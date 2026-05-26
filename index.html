@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Siftle</title>
+    <link rel="icon" type="image/png" href="./assets/Siftle_logo-removebg-preview.png" />
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="brief-board" aria-label="Siftle trending news website">
+        <header class="site-header">
+          <div class="brand-lockup">
+            <img src="./assets/Siftle_logo-removebg-preview.png" alt="Siftle logo" />
+            <span>Siftle</span>
+          </div>
+
+          <nav class="top-actions" aria-label="Main actions">
+            <button type="button" data-menu-action="today">Today</button>
+            <button type="button" data-menu-action="saved">Saved</button>
+            <button type="button" data-menu-action="archive">Shelby Archive</button>
+          </nav>
+
+          <button class="menu-button" id="menuButton" type="button" aria-label="Open menu" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+
+          <div class="profile-dot" aria-hidden="true"></div>
+        </header>
+
+        <div class="menu-panel" id="menuPanel" hidden>
+          <button type="button" data-menu-action="today">Today</button>
+          <button type="button" data-menu-action="saved">Saved</button>
+          <button type="button" data-menu-action="archive">Shelby Archive</button>
+        </div>
+
+        <section class="brief-hero">
+          <div class="headline-row">
+            <h1>Top Brief</h1>
+            <p class="date-label" id="dateLabel"></p>
+            <p class="menu-status" id="menuStatus" aria-live="polite"></p>
+          </div>
+          <div class="hero-badge">
+            <span>AI ranked</span>
+            <strong>Scroll the day</strong>
+          </div>
+        </section>
+
+        <section class="archive-controls" id="archiveControls" aria-label="Daily archive selector">
+          <label for="archiveDateSelect">Day</label>
+          <select id="archiveDateSelect" aria-label="Select saved day">
+            <option value="">Today</option>
+          </select>
+          <button type="button" id="todayButton">Live feed</button>
+          <span id="archiveStatus" aria-live="polite"></span>
+        </section>
+
+        <nav class="category-tabs" id="categoryTabs" aria-label="News categories"></nav>
+
+        <section class="story-list" id="storyList" aria-label="Trending stories"></section>
+        <section class="story-detail" id="storyDetail" aria-label="Story summary" hidden></section>
+      </section>
+    </main>
+
+    <script type="module" src="./dist/main.js"></script>
+  </body>
+</html>

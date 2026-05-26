@@ -1,0 +1,94 @@
+export const categories = ["All", "Crypto", "Sports", "Anime"];
+export const mockStories = [
+    {
+        id: 1,
+        headline: "SOL price rises as Coinbase stablecoin launch boosts attention",
+        category: "Crypto",
+        summary: "Crypto traders are watching Solana after exchange activity and stablecoin news pushed fresh liquidity discussion.",
+        source: "Crypto Desk",
+        sourceUrl: "https://example.com/sol-coinbase-stablecoin",
+        imageUrl: "https://images.unsplash.com/photo-1640161704729-cbe966a08476?auto=format&fit=crop&w=1200&q=80",
+        readTime: "2 min read",
+        postedAt: "18m",
+        accent: "blue",
+        saved: false
+    },
+    {
+        id: 2,
+        headline: "Transfer window rumors build around Premier League clubs",
+        category: "Sports",
+        summary: "Football fans are tracking reports around striker targets, contract renewals, and late-window squad decisions.",
+        source: "Football Brief",
+        sourceUrl: "https://example.com/football-transfer-rumors",
+        imageUrl: "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
+        readTime: "3 min read",
+        postedAt: "34m",
+        accent: "teal",
+        saved: false
+    },
+    {
+        id: 3,
+        headline: "New anime adaptation confirmed after manga sales surge",
+        category: "Anime",
+        summary: "A popular manga series is getting an anime adaptation after months of fan speculation and rising sales.",
+        source: "Anime Wire",
+        sourceUrl: "https://example.com/anime-adaptation-announced",
+        imageUrl: "https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?auto=format&fit=crop&w=1200&q=80",
+        readTime: "4 min read",
+        postedAt: "52m",
+        accent: "violet",
+        saved: true
+    },
+    {
+        id: 4,
+        headline: "Ethereum upgrade \"Pectra\" goes live",
+        category: "Crypto",
+        summary: "Ethereum's latest network upgrade is being watched for wallet improvements, validator changes, and ecosystem impact.",
+        source: "Chain Watch",
+        sourceUrl: "https://example.com/ethereum-pectra",
+        imageUrl: "https://images.unsplash.com/photo-1621504450181-5d356f61d307?auto=format&fit=crop&w=1200&q=80",
+        readTime: "2 min read",
+        postedAt: "1h",
+        accent: "slate",
+        saved: false
+    },
+    {
+        id: 5,
+        headline: "Champions League draw creates early heavyweight matchup",
+        category: "Sports",
+        summary: "The latest draw sets up a high-stakes fixture between two major clubs and sparks immediate fan debate.",
+        source: "Matchday Daily",
+        sourceUrl: "https://example.com/champions-league-draw",
+        imageUrl: "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
+        readTime: "3 min read",
+        postedAt: "1h",
+        accent: "blue",
+        saved: false
+    },
+    {
+        id: 6,
+        headline: "Crunchyroll reveals new seasonal simulcast lineup",
+        category: "Anime",
+        summary: "Fans are sorting through new simulcast dates, sequel premieres, and fresh licenses for the upcoming season.",
+        source: "Anime Schedule",
+        sourceUrl: "https://example.com/anime-seasonal-lineup",
+        imageUrl: "https://images.unsplash.com/photo-1613376023733-0a73315d9b06?auto=format&fit=crop&w=1200&q=80",
+        readTime: "2 min read",
+        postedAt: "2h",
+        accent: "blue",
+        saved: false
+    },
+    {
+        id: 7,
+        headline: "Studio trailer drop sparks anime franchise debate",
+        category: "Anime",
+        summary: "A surprise trailer revealed new characters and release dates, sending fan theories across entertainment outlets.",
+        source: "Culture Desk",
+        sourceUrl: "https://example.com/studio-trailer-drop",
+        imageUrl: "https://images.unsplash.com/photo-1613376023733-0a73315d9b06?auto=format&fit=crop&w=1200&q=80",
+        readTime: "2 min read",
+        postedAt: "2h",
+        accent: "violet",
+        saved: false
+    }
+];
