@@ -7,6 +7,7 @@ const textDecoder = new TextDecoder();
 const normalizeNetwork = (value = "TESTNET") => {
   const normalized = value.toLowerCase();
   if (normalized === "shelbynet") return Network.SHELBYNET;
+  if (normalized === "devnet") return Network.SHELBYNET;
   if (normalized === "local") return Network.LOCAL;
   return Network.TESTNET;
 };
