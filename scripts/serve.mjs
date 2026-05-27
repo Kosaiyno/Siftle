@@ -1,4 +1,4 @@
-import { createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { createZGComputeNetworkReadOnlyBroker } from "@0gfoundation/0g-compute-ts-sdk";
@@ -50,6 +50,7 @@ const mimeTypes = new Map([
 
 const categories = ["All", "Crypto", "Sports", "Anime"];
 const archiveDir = join(root, ".siftle", "archive");
+const publishedDir = join(root, ".siftle", "published");
 
 const categoryQueries = {
   All: "crypto football anime trending",
@@ -148,6 +149,13 @@ const sendJson = (response, statusCode, payload) => {
 const normalizeCategory = (category) => (categories.includes(category) ? category : "All");
 
 const archiveFilename = (date, category) => `${date}-${normalizeCategory(category).toLowerCase()}.json`;
+const latestFilename = (category) => `latest-${normalizeCategory(category).toLowerCase()}.json`;
+
+const writeJsonFile = (filePath, payload) => {
+  const tempPath = `${filePath}.tmp`;
+  writeFileSync(tempPath, JSON.stringify(payload, null, 2));
+  renameSync(tempPath, filePath);
+};
 
 const readLocalArchiveSnapshot = (date, category) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date ?? "")) {
@@ -894,29 +902,26 @@ const archiveSnapshot = async (snapshot) => {
       shelby_configured: isShelbyArchiveConfigured(),
       shelby_rpc_url: process.env.SHELBY_RPC_URL ?? null,
       shelby_archive_prefix: process.env.SHELBY_ARCHIVE_PREFIX ?? "siftle/feeds",
-      shelby_blob_name: getShelbyBlobName(snapshot.date, snapshot.category),
+      shelby_blob_name: getShelbyBlobName(snapshot.date, snapshot.category, snapshot.generated_at),
       stored_at: new Date().toISOString()
     }
   };
 
-  writeFileSync(localPath, JSON.stringify(snapshotWithStorage, null, 2));
+  writeJsonFile(localPath, snapshotWithStorage);
 
   if (isShelbyArchiveConfigured()) {
     try {
       const shelbyArchive = await uploadShelbySnapshot(snapshotWithStorage);
-      writeFileSync(
+      writeJsonFile(
         localPath,
-        JSON.stringify(
-          {
-            ...snapshotWithStorage,
-            storage: {
-              ...snapshotWithStorage.storage,
-              shelby_upload: shelbyArchive
-            }
+        {
+          ...snapshotWithStorage,
+          storage: {
+            ...snapshotWithStorage.storage,
+            shelby_upload: shelbyArchive
           },
-          null,
-          2
-        )
+          archive: shelbyArchive
+        }
       );
       return shelbyArchive;
     } catch (error) {
@@ -954,7 +959,57 @@ const archiveSnapshot = async (snapshot) => {
   return { provider: "shelby", response: await response.json() };
 };
 
-const getFeed = async (category) => {
+const getLatestSnapshotPath = (category) => join(publishedDir, latestFilename(category));
+
+const readPublishedSnapshot = (category) => {
+  const filePath = getLatestSnapshotPath(category);
+  if (!existsSync(filePath)) return null;
+  return JSON.parse(readFileSync(filePath, "utf8"));
+};
+
+const getRecoverablePublishedSnapshot = async (category) => {
+  const selectedCategory = normalizeCategory(category);
+  const current = readPublishedSnapshot(selectedCategory);
+  if (!isShelbyArchiveConfigured() || current?.archive?.provider === "shelby") {
+    return current;
+  }
+
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const recovered = await readArchiveSnapshot(today, selectedCategory);
+    const blobName = recovered?.archive?.blob_name ?? "";
+    const isOwnCategoryBlob =
+      selectedCategory === "All" ||
+      blobName.includes(`/${selectedCategory.toLowerCase()}/`) ||
+      blobName.endsWith(`/${selectedCategory.toLowerCase()}.json`);
+
+    if (
+      recovered?.archive?.provider === "shelby" &&
+      recovered.category === selectedCategory &&
+      isOwnCategoryBlob &&
+      (recovered.top_stories?.length ?? 0) > 0
+    ) {
+      const publishedSnapshot = {
+        ...recovered,
+        published_at: recovered.published_at ?? new Date().toISOString(),
+        status: "published"
+      };
+      writePublishedSnapshot(publishedSnapshot);
+      return publishedSnapshot;
+    }
+  } catch {
+    // Keep the local latest file if Shelby recovery is unavailable.
+  }
+
+  return current;
+};
+
+const writePublishedSnapshot = (snapshot) => {
+  mkdirSync(publishedDir, { recursive: true });
+  writeJsonFile(getLatestSnapshotPath(snapshot.category), snapshot);
+};
+
+const generateSnapshot = async (category) => {
   const selectedCategory = categories.includes(category) ? category : "All";
   const results = await Promise.allSettled([
     fetchNicheRss(selectedCategory),
@@ -980,6 +1035,10 @@ const getFeed = async (category) => {
     top_stories: stories
   };
 
+  return snapshot;
+};
+
+const publishSnapshot = async (snapshot) => {
   let archive;
   try {
     archive = await archiveSnapshot(snapshot);
@@ -987,43 +1046,117 @@ const getFeed = async (category) => {
     archive = { provider: "local-dev", error: error.message };
   }
 
-  return { ...snapshot, archive };
+  if (isShelbyArchiveConfigured() && archive.provider !== "shelby") {
+    throw new Error(archive.shelby_error || archive.error || "Shelby archive upload did not complete");
+  }
+
+  const publishedSnapshot = {
+    ...snapshot,
+    archive,
+    published_at: new Date().toISOString(),
+    status: "published"
+  };
+
+  writePublishedSnapshot(publishedSnapshot);
+  return publishedSnapshot;
 };
 
-// In-memory latest snapshot (precomputed by background job)
-let latestSnapshot = null;
-const refreshIntervalMinutes = Number(process.env.REFRESH_INTERVAL_MINUTES ?? 60);
+const generateAndPublishFeed = async (category) => publishSnapshot(await generateSnapshot(category));
 
-const refreshLatestSnapshot = async () => {
+const getPublishedFeed = async (category) => {
+  const selectedCategory = normalizeCategory(category);
+  const snapshot = await getRecoverablePublishedSnapshot(selectedCategory);
+  if (snapshot) return snapshot;
+
+  return generateAndPublishFeed(selectedCategory);
+};
+
+const refreshIntervalMinutes = Number(process.env.REFRESH_INTERVAL_MINUTES ?? 60);
+const publishedSnapshots = new Map();
+const publishStatus = {
+  is_running: false,
+  last_started_at: null,
+  last_finished_at: null,
+  last_error: null,
+  categories: {}
+};
+
+const refreshPublishedFeeds = async (reason = "scheduled") => {
+  if (publishStatus.is_running) {
+    return { skipped: true, reason: "publish already running" };
+  }
+
+  publishStatus.is_running = true;
+  publishStatus.last_started_at = new Date().toISOString();
+  publishStatus.last_error = null;
+
   try {
-    console.log("Refreshing feed snapshot...");
-    latestSnapshot = await getFeed("All");
-    console.log("Feed snapshot refreshed at", new Date().toISOString());
+    console.log(`Publishing hourly feeds (${reason})...`);
+    let failureCount = 0;
+
+    for (const category of categories) {
+      try {
+        const snapshot = await generateAndPublishFeed(category);
+        publishedSnapshots.set(category, snapshot);
+        publishStatus.categories[category] = {
+          status: "published",
+          story_count: snapshot.top_stories?.length ?? 0,
+          published_at: snapshot.published_at,
+          archive_provider: snapshot.archive?.provider ?? "unknown"
+        };
+      } catch (error) {
+        failureCount += 1;
+        const previous = await getRecoverablePublishedSnapshot(category);
+        publishStatus.categories[category] = {
+          status: previous ? "kept_previous" : "failed",
+          story_count: previous?.top_stories?.length ?? 0,
+          published_at: previous?.published_at ?? null,
+          archive_provider: previous?.archive?.provider ?? null,
+          error: error.message
+        };
+        console.warn(`Failed to publish ${category}:`, error.message);
+      }
+    }
+
+    publishStatus.last_finished_at = new Date().toISOString();
+    publishStatus.last_error = failureCount > 0 ? `${failureCount} categories failed; previous published feeds kept where available` : null;
+    console.log("Hourly feeds published at", publishStatus.last_finished_at);
+    return { skipped: false, status: publishStatus };
   } catch (err) {
-    console.warn("Failed to refresh feed snapshot:", err.message);
+    publishStatus.last_error = err.message;
+    console.warn("Failed to publish hourly feeds:", err.message);
+    return { skipped: false, error: err.message, status: publishStatus };
+  } finally {
+    publishStatus.is_running = false;
   }
 };
 
 // Kick off initial refresh and schedule periodic refreshes
-void refreshLatestSnapshot();
-setInterval(() => void refreshLatestSnapshot(), Math.max(1, refreshIntervalMinutes) * 60 * 1000);
+void refreshPublishedFeeds("startup");
+setInterval(() => void refreshPublishedFeeds("scheduled"), Math.max(1, refreshIntervalMinutes) * 60 * 1000);
 
 const server = createServer(async (request, response) => {
   const requestUrl = new URL(request.url ?? "/", `http://${request.headers.host}`);
 
   if (requestUrl.pathname === "/api/feed" && request.method === "GET") {
     const category = requestUrl.searchParams.get("category") ?? "All";
-    // Serve cached snapshot for the top-level All category when available to avoid on-demand generation
-    if (category === "All" && latestSnapshot) {
-      try {
-        sendJson(response, 200, latestSnapshot);
-        return;
-      } catch (err) {
-        // fall back to live generation
-      }
-    }
+    getPublishedFeed(category)
+      .then((payload) => sendJson(response, 200, payload))
+      .catch((error) => sendJson(response, 500, { error: error.message }));
+    return;
+  }
 
-    getFeed(category)
+  if (requestUrl.pathname === "/api/publish/status" && request.method === "GET") {
+    sendJson(response, 200, {
+      ...publishStatus,
+      refresh_interval_minutes: refreshIntervalMinutes,
+      published_categories: categories.filter((category) => Boolean(readPublishedSnapshot(category)))
+    });
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/publish/refresh" && request.method === "POST") {
+    refreshPublishedFeeds("manual")
       .then((payload) => sendJson(response, 200, payload))
       .catch((error) => sendJson(response, 500, { error: error.message }));
     return;

@@ -106,7 +106,7 @@ const loadFeed = async (category = state.activeCategory) => {
             }
             else {
                 const archiveLabel = data.archive?.provider === "shelby" ? "Shelby" : "local archive";
-                menuStatus.textContent = `Feed updated and saved to ${archiveLabel}`;
+                menuStatus.textContent = `Latest published feed loaded from ${archiveLabel}`;
             }
         }
         setArchiveStatus(state.activeArchiveDate ? `Archive: ${state.activeArchiveDate}` : "Live feed");

@@ -20,9 +20,18 @@ export const isShelbyArchiveConfigured = () =>
       process.env.SHELBY_RPC_URL
   );
 
-export const getShelbyBlobName = (date, category) => {
+const getSnapshotSlug = (generatedAt) => {
+  if (!generatedAt) return "";
+  return generatedAt.replace(/[:.]/g, "-");
+};
+
+export const getShelbyBlobName = (date, category, generatedAt) => {
   const prefix = (process.env.SHELBY_ARCHIVE_PREFIX || "siftle/feeds").replace(/^\/+|\/+$/g, "");
-  return `${prefix}/${date}/${category.toLowerCase()}.json`;
+  const categorySlug = category.toLowerCase();
+  const snapshotSlug = getSnapshotSlug(generatedAt);
+  return snapshotSlug
+    ? `${prefix}/${date}/${categorySlug}/${snapshotSlug}.json`
+    : `${prefix}/${date}/${categorySlug}.json`;
 };
 
 const getExpirationMicros = () => {
@@ -87,7 +96,7 @@ const readStreamToText = async (readable) => {
 
 export const uploadShelbySnapshot = async (snapshot) => {
   const { client, signer } = getShelbyClient();
-  const blobName = getShelbyBlobName(snapshot.date, snapshot.category);
+  const blobName = getShelbyBlobName(snapshot.date, snapshot.category, snapshot.generated_at);
   const blobData = textEncoder.encode(JSON.stringify(snapshot, null, 2));
 
   await client.upload({
@@ -105,9 +114,8 @@ export const uploadShelbySnapshot = async (snapshot) => {
   };
 };
 
-export const downloadShelbySnapshot = async (date, category) => {
+const downloadShelbyBlob = async (blobName) => {
   const { client, signer } = getShelbyClient();
-  const blobName = getShelbyBlobName(date, category);
   const blob = await client.download({
     account: process.env.SHELBY_ACCOUNT_ADDRESS || signer.accountAddress,
     blobName
@@ -125,6 +133,27 @@ export const downloadShelbySnapshot = async (date, category) => {
   };
 };
 
+export const downloadShelbySnapshot = async (date, category) => {
+  try {
+    const files = await listShelbyArchiveFiles();
+    const latest = files
+      .filter((file) => file.date === date && file.categorySlug.toLowerCase() === category.toLowerCase())
+      .sort((first, second) => {
+        const firstTime = first.generated_at ? new Date(first.generated_at).getTime() : 0;
+        const secondTime = second.generated_at ? new Date(second.generated_at).getTime() : 0;
+        return secondTime - firstTime;
+      })[0];
+
+    if (latest?.blob_name) {
+      return await downloadShelbyBlob(latest.blob_name);
+    }
+  } catch {
+    // Fall back to the legacy daily blob path below.
+  }
+
+  return downloadShelbyBlob(getShelbyBlobName(date, category));
+};
+
 export const listShelbyArchiveFiles = async () => {
   const { client, signer } = getShelbyClient();
   const prefix = (process.env.SHELBY_ARCHIVE_PREFIX || "siftle/feeds").replace(/^\/+|\/+$/g, "");
@@ -136,15 +165,21 @@ export const listShelbyArchiveFiles = async () => {
   return blobs
     .filter((blob) => !blob.isDeleted && blob.blobNameSuffix?.startsWith(`${prefix}/`))
     .map((blob) => {
-      const match = blob.blobNameSuffix.match(/\/(\d{4}-\d{2}-\d{2})\/([a-z]+)\.json$/i);
+      const match =
+        blob.blobNameSuffix.match(/\/(\d{4}-\d{2}-\d{2})\/([a-z]+)\.json$/i) ||
+        blob.blobNameSuffix.match(/\/(\d{4}-\d{2}-\d{2})\/([a-z]+)\/([^/]+)\.json$/i);
       if (!match) return null;
 
-      const [, date, categorySlug] = match;
+      const [, date, categorySlug, snapshotSlug] = match;
       return {
         date,
         categorySlug,
         story_count: null,
-        generated_at: blob.creationMicros ? new Date(Number(blob.creationMicros) / 1000).toISOString() : null,
+        generated_at: snapshotSlug
+          ? snapshotSlug.replace(/-(\d{3})Z$/, ".$1Z").replace(/T(\d{2})-(\d{2})-(\d{2})/, "T$1:$2:$3")
+          : blob.creationMicros
+            ? new Date(Number(blob.creationMicros) / 1000).toISOString()
+            : null,
         storage: "shelby",
         blob_name: blob.blobNameSuffix,
         size: blob.size
