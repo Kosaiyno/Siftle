@@ -2,6 +2,13 @@ import { createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, sta
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { createZGComputeNetworkReadOnlyBroker } from "@0gfoundation/0g-compute-ts-sdk";
+import {
+  downloadShelbySnapshot,
+  getShelbyBlobName,
+  isShelbyArchiveConfigured,
+  listShelbyArchiveFiles,
+  uploadShelbySnapshot
+} from "./shelbyArchive.mjs";
 
 const root = resolve(process.cwd());
 const port = Number(process.env.PORT ?? 5173);
@@ -142,7 +149,7 @@ const normalizeCategory = (category) => (categories.includes(category) ? categor
 
 const archiveFilename = (date, category) => `${date}-${normalizeCategory(category).toLowerCase()}.json`;
 
-const readArchiveSnapshot = (date, category) => {
+const readLocalArchiveSnapshot = (date, category) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date ?? "")) {
     throw new Error("Invalid archive date");
   }
@@ -158,7 +165,7 @@ const readArchiveSnapshot = (date, category) => {
         category: selectedCategory,
         top_stories: (allSnapshot.top_stories ?? []).filter((story) => story.category === selectedCategory),
         archive: {
-          provider: process.env.SHELBY_UPLOAD_URL ? "shelby-configured" : "local-dev",
+          provider: "local-dev",
           restored_from: allPath,
           filtered_from: "All"
         }
@@ -172,19 +179,58 @@ const readArchiveSnapshot = (date, category) => {
   return {
     ...snapshot,
     archive: {
-      provider: process.env.SHELBY_UPLOAD_URL ? "shelby-configured" : "local-dev",
+      provider: "local-dev",
       restored_from: filePath
     }
   };
 };
 
-const readArchiveIndex = () => {
-  if (!existsSync(archiveDir)) {
-    return { dates: [], files: [] };
+const readArchiveSnapshot = async (date, category) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date ?? "")) {
+    throw new Error("Invalid archive date");
   }
 
+  const selectedCategory = normalizeCategory(category);
+
+  if (isShelbyArchiveConfigured()) {
+    try {
+      const { snapshot, archive } = await downloadShelbySnapshot(date, selectedCategory);
+      return { ...snapshot, archive };
+    } catch (error) {
+      console.warn("Shelby archive read fallback:", error.message);
+
+      if (selectedCategory !== "All") {
+        try {
+          const { snapshot, archive } = await downloadShelbySnapshot(date, "All");
+          return {
+            ...snapshot,
+            category: selectedCategory,
+            top_stories: (snapshot.top_stories ?? []).filter((story) => story.category === selectedCategory),
+            archive: {
+              ...archive,
+              filtered_from: "All"
+            }
+          };
+        } catch {
+          // Fall through to the local archive.
+        }
+      }
+    }
+  }
+
+  return readLocalArchiveSnapshot(date, selectedCategory);
+};
+
+const normalizeArchiveFile = (file) => ({
+  ...file,
+  category: file.category ?? categories.find((item) => item.toLowerCase() === file.categorySlug?.toLowerCase()) ?? "All"
+});
+
+const readLocalArchiveFiles = () => {
+  if (!existsSync(archiveDir)) return [];
   const allowedCategories = new Set(categories.map((category) => category.toLowerCase()));
-  const files = readdirSync(archiveDir)
+
+  return readdirSync(archiveDir)
     .filter((filename) => filename.endsWith(".json"))
     .map((filename) => {
       const match = filename.match(/^(\d{4}-\d{2}-\d{2})-([a-z]+)\.json$/i);
@@ -203,7 +249,7 @@ const readArchiveIndex = () => {
           category,
           story_count: Array.isArray(snapshot.top_stories) ? snapshot.top_stories.length : 0,
           generated_at: snapshot.generated_at ?? null,
-          storage: snapshot.sources?.shelby ? "shelby" : "local-dev"
+          storage: snapshot.storage?.shelby_upload?.provider === "shelby" ? "shelby" : "local-dev"
         };
       } catch {
         return {
@@ -215,7 +261,12 @@ const readArchiveIndex = () => {
         };
       }
     })
-    .filter(Boolean)
+    .filter(Boolean);
+};
+
+const groupArchiveFiles = (files) => {
+  const sortedFiles = files
+    .map(normalizeArchiveFile)
     .sort((first, second) => {
       if (first.date !== second.date) return second.date.localeCompare(first.date);
       return categories.indexOf(first.category) - categories.indexOf(second.category);
@@ -227,6 +278,31 @@ const readArchiveIndex = () => {
   }));
 
   return { dates: groupedDates, files };
+};
+
+const readArchiveIndex = async () => {
+  const localFiles = readLocalArchiveFiles();
+  let shelbyFiles = [];
+
+  if (isShelbyArchiveConfigured()) {
+    try {
+      shelbyFiles = await listShelbyArchiveFiles();
+    } catch (error) {
+      console.warn("Shelby archive index fallback:", error.message);
+    }
+  }
+
+  const merged = new Map();
+  for (const file of [...localFiles, ...shelbyFiles]) {
+    const normalized = normalizeArchiveFile(file);
+    const key = `${normalized.date}-${normalized.category}`;
+    const current = merged.get(key);
+    if (!current || normalized.storage === "shelby") {
+      merged.set(key, normalized);
+    }
+  }
+
+  return groupArchiveFiles([...merged.values()]);
 };
 
 const readJsonBody = async (request) => {
@@ -815,15 +891,51 @@ const archiveSnapshot = async (snapshot) => {
     ...snapshot,
     storage: {
       local_path: localPath,
-      shelby_configured: Boolean(process.env.SHELBY_UPLOAD_URL),
+      shelby_configured: isShelbyArchiveConfigured(),
+      shelby_rpc_url: process.env.SHELBY_RPC_URL ?? null,
+      shelby_archive_prefix: process.env.SHELBY_ARCHIVE_PREFIX ?? "siftle/feeds",
+      shelby_blob_name: getShelbyBlobName(snapshot.date, snapshot.category),
       stored_at: new Date().toISOString()
     }
   };
 
   writeFileSync(localPath, JSON.stringify(snapshotWithStorage, null, 2));
 
+  if (isShelbyArchiveConfigured()) {
+    try {
+      const shelbyArchive = await uploadShelbySnapshot(snapshotWithStorage);
+      writeFileSync(
+        localPath,
+        JSON.stringify(
+          {
+            ...snapshotWithStorage,
+            storage: {
+              ...snapshotWithStorage.storage,
+              shelby_upload: shelbyArchive
+            }
+          },
+          null,
+          2
+        )
+      );
+      return shelbyArchive;
+    } catch (error) {
+      console.warn("Shelby archive upload fallback:", error.message);
+      return {
+        provider: "local-dev",
+        path: localPath,
+        shelby_error: error.message
+      };
+    }
+  }
+
   if (!process.env.SHELBY_UPLOAD_URL) {
-    return { provider: "local-dev", path: localPath };
+    return {
+      provider: "local-dev",
+      path: localPath,
+      rpc_url: process.env.SHELBY_RPC_URL ?? null,
+      note: "Shelby SDK config is incomplete."
+    };
   }
 
   const response = await fetch(process.env.SHELBY_UPLOAD_URL, {
@@ -862,7 +974,7 @@ const getFeed = async (category) => {
       newsdata: Boolean(process.env.NEWSDATA_API_KEY),
       guardian: Boolean(process.env.GUARDIAN_API_KEY),
       zero_g: Boolean(process.env.ZERO_G_API_KEY || process.env.OG_COMPUTE_API_KEY),
-      shelby: Boolean(process.env.SHELBY_UPLOAD_URL),
+      shelby: isShelbyArchiveConfigured(),
       max_article_age_hours: maxArticleAgeHours
     },
     top_stories: stories
@@ -896,7 +1008,7 @@ const refreshLatestSnapshot = async () => {
 void refreshLatestSnapshot();
 setInterval(() => void refreshLatestSnapshot(), Math.max(1, refreshIntervalMinutes) * 60 * 1000);
 
-const server = createServer((request, response) => {
+const server = createServer(async (request, response) => {
   const requestUrl = new URL(request.url ?? "/", `http://${request.headers.host}`);
 
   if (requestUrl.pathname === "/api/feed" && request.method === "GET") {
@@ -931,7 +1043,7 @@ const server = createServer((request, response) => {
       const category = requestUrl.searchParams.get("category") ?? "All";
 
       if (date) {
-        const snapshot = readArchiveSnapshot(date, category);
+        const snapshot = await readArchiveSnapshot(date, category);
         if (!snapshot) {
           sendJson(response, 404, { error: "Archive snapshot not found" });
           return;
@@ -941,7 +1053,7 @@ const server = createServer((request, response) => {
         return;
       }
 
-      sendJson(response, 200, readArchiveIndex());
+      sendJson(response, 200, await readArchiveIndex());
     } catch (error) {
       sendJson(response, 500, { error: error.message });
     }
