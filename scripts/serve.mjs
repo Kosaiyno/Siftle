@@ -548,6 +548,39 @@ const summarizeLocally = (article) => {
   return base.length > 220 ? `${base.slice(0, 217).trim()}...` : base;
 };
 
+const summaryPromptVersion = "grounded-v2";
+
+const cleanSummaryText = (value = "") => {
+  let summary = String(value ?? "").trim();
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const fenced = summary.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+    if (fenced) summary = fenced[1].trim();
+
+    const jsonText = summary.match(/^\s*\{[\s\S]*\}\s*$/)?.[0];
+    if (!jsonText) break;
+
+    try {
+      const parsed = JSON.parse(jsonText);
+      if (typeof parsed.summary === "string") {
+        summary = parsed.summary.trim();
+        continue;
+      }
+    } catch {
+      break;
+    }
+
+    break;
+  }
+
+  return stripHtml(summary)
+    .replace(/^["'{\s]+/, "")
+    .replace(/["'}\s]+$/, "")
+    .replace(/^summary\s*:\s*/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
 const getSummaryCachePath = (article) => {
   const cacheDir = join(root, ".siftle", "cache", "summaries");
   mkdirSync(cacheDir, { recursive: true });
@@ -617,7 +650,9 @@ const summarizeWith0G = async (article, options = {}) => {
   if (!force && existsSync(cachePath)) {
     try {
       const cached = JSON.parse(readFileSync(cachePath, "utf8"));
-      if (cached.summary) return { summary: cached.summary, provider: cached.provider ?? "cache", proof: cached.proof };
+      if (cached.summary && cached.prompt_version === summaryPromptVersion) {
+        return { summary: cleanSummaryText(cached.summary), provider: cached.provider ?? "cache", proof: cached.proof };
+      }
     } catch {
       // Ignore broken cache files and regenerate the summary.
     }
@@ -641,7 +676,7 @@ const summarizeWith0G = async (article, options = {}) => {
           {
                 role: "system",
                 content:
-                  "You summarize news for Siftle. Return strict JSON with one key: summary. The summary must be a detailed neutral paragraph between 120 and 200 words, no bullets, no hype, and must focus on the most important facts, impact, and context. If the provided article text is short, expand by providing safe background context, common industry implications, and general impact analysis without inventing specific, checkable facts (avoid new dates, exact figures, or named quotations). Output ONLY valid JSON (no surrounding commentary)."
+                  "You summarize news for Siftle. Return strict JSON with exactly one key: summary. The summary must be one neutral, reader-friendly paragraph between 70 and 120 words. Use only the supplied headline, description, source, and category. Do not add outside facts, dates, figures, names, quotes, predictions, or broad background that is not directly supported by the input. If the input is short, write a shorter careful summary instead of filling space. Output ONLY valid JSON."
               },
           {
             role: "user",
@@ -669,17 +704,17 @@ const summarizeWith0G = async (article, options = {}) => {
       let s = "";
       if (jsonText) {
         const parsed = JSON.parse(jsonText);
-        s = stripHtml(parsed.summary || "");
+        s = cleanSummaryText(parsed.summary || "");
       } else {
-        s = stripHtml(content.replace(/^```(?:json)?/i, "").replace(/```$/i, ""));
+        s = cleanSummaryText(content);
       }
       return s;
     };
 
     let summary = extractSummaryFromResponse(data);
 
-    // If 0G returned a very short summary, try one retry requesting a longer paragraph.
-    const minWords = 110;
+    // Retry only when the model returns something unusably short, while staying grounded.
+    const minWords = 45;
     const wordCount = summary.split(/\s+/).filter(Boolean).length;
     if (wordCount < minWords) {
       try {
@@ -696,7 +731,7 @@ const summarizeWith0G = async (article, options = {}) => {
               {
                 role: "system",
                 content:
-                  "You summarize news for Siftle. Return strict JSON with one key: summary. The summary must be a detailed neutral paragraph between 150 and 220 words, no bullets, no hype, and must focus on the most important facts, impact, and context. If the provided article text is short, expand safely by adding background, typical market or policy implications, and general context while avoiding invented, checkable facts. Output ONLY valid JSON (no surrounding commentary)."
+                  "You summarize news for Siftle. Return strict JSON with exactly one key: summary. Write one neutral paragraph between 70 and 120 words using only the supplied article fields. Do not invent or import external context. If details are limited, stay brief and precise. Output ONLY valid JSON."
               },
               {
                 role: "user",
@@ -733,35 +768,8 @@ const summarizeWith0G = async (article, options = {}) => {
       summary = summarizeLocally(article);
     }
 
-    // If the summary is still too short after retries, expand locally with safe, generic context.
-    const finalWordCount = summary.split(/\s+/).filter(Boolean).length;
-    if (finalWordCount < minWords) {
-      const expandLocally = (article, shortSummary) => {
-        const parts = [];
-        parts.push(shortSummary.replace(/\.$/, ""));
-        parts.push(
-          `Background: In situations like this, broader trends and context often shape how the story is understood — for example, market sentiment, regulatory focus, or sector-specific dynamics may inform reactions.`
-        );
-        parts.push(
-          `Implications: The development could influence related actors and may lead to shifts in short-term attention, investment flows, or policy responses; stakeholders will likely monitor for confirmations and follow-up reporting.`
-        );
-        parts.push(
-          `Caveat: this expanded paragraph avoids asserting specific, unverified facts beyond the original report and focuses on plausible context and impact.`
-        );
+    summary = cleanSummaryText(summary);
 
-        // Combine and trim to form a coherent paragraph.
-        return parts.join(" ").replace(/\s+/g, " ").trim();
-      };
-
-      summary = expandLocally(article, summary);
-      // annotate proof to indicate local expansion
-      if (!data) data = {};
-      if (!data.id) data.id = null;
-      // mark that we expanded locally
-      // proof variable exists later when writing cache; we'll add expanded flag below.
-    }
-
-    const expandedFlag = (summary.split(/\s+/).filter(Boolean).length < minWords) === false ? false : false; // placeholder
     const proofObj = {
       providerAddress: service.provider,
       endpoint,
@@ -775,12 +783,15 @@ const summarizeWith0G = async (article, options = {}) => {
       // nothing special — best-effort
     }
 
-    writeFileSync(cachePath, JSON.stringify({ summary, cached_at: new Date().toISOString(), provider: "0g", proof: proofObj }, null, 2));
+    writeFileSync(
+      cachePath,
+      JSON.stringify({ summary, cached_at: new Date().toISOString(), provider: "0g", proof: proofObj, prompt_version: summaryPromptVersion }, null, 2)
+    );
     return { summary, provider: "0g", proof: proofObj };
   } catch (error) {
     console.warn("0G summarization fallback:", error.message);
-    const summary = summarizeLocally(article);
-    writeFileSync(cachePath, JSON.stringify({ summary, cached_at: new Date().toISOString(), provider: "local-fallback" }, null, 2));
+    const summary = cleanSummaryText(summarizeLocally(article));
+    writeFileSync(cachePath, JSON.stringify({ summary, cached_at: new Date().toISOString(), provider: "local-fallback", prompt_version: summaryPromptVersion }, null, 2));
     return { summary, provider: "local-fallback", error: error.message };
   }
 };
@@ -961,10 +972,23 @@ const archiveSnapshot = async (snapshot) => {
 
 const getLatestSnapshotPath = (category) => join(publishedDir, latestFilename(category));
 
+const normalizeSnapshotSummaries = (snapshot) => {
+  if (!snapshot?.top_stories) return snapshot;
+
+  return {
+    ...snapshot,
+    top_stories: snapshot.top_stories.map((story) => ({
+      ...story,
+      summary: cleanSummaryText(story.summary),
+      ai_summary: story.ai_summary ? cleanSummaryText(story.ai_summary) : story.ai_summary
+    }))
+  };
+};
+
 const readPublishedSnapshot = (category) => {
   const filePath = getLatestSnapshotPath(category);
   if (!existsSync(filePath)) return null;
-  return JSON.parse(readFileSync(filePath, "utf8"));
+  return normalizeSnapshotSummaries(JSON.parse(readFileSync(filePath, "utf8")));
 };
 
 const getRecoverablePublishedSnapshot = async (category) => {
@@ -1051,7 +1075,7 @@ const publishSnapshot = async (snapshot) => {
   }
 
   const publishedSnapshot = {
-    ...snapshot,
+    ...normalizeSnapshotSummaries(snapshot),
     archive,
     published_at: new Date().toISOString(),
     status: "published"

@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Siftle</title>
     <link rel="icon" type="image/png" href="./assets/Siftle_logo-removebg-preview.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Relief:wght@400;700&family=Inter:wght@500;650;750;850&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./src/styles.css" />
   </head>
   <body>
@@ -16,11 +19,7 @@
             <span>Siftle</span>
           </div>
 
-          <nav class="top-actions" aria-label="Main actions">
-            <button type="button" data-menu-action="today">Today</button>
-            <button type="button" data-menu-action="saved">Saved</button>
-            <button type="button" data-menu-action="archive">Shelby Archive</button>
-          </nav>
+          
 
           <button class="menu-button" id="menuButton" type="button" aria-label="Open menu" aria-expanded="false">
             <span></span>
@@ -28,25 +27,18 @@
             <span></span>
           </button>
 
-          <div class="profile-dot" aria-hidden="true"></div>
+          <button class="top-saved" type="button" data-menu-action="saved">Saved</button>
         </header>
 
-        <div class="menu-panel" id="menuPanel" hidden>
-          <button type="button" data-menu-action="today">Today</button>
-          <button type="button" data-menu-action="saved">Saved</button>
-          <button type="button" data-menu-action="archive">Shelby Archive</button>
-        </div>
+        
 
         <section class="brief-hero">
           <div class="headline-row">
-            <h1>Top Brief</h1>
+            <h1>Top News</h1>
             <p class="date-label" id="dateLabel"></p>
-            <p class="menu-status" id="menuStatus" aria-live="polite"></p>
+            
           </div>
-          <div class="hero-badge">
-            <span>AI ranked</span>
-            <strong>Scroll the day</strong>
-          </div>
+          
         </section>
 
         <section class="archive-controls" id="archiveControls" aria-label="Daily archive selector">
