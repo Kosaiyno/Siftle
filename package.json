@@ -8,6 +8,7 @@
     "start": "node scripts/serve.mjs"
   },
   "devDependencies": {
+    "@shelby-protocol/cli": "^0.0.29",
     "typescript": "^5.5.0"
   },
   "dependencies": {
