@@ -17,6 +17,7 @@ const rssItemsPerFeed = Number(process.env.RSS_ITEMS_PER_FEED ?? 30);
 const summaryConcurrency = Number(process.env.SUMMARY_CONCURRENCY ?? 8);
 const summaryTimeoutMs = Number(process.env.SUMMARY_TIMEOUT_MS ?? 20000);
 const appTimeZone = process.env.APP_TIME_ZONE || "Africa/Lagos";
+const allowedOrigin = process.env.ALLOWED_ORIGIN || process.env.ALLOWED_ORIGINS || "*";
 
 const loadEnv = () => {
   const envPath = join(root, ".env");
@@ -263,10 +264,17 @@ const mockStories = [
 const sendJson = (response, statusCode, payload) => {
   response.writeHead(statusCode, {
     "Content-Type": "application/json; charset=utf-8",
-    "Cache-Control": "no-store"
+    "Cache-Control": "no-store",
+    ...getCorsHeaders()
   });
   response.end(JSON.stringify(payload));
 };
+
+const getCorsHeaders = () => ({
+  "Access-Control-Allow-Origin": allowedOrigin,
+  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type,Authorization"
+});
 
 const normalizeCategory = (category) => (categories.includes(category) ? category : "All");
 
@@ -1484,6 +1492,12 @@ setInterval(() => void refreshPublishedFeeds("scheduled"), Math.max(1, refreshIn
 
 const server = createServer(async (request, response) => {
   const requestUrl = new URL(request.url ?? "/", `http://${request.headers.host}`);
+
+  if (request.method === "OPTIONS") {
+    response.writeHead(204, getCorsHeaders());
+    response.end();
+    return;
+  }
 
   if (requestUrl.pathname === "/api/feed" && request.method === "GET") {
     const category = requestUrl.searchParams.get("category") ?? "All";

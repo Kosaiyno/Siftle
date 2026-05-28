@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: siftle-backend
+    env: node
+    plan: free
+    buildCommand: "npm ci"
+    startCommand: "npm start"
+    autoDeploy: true
+    # Do NOT include secrets here. Add these environment variables in the
+    # Render dashboard under the service's Environment -> Environment
+    # Variables section.
+    envVars: []

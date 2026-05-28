@@ -1,4 +1,6 @@
 import { categories, mockStories } from "./mockNews.js";
+const apiBase = (window.SIFTLE_API_BASE || "").replace(/\/$/, "");
+const apiUrl = (path) => `${apiBase}${path}`;
 const state = {
     activeCategory: "All",
     stories: mockStories,
@@ -112,7 +114,7 @@ const loadStorySummary = async (story) => {
     state.loadingSummaryUrl = story.sourceUrl;
     renderDetail();
     try {
-        const response = await fetch("/api/summary", {
+        const response = await fetch(apiUrl("/api/summary"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(story)
@@ -181,7 +183,7 @@ const loadFeed = async (category = state.activeCategory) => {
         const endpoint = state.activeArchiveDate
             ? `/api/archive?date=${encodeURIComponent(state.activeArchiveDate)}&category=${encodeURIComponent(category)}`
             : `/api/feed?category=${encodeURIComponent(category)}`;
-        const response = await fetch(endpoint);
+        const response = await fetch(apiUrl(endpoint));
         if (!response.ok)
             throw new Error(`Feed request failed with ${response.status}`);
         const data = await response.json();
@@ -222,7 +224,7 @@ const loadArchiveIndex = async () => {
     if (!archiveDateSelect)
         return;
     try {
-        const response = await fetch("/api/archive");
+        const response = await fetch(apiUrl("/api/archive"));
         if (!response.ok)
             throw new Error(`Archive index failed with ${response.status}`);
         const data = await response.json();
@@ -315,7 +317,9 @@ const renderStories = () => {
           </div>
 
           <div class="card-action-row desktop-only">
-            <a class="card-source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>
+            ${/example\\.com/i.test(story.sourceUrl)
+        ? `<a class="card-source-button disabled" href="#" onclick="event.preventDefault(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
+        : `<a class="card-source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
           </div>
 
           <!-- Mobile layout (visible at 640px and below) -->
@@ -341,7 +345,9 @@ const renderStories = () => {
               </div>
             </div>
             <div class="mobile-card-actions">
-              <a class="mobile-action-btn source-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Open source</a>
+              ${/example\\.com/i.test(story.sourceUrl)
+        ? `<a class="mobile-action-btn source-btn disabled" href="#" onclick="event.preventDefault(); event.stopPropagation(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
+        : `<a class="mobile-action-btn source-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Open source</a>`}
               <button class="mobile-action-btn summary-btn" type="button">AI summary</button>
             </div>
           </div>
