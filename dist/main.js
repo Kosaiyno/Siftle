@@ -113,6 +113,14 @@ const cleanSummaryText = (value) => {
         break;
     }
     return summary
+        .replace(/&lt;|&#60;/gi, "<")
+        .replace(/&gt;|&#62;/gi, ">")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&#39;/g, "'")
+        .replace(/&apos;/g, "'")
+        .replace(/&quot;/g, "\"")
         .replace(/^["'{\s]+/, "")
         .replace(/["'}\s]+$/, "")
         .replace(/^summary\s*:\s*/i, "")

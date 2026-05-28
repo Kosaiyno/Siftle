@@ -518,7 +518,8 @@ const readJsonBody = async (request) => {
 
 const stripHtml = (value = "") =>
   value
-    .replace(/<[^>]+>/g, " ")
+    .replace(/&lt;|&#60;/gi, "<")
+    .replace(/&gt;|&#62;/gi, ">")
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
     .replace(/&#39;/g, "'")
@@ -526,11 +527,14 @@ const stripHtml = (value = "") =>
     .replace(/&quot;/g, "\"")
     .replace(/&ldquo;|&rdquo;/g, "\"")
     .replace(/&lsquo;|&rsquo;/g, "'")
+    .replace(/<[^>]+>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 
 const decodeHtmlEntities = (value = "") =>
   value
+    .replace(/&lt;|&#60;/gi, "<")
+    .replace(/&gt;|&#62;/gi, ">")
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
     .replace(/&#39;/g, "'")
