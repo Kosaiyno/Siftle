@@ -82,6 +82,28 @@ const archiveDateSelect = document.querySelector<HTMLSelectElement>("#archiveDat
 const archiveStatus = document.querySelector<HTMLSpanElement>("#archiveStatus");
 const todayButton = document.querySelector<HTMLButtonElement>("#todayButton");
 
+let toastTimer: number | undefined;
+
+const showActionToast = (message: string): void => {
+  let toast = document.querySelector<HTMLDivElement>("#actionToast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "actionToast";
+    toast.className = "action-toast";
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+    document.body.appendChild(toast);
+  }
+
+  toast.textContent = message;
+  toast.classList.add("show");
+
+  if (toastTimer) window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => {
+    toast?.classList.remove("show");
+  }, 1700);
+};
+
 const resetFeedScroll = (): void => {
   state.feedScrollY = 0;
   window.scrollTo({ top: 0, behavior: "auto" });
@@ -692,6 +714,7 @@ const handleStoryExport = async (storyId: number, action: "save" | "share"): Pro
 
   state.activeShareStoryId = null;
   renderStories();
+  showActionToast(action === "share" ? "Preparing share image" : "Preparing download");
 
   if (menuStatus) menuStatus.textContent = action === "share" ? "Preparing share image..." : "Preparing image download...";
 
@@ -701,9 +724,11 @@ const handleStoryExport = async (storyId: number, action: "save" | "share"): Pro
     } else {
       await saveStoryImage(story);
     }
+    showActionToast(action === "share" ? "Share image ready" : "Image saved");
     if (menuStatus) menuStatus.textContent = "Branded story image ready";
   } catch (error) {
     console.warn(error);
+    showActionToast("Image export unavailable");
     if (menuStatus) menuStatus.textContent = "Image export was cancelled or unavailable";
   }
 };
@@ -804,6 +829,7 @@ storyList?.addEventListener("click", (event) => {
     if (story.saved) savedUrls.add(url);
     else savedUrls.delete(url);
     persistSavedSet();
+    showActionToast(story.saved ? "Saved to your list" : "Removed from saved");
     // If we're viewing saved items, refresh the list so the card disappears when un-saved
     renderStories();
     return;
