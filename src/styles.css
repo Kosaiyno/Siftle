@@ -1548,8 +1548,16 @@ h1 {
    ============================================================ */
 
 /* Show/hide helpers */
-.desktop-only { display: revert; }
+.desktop-only { display: block; }
 .mobile-only  { display: none; }
+
+.story-topline.desktop-only {
+  display: flex;
+}
+
+.card-action-row.desktop-only {
+  display: flex;
+}
 
 @media (max-width: 640px) {
   .desktop-only { display: none !important; }
