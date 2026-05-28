@@ -157,10 +157,19 @@ export const downloadShelbySnapshot = async (date, category) => {
 export const listShelbyArchiveFiles = async () => {
   const { client, signer } = getShelbyClient();
   const prefix = (process.env.SHELBY_ARCHIVE_PREFIX || "siftle/feeds").replace(/^\/+|\/+$/g, "");
-  const blobs = await client.coordination.getAccountBlobs({
-    account: process.env.SHELBY_ACCOUNT_ADDRESS || signer.accountAddress,
-    pagination: { limit: 200, offset: 0 }
-  });
+  const account = process.env.SHELBY_ACCOUNT_ADDRESS || signer.accountAddress;
+  const blobs = [];
+  const limit = 200;
+
+  for (let offset = 0; offset < 5000; offset += limit) {
+    const page = await client.coordination.getAccountBlobs({
+      account,
+      pagination: { limit, offset }
+    });
+
+    blobs.push(...page);
+    if (page.length < limit) break;
+  }
 
   return blobs
     .filter((blob) => !blob.isDeleted && blob.blobNameSuffix?.startsWith(`${prefix}/`))

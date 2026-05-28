@@ -273,10 +273,10 @@ const loadArchiveIndex = async (): Promise<void> => {
       month: "2-digit",
       day: "2-digit"
     });
-    state.archiveDates = data.dates ?? [];
+    state.archiveDates = (data.dates ?? []).filter((entry: ArchiveDate) => entry.date !== today);
     archiveDateSelect.innerHTML = [
       `<option value="">Today</option>`,
-      ...state.archiveDates.map((entry) => `<option value="${entry.date}">${entry.date}${entry.date === today ? " saved" : ""}</option>`)
+      ...state.archiveDates.map((entry) => `<option value="${entry.date}">${entry.date}</option>`)
     ].join("");
     archiveDateSelect.value = state.activeArchiveDate ?? "";
     setArchiveStatus(state.archiveDates.length > 0 ? "Saved days ready" : "Live feed ready");
@@ -333,13 +333,18 @@ const renderStories = (): void => {
                 <span>${getStoryTimeLabel(story)} - ${story.readTime}</span>
               </div>
             </div>
-            <div class="share-control">
-              <button class="export-button" type="button" aria-label="Export story card" data-export-id="${story.id}" aria-expanded="${state.activeShareStoryId === story.id}">
+            <div class="story-card-actions">
+              <button class="bookmark-button" type="button" data-bookmark-url="${story.sourceUrl}" aria-pressed="${story.saved ? "true" : "false"}" aria-label="${story.saved ? "Remove saved story" : "Save story"}">
                 <span></span>
               </button>
-              <div class="share-menu" ${state.activeShareStoryId === story.id ? "" : "hidden"}>
-                <button type="button" data-export-action="save" data-export-story-id="${story.id}">Save image</button>
-                <button type="button" data-export-action="share" data-export-story-id="${story.id}">Share</button>
+              <div class="share-control">
+                <button class="export-button" type="button" aria-label="Export story card" data-export-id="${story.id}" aria-expanded="${state.activeShareStoryId === story.id}">
+                  <span></span>
+                </button>
+                <div class="share-menu" ${state.activeShareStoryId === story.id ? "" : "hidden"}>
+                  <button type="button" data-export-action="save" data-export-story-id="${story.id}">Save image</button>
+                  <button type="button" data-export-action="share" data-export-story-id="${story.id}">Share</button>
+                </div>
               </div>
             </div>
           </div>
@@ -416,13 +421,18 @@ const renderStories = (): void => {
                 <span>${getStoryTimeLabel(story)} - ${story.readTime}</span>
               </div>
             </div>
-            <div class="share-control">
-              <button class="export-button" type="button" aria-label="Export story card" data-export-id="${story.id}" aria-expanded="${state.activeShareStoryId === story.id}">
+            <div class="story-card-actions">
+              <button class="bookmark-button" type="button" data-bookmark-url="${story.sourceUrl}" aria-pressed="${story.saved ? "true" : "false"}" aria-label="${story.saved ? "Remove saved story" : "Save story"}">
                 <span></span>
               </button>
-              <div class="share-menu" ${state.activeShareStoryId === story.id ? "" : "hidden"}>
-                <button type="button" data-export-action="save" data-export-story-id="${story.id}">Save image</button>
-                <button type="button" data-export-action="share" data-export-story-id="${story.id}">Share</button>
+              <div class="share-control">
+                <button class="export-button" type="button" aria-label="Export story card" data-export-id="${story.id}" aria-expanded="${state.activeShareStoryId === story.id}">
+                  <span></span>
+                </button>
+                <div class="share-menu" ${state.activeShareStoryId === story.id ? "" : "hidden"}>
+                  <button type="button" data-export-action="save" data-export-story-id="${story.id}">Save image</button>
+                  <button type="button" data-export-action="share" data-export-story-id="${story.id}">Share</button>
+                </div>
               </div>
             </div>
           </div>
@@ -790,7 +800,7 @@ storyList?.addEventListener("click", (event) => {
   const exportAction = target.closest<HTMLButtonElement>("[data-export-action]");
   const storyCard = target.closest<HTMLElement>("[data-story-id]");
 
-  const bookmarkBtn = target.closest<HTMLButtonElement>(".mobile-bookmark-btn");
+  const bookmarkBtn = target.closest<HTMLButtonElement>(".mobile-bookmark-btn, .bookmark-button");
   if (bookmarkBtn) {
     event.stopPropagation();
     const url = bookmarkBtn.dataset.bookmarkUrl || "";

@@ -408,6 +408,19 @@ body.detail-mode .site-header {
   align-items: center;
 }
 
+.story-topline {
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.story-card-actions {
+  position: relative;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
 
 .story-icon span {
   width: 16px;
@@ -655,21 +668,25 @@ body.detail-mode .site-header {
 }
 
 .save-button,
+.bookmark-button,
 .export-button {
   position: relative;
-  width: 30px;
+  width: 38px;
   height: 38px;
   border: 0;
   border-radius: 10px;
   background: transparent;
+  cursor: pointer;
 }
 
 .save-button:hover,
+.bookmark-button:hover,
 .export-button:hover {
   background: var(--soft);
 }
 
-.save-button span {
+.save-button span,
+.bookmark-button span {
   position: absolute;
   inset: 8px 8px;
   border: 2px solid #aab2c5;
@@ -677,7 +694,8 @@ body.detail-mode .site-header {
   border-radius: 3px 3px 0 0;
 }
 
-.save-button span::after {
+.save-button span::after,
+.bookmark-button span::after {
   content: "";
   position: absolute;
   left: 50%;
@@ -691,8 +709,14 @@ body.detail-mode .site-header {
 }
 
 .save-button.saved span,
-.save-button.saved span::after {
+.save-button.saved span::after,
+.bookmark-button[aria-pressed="true"] span,
+.bookmark-button[aria-pressed="true"] span::after {
   border-color: var(--blue);
+}
+
+.bookmark-button[aria-pressed="true"] {
+  background: rgba(68, 82, 255, 0.08);
 }
 
 .share-control {
@@ -701,7 +725,8 @@ body.detail-mode .site-header {
 }
 
 .export-button {
-  width: 38px;
+  background: rgba(245, 248, 255, 0.9);
+  box-shadow: inset 0 0 0 1px rgba(214, 221, 239, 0.8);
 }
 
 .export-button span {
@@ -738,6 +763,15 @@ body.detail-mode .site-header {
   border-radius: 999px;
   background: #9fa9bf;
   transform: translateX(-50%);
+}
+
+.export-button:hover span,
+.export-button:hover span::before {
+  border-color: var(--blue);
+}
+
+.export-button:hover span::after {
+  background: var(--blue);
 }
 
 .share-menu {
