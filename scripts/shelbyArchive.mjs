@@ -4,8 +4,9 @@ import { ShelbyNodeClient } from "@shelby-protocol/sdk/node";
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 
-const normalizeNetwork = (value = "TESTNET") => {
-  const normalized = value.toLowerCase();
+const normalizeNetwork = (value) => {
+  const rpcUrl = String(process.env.SHELBY_RPC_URL || "").toLowerCase();
+  const normalized = String(value || (rpcUrl.includes("shelby") ? "shelbynet" : "TESTNET")).toLowerCase();
   if (normalized === "shelbynet") return Network.SHELBYNET;
   if (normalized === "devnet") return Network.SHELBYNET;
   if (normalized === "local") return Network.LOCAL;
