@@ -422,16 +422,45 @@ body.detail-mode .site-header {
   margin-left: auto;
 }
 
+.story-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
 .story-icon span {
+  position: relative;
   width: 16px;
   height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.95);
   border-radius: 5px;
-  box-shadow:
-    8px 0 0 -5px #fff,
-    -8px 0 0 -5px #fff,
-    0 8px 0 -5px #fff,
-    0 -8px 0 -5px #fff;
+  box-shadow: none;
+}
+
+.story-icon span::before,
+.story-icon span::after {
+  content: "";
+  position: absolute;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 999px;
+}
+
+.story-icon span::before {
+  left: 50%;
+  top: -7px;
+  bottom: -7px;
+  width: 3px;
+  transform: translateX(-50%);
+}
+
+.story-icon span::after {
+  top: 50%;
+  left: -7px;
+  right: -7px;
+  height: 3px;
+  transform: translateY(-50%);
 }
 
 .story-icon.blue {
@@ -452,11 +481,11 @@ body.detail-mode .site-header {
 
 .story-icon.slate span {
   border-color: #aeb7c8;
-  box-shadow:
-    8px 0 0 -5px #aeb7c8,
-    -8px 0 0 -5px #aeb7c8,
-    0 8px 0 -5px #aeb7c8,
-    0 -8px 0 -5px #aeb7c8;
+}
+
+.story-icon.slate span::before,
+.story-icon.slate span::after {
+  background: #aeb7c8;
 }
 
 .story-copy {
