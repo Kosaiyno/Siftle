@@ -12,7 +12,11 @@ import {
 
 const root = resolve(process.cwd());
 const port = Number(process.env.PORT ?? 5173);
-const maxArticleAgeHours = Number(process.env.MAX_ARTICLE_AGE_HOURS ?? 72);
+const maxArticleAgeHours = Number(process.env.MAX_ARTICLE_AGE_HOURS ?? 36);
+const rssItemsPerFeed = Number(process.env.RSS_ITEMS_PER_FEED ?? 30);
+const summaryConcurrency = Number(process.env.SUMMARY_CONCURRENCY ?? 8);
+const summaryTimeoutMs = Number(process.env.SUMMARY_TIMEOUT_MS ?? 20000);
+const appTimeZone = process.env.APP_TIME_ZONE || "Africa/Lagos";
 
 const loadEnv = () => {
   const envPath = join(root, ".env");
@@ -49,14 +53,35 @@ const mimeTypes = new Map([
 ]);
 
 const categories = ["All", "Crypto", "Sports", "Anime"];
+const sourceCategories = categories.filter((category) => category !== "All");
 const archiveDir = join(root, ".siftle", "archive");
 const publishedDir = join(root, ".siftle", "published");
+
+const getAppDate = (value = new Date()) => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const parts = new Intl.DateTimeFormat("en", {
+    timeZone: appTimeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+
+  return year && month && day ? `${year}-${month}-${day}` : null;
+};
+
+const getTodayKey = () => getAppDate() ?? new Date().toISOString().slice(0, 10);
 
 const categoryQueries = {
   All: "crypto football anime trending",
   Crypto: "crypto bitcoin ethereum blockchain DeFi stablecoin",
-  Sports: "football soccer Champions League Premier League transfers",
-  Anime: "anime manga Crunchyroll trailer adaptation"
+  Sports: "football soccer basketball NBA NFL Champions League Premier League transfers",
+  Anime: "anime manga Crunchyroll trailer adaptation studio"
 };
 
 const categoryMap = {
@@ -69,30 +94,127 @@ const categoryMap = {
   football: "Sports",
   soccer: "Sports",
   sports: "Sports",
+  basketball: "Sports",
+  nba: "Sports",
+  nfl: "Sports",
+  mlb: "Sports",
+  tennis: "Sports",
+  formula: "Sports",
+  f1: "Sports",
+  arsenal: "Sports",
+  chelsea: "Sports",
+  liverpool: "Sports",
+  manchester: "Sports",
+  "real madrid": "Sports",
+  barcelona: "Sports",
+  uefa: "Sports",
   "champions league": "Sports",
+  "premier league": "Sports",
   transfer: "Sports",
   anime: "Anime",
   manga: "Anime",
+  manhwa: "Anime",
   crunchyroll: "Anime",
+  "anime news network": "Anime",
   anilist: "Anime",
   "myanimelist": "Anime"
+};
+
+const categorySignals = {
+  Crypto: [
+    "bitcoin",
+    "btc",
+    "ethereum",
+    "eth",
+    "crypto",
+    "blockchain",
+    "defi",
+    "stablecoin",
+    "stablecoins",
+    "usdc",
+    "usdt",
+    "solana",
+    "sol",
+    "token",
+    "tokenized",
+    "wallet",
+    "exchange",
+    "dex",
+    "onchain",
+    "on-chain",
+    "web3",
+    "nft",
+    "dao",
+    "xrp",
+    "memecoin",
+    "meme coin"
+  ],
+  Sports: [
+    "football",
+    "soccer",
+    "sports",
+    "basketball",
+    "nba",
+    "nfl",
+    "mlb",
+    "tennis",
+    "formula",
+    "f1",
+    "champions league",
+    "premier league",
+    "uefa",
+    "transfer",
+    "arsenal",
+    "chelsea",
+    "liverpool",
+    "madrid",
+    "barcelona"
+  ],
+  Anime: ["anime", "manga", "manhwa", "crunchyroll", "anilist", "myanimelist", "studio", "voice actor"]
+};
+
+const getArticleText = (article) => `${article.category ?? ""} ${article.headline ?? ""} ${article.summary ?? ""} ${article.source ?? ""}`.toLowerCase();
+
+const matchesCategorySignal = (article, category) => {
+  if (category === "All") return true;
+  const signals = categorySignals[category] ?? [];
+  if (signals.length === 0) return true;
+  const haystack = getArticleText(article);
+  return signals.some((signal) => haystack.includes(signal));
 };
 
 const rssFeeds = {
   Crypto: [
     "https://www.coindesk.com/arc/outboundfeeds/rss/",
     "https://cointelegraph.com/rss",
-    "https://decrypt.co/feed"
+    "https://decrypt.co/feed",
+    "https://cryptoslate.com/feed/",
+    "https://bitcoinmagazine.com/.rss/full/",
+    "https://www.dlnews.com/rss/",
+    "https://www.theblock.co/rss.xml"
   ],
   Sports: [
     "https://www.espn.com/espn/rss/soccer/news",
+    "https://www.espn.com/espn/rss/nba/news",
+    "https://www.espn.com/espn/rss/nfl/news",
+    "https://www.espn.com/espn/rss/mlb/news",
     "https://www.espn.com/espn/rss/news",
     "https://feeds.bbci.co.uk/sport/rss.xml",
-    "https://www.uefa.com/rssfeed/news/rss.xml"
+    "https://feeds.bbci.co.uk/sport/football/rss.xml",
+    "https://www.theguardian.com/football/rss",
+    "https://www.theguardian.com/sport/rss",
+    "https://www.uefa.com/rssfeed/news/rss.xml",
+    "https://www.nba.com/rss/nba_rss.xml"
   ],
   Anime: [
     "https://www.animenewsnetwork.com/all/rss.xml",
-    "https://feeds.feedburner.com/crunchyroll/rss"
+    "https://www.animenewsnetwork.com/news/rss.xml",
+    "https://feeds.feedburner.com/crunchyroll/rss",
+    "https://myanimelist.net/rss/news.xml",
+    "https://animecorner.me/feed/",
+    "https://anitrendz.net/news/feed/",
+    "https://otakuusamagazine.com/feed/",
+    "https://randomc.net/feed/"
   ]
 };
 
@@ -171,7 +293,7 @@ const readLocalArchiveSnapshot = (date, category) => {
       return {
         ...allSnapshot,
         category: selectedCategory,
-        top_stories: (allSnapshot.top_stories ?? []).filter((story) => story.category === selectedCategory),
+        top_stories: markArchiveStories((allSnapshot.top_stories ?? []).filter((story) => story.category === selectedCategory), date),
         archive: {
           provider: "local-dev",
           restored_from: allPath,
@@ -186,6 +308,7 @@ const readLocalArchiveSnapshot = (date, category) => {
   const snapshot = JSON.parse(readFileSync(filePath, "utf8"));
   return {
     ...snapshot,
+    top_stories: markArchiveStories(snapshot.top_stories ?? [], date),
     archive: {
       provider: "local-dev",
       restored_from: filePath
@@ -200,10 +323,41 @@ const readArchiveSnapshot = async (date, category) => {
 
   const selectedCategory = normalizeCategory(category);
 
+  if (selectedCategory === "All") {
+    const categorySnapshots = (
+      await Promise.all(sourceCategories.map((sourceCategory) => readArchiveSnapshot(date, sourceCategory).catch(() => null)))
+    ).filter((snapshot) => snapshot?.top_stories?.length);
+
+    if (categorySnapshots.length > 0) {
+      return {
+        date,
+        category: "All",
+        generated_at: categorySnapshots
+          .map((snapshot) => snapshot.generated_at)
+          .filter(Boolean)
+          .sort()
+          .at(-1),
+        sources: {
+          newsdata: categorySnapshots.some((snapshot) => snapshot.sources?.newsdata),
+          guardian: categorySnapshots.some((snapshot) => snapshot.sources?.guardian),
+          zero_g: categorySnapshots.some((snapshot) => snapshot.sources?.zero_g),
+          shelby: categorySnapshots.some((snapshot) => snapshot.sources?.shelby),
+          max_article_age_hours: maxArticleAgeHours,
+          composed_from_categories: categorySnapshots.map((snapshot) => snapshot.category)
+        },
+        top_stories: markArchiveStories(mergeDailyStories(categorySnapshots.flatMap((snapshot) => snapshot.top_stories), []), date),
+        archive: {
+          provider: "composed",
+          composed_from_categories: categorySnapshots.map((snapshot) => snapshot.category)
+        }
+      };
+    }
+  }
+
   if (isShelbyArchiveConfigured()) {
     try {
       const { snapshot, archive } = await downloadShelbySnapshot(date, selectedCategory);
-      return { ...snapshot, archive };
+      return { ...snapshot, top_stories: markArchiveStories(snapshot.top_stories ?? [], date), archive };
     } catch (error) {
       console.warn("Shelby archive read fallback:", error.message);
 
@@ -213,7 +367,7 @@ const readArchiveSnapshot = async (date, category) => {
           return {
             ...snapshot,
             category: selectedCategory,
-            top_stories: (snapshot.top_stories ?? []).filter((story) => story.category === selectedCategory),
+            top_stories: markArchiveStories((snapshot.top_stories ?? []).filter((story) => story.category === selectedCategory), date),
             archive: {
               ...archive,
               filtered_from: "All"
@@ -283,7 +437,7 @@ const groupArchiveFiles = (files) => {
   const groupedDates = [...new Set(files.map((file) => file.date))].map((date) => ({
     date,
     categories: files.filter((file) => file.date === date).map((file) => file.category)
-  }));
+  })).sort((first, second) => second.date.localeCompare(first.date));
 
   return { dates: groupedDates, files };
 };
@@ -465,15 +619,43 @@ const isFreshArticle = (article) => {
   return ageHours >= 0 && ageHours <= maxArticleAgeHours;
 };
 
+const isArticleOnAppDate = (article, date) => {
+  const articleDate = getAppDate(article.publishedAt);
+  return articleDate ? articleDate === date : true;
+};
+
+const filterStoriesByAppDate = (stories = [], date) =>
+  stories.filter((story) => {
+    const storyDate = getAppDate(story.publishedAt);
+    return storyDate ? storyDate === date : true;
+  });
+
+const formatArchiveStoryDate = (value, fallbackDate) => {
+  const parsed = value ? new Date(value) : null;
+  if (!parsed || Number.isNaN(parsed.getTime())) return fallbackDate;
+
+  return new Intl.DateTimeFormat("en", {
+    timeZone: appTimeZone,
+    month: "short",
+    day: "numeric"
+  }).format(parsed);
+};
+
+const markArchiveStories = (stories = [], date) =>
+  stories.map((story) => ({
+    ...story,
+    postedAt: formatArchiveStoryDate(story.publishedAt, date)
+  }));
+
 const inferCategory = (article, fallbackCategory) => {
   if (fallbackCategory && fallbackCategory !== "All") return fallbackCategory;
 
-  const haystack = `${article.category ?? ""} ${article.headline ?? ""} ${article.summary ?? ""}`.toLowerCase();
+  const haystack = getArticleText(article);
   for (const [key, category] of Object.entries(categoryMap)) {
     if (haystack.includes(key)) return category;
   }
 
-  return "Crypto";
+  return "Sports";
 };
 
 const accentForCategory = (category) => {
@@ -507,6 +689,7 @@ const extractRssImage = (item, category) => {
 
 const fetchRssFeed = async (url, fallbackCategory) => {
   const response = await fetch(url, {
+    signal: AbortSignal.timeout(15000),
     headers: {
       "User-Agent": "Siftle/0.1 news aggregator"
     }
@@ -517,7 +700,7 @@ const fetchRssFeed = async (url, fallbackCategory) => {
   const xml = await response.text();
   const items = xml.match(/<item[\s\S]*?<\/item>/gi) ?? [];
 
-  return items.slice(0, 12).map((item) => {
+  return items.slice(0, Math.max(1, rssItemsPerFeed)).map((item) => {
     const headline = stripHtml(extractTag(item, "title"));
     const summary = stripHtml(extractTag(item, "description") || extractTag(item, "content:encoded") || headline);
     const link = stripHtml(extractTag(item, "link"));
@@ -538,8 +721,12 @@ const fetchRssFeed = async (url, fallbackCategory) => {
 };
 
 const fetchNicheRss = async (category) => {
-  const feedUrls = category === "All" ? Object.values(rssFeeds).flat() : rssFeeds[category] ?? [];
-  const results = await Promise.allSettled(feedUrls.map((url) => fetchRssFeed(url, category)));
+  const feedEntries =
+    category === "All"
+      ? Object.entries(rssFeeds).flatMap(([feedCategory, urls]) => urls.map((url) => ({ url, category: feedCategory })))
+      : (rssFeeds[category] ?? []).map((url) => ({ url, category }));
+
+  const results = await Promise.allSettled(feedEntries.map((feed) => fetchRssFeed(feed.url, feed.category)));
   return results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
 };
 
@@ -665,7 +852,7 @@ const summarizeWith0G = async (article, options = {}) => {
     console.log("0G api key present:", Boolean(apiKey));
     const response = await fetch(`${endpoint}/chat/completions`, {
       method: "POST",
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(summaryTimeoutMs),
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`
@@ -720,7 +907,7 @@ const summarizeWith0G = async (article, options = {}) => {
       try {
         const retryResp = await fetch(`${endpoint}/chat/completions`, {
           method: "POST",
-          signal: AbortSignal.timeout(45000),
+          signal: AbortSignal.timeout(summaryTimeoutMs),
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${apiKey}`
@@ -809,7 +996,9 @@ const fetchNewsData = async (category) => {
     params.set("q", categoryQueries[category]);
   }
 
-  const response = await fetch(`https://newsdata.io/api/1/latest?${params}`);
+  const response = await fetch(`https://newsdata.io/api/1/latest?${params}`, {
+    signal: AbortSignal.timeout(15000)
+  });
   if (!response.ok) throw new Error(`NewsData returned ${response.status}`);
 
   const data = await response.json();
@@ -831,10 +1020,12 @@ const fetchGuardian = async (category) => {
     "api-key": process.env.GUARDIAN_API_KEY,
     q: categoryQueries[category] ?? "top news",
     "show-fields": "trailText,thumbnail",
-    "page-size": "10"
+    "page-size": String(Number(process.env.GUARDIAN_PAGE_SIZE ?? 30))
   });
 
-  const response = await fetch(`https://content.guardianapis.com/search?${params}`);
+  const response = await fetch(`https://content.guardianapis.com/search?${params}`, {
+    signal: AbortSignal.timeout(15000)
+  });
   if (!response.ok) throw new Error(`Guardian returned ${response.status}`);
 
   const data = await response.json();
@@ -862,9 +1053,26 @@ const dedupeArticles = (articles) => {
     });
 };
 
+const runWithConcurrency = async (items, limit, worker) => {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  const workerCount = Math.max(1, Math.min(limit, items.length));
+
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (nextIndex < items.length) {
+        const currentIndex = nextIndex;
+        nextIndex += 1;
+        results[currentIndex] = await worker(items[currentIndex], currentIndex);
+      }
+    })
+  );
+
+  return results;
+};
+
 const buildStories = async (articles) => {
-  const selected = articles.slice(0, 14);
-  const stories = selected.map((article, index) => {
+  const stories = articles.map((article, index) => {
     const category = inferCategory(article, article.category);
 
     return {
@@ -875,6 +1083,7 @@ const buildStories = async (articles) => {
       source: article.source,
       sourceUrl: article.sourceUrl,
       imageUrl: article.imageUrl || getFallbackImage(category),
+      publishedAt: article.publishedAt,
       readTime: estimateReadTime(`${article.headline} ${article.summary}`),
       postedAt: relativeTime(article.publishedAt),
       accent: accentForCategory(category),
@@ -882,23 +1091,98 @@ const buildStories = async (articles) => {
     };
   });
 
-  // Precompute AI summaries for the selected articles using 0G (cached by summarizeWith0G)
-  await Promise.allSettled(
-    selected.map(async (article, idx) => {
-      try {
-        const result = await summarizeWith0G(article);
-        if (result && result.summary) {
-          stories[idx].ai_summary = result.summary;
-          stories[idx].ai_provider = result.provider || "0g";
-          if (result.proof) stories[idx].ai_proof = result.proof;
-        }
-      } catch (err) {
-        // ignore per-article errors; local summary already present
+  await runWithConcurrency(articles, summaryConcurrency, async (article, idx) => {
+    try {
+      const result = await summarizeWith0G(article);
+      if (result && result.summary) {
+        stories[idx].ai_summary = result.summary;
+        stories[idx].ai_provider = result.provider || "0g";
+        if (result.proof) stories[idx].ai_proof = result.proof;
       }
-    })
-  );
+    } catch (err) {
+      // ignore per-article errors; local summary already present
+    }
+  });
 
   return stories;
+};
+
+const getStoryDedupeKey = (story) => {
+  const sourceUrl = String(story.sourceUrl || "").trim().toLowerCase().replace(/[?#].*$/, "");
+  if (sourceUrl) return `url:${sourceUrl}`;
+
+  return `title:${stripHtml(story.headline)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(" ")
+    .slice(0, 10)
+    .join(" ")}`;
+};
+
+const sortStoriesNewestFirst = (stories) =>
+  [...stories].sort((first, second) => {
+    const firstTime = new Date(first.publishedAt || 0).getTime();
+    const secondTime = new Date(second.publishedAt || 0).getTime();
+    if (!Number.isNaN(firstTime) && !Number.isNaN(secondTime) && firstTime !== secondTime) {
+      return secondTime - firstTime;
+    }
+
+    return Number(first.id ?? 0) - Number(second.id ?? 0);
+  });
+
+const mergeDailyStories = (freshStories, previousStories = []) => {
+  const seen = new Set();
+
+  return sortStoriesNewestFirst([...freshStories, ...previousStories])
+    .filter((story) => {
+      const key = getStoryDedupeKey(story);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((story, index) => ({
+      ...story,
+      id: index + 1,
+      postedAt: story.publishedAt ? relativeTime(story.publishedAt) : story.postedAt
+    }));
+};
+
+const mergeWithTodaySnapshot = (snapshot) => {
+  const previous = readPublishedSnapshot(snapshot.category);
+  if (!previous || previous.date !== snapshot.date) return snapshot;
+
+  return {
+    ...snapshot,
+    top_stories: mergeDailyStories(snapshot.top_stories, previous.top_stories)
+  };
+};
+
+const buildCategorySnapshot = async (category) => mergeWithTodaySnapshot(await generateSnapshot(category));
+
+const buildAllSnapshotFromCategories = async () => {
+  const today = getTodayKey();
+  const categorySnapshots = sourceCategories
+    .map(readPublishedSnapshot)
+    .filter((snapshot) => snapshot?.date === today && Array.isArray(snapshot.top_stories));
+
+  if (categorySnapshots.length === 0) {
+    return buildCategorySnapshot("All");
+  }
+
+  return {
+    date: today,
+    category: "All",
+    generated_at: new Date().toISOString(),
+    sources: {
+      newsdata: categorySnapshots.some((snapshot) => snapshot.sources?.newsdata),
+      guardian: categorySnapshots.some((snapshot) => snapshot.sources?.guardian),
+      zero_g: categorySnapshots.some((snapshot) => snapshot.sources?.zero_g),
+      shelby: isShelbyArchiveConfigured(),
+      max_article_age_hours: maxArticleAgeHours,
+      composed_from_categories: sourceCategories
+    },
+    top_stories: mergeDailyStories(categorySnapshots.flatMap((snapshot) => snapshot.top_stories), [])
+  };
 };
 
 const archiveSnapshot = async (snapshot) => {
@@ -980,7 +1264,8 @@ const normalizeSnapshotSummaries = (snapshot) => {
     top_stories: snapshot.top_stories.map((story) => ({
       ...story,
       summary: cleanSummaryText(story.summary),
-      ai_summary: story.ai_summary ? cleanSummaryText(story.ai_summary) : story.ai_summary
+      ai_summary: story.ai_summary ? cleanSummaryText(story.ai_summary) : story.ai_summary,
+      postedAt: story.publishedAt ? relativeTime(story.publishedAt) : story.postedAt
     }))
   };
 };
@@ -999,7 +1284,7 @@ const getRecoverablePublishedSnapshot = async (category) => {
   }
 
   try {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getTodayKey();
     const recovered = await readArchiveSnapshot(today, selectedCategory);
     const blobName = recovered?.archive?.blob_name ?? "";
     const isOwnCategoryBlob =
@@ -1035,6 +1320,7 @@ const writePublishedSnapshot = (snapshot) => {
 
 const generateSnapshot = async (category) => {
   const selectedCategory = categories.includes(category) ? category : "All";
+  const date = getTodayKey();
   const results = await Promise.allSettled([
     fetchNicheRss(selectedCategory),
     fetchNewsData(selectedCategory),
@@ -1042,11 +1328,15 @@ const generateSnapshot = async (category) => {
   ]);
   const rawArticles = results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
   const repairedArticles = await repairTruncatedArticleTitles(rawArticles);
-  const articles = dedupeArticles(repairedArticles);
+  const articles = dedupeArticles(repairedArticles).filter(
+    (article) =>
+      isArticleOnAppDate(article, date) &&
+      (selectedCategory === "All" || matchesCategorySignal(article, selectedCategory))
+  );
   const stories = articles.length > 0 ? await buildStories(articles) : mockStories;
 
   const snapshot = {
-    date: new Date().toISOString().slice(0, 10),
+    date,
     category: selectedCategory,
     generated_at: new Date().toISOString(),
     sources: {
@@ -1070,7 +1360,7 @@ const publishSnapshot = async (snapshot) => {
     archive = { provider: "local-dev", error: error.message };
   }
 
-  if (isShelbyArchiveConfigured() && archive.provider !== "shelby") {
+  if (process.env.REQUIRE_SHELBY_UPLOAD === "true" && isShelbyArchiveConfigured() && archive.provider !== "shelby") {
     throw new Error(archive.shelby_error || archive.error || "Shelby archive upload did not complete");
   }
 
@@ -1085,12 +1375,26 @@ const publishSnapshot = async (snapshot) => {
   return publishedSnapshot;
 };
 
-const generateAndPublishFeed = async (category) => publishSnapshot(await generateSnapshot(category));
+const generateAndPublishFeed = async (category) => publishSnapshot(await buildCategorySnapshot(category));
 
 const getPublishedFeed = async (category) => {
   const selectedCategory = normalizeCategory(category);
+  if (selectedCategory === "All") {
+    const composed = await buildAllSnapshotFromCategories();
+    writePublishedSnapshot({
+      ...composed,
+      archive: {
+        provider: "composed",
+        composed_from_categories: sourceCategories
+      },
+      published_at: new Date().toISOString(),
+      status: "published"
+    });
+    return readPublishedSnapshot("All");
+  }
+
   const snapshot = await getRecoverablePublishedSnapshot(selectedCategory);
-  if (snapshot) return snapshot;
+  if (snapshot?.date === getTodayKey()) return snapshot;
 
   return generateAndPublishFeed(selectedCategory);
 };
@@ -1118,7 +1422,7 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
     console.log(`Publishing hourly feeds (${reason})...`);
     let failureCount = 0;
 
-    for (const category of categories) {
+    for (const category of sourceCategories) {
       try {
         const snapshot = await generateAndPublishFeed(category);
         publishedSnapshots.set(category, snapshot);
@@ -1141,6 +1445,25 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
         console.warn(`Failed to publish ${category}:`, error.message);
       }
     }
+
+    const allSnapshot = await buildAllSnapshotFromCategories();
+    const publishedAllSnapshot = {
+      ...allSnapshot,
+      archive: {
+        provider: "composed",
+        composed_from_categories: sourceCategories
+      },
+      published_at: new Date().toISOString(),
+      status: "published"
+    };
+    writePublishedSnapshot(publishedAllSnapshot);
+    publishedSnapshots.set("All", publishedAllSnapshot);
+    publishStatus.categories.All = {
+      status: "composed",
+      story_count: publishedAllSnapshot.top_stories?.length ?? 0,
+      published_at: publishedAllSnapshot.published_at,
+      archive_provider: "composed"
+    };
 
     publishStatus.last_finished_at = new Date().toISOString();
     publishStatus.last_error = failureCount > 0 ? `${failureCount} categories failed; previous published feeds kept where available` : null;

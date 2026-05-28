@@ -10,6 +10,9 @@ const state: {
   loadingSummaryUrl: string | null;
   archiveDates: ArchiveDate[];
   activeArchiveDate: string | null;
+  activeShareStoryId: number | null;
+  feedScrollY: number;
+  hasLoadedFeed: boolean;
 } = {
   activeCategory: "All",
   stories: mockStories,
@@ -18,7 +21,10 @@ const state: {
   aiSummaries: {},
   loadingSummaryUrl: null,
   archiveDates: [],
-  activeArchiveDate: null
+  activeArchiveDate: null,
+  activeShareStoryId: null,
+  feedScrollY: 0,
+  hasLoadedFeed: false
 };
 
 const dateLabel = document.querySelector<HTMLParagraphElement>("#dateLabel");
@@ -32,8 +38,25 @@ const archiveDateSelect = document.querySelector<HTMLSelectElement>("#archiveDat
 const archiveStatus = document.querySelector<HTMLSpanElement>("#archiveStatus");
 const todayButton = document.querySelector<HTMLButtonElement>("#todayButton");
 
+const resetFeedScroll = (): void => {
+  state.feedScrollY = 0;
+  window.scrollTo({ top: 0, behavior: "auto" });
+};
+
+const formatHeaderDate = (date?: string | null): string => {
+  const value = date ? new Date(`${date}T12:00:00`) : new Date();
+  return new Intl.DateTimeFormat("en", {
+    month: "long",
+    day: "numeric",
+    year: "numeric"
+  }).format(value);
+};
+
 const getFilteredStories = (): NewsStory[] =>
   state.stories.filter((story) => state.activeCategory === "All" || story.category === state.activeCategory);
+
+const getStoryTimeLabel = (story: NewsStory): string =>
+  state.activeArchiveDate ? story.postedAt : `${story.postedAt} ago`;
 
 const cleanSummaryText = (value: string): string => {
   let summary = String(value || "").trim();
@@ -112,6 +135,7 @@ const openStory = (storyId: number): void => {
   const story = state.stories.find((item) => item.id === storyId);
   if (!story) return;
 
+  state.feedScrollY = window.scrollY;
   state.selectedStoryId = story.id;
   window.history.pushState({}, "", `#story-${story.id}`);
   render();
@@ -123,14 +147,19 @@ const closeStory = (): void => {
   state.selectedStoryId = null;
   window.history.pushState({}, "", window.location.pathname);
   render();
+  requestAnimationFrame(() => window.scrollTo({ top: state.feedScrollY, behavior: "auto" }));
 };
 
 const syncStoryFromHash = (): void => {
   const match = window.location.hash.match(/^#story-(\d+)$/);
   const story = match ? state.stories.find((item) => item.id === Number(match[1])) : undefined;
+  const wasInDetail = state.selectedStoryId !== null;
   state.selectedStoryId = story?.id ?? null;
   render();
   if (story) void loadStorySummary(story);
+  if (!story && wasInDetail) {
+    requestAnimationFrame(() => window.scrollTo({ top: state.feedScrollY, behavior: "auto" }));
+  }
 };
 
 const setArchiveStatus = (message: string): void => {
@@ -138,7 +167,7 @@ const setArchiveStatus = (message: string): void => {
 };
 
 const loadFeed = async (category: Category = state.activeCategory): Promise<void> => {
-  state.isLoading = true;
+  state.isLoading = !state.hasLoadedFeed;
   state.selectedStoryId = null;
   renderStories();
 
@@ -151,6 +180,8 @@ const loadFeed = async (category: Category = state.activeCategory): Promise<void
 
     const data = await response.json();
     state.stories = data.top_stories ?? mockStories;
+    state.hasLoadedFeed = true;
+    if (dateLabel) dateLabel.textContent = formatHeaderDate(data.date ?? state.activeArchiveDate);
     if (menuStatus) {
       if (state.activeArchiveDate) {
         menuStatus.textContent = `Showing ${category} from ${state.activeArchiveDate}`;
@@ -183,7 +214,13 @@ const loadArchiveIndex = async (): Promise<void> => {
     if (!response.ok) throw new Error(`Archive index failed with ${response.status}`);
 
     const data = await response.json();
-    state.archiveDates = data.dates ?? [];
+    const today = new Date().toLocaleDateString("en-CA", {
+      timeZone: "Africa/Lagos",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    });
+    state.archiveDates = (data.dates ?? []).filter((entry: ArchiveDate) => entry.date !== today);
     archiveDateSelect.innerHTML = [
       `<option value="">Today</option>`,
       ...state.archiveDates.map((entry) => `<option value="${entry.date}">${entry.date}</option>`)
@@ -245,12 +282,18 @@ const renderStories = (): void => {
               </div>
               <div>
                 <strong>${story.source}</strong>
-                <span>${story.postedAt} ago - ${story.readTime}</span>
+                <span>${getStoryTimeLabel(story)} - ${story.readTime}</span>
               </div>
             </div>
-            <button class="save-button ${story.saved ? "saved" : ""}" type="button" aria-label="Save story" data-save-id="${story.id}">
+            <div class="share-control">
+            <button class="export-button" type="button" aria-label="Export story card" data-export-id="${story.id}" aria-expanded="${state.activeShareStoryId === story.id}">
               <span></span>
             </button>
+              <div class="share-menu" ${state.activeShareStoryId === story.id ? "" : "hidden"}>
+                <button type="button" data-export-action="save" data-export-story-id="${story.id}">Save image</button>
+                <button type="button" data-export-action="share" data-export-story-id="${story.id}">Share</button>
+              </div>
+            </div>
           </div>
 
           <div class="story-image-frame" aria-hidden="true">
@@ -270,6 +313,231 @@ const renderStories = (): void => {
       `
     )
     .join("");
+};
+
+const loadCanvasImage = (src: string): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`Unable to load image: ${src}`));
+    image.src = src;
+  });
+
+const drawRoundRect = (
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+): void => {
+  context.beginPath();
+  context.moveTo(x + radius, y);
+  context.lineTo(x + width - radius, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + radius);
+  context.lineTo(x + width, y + height - radius);
+  context.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  context.lineTo(x + radius, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - radius);
+  context.lineTo(x, y + radius);
+  context.quadraticCurveTo(x, y, x + radius, y);
+  context.closePath();
+};
+
+const drawWrappedText = (
+  context: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number,
+  maxLines: number
+): number => {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let line = "";
+
+  for (const word of words) {
+    const testLine = line ? `${line} ${word}` : word;
+    if (context.measureText(testLine).width <= maxWidth) {
+      line = testLine;
+      continue;
+    }
+
+    if (line) lines.push(line);
+    line = word;
+    if (lines.length === maxLines) break;
+  }
+
+  if (line && lines.length < maxLines) lines.push(line);
+  if (words.length > 0 && lines.length === maxLines) {
+    while (context.measureText(`${lines[maxLines - 1]}...`).width > maxWidth && lines[maxLines - 1].length > 0) {
+      lines[maxLines - 1] = lines[maxLines - 1].slice(0, -1).trim();
+    }
+    lines[maxLines - 1] = `${lines[maxLines - 1]}...`;
+  }
+
+  lines.forEach((item, index) => context.fillText(item, x, y + index * lineHeight));
+  return y + lines.length * lineHeight;
+};
+
+const drawCoverImage = (
+  context: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+): void => {
+  const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
+  const sourceWidth = width / scale;
+  const sourceHeight = height / scale;
+  const sourceX = (image.naturalWidth - sourceWidth) / 2;
+  const sourceY = (image.naturalHeight - sourceHeight) / 2;
+
+  context.save();
+  drawRoundRect(context, x, y, width, height, radius);
+  context.clip();
+  context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, x, y, width, height);
+  context.restore();
+};
+
+const canvasToBlob = (canvas: HTMLCanvasElement): Promise<Blob> =>
+  new Promise((resolve, reject) => {
+    try {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("Unable to export image"));
+      }, "image/png");
+    } catch (error) {
+      reject(error);
+    }
+  });
+
+const drawShareCard = async (story: NewsStory, includeRemoteImage = true): Promise<HTMLCanvasElement> => {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1080;
+  canvas.height = 1120;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Canvas is not available");
+
+  context.fillStyle = "#f4f7fb";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.shadowColor = "rgba(23, 34, 72, 0.16)";
+  context.shadowBlur = 44;
+  context.shadowOffsetY = 18;
+  context.fillStyle = "#ffffff";
+  drawRoundRect(context, 70, 70, 940, 980, 34);
+  context.fill();
+  context.shadowColor = "transparent";
+
+  const logo = await loadCanvasImage("./assets/Siftle_logo-removebg-preview.png").catch(() => null);
+  if (logo) {
+    context.drawImage(logo, 784, 106, 54, 54);
+  }
+  context.fillStyle = "#071229";
+  context.font = "800 34px Inter, Arial, sans-serif";
+  context.textAlign = "left";
+  context.fillText("Siftle", 850, 143);
+
+  context.fillStyle = "#6b748c";
+  context.font = "700 24px Inter, Arial, sans-serif";
+  context.fillText(`${story.source} - ${story.postedAt} ago`, 110, 140);
+
+  const imageY = 195;
+  if (includeRemoteImage) {
+    const storyImage = await loadCanvasImage(story.imageUrl).catch(() => null);
+    if (storyImage) {
+      drawCoverImage(context, storyImage, 110, imageY, 860, 520, 28);
+    } else {
+      context.fillStyle = "#eef2ff";
+      drawRoundRect(context, 110, imageY, 860, 520, 28);
+      context.fill();
+    }
+  } else {
+    context.fillStyle = "#eef2ff";
+    drawRoundRect(context, 110, imageY, 860, 520, 28);
+    context.fill();
+  }
+
+  const chipY = 775;
+  context.fillStyle = story.category === "Sports" ? "#dffaf4" : story.category === "Anime" ? "#efe7ff" : "#eee7ff";
+  drawRoundRect(context, 110, chipY, 118, 42, 21);
+  context.fill();
+  context.fillStyle = story.category === "Sports" ? "#11a98d" : "#6f3cff";
+  context.font = "800 22px Inter, Arial, sans-serif";
+  context.fillText(story.category, 132, chipY + 28);
+
+  context.fillStyle = "#06122f";
+  context.font = "850 52px Inter, Arial, sans-serif";
+  drawWrappedText(context, story.headline, 110, 900, 860, 62, 3);
+
+  return canvas;
+};
+
+const createStoryImageBlob = async (story: NewsStory): Promise<Blob> => {
+  const canvas = await drawShareCard(story, true);
+  try {
+    return await canvasToBlob(canvas);
+  } catch {
+    return canvasToBlob(await drawShareCard(story, false));
+  }
+};
+
+const getStoryFilename = (story: NewsStory): string => {
+  const slug = story.headline.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48);
+  return `siftle-${slug || "story"}.png`;
+};
+
+const saveStoryImage = async (story: NewsStory): Promise<void> => {
+  const blob = await createStoryImageBlob(story);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = getStoryFilename(story);
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
+const shareStoryImage = async (story: NewsStory): Promise<void> => {
+  const blob = await createStoryImageBlob(story);
+  const file = new File([blob], getStoryFilename(story), { type: "image/png" });
+  const shareData = {
+    title: story.headline,
+    text: `Siftle: ${story.headline}`,
+    files: [file]
+  };
+
+  if (navigator.canShare?.(shareData) && navigator.share) {
+    await navigator.share(shareData);
+    return;
+  }
+
+  await saveStoryImage(story);
+};
+
+const handleStoryExport = async (storyId: number, action: "save" | "share"): Promise<void> => {
+  const story = state.stories.find((item) => item.id === storyId);
+  if (!story) return;
+
+  state.activeShareStoryId = null;
+  renderStories();
+
+  if (menuStatus) menuStatus.textContent = action === "share" ? "Preparing share image..." : "Preparing image download...";
+
+  try {
+    if (action === "share") {
+      await shareStoryImage(story);
+    } else {
+      await saveStoryImage(story);
+    }
+    if (menuStatus) menuStatus.textContent = "Branded story image ready";
+  } catch (error) {
+    console.warn(error);
+    if (menuStatus) menuStatus.textContent = "Image export was cancelled or unavailable";
+  }
 };
 
 const renderDetail = (): void => {
@@ -296,11 +564,11 @@ const renderDetail = (): void => {
     <article class="detail-card">
       <div class="detail-topline">
         <span class="category-chip ${story.category}">${story.category}</span>
-        <span>${story.source} - ${story.postedAt} ago - ${story.readTime}</span>
+        <span>${story.source} - ${getStoryTimeLabel(story)} - ${story.readTime}</span>
       </div>
       <h2>${story.headline}</h2>
       <img class="detail-image" src="${story.imageUrl}" alt="" />
-      <section class="detail-summary">
+      <section class="detail-summary ${story.category}">
         <strong>AI summary</strong>
         <p>${isLoadingSummary ? "Preparing a short AI summary..." : summary}</p>
       </section>
@@ -316,11 +584,7 @@ const render = (): void => {
   if (archiveDateSelect) archiveDateSelect.value = state.activeArchiveDate ?? "";
 };
 
-dateLabel!.textContent = new Intl.DateTimeFormat("en", {
-  month: "long",
-  day: "numeric",
-  year: "numeric"
-}).format(new Date());
+dateLabel!.textContent = formatHeaderDate();
 
 categoryTabs?.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
@@ -329,6 +593,7 @@ categoryTabs?.addEventListener("click", (event) => {
 
   state.activeCategory = button.dataset.category as Category;
   window.history.pushState({}, "", window.location.pathname);
+  resetFeedScroll();
   render();
   void loadFeed(state.activeCategory);
 });
@@ -336,6 +601,7 @@ categoryTabs?.addEventListener("click", (event) => {
 archiveDateSelect?.addEventListener("change", () => {
   state.activeArchiveDate = archiveDateSelect.value || null;
   window.history.pushState({}, "", window.location.pathname);
+  resetFeedScroll();
   render();
   void loadFeed(state.activeCategory);
 });
@@ -344,21 +610,27 @@ todayButton?.addEventListener("click", () => {
   state.activeArchiveDate = null;
   if (archiveDateSelect) archiveDateSelect.value = "";
   window.history.pushState({}, "", window.location.pathname);
+  resetFeedScroll();
   render();
   void loadFeed(state.activeCategory);
 });
 
 storyList?.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
-  const saveButton = target.closest<HTMLButtonElement>("[data-save-id]");
+  const exportButton = target.closest<HTMLButtonElement>("[data-export-id]");
+  const exportAction = target.closest<HTMLButtonElement>("[data-export-action]");
   const storyCard = target.closest<HTMLElement>("[data-story-id]");
 
-  if (saveButton) {
+  if (exportAction) {
     event.stopPropagation();
-    const storyId = Number(saveButton.dataset.saveId);
-    state.stories = state.stories.map((story) =>
-      story.id === storyId ? { ...story, saved: !story.saved } : story
-    );
+    void handleStoryExport(Number(exportAction.dataset.exportStoryId), exportAction.dataset.exportAction as "save" | "share");
+    return;
+  }
+
+  if (exportButton) {
+    event.stopPropagation();
+    const storyId = Number(exportButton.dataset.exportId);
+    state.activeShareStoryId = state.activeShareStoryId === storyId ? null : storyId;
     renderStories();
     return;
   }
@@ -395,6 +667,11 @@ menuButton?.addEventListener("click", () => {
 
 document.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
+  if (!target.closest(".share-control") && state.activeShareStoryId !== null) {
+    state.activeShareStoryId = null;
+    renderStories();
+  }
+
   const button = target.closest<HTMLButtonElement>("[data-menu-action]");
   if (!button) return;
 
@@ -407,6 +684,7 @@ document.addEventListener("click", (event) => {
   if (button.dataset.menuAction === "today") {
     state.activeArchiveDate = null;
     if (archiveDateSelect) archiveDateSelect.value = "";
+    resetFeedScroll();
     void loadFeed(state.activeCategory);
   }
 });

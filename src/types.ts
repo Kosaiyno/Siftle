@@ -8,6 +8,7 @@ export interface NewsStory {
   source: string;
   sourceUrl: string;
   imageUrl: string;
+  publishedAt?: string;
   readTime: string;
   postedAt: string;
   accent: "blue" | "teal" | "violet" | "slate";
