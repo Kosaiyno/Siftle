@@ -13,6 +13,7 @@ const state: {
   activeShareStoryId: number | null;
   feedScrollY: number;
   hasLoadedFeed: boolean;
+  showSaved: boolean;
 } = {
   activeCategory: "All",
   stories: mockStories,
@@ -25,7 +26,41 @@ const state: {
   activeShareStoryId: null,
   feedScrollY: 0,
   hasLoadedFeed: false
+  ,
+  showSaved: false
 };
+
+const SAVED_KEY = "siftle.savedUrls";
+let savedUrls = new Set<string>();
+
+const loadSavedFromStorage = (): void => {
+  try {
+    const raw = localStorage.getItem(SAVED_KEY) || "[]";
+    const list = JSON.parse(raw) as string[];
+    savedUrls = new Set(list.filter(Boolean));
+  } catch {
+    savedUrls = new Set();
+  }
+};
+
+const persistSavedSet = (): void => {
+  try {
+    localStorage.setItem(SAVED_KEY, JSON.stringify(Array.from(savedUrls)));
+  } catch {
+    // ignore
+  }
+};
+
+const applySavedFlags = (): void => {
+  if (!Array.isArray(state.stories)) return;
+  for (const s of state.stories) {
+    s.saved = Boolean(savedUrls.has(s.sourceUrl));
+  }
+};
+
+// Initialize saved set from localStorage and apply to initial mock stories
+loadSavedFromStorage();
+applySavedFlags();
 
 const dateLabel = document.querySelector<HTMLParagraphElement>("#dateLabel");
 const categoryTabs = document.querySelector<HTMLElement>("#categoryTabs");
@@ -53,7 +88,10 @@ const formatHeaderDate = (date?: string | null): string => {
 };
 
 const getFilteredStories = (): NewsStory[] =>
-  state.stories.filter((story) => state.activeCategory === "All" || story.category === state.activeCategory);
+  state.stories.filter((story) => {
+    if (state.showSaved) return Boolean(story.saved);
+    return state.activeCategory === "All" || story.category === state.activeCategory;
+  });
 
 const getStoryTimeLabel = (story: NewsStory): string =>
   state.activeArchiveDate ? story.postedAt : `${story.postedAt} ago`;
@@ -170,6 +208,8 @@ const loadFeed = async (category: Category = state.activeCategory): Promise<void
   state.isLoading = !state.hasLoadedFeed;
   state.selectedStoryId = null;
   renderStories();
+  // Reset saved-view when loading a fresh feed
+  state.showSaved = false;
 
   try {
     const endpoint = state.activeArchiveDate
@@ -180,6 +220,8 @@ const loadFeed = async (category: Category = state.activeCategory): Promise<void
 
     const data = await response.json();
     state.stories = data.top_stories ?? mockStories;
+    // apply saved flags from storage
+    applySavedFlags();
     state.hasLoadedFeed = true;
     if (dateLabel) dateLabel.textContent = formatHeaderDate(data.date ?? state.activeArchiveDate);
     if (menuStatus) {
@@ -194,6 +236,7 @@ const loadFeed = async (category: Category = state.activeCategory): Promise<void
   } catch (error) {
     console.warn(error);
     state.stories = mockStories;
+    applySavedFlags();
     if (menuStatus) {
       menuStatus.textContent = state.activeArchiveDate
         ? "That saved day/category is not available yet"
@@ -233,6 +276,9 @@ const loadArchiveIndex = async (): Promise<void> => {
   }
 };
 
+const getCategoryLabel = (category: Category): string =>
+  category === "All" ? "For you" : category;
+
 const renderCategories = (): void => {
   if (!categoryTabs) return;
 
@@ -240,7 +286,7 @@ const renderCategories = (): void => {
     .map(
       (category) => `
         <button class="category-tab ${category === state.activeCategory ? "active" : ""}" type="button" data-category="${category}">
-          ${category}
+          ${getCategoryLabel(category)}
         </button>
       `
     )
@@ -275,7 +321,9 @@ const renderStories = (): void => {
     .map(
       (story) => `
         <article class="story-card" data-story-id="${story.id}" role="button" tabindex="0" aria-label="Open summary for ${story.headline}">
-          <div class="story-topline">
+
+          <!-- Desktop layout (visible above 640px) -->
+          <div class="story-topline desktop-only">
             <div class="story-source">
               <div class="story-icon ${story.accent}" aria-hidden="true">
                 <span></span>
@@ -286,9 +334,9 @@ const renderStories = (): void => {
               </div>
             </div>
             <div class="share-control">
-            <button class="export-button" type="button" aria-label="Export story card" data-export-id="${story.id}" aria-expanded="${state.activeShareStoryId === story.id}">
-              <span></span>
-            </button>
+              <button class="export-button" type="button" aria-label="Export story card" data-export-id="${story.id}" aria-expanded="${state.activeShareStoryId === story.id}">
+                <span></span>
+              </button>
               <div class="share-menu" ${state.activeShareStoryId === story.id ? "" : "hidden"}>
                 <button type="button" data-export-action="save" data-export-story-id="${story.id}">Save image</button>
                 <button type="button" data-export-action="share" data-export-story-id="${story.id}">Share</button>
@@ -296,19 +344,48 @@ const renderStories = (): void => {
             </div>
           </div>
 
-          <div class="story-image-frame" aria-hidden="true">
+          <div class="story-image-frame desktop-only" aria-hidden="true">
             <img src="${story.imageUrl}" alt="" loading="lazy" />
           </div>
 
-          <div class="story-copy">
+          <div class="story-copy desktop-only">
             <span class="category-chip ${story.category}">${story.category}</span>
             <h2>${story.headline}</h2>
             <p>Tap to read the AI summary.</p>
           </div>
 
-          <div class="card-action-row">
+          <div class="card-action-row desktop-only">
             <a class="card-source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>
           </div>
+
+          <!-- Mobile layout (visible at 640px and below) -->
+          <div class="mobile-card-inner mobile-only">
+            <div class="mobile-card-body">
+              <div class="mobile-card-text">
+                <div class="mobile-card-topline">
+                  <span class="category-chip ${story.category}">${story.category}</span>
+                  <div class="mobile-icons">
+                    <button class="mobile-bookmark-btn" type="button" data-bookmark-url="${story.sourceUrl}" aria-pressed="${story.saved ? "true" : "false"}" aria-label="Save story">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                    </button>
+                    <button class="mobile-export-icon" type="button" data-export-action="save" data-export-story-id="${story.id}" aria-label="Save image">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="19"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <h2>${story.headline}</h2>
+                <span class="mobile-card-time">${getStoryTimeLabel(story)}</span>
+              </div>
+              <div class="mobile-card-image" aria-hidden="true">
+                <img src="${story.imageUrl}" alt="" loading="lazy" />
+              </div>
+            </div>
+            <div class="mobile-card-actions">
+              <a class="mobile-action-btn source-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Open source</a>
+              <button class="mobile-action-btn summary-btn" type="button">AI summary</button>
+            </div>
+          </div>
+
         </article>
       `
     )
@@ -560,20 +637,25 @@ const renderDetail = (): void => {
   storyDetail.classList.add("fullscreen");
   document.body.classList.add("detail-mode");
   storyDetail.innerHTML = `
-    <button class="back-button" type="button" data-back-to-feed>Back to feed</button>
-    <article class="detail-card">
-      <div class="detail-topline">
-        <span class="category-chip ${story.category}">${story.category}</span>
-        <span>${story.source} - ${getStoryTimeLabel(story)} - ${story.readTime}</span>
-      </div>
-      <h2>${story.headline}</h2>
-      <img class="detail-image" src="${story.imageUrl}" alt="" />
-      <section class="detail-summary ${story.category}">
-        <strong>AI summary</strong>
-        <p>${isLoadingSummary ? "Preparing a short AI summary..." : summary}</p>
-      </section>
-      <a class="source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>
-    </article>
+    <div class="detail-container">
+      <button class="back-button" type="button" data-back-to-feed aria-label="Go back to feed">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Back to feed
+      </button>
+      <article class="detail-card">
+        <div class="detail-topline">
+          <span class="category-chip ${story.category}">${story.category}</span>
+          <span>${story.source} - ${getStoryTimeLabel(story)} - ${story.readTime}</span>
+        </div>
+        <h2>${story.headline}</h2>
+        <img class="detail-image" src="${story.imageUrl}" alt="" />
+        <section class="detail-summary ${story.category}">
+          <strong>AI summary</strong>
+          <p>${isLoadingSummary ? "Preparing a short AI summary..." : summary}</p>
+        </section>
+        <a class="source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>
+      </article>
+    </div>
   `;
 };
 
@@ -620,6 +702,21 @@ storyList?.addEventListener("click", (event) => {
   const exportButton = target.closest<HTMLButtonElement>("[data-export-id]");
   const exportAction = target.closest<HTMLButtonElement>("[data-export-action]");
   const storyCard = target.closest<HTMLElement>("[data-story-id]");
+
+  const bookmarkBtn = target.closest<HTMLButtonElement>(".mobile-bookmark-btn");
+  if (bookmarkBtn) {
+    event.stopPropagation();
+    const url = bookmarkBtn.dataset.bookmarkUrl || "";
+    const story = state.stories.find((s) => s.sourceUrl === url);
+    if (!story) return;
+    story.saved = !story.saved;
+    if (story.saved) savedUrls.add(url);
+    else savedUrls.delete(url);
+    persistSavedSet();
+    // If we're viewing saved items, refresh the list so the card disappears when un-saved
+    renderStories();
+    return;
+  }
 
   if (exportAction) {
     event.stopPropagation();
@@ -682,13 +779,46 @@ document.addEventListener("click", (event) => {
   };
   if (menuStatus) menuStatus.textContent = labels[button.dataset.menuAction ?? "today"];
   if (button.dataset.menuAction === "today") {
+    state.showSaved = false;
     state.activeArchiveDate = null;
     if (archiveDateSelect) archiveDateSelect.value = "";
     resetFeedScroll();
     void loadFeed(state.activeCategory);
+  }
+
+  if (button.dataset.menuAction === "saved") {
+    // Show only saved stories from localStorage
+    loadSavedFromStorage();
+    applySavedFlags();
+    state.showSaved = true;
+    // ensure archive controls are not open when viewing saved items
+    const archiveControlsEl = document.querySelector<HTMLElement>('#archiveControls');
+    archiveControlsEl?.classList.remove('mobile-open');
+    resetFeedScroll();
+    render();
   }
 });
 
 render();
 void loadArchiveIndex();
 void loadFeed();
+
+// Mobile archive card: toggle the archive controls via class (safe for desktop)
+const mobileArchiveCardEl = document.querySelector<HTMLButtonElement>("#mobileArchiveCard");
+const archiveControlsEl = document.querySelector<HTMLElement>("#archiveControls");
+mobileArchiveCardEl?.addEventListener("click", () => {
+  if (!archiveControlsEl) return;
+  const isOpen = archiveControlsEl.classList.toggle("mobile-open");
+  if (isOpen) {
+    setTimeout(() => archiveControlsEl.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+  }
+});
+
+// Compact header archive pill (mobile) — toggle archive controls
+const archivePill = document.querySelector<HTMLButtonElement>("#archivePill");
+archivePill?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (!archiveControlsEl) return;
+  const isOpen = archiveControlsEl.classList.toggle("mobile-open");
+  if (isOpen) setTimeout(() => archiveControlsEl.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+});
