@@ -325,9 +325,6 @@ const renderStories = (): void => {
           <!-- Desktop layout (visible above 640px) -->
           <div class="story-topline desktop-only">
             <div class="story-source">
-              <div class="story-icon ${story.accent}" aria-hidden="true">
-                <span></span>
-              </div>
               <div>
                 <strong>${story.source}</strong>
                 <span>${getStoryTimeLabel(story)} - ${story.readTime}</span>
@@ -413,9 +410,6 @@ const renderStories = (): void => {
           <!-- Desktop layout (visible above 640px) -->
           <div class="story-topline desktop-only">
             <div class="story-source">
-              <div class="story-icon ${story.accent}" aria-hidden="true">
-                <span></span>
-              </div>
               <div>
                 <strong>${story.source}</strong>
                 <span>${getStoryTimeLabel(story)} - ${story.readTime}</span>
