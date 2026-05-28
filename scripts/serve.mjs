@@ -620,17 +620,36 @@ const repairTruncatedArticleTitles = async (articles) => {
   return repaired;
 };
 
-const getFallbackImage = (category) => {
-  const images = {
-    Crypto:
-      "https://images.unsplash.com/photo-1640161704729-cbe966a08476?auto=format&fit=crop&w=1200&q=80",
-    Sports:
-      "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
-    Anime:
-      "https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?auto=format&fit=crop&w=1200&q=80"
-  };
+const fallbackImages = {
+  Crypto: [
+    "https://images.unsplash.com/photo-1640161704729-cbe966a08476?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1621504450181-5d356f61d307?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1639322537228-f710d846310a?auto=format&fit=crop&w=1200&q=80"
+  ],
+  Sports: [
+    "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1200&q=80"
+  ],
+  Anime: [
+    "https://images.unsplash.com/photo-1613376023733-0a73315d9b06?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1580477667995-2b94f01c9516?auto=format&fit=crop&w=1200&q=80"
+  ]
+};
 
-  return images[category] ?? images.Crypto;
+const stableIndex = (value = "", length = 1) => {
+  let hash = 0;
+  for (const char of value) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  }
+  return hash % Math.max(1, length);
+};
+
+const getFallbackImage = (category, seed = "") => {
+  const images = fallbackImages[category] ?? fallbackImages.Crypto;
+  return images[stableIndex(seed || category, images.length)];
 };
 
 const estimateReadTime = (text) => {
@@ -714,7 +733,7 @@ const extractTag = (item, tagName) => {
   return match[1].replace(/^<!\[CDATA\[/, "").replace(/\]\]>$/, "").trim();
 };
 
-const extractRssImage = (item, category) => {
+const extractRssImage = (item, category, seed = "") => {
   const mediaContent = item.match(/<media:content[^>]+>/i)?.[0] ?? "";
   const mediaThumbnail = item.match(/<media:thumbnail[^>]+>/i)?.[0] ?? "";
   const enclosure = item.match(/<enclosure[^>]+>/i)?.[0] ?? "";
@@ -726,7 +745,7 @@ const extractRssImage = (item, category) => {
     extractAttribute(mediaThumbnail, "url") ||
     extractAttribute(enclosure, "url") ||
     extractAttribute(descriptionImage, "src") ||
-    getFallbackImage(category)
+    getFallbackImage(category, seed)
   );
 };
 
@@ -756,7 +775,7 @@ const fetchRssFeed = async (url, fallbackCategory) => {
       summary,
       source: sourceHost,
       sourceUrl: link || url,
-      imageUrl: extractRssImage(item, category),
+      imageUrl: extractRssImage(item, category, `${headline} ${sourceHost}`),
       publishedAt,
       category
     };
@@ -1096,6 +1115,28 @@ const dedupeArticles = (articles) => {
     });
 };
 
+const getArticleSourceKey = (article) => {
+  try {
+    return new URL(article.sourceUrl || "").hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return String(article.source || "unknown").toLowerCase();
+  }
+};
+
+const balanceArticlesBySource = (articles, maxPerSource = 8) => {
+  const sourceKeys = new Set(articles.map(getArticleSourceKey));
+  if (sourceKeys.size <= 1) return articles;
+
+  const counts = new Map();
+  return articles.filter((article) => {
+    const key = getArticleSourceKey(article);
+    const count = counts.get(key) ?? 0;
+    if (count >= maxPerSource) return false;
+    counts.set(key, count + 1);
+    return true;
+  });
+};
+
 const runWithConcurrency = async (items, limit, worker) => {
   const results = new Array(items.length);
   let nextIndex = 0;
@@ -1371,11 +1412,12 @@ const generateSnapshot = async (category) => {
   ]);
   const rawArticles = results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
   const repairedArticles = await repairTruncatedArticleTitles(rawArticles);
-  const articles = dedupeArticles(repairedArticles).filter(
+  const dedupedArticles = dedupeArticles(repairedArticles).filter(
     (article) =>
       isArticleOnAppDate(article, date) &&
       (selectedCategory === "All" || matchesCategorySignal(article, selectedCategory))
   );
+  const articles = selectedCategory === "Anime" ? balanceArticlesBySource(dedupedArticles, 8) : dedupedArticles;
   const stories = articles.length > 0 ? await buildStories(articles) : mockStories;
 
   const snapshot = {
