@@ -174,11 +174,10 @@ const setArchiveStatus = (message) => {
         archiveStatus.textContent = message;
 };
 const loadFeed = async (category = state.activeCategory) => {
-    state.isLoading = !state.hasLoadedFeed;
     state.selectedStoryId = null;
-    renderStories();
-    // Reset saved-view when loading a fresh feed
     state.showSaved = false;
+    state.isLoading = false;
+    renderCategories();
     try {
         const endpoint = state.activeArchiveDate
             ? `/api/archive?date=${encodeURIComponent(state.activeArchiveDate)}&category=${encodeURIComponent(category)}`
@@ -206,7 +205,9 @@ const loadFeed = async (category = state.activeCategory) => {
     }
     catch (error) {
         console.warn(error);
-        state.stories = mockStories;
+        if (!state.hasLoadedFeed) {
+            state.stories = mockStories;
+        }
         applySavedFlags();
         if (menuStatus) {
             menuStatus.textContent = state.activeArchiveDate
@@ -265,19 +266,90 @@ const renderStories = () => {
     const stories = getFilteredStories();
     storyList.hidden = Boolean(state.selectedStoryId);
     if (state.isLoading) {
-        storyList.innerHTML = `
-      <article class="story-card loading-card">
-        <div class="story-copy">
-          <span class="category-chip">Siftle</span>
-          <h2>Gathering today's trending stories...</h2>
-          <p>Pulling fresh sources and preparing the feed.</p>
-        </div>
-      </article>
-    `;
+        storyList.innerHTML = state.stories.length > 0 ? storyList.innerHTML : "";
         return;
     }
     if (stories.length === 0) {
-        storyList.innerHTML = `<div class="empty-state">No briefs found for this view.</div>`;
+        const fallbackStories = state.showSaved ? [] : state.stories;
+        if (fallbackStories.length > 0) {
+            storyList.innerHTML = fallbackStories
+                .map((story) => `
+        <article class="story-card" data-story-id="${story.id}" role="button" tabindex="0" aria-label="Open summary for ${story.headline}">
+
+          <!-- Desktop layout (visible above 640px) -->
+          <div class="story-topline desktop-only">
+            <div class="story-source">
+              <div class="story-icon ${story.accent}" aria-hidden="true">
+                <span></span>
+              </div>
+              <div>
+                <strong>${story.source}</strong>
+                <span>${getStoryTimeLabel(story)} - ${story.readTime}</span>
+              </div>
+            </div>
+            <div class="share-control">
+              <button class="export-button" type="button" aria-label="Export story card" data-export-id="${story.id}" aria-expanded="${state.activeShareStoryId === story.id}">
+                <span></span>
+              </button>
+              <div class="share-menu" ${state.activeShareStoryId === story.id ? "" : "hidden"}>
+                <button type="button" data-export-action="save" data-export-story-id="${story.id}">Save image</button>
+                <button type="button" data-export-action="share" data-export-story-id="${story.id}">Share</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="story-image-frame desktop-only" aria-hidden="true">
+            <img src="${story.imageUrl}" alt="" loading="lazy" />
+          </div>
+
+          <div class="story-copy desktop-only">
+            <span class="category-chip ${story.category}">${story.category}</span>
+            <h2>${story.headline}</h2>
+            <p>Tap to read the AI summary.</p>
+          </div>
+
+          <div class="card-action-row desktop-only">
+            ${/example\\.com/i.test(story.sourceUrl)
+                ? `<a class="card-source-button disabled" href="#" onclick="event.preventDefault(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
+                : `<a class="card-source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
+          </div>
+
+          <!-- Mobile layout (visible at 640px and below) -->
+          <div class="mobile-card-inner mobile-only">
+            <div class="mobile-card-body">
+              <div class="mobile-card-text">
+                <div class="mobile-card-topline">
+                  <span class="category-chip ${story.category}">${story.category}</span>
+                  <div class="mobile-icons">
+                    <button class="mobile-bookmark-btn" type="button" data-bookmark-url="${story.sourceUrl}" aria-pressed="${story.saved ? "true" : "false"}" aria-label="Save story">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                    </button>
+                    <button class="mobile-export-icon" type="button" data-export-action="save" data-export-story-id="${story.id}" aria-label="Save image">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="19"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <h2>${story.headline}</h2>
+                <span class="mobile-card-time">${getStoryTimeLabel(story)}</span>
+              </div>
+              <div class="mobile-card-image" aria-hidden="true">
+                <img src="${story.imageUrl}" alt="" loading="lazy" />
+              </div>
+            </div>
+            <div class="mobile-card-actions">
+              ${/example\\.com/i.test(story.sourceUrl)
+                ? `<a class="mobile-action-btn source-btn disabled" href="#" onclick="event.preventDefault(); event.stopPropagation(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
+                : `<a class="mobile-action-btn source-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Open source</a>`}
+              <button class="mobile-action-btn summary-btn" type="button">AI summary</button>
+            </div>
+          </div>
+
+        </article>
+      `)
+                .join("");
+            return;
+        }
+        storyList.innerHTML = "";
         return;
     }
     storyList.innerHTML = stories
