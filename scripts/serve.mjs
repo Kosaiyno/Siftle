@@ -434,6 +434,37 @@ const readLocalArchiveFiles = () => {
     .filter(Boolean);
 };
 
+const readPublishedArchiveFiles = () => {
+  if (!existsSync(publishedDir)) return [];
+
+  return readdirSync(publishedDir)
+    .filter((filename) => filename.endsWith(".json"))
+    .map((filename) => {
+      const match = filename.match(/^latest-([a-z]+)\.json$/i);
+      if (!match) return null;
+
+      const categorySlug = match[1];
+      const category = categories.find((item) => item.toLowerCase() === categorySlug.toLowerCase());
+      if (!category) return null;
+
+      try {
+        const snapshot = JSON.parse(readFileSync(join(publishedDir, filename), "utf8"));
+        if (!snapshot?.date) return null;
+
+        return {
+          date: snapshot.date,
+          category,
+          story_count: Array.isArray(snapshot.top_stories) ? snapshot.top_stories.length : 0,
+          generated_at: snapshot.generated_at ?? snapshot.published_at ?? null,
+          storage: snapshot.archive?.provider === "shelby" ? "shelby" : "published"
+        };
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+};
+
 const groupArchiveFiles = (files) => {
   const sortedFiles = files
     .map(normalizeArchiveFile)
@@ -442,16 +473,16 @@ const groupArchiveFiles = (files) => {
       return categories.indexOf(first.category) - categories.indexOf(second.category);
     });
 
-  const groupedDates = [...new Set(files.map((file) => file.date))].map((date) => ({
+  const groupedDates = [...new Set(sortedFiles.map((file) => file.date))].map((date) => ({
     date,
-    categories: files.filter((file) => file.date === date).map((file) => file.category)
+    categories: sortedFiles.filter((file) => file.date === date).map((file) => file.category)
   })).sort((first, second) => second.date.localeCompare(first.date));
 
-  return { dates: groupedDates, files };
+  return { dates: groupedDates, files: sortedFiles };
 };
 
 const readArchiveIndex = async () => {
-  const localFiles = readLocalArchiveFiles();
+  const localFiles = [...readLocalArchiveFiles(), ...readPublishedArchiveFiles()];
   let shelbyFiles = [];
 
   if (isShelbyArchiveConfigured()) {

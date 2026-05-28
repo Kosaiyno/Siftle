@@ -235,13 +235,13 @@ const loadArchiveIndex = async () => {
             month: "2-digit",
             day: "2-digit"
         });
-        state.archiveDates = (data.dates ?? []).filter((entry) => entry.date !== today);
+        state.archiveDates = data.dates ?? [];
         archiveDateSelect.innerHTML = [
             `<option value="">Today</option>`,
-            ...state.archiveDates.map((entry) => `<option value="${entry.date}">${entry.date}</option>`)
+            ...state.archiveDates.map((entry) => `<option value="${entry.date}">${entry.date}${entry.date === today ? " saved" : ""}</option>`)
         ].join("");
         archiveDateSelect.value = state.activeArchiveDate ?? "";
-        setArchiveStatus(state.archiveDates.length > 0 ? "Saved days ready" : "No saved days yet");
+        setArchiveStatus(state.archiveDates.length > 0 ? "Saved days ready" : "Live feed ready");
     }
     catch (error) {
         console.warn(error);
