@@ -324,6 +324,7 @@ body.detail-mode .site-header {
   box-shadow: 0 10px 22px rgba(68, 82, 255, 0.24);
 }
 
+
 .story-list {
   display: grid;
   grid-template-columns: 1fr;
@@ -379,6 +380,40 @@ body.detail-mode .site-header {
   align-items: center;
 }
 
+.story-topline {
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.story-source {
+  min-width: 0;
+  gap: 12px;
+}
+
+.story-source strong,
+.story-source span {
+  display: block;
+}
+
+.story-source strong {
+  font-size: 0.94rem;
+}
+
+.story-source span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.story-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 12px;
+}
 .story-topline {
   justify-content: space-between;
   gap: 14px;
