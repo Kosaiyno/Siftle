@@ -1,3 +1,5 @@
+
+/* --- Desktop (restored from feature/desktop-from-old) --- */
 :root {
   color-scheme: light;
   --ink: #111a36;
@@ -39,7 +41,7 @@ button {
 
 .brief-board {
   position: relative;
-  width: min(980px, 100%);
+  width: min(900px, 100%);
   min-height: calc(100vh - clamp(44px, 8vw, 96px));
   margin: 0 auto;
   padding: 0;
@@ -50,8 +52,9 @@ button {
 }
 
 .site-header {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) auto 42px 32px;
+  gap: 18px;
   align-items: center;
 }
 
