@@ -1576,15 +1576,26 @@ const server = createServer(async (request, response) => {
     return;
   }
 
-  if (requestUrl.pathname === "/api/status" && request.method === "GET") {
-    sendJson(response, 200, {
+  if (requestUrl.pathname === "/api/status" && (request.method === "GET" || request.method === "HEAD")) {
+    const payload = {
       ok: true,
       service: "siftle-backend",
       time: new Date().toISOString(),
       refresh_interval_minutes: refreshIntervalMinutes,
       is_publishing: publishStatus.is_running,
       last_finished_at: publishStatus.last_finished_at
-    });
+    };
+
+    if (request.method === "HEAD") {
+      response.writeHead(200, {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        ...getCorsHeaders()
+      });
+      response.end();
+    } else {
+      sendJson(response, 200, payload);
+    }
     return;
   }
 
