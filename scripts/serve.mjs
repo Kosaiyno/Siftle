@@ -1576,6 +1576,18 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (requestUrl.pathname === "/api/status" && request.method === "GET") {
+    sendJson(response, 200, {
+      ok: true,
+      service: "siftle-backend",
+      time: new Date().toISOString(),
+      refresh_interval_minutes: refreshIntervalMinutes,
+      is_publishing: publishStatus.is_running,
+      last_finished_at: publishStatus.last_finished_at
+    });
+    return;
+  }
+
   if (requestUrl.pathname === "/api/feed" && request.method === "GET") {
     const category = requestUrl.searchParams.get("category") ?? "All";
     getPublishedFeed(category)
