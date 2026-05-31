@@ -1,6 +1,6 @@
 import type { Category, NewsStory } from "./types.js";
 
-export const categories: Category[] = ["All", "Crypto", "Sports", "Anime"];
+export const categories: Category[] = ["All", "Crypto", "Sports", "Anime", "Tech"];
 
 export const mockStories: NewsStory[] = [
   {
@@ -92,6 +92,19 @@ export const mockStories: NewsStory[] = [
     readTime: "2 min read",
     postedAt: "2h",
     accent: "violet",
+    saved: false
+  },
+  {
+    id: 8,
+    headline: "Developers track new AI coding tools and framework releases",
+    category: "Tech",
+    summary: "Programming teams are watching updates across AI-assisted development, web frameworks, cloud platforms, and open-source tooling.",
+    source: "Tech Brief",
+    sourceUrl: "https://example.com/programming-ai-tools",
+    imageUrl: "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1200&q=80",
+    readTime: "3 min read",
+    postedAt: "42m",
+    accent: "slate",
     saved: false
   }
 ];

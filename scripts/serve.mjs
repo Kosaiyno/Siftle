@@ -53,7 +53,7 @@ const mimeTypes = new Map([
   [".webp", "image/webp"]
 ]);
 
-const categories = ["All", "Crypto", "Sports", "Anime"];
+const categories = ["All", "Crypto", "Sports", "Anime", "Tech"];
 const sourceCategories = categories.filter((category) => category !== "All");
 const archiveDir = join(root, ".siftle", "archive");
 const publishedDir = join(root, ".siftle", "published");
@@ -79,10 +79,11 @@ const getAppDate = (value = new Date()) => {
 const getTodayKey = () => getAppDate() ?? new Date().toISOString().slice(0, 10);
 
 const categoryQueries = {
-  All: "crypto football anime trending",
+  All: "crypto football anime technology programming trending",
   Crypto: "crypto bitcoin ethereum blockchain DeFi stablecoin",
   Sports: "football soccer basketball NBA NFL Champions League Premier League transfers",
-  Anime: "anime manga Crunchyroll trailer adaptation studio"
+  Anime: "anime manga Crunchyroll trailer adaptation studio",
+  Tech: "technology programming software developer AI startup cybersecurity cloud"
 };
 
 const categoryMap = {
@@ -118,7 +119,26 @@ const categoryMap = {
   crunchyroll: "Anime",
   "anime news network": "Anime",
   anilist: "Anime",
-  "myanimelist": "Anime"
+  "myanimelist": "Anime",
+  tech: "Tech",
+  technology: "Tech",
+  programming: "Tech",
+  software: "Tech",
+  developer: "Tech",
+  developers: "Tech",
+  javascript: "Tech",
+  typescript: "Tech",
+  python: "Tech",
+  "open source": "Tech",
+  github: "Tech",
+  openai: "Tech",
+  "generative ai": "Tech",
+  "machine learning": "Tech",
+  "artificial intelligence": "Tech",
+  cloud: "Tech",
+  cybersecurity: "Tech",
+  startup: "Tech",
+  startups: "Tech"
 };
 
 const categorySignals = {
@@ -171,13 +191,35 @@ const categorySignals = {
     "madrid",
     "barcelona"
   ],
-  Anime: ["anime", "manga", "manhwa", "crunchyroll", "anilist", "myanimelist", "studio", "voice actor"]
+  Anime: ["anime", "manga", "manhwa", "crunchyroll", "anilist", "myanimelist", "studio", "voice actor"],
+  Tech: [
+    "tech",
+    "technology",
+    "programming",
+    "software",
+    "developer",
+    "developers",
+    "javascript",
+    "typescript",
+    "python",
+    "open source",
+    "github",
+    "openai",
+    "generative ai",
+    "machine learning",
+    "artificial intelligence",
+    "cloud",
+    "cybersecurity",
+    "startup",
+    "startups"
+  ]
 };
 
 const getArticleText = (article) => `${article.category ?? ""} ${article.headline ?? ""} ${article.summary ?? ""} ${article.source ?? ""}`.toLowerCase();
 
 const matchesCategorySignal = (article, category) => {
   if (category === "All") return true;
+  if (article.category === category) return true;
   const signals = categorySignals[category] ?? [];
   if (signals.length === 0) return true;
   const haystack = getArticleText(article);
@@ -216,6 +258,17 @@ const rssFeeds = {
     "https://anitrendz.net/news/feed/",
     "https://otakuusamagazine.com/feed/",
     "https://randomc.net/feed/"
+  ],
+  Tech: [
+    "https://www.theverge.com/rss/index.xml",
+    "https://techcrunch.com/feed/",
+    "https://www.wired.com/feed/rss",
+    "https://www.engadget.com/rss.xml",
+    "https://feeds.arstechnica.com/arstechnica/index",
+    "https://www.zdnet.com/news/rss.xml",
+    "https://www.infoq.com/feed/",
+    "https://dev.to/feed",
+    "https://github.blog/feed/"
   ]
 };
 
@@ -258,8 +311,28 @@ const mockStories = [
     postedAt: "52m",
     accent: "violet",
     saved: true
+  },
+  {
+    id: 4,
+    headline: "Developers track new AI coding tools and framework releases",
+    category: "Tech",
+    summary: "Programming teams are watching updates across AI-assisted development, web frameworks, cloud platforms, and open-source tooling.",
+    source: "Tech Brief",
+    sourceUrl: "https://example.com/programming-ai-tools",
+    imageUrl: "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1200&q=80",
+    readTime: "3 min read",
+    postedAt: "42m",
+    accent: "slate",
+    saved: false
   }
 ];
+
+const getMockStoriesForCategory = (category) =>
+  category === "All" ? mockStories : mockStories.filter((story) => story.category === category);
+
+const hasRealStories = (snapshot) =>
+  Array.isArray(snapshot?.top_stories) &&
+  snapshot.top_stories.some((story) => story.sourceUrl && !/example\.com/i.test(story.sourceUrl));
 
 const sendJson = (response, statusCode, payload) => {
   response.writeHead(statusCode, {
@@ -636,6 +709,12 @@ const fallbackImages = {
     "https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?auto=format&fit=crop&w=1200&q=80",
     "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=1200&q=80",
     "https://images.unsplash.com/photo-1580477667995-2b94f01c9516?auto=format&fit=crop&w=1200&q=80"
+  ],
+  Tech: [
+    "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80"
   ]
 };
 
@@ -724,6 +803,7 @@ const accentForCategory = (category) => {
   if (category === "Crypto") return "teal";
   if (category === "Anime") return "violet";
   if (category === "Sports") return "blue";
+  if (category === "Tech") return "slate";
   return "slate";
 };
 
@@ -1245,9 +1325,15 @@ const buildCategorySnapshot = async (category) => mergeWithTodaySnapshot(await g
 
 const buildAllSnapshotFromCategories = async () => {
   const today = getTodayKey();
-  const categorySnapshots = sourceCategories
-    .map(readPublishedSnapshot)
-    .filter((snapshot) => snapshot?.date === today && Array.isArray(snapshot.top_stories));
+  const categorySnapshots = (
+    await Promise.all(
+      sourceCategories.map(async (category) => {
+        const snapshot = readPublishedSnapshot(category);
+        if (snapshot?.date === today && hasRealStories(snapshot)) return snapshot;
+        return generateAndPublishFeed(category);
+      })
+    )
+  ).filter((snapshot) => snapshot?.date === today && Array.isArray(snapshot.top_stories));
 
   if (categorySnapshots.length === 0) {
     return buildCategorySnapshot("All");
@@ -1418,7 +1504,7 @@ const generateSnapshot = async (category) => {
       (selectedCategory === "All" || matchesCategorySignal(article, selectedCategory))
   );
   const articles = selectedCategory === "Anime" ? balanceArticlesBySource(dedupedArticles, 8) : dedupedArticles;
-  const stories = articles.length > 0 ? await buildStories(articles) : mockStories;
+  const stories = articles.length > 0 ? await buildStories(articles) : getMockStoriesForCategory(selectedCategory);
 
   const snapshot = {
     date,
@@ -1479,7 +1565,7 @@ const getPublishedFeed = async (category) => {
   }
 
   const snapshot = await getRecoverablePublishedSnapshot(selectedCategory);
-  if (snapshot?.date === getTodayKey()) return snapshot;
+  if (snapshot?.date === getTodayKey() && hasRealStories(snapshot)) return snapshot;
 
   return generateAndPublishFeed(selectedCategory);
 };

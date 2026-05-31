@@ -661,10 +661,17 @@ const drawShareCard = async (story: NewsStory, includeRemoteImage = true): Promi
   }
 
   const chipY = 775;
-  context.fillStyle = story.category === "Sports" ? "#dffaf4" : story.category === "Anime" ? "#efe7ff" : "#eee7ff";
+  context.fillStyle =
+    story.category === "Sports"
+      ? "#dffaf4"
+      : story.category === "Tech"
+        ? "#e8eef6"
+        : story.category === "Anime"
+          ? "#efe7ff"
+          : "#eee7ff";
   drawRoundRect(context, 110, chipY, 118, 42, 21);
   context.fill();
-  context.fillStyle = story.category === "Sports" ? "#11a98d" : "#6f3cff";
+  context.fillStyle = story.category === "Sports" ? "#11a98d" : story.category === "Tech" ? "#3f5f86" : "#6f3cff";
   context.font = "800 22px Inter, Arial, sans-serif";
   context.fillText(story.category, 132, chipY + 28);
 

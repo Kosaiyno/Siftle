@@ -539,6 +539,11 @@ body.detail-mode .site-header {
   background: rgba(122, 60, 255, 0.08);
 }
 
+.category-chip.Tech {
+  color: #3f5f86;
+  background: rgba(63, 95, 134, 0.1);
+}
+
 .source-button,
 .back-button,
 .card-source-button {
@@ -1499,6 +1504,10 @@ h1 {
   line-height: 1.62;
 }
 
+.detail-summary.Tech p {
+  color: #344861;
+}
+
 @media (max-width: 820px) {
   .brief-hero {
     margin-top: 30px;
@@ -1916,6 +1925,11 @@ h1 {
   .mobile-card-text .category-chip.Anime {
     color: #8b35e0;
     background: rgba(139, 53, 224, 0.1);
+  }
+
+  .mobile-card-text .category-chip.Tech {
+    color: #3f5f86;
+    background: rgba(63, 95, 134, 0.1);
   }
 
   .mobile-card-text h2 {
