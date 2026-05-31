@@ -1499,9 +1499,7 @@ const generateSnapshot = async (category) => {
   const rawArticles = results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
   const repairedArticles = await repairTruncatedArticleTitles(rawArticles);
   const dedupedArticles = dedupeArticles(repairedArticles).filter(
-    (article) =>
-      isArticleOnAppDate(article, date) &&
-      (selectedCategory === "All" || matchesCategorySignal(article, selectedCategory))
+    (article) => selectedCategory === "All" || matchesCategorySignal(article, selectedCategory)
   );
   const articles = selectedCategory === "Anime" ? balanceArticlesBySource(dedupedArticles, 8) : dedupedArticles;
   const stories = articles.length > 0 ? await buildStories(articles) : getMockStoriesForCategory(selectedCategory);

@@ -675,9 +675,9 @@ const drawShareCard = async (story: NewsStory, includeRemoteImage = true): Promi
   context.font = "800 22px Inter, Arial, sans-serif";
   context.fillText(story.category, 132, chipY + 28);
 
-  context.fillStyle = "#06122f";
-  context.font = "850 52px Inter, Arial, sans-serif";
-  drawWrappedText(context, story.headline, 110, 900, 860, 62, 3);
+  context.fillStyle = "#07142f";
+  context.font = "680 44px Space Grotesk, Inter, Arial, sans-serif";
+  drawWrappedText(context, story.headline, 110, 888, 860, 54, 4);
 
   return canvas;
 };
