@@ -13,6 +13,10 @@ export interface NewsStory {
   postedAt: string;
   accent: "blue" | "teal" | "violet" | "slate";
   saved: boolean;
+  thread?: {
+    count: number;
+    topic: string;
+  };
   ai_summary?: string;
   ai_provider?: string;
   ai_proof?: {
@@ -22,6 +26,13 @@ export interface NewsStory {
     responseId?: string | null;
     status?: number;
   };
+}
+
+export interface StoryThread {
+  topic: string;
+  count: number;
+  current: NewsStory;
+  items: NewsStory[];
 }
 
 export interface ArchiveDate {

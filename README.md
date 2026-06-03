@@ -1,328 +1,192 @@
 # Siftle
 
-Siftle is an AI-powered daily news feed app that summarizes trending stories and permanently archives them on Shelby.
+Siftle is a clean daily news app for fast-moving internet categories. It pulls fresh stories, filters them by category, archives daily snapshots on Shelby, and uses 0G Compute where deeper AI judgment is worth the cost.
 
-## What Siftle Is
-
-Siftle is a smart news feed for major daily trends. Users open the app, choose a category, and get a clean feed of the most important stories of the day.
-
-Supported categories include:
+Current categories:
 
 - Crypto
 - Sports
 - Anime
+- Tech
 
-Instead of endless scrolling through social media, Siftle gives users a focused daily view of what matters:
+## What It Does
 
-- Top trending stories for the day
-- Short AI-generated summaries
-- Main source links
-- Explanations of why each topic is trending
+Siftle publishes a daily feed for each category and keeps the live feed fresh on a schedule.
 
-Siftle is closer to a smart newspaper than a social media platform. It uses AI to filter, group, summarize, and rank major stories so users can quickly understand what the internet is discussing.
+The app supports:
 
-## What The App Does
+- Fresh category feeds
+- Today-only live feeds with older stories moved into archive
+- Saved and archived story views
+- Source links for every story
+- On-demand AI summaries
+- Story threads that connect related updates over time
+- Shelby-backed daily archive snapshots
+- 0G Compute-backed AI work with local fallbacks
 
-Every day, Siftle:
+## Threads
 
-1. Pulls news and trending topics from selected sources.
-2. Groups duplicate or related stories together.
-3. Uses AI to summarize each major trend.
-4. Ranks the biggest stories.
-5. Publishes daily category feeds.
-6. Archives the day's feeds on Shelby.
+Threads connect a current story to older related updates so readers can see how a topic has unfolded.
 
-Users can:
+Thread behavior:
 
-- Refresh feeds
-- Browse categories
-- View older daily feeds
-- Search historical trends later
+- A thread button appears when a story has at least one related past update.
+- Threads are ordered newest first, with the latest/current update on top and older updates below.
+- Thread topics are generated to describe the shared story, not just copied from one headline.
+- Thread matching uses local candidate search first, then 0G Compute for stricter review when budget allows.
+- Broad keyword overlap is not enough. Stories must share a specific actor, product, event, team, launch, dispute, outage, market catalyst, or direct continuation.
 
-## Why Shelby Matters
+This is especially important for future prediction markets, where noisy or unrelated threads would create bad market context.
 
-Shelby is the archive and retrieval layer for Siftle.
+## 0G Compute Usage
 
-The app constantly generates daily news snapshots, AI summaries, and trend metadata. Instead of deleting old feeds, Siftle stores them permanently on Shelby.
+Siftle is currently configured to use 0G in conserve mode.
 
-Over time, this creates:
+Conserve mode is designed to manage compute spend:
 
-- A historical trend database
-- AI-generated daily newspapers
-- Searchable archives of what the internet was discussing
+- Automatic feed refresh does not summarize every article with 0G.
+- Basic feed summaries use local fallback text by default.
+- 0G summaries are generated on demand when the user opens or requests an AI summary.
+- Thread review is capped per refresh so grouping cannot burn unlimited compute.
+- 0G decisions and summaries are cached locally so repeated requests do not pay twice.
 
-## What Gets Stored On Shelby
-
-### 1. Daily Feed Snapshots
-
-The full daily feed for each category.
-
-Example:
-
-```json
-{
-  "date": "2026-05-25",
-  "category": "sports",
-  "top_stories": []
-}
-```
-
-Purpose:
-
-- Lets users revisit old feeds
-- Creates permanent daily archives
-
-### 2. AI Summaries
-
-The AI-generated explanations for each trend.
-
-Example:
-
-```json
-{
-  "headline": "Election debate trends globally",
-  "summary": "AI-generated summary...",
-  "why_it_matters": "..."
-}
-```
-
-Purpose:
-
-- Stores the AI-generated intelligence layer
-- Makes feeds easier to consume
-
-### 3. Source And Trend Metadata
-
-The original source links and ranking information.
-
-Example:
-
-```json
-{
-  "source": "BBC",
-  "url": "https://example.com/story",
-  "trend_score": 92,
-  "mentions": 1400
-}
-```
-
-Purpose:
-
-- Shows where stories came from
-- Explains why something was ranked as trending
-
-## MVP News Sources
-
-For the first MVP, Siftle should use free news APIs and RSS feeds before adding harder or more expensive social data sources.
-
-Recommended starting stack:
-
-- NewsData.io
-- The Guardian Open Platform
-- RSS feeds
-
-Optional APIs for testing or extra coverage:
-
-- Currents API
-- GNews API
-
-### NewsData.io
-
-NewsData.io is a good fit for the basic Siftle MVP because it supports daily feeds, categories, global news, and simple API-based article fetching.
-
-Best for:
-
-- Daily feeds
-- Categories
-- Global news
-- Simple MVP development
-
-### Currents API
-
-Currents API can be useful if the app needs more request volume or broad global news coverage across countries and languages.
-
-Best for:
-
-- More request volume
-- Basic global news feeds
-
-### GNews API
-
-GNews API is useful for quick prototypes and testing because it provides clean JSON responses for current and historical news.
-
-Best for:
-
-- Testing
-- Clean JSON responses
-- Quick prototypes
-
-### The Guardian Open Platform
-
-The Guardian Open Platform is useful as a reliable source layer, especially for serious news categories.
-
-Best for:
-
-- Politics
-- World news
-- Source credibility
-
-### RSS Feeds
-
-RSS feeds are useful as a free fallback and additional source layer. They can help Siftle gather articles from selected publishers without depending only on paid APIs.
-
-Best for:
-
-- Free article ingestion
-- Publisher-specific feeds
-- Backup source coverage
-
-## MVP Ingestion Pipeline
-
-The recommended MVP flow is:
-
-1. Fetch top articles daily from NewsData.io, The Guardian Open Platform, and RSS feeds.
-2. Normalize all articles into one internal format.
-3. Group articles by category.
-4. Cluster duplicates and related stories.
-5. Send headlines and descriptions to 0G Compute for AI summaries.
-6. Rank stories by relevance, source count, freshness, and trend metadata.
-7. Store the final daily feed snapshot on Shelby.
-
-X should be avoided for the first MVP. Its API access, rate limits, and cost can make the early build harder. Later, X can be added as an extra social signal instead of the main news source.
-
-## Integration Setup
-
-Siftle now includes a local MVP backend in `scripts/serve.mjs`.
-
-The backend exposes:
-
-- `GET /api/feed?category=All`
-- `POST /api/archive`
-
-The feed endpoint:
-
-1. Fetches niche RSS articles first for Crypto, Sports, and Anime.
-2. Fetches articles from NewsData.io and The Guardian when API keys are configured.
-3. Normalizes articles into Siftle's internal story format.
-4. Removes obvious duplicate headlines.
-5. Sends each story to 0G Compute for AI summaries when configured.
-6. Falls back to local summaries if 0G is not configured.
-7. Saves the daily snapshot locally during development.
-8. Sends the snapshot to Shelby when `SHELBY_UPLOAD_URL` is configured.
-
-Create a `.env` file from `.env.example`:
+Useful defaults:
 
 ```txt
-NEWSDATA_API_KEY=
-GUARDIAN_API_KEY=
-OG_RPC_URL=https://evmrpc.0g.ai
-OG_COMPUTE_PROVIDER=
-ZERO_G_API_KEY=
-ZERO_G_MODEL=zai-org/GLM-5-FP8
-OG_COMPUTE_API_KEY=
-OG_COMPUTE_MODEL=zai-org/GLM-5-FP8
-SHELBY_UPLOAD_URL=
-SHELBY_API_KEY=
-PORT=5173
-MAX_ARTICLE_AGE_HOURS=72
+OG_USAGE_MODE=conserve
+THREAD_REVIEW_BUDGET_PER_REFRESH=12
+SUMMARY_TIMEOUT_MS=45000
+REFRESH_INTERVAL_MINUTES=30
 ```
 
-Local development fallback:
+Set `OG_USAGE_MODE=full` only if you want automatic 0G summaries during feed generation.
 
-- If no news API keys are set, Siftle uses mock stories.
-- If no 0G key is set, Siftle creates local short summaries.
-- If no Shelby endpoint is set, Siftle archives snapshots under `.siftle/archive`.
-- `MAX_ARTICLE_AGE_HOURS` controls freshness filtering. The default is `72`, so stale RSS stories and undated items are not shown in the live feed.
+## Shelby Archive
 
-## UI And Brand Direction
+Shelby is the archive layer for Siftle.
 
-The Siftle interface should feel like a clean, soft, futuristic mobile news app.
+Siftle stores daily category snapshots so old stories do not remain in today's feed. This lets the app keep the live feed fresh while preserving past updates for archive browsing and thread history.
 
-Visual direction:
+Archived snapshots include:
 
-- Mostly white interface with soft blue and lavender shadows
-- Electric blue, violet, and teal/green accent colors
-- Main logo stored at `assets/Siftle_logo-removebg-preview.png`
-- Dark navy headings with softer gray secondary text
-- Rounded mobile-first layouts inspired by a polished phone UI
-- Small category tabs with an active blue/violet gradient state
-- White story cards with subtle borders and shadows
-- Gradient square icons for categories and story types
-- Bookmark actions for saved stories
-- Orbit, radar, or signal motifs to suggest trend discovery
-- Floating "key takeaways" style panels for AI-generated summaries
+- Date
+- Category
+- Stories
+- Source links
+- Local or 0G summaries
+- Archive metadata
 
-The brand should communicate:
+If Shelby is not configured, Siftle writes local archive files under `.siftle/archive` during development.
 
-- AI-curated daily briefs
-- Clean feeds instead of endless scrolling
-- Trend signals and source-backed summaries
-- Calm, credible, technology-forward news discovery
+## News Sources
 
-## Feed UX Direction
+Siftle uses RSS feeds first, with NewsData.io and The Guardian available when API keys are configured.
 
-The Siftle website should feel like a clean news-focused social feed. Users scroll through story posts, switch categories, save stories, and click any story to expand it.
+Current source direction:
 
-Expected feed behavior:
+- Crypto: CoinDesk, Cointelegraph, Decrypt, The Block, CryptoSlate, Bitcoin Magazine, DL News, Blockworks
+- Sports: football and NBA only for now, including ESPN soccer/NBA, BBC Football, The Guardian Football, UEFA, Sky Sports football, NBA RSS
+- Anime: anime and manga news sources, including Anime News Network and related feeds
+- Tech: company, product, AI, cloud, startup, platform, security, and major tech company news from sources such as The Verge, TechCrunch, Wired, Engadget, Ars Technica, ZDNet, InfoQ, GitHub Blog, VentureBeat, MIT Technology Review, and Bloomberg Technology
 
-- A continuous scrollable feed of trending stories
-- Category tabs for Crypto, Sports, and Anime
-- Story cards that show an image, source, time, headline, and category
-- Clickable cards that open a separate story page
-- Story pages with the image, headline, short AI summary, and source button
-- Bookmark actions for saving stories
-- Source links for opening the original article
-- A calm interface that borrows the ease of social media without becoming a social network
+Sports is intentionally narrowed to football and NBA. Tech is intentionally filtered away from tutorials, personal dev posts, coupons, reviews, and low-value how-to content so it can produce better threads and future market candidates.
 
-## Niche Feed Strategy
+## Local Development
 
-Siftle should focus first on feeds that feel alive every day:
+Install dependencies:
 
-- Crypto
-- Sports, especially football
-- Anime
+```bash
+npm install
+```
 
-These ecosystems have constant updates, active communities, emotional engagement, and daily narratives. This makes them stronger than generic news categories for the first version of Siftle.
+Build:
 
-Priority source direction:
+```bash
+npm run build
+```
 
-- Crypto: CryptoPanic, CoinDesk, Decrypt, The Block, DL News, Cointelegraph, project blogs, and RSS feeds
-- Sports: ESPN, football-data.org, The Athletic headlines, FIFA/UEFA news, and football RSS feeds
-- Anime: Anime News Network, MyAnimeList feeds, AniList APIs, Crunchyroll News, episode releases, trailers, manga announcements, studio news, and adaptation news
+Start local backend/frontend:
 
-## Card Data Rules
+```bash
+node scripts/serve.mjs
+```
 
-Each feed card should make the story feel alive while keeping the data honest.
+Open:
 
-Real source fields:
+```txt
+http://localhost:5173
+```
 
-- Headline
-- Source name
-- Source link
-- Publish time
-- Article image when provided by the source
+## Environment
 
-AI-generated fields:
+Create a `.env` file from `.env.example` and configure only the services you need.
 
-- Short summary
+Common variables:
 
-Fallback-only fields:
+```txt
+PORT=5173
+REFRESH_INTERVAL_MINUTES=30
+MAX_ARTICLE_AGE_HOURS=36
+RSS_ITEMS_PER_FEED=30
 
-- Mock stories are only used when real sources fail or return no fresh articles.
-- Category fallback images are only used when the source does not provide an image.
+NEWSDATA_API_KEY=
+GUARDIAN_API_KEY=
 
-Removed from the first UI:
+OG_RPC_URL=https://evmrpc.0g.ai
+OG_COMPUTE_PROVIDER=
+OG_COMPUTE_ENDPOINT=
+OG_COMPUTE_API_KEY=
+OG_COMPUTE_MODEL=zai-org/GLM-5-FP8
+OG_USAGE_MODE=conserve
+THREAD_REVIEW_BUDGET_PER_REFRESH=12
+SUMMARY_TIMEOUT_MS=45000
+THREAD_REVIEW_TIMEOUT_MS=45000
 
-- Mention counts
-- Trend scores
-- Why it is trending
+SHELBY_UPLOAD_URL=
+SHELBY_API_KEY=
+REQUIRE_SHELBY_UPLOAD=false
+```
 
-0G summary performance:
+Fallback behavior:
 
-- Summaries are generated as one short neutral paragraph.
-- 0G calls run in parallel for feed items.
-- Summaries are cached locally under `.siftle/cache/summaries` so refreshing the same story does not call 0G again.
+- If news API keys are missing, RSS feeds still run.
+- If real sources fail or return no fresh articles, mock stories are used only as a development fallback.
+- If 0G is unavailable, Siftle falls back to local summaries and strict local thread matching.
+- If Shelby is unavailable, snapshots are archived locally.
 
-## Product Summary
+## API Endpoints
 
-Siftle is an AI-powered daily news feed app that summarizes trending stories and permanently archives them on Shelby.
+Useful local endpoints:
+
+```txt
+GET  /api/status
+GET  /api/0g/status
+GET  /api/feed?category=All
+GET  /api/feed?category=Crypto
+GET  /api/feed?category=Sports
+GET  /api/feed?category=Anime
+GET  /api/feed?category=Tech
+GET  /api/thread?category=Crypto&sourceUrl=...
+GET  /api/archive
+GET  /api/archive?date=YYYY-MM-DD&category=Crypto
+GET  /api/publish/status
+POST /api/publish/refresh
+POST /api/summary
+POST /api/archive
+```
+
+`/api/0g/status` shows whether 0G is configured, whether it has succeeded recently, fallback counts, usage mode, and remaining thread-review budget.
+
+## Product Direction
+
+Siftle is becoming a news app built around developing storylines.
+
+Near-term focus:
+
+- Keep feeds fresh and credible
+- Improve source quality per category
+- Keep thread matching strict
+- Use 0G Compute for high-value judgment, not wasteful background work
+- Preserve daily history on Shelby
+
+Later, prediction markets can be added on top of strong threads, where a market is created only when a story has enough credible updates and a clear future outcome.

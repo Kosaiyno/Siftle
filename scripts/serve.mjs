@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
@@ -15,9 +16,12 @@ const port = Number(process.env.PORT ?? 5173);
 const maxArticleAgeHours = Number(process.env.MAX_ARTICLE_AGE_HOURS ?? 36);
 const rssItemsPerFeed = Number(process.env.RSS_ITEMS_PER_FEED ?? 30);
 const summaryConcurrency = Number(process.env.SUMMARY_CONCURRENCY ?? 2);
-const summaryTimeoutMs = Number(process.env.SUMMARY_TIMEOUT_MS ?? 20000);
+const summaryTimeoutMs = Number(process.env.SUMMARY_TIMEOUT_MS ?? 45000);
 const appTimeZone = process.env.APP_TIME_ZONE || "Africa/Lagos";
 const allowedOrigin = process.env.ALLOWED_ORIGIN || process.env.ALLOWED_ORIGINS || "*";
+const ogUsageMode = process.env.OG_USAGE_MODE || "conserve";
+const shouldAutoSummarizeWith0G = ogUsageMode === "full";
+const threadReviewBudgetPerRefresh = Number(process.env.THREAD_REVIEW_BUDGET_PER_REFRESH ?? 12);
 
 const loadEnv = () => {
   const envPath = join(root, ".env");
@@ -79,11 +83,11 @@ const getAppDate = (value = new Date()) => {
 const getTodayKey = () => getAppDate() ?? new Date().toISOString().slice(0, 10);
 
 const categoryQueries = {
-  All: "crypto football anime technology programming trending",
+  All: "crypto football NBA anime technology company platform startup AI trending",
   Crypto: "crypto bitcoin ethereum blockchain DeFi stablecoin",
-  Sports: "football soccer basketball NBA NFL Champions League Premier League transfers",
+  Sports: "football soccer NBA Champions League Premier League transfers",
   Anime: "anime manga Crunchyroll trailer adaptation studio",
-  Tech: "technology programming software developer AI startup cybersecurity cloud"
+  Tech: "technology company platform product launch AI startup cybersecurity cloud"
 };
 
 const categoryMap = {
@@ -95,14 +99,8 @@ const categoryMap = {
   stablecoin: "Crypto",
   football: "Sports",
   soccer: "Sports",
-  sports: "Sports",
   basketball: "Sports",
   nba: "Sports",
-  nfl: "Sports",
-  mlb: "Sports",
-  tennis: "Sports",
-  formula: "Sports",
-  f1: "Sports",
   arsenal: "Sports",
   chelsea: "Sports",
   liverpool: "Sports",
@@ -173,17 +171,16 @@ const categorySignals = {
   Sports: [
     "football",
     "soccer",
-    "sports",
     "basketball",
     "nba",
-    "nfl",
-    "mlb",
-    "tennis",
-    "formula",
-    "f1",
     "champions league",
     "premier league",
     "uefa",
+    "fifa",
+    "la liga",
+    "serie a",
+    "bundesliga",
+    "mls",
     "transfer",
     "arsenal",
     "chelsea",
@@ -193,33 +190,40 @@ const categorySignals = {
   ],
   Anime: ["anime", "manga", "manhwa", "crunchyroll", "anilist", "myanimelist", "studio", "voice actor"],
   Tech: [
-    "tech",
     "technology",
-    "programming",
     "software",
-    "developer",
-    "developers",
-    "javascript",
-    "typescript",
-    "python",
-    "open source",
+    "platform",
+    "product",
+    "launch",
+    "company",
+    "companies",
+    "security",
+    "cloud",
+    "ai",
     "github",
+    "google",
+    "apple",
+    "microsoft",
+    "meta",
+    "amazon",
+    "nvidia",
     "openai",
+    "anthropic",
     "generative ai",
     "machine learning",
     "artificial intelligence",
-    "cloud",
     "cybersecurity",
     "startup",
     "startups"
   ]
 };
 
-const getArticleText = (article) => `${article.category ?? ""} ${article.headline ?? ""} ${article.summary ?? ""} ${article.source ?? ""}`.toLowerCase();
+const getArticleText = (article) =>
+  `${article.category ?? ""} ${article.headline ?? ""} ${article.summary ?? ""} ${article.source ?? ""} ${article.sourceUrl ?? ""}`.toLowerCase();
 
 const matchesCategorySignal = (article, category) => {
   if (category === "All") return true;
-  if (article.category === category) return true;
+  if (article.category === category && category !== "Sports") return true;
   const signals = categorySignals[category] ?? [];
   if (signals.length === 0) return true;
   const haystack = getArticleText(article);
@@ -234,19 +238,16 @@ const rssFeeds = {
     "https://cryptoslate.com/feed/",
     "https://bitcoinmagazine.com/.rss/full/",
     "https://www.dlnews.com/rss/",
-    "https://www.theblock.co/rss.xml"
+    "https://www.theblock.co/rss.xml",
+    "https://blockworks.com/feed"
   ],
   Sports: [
     "https://www.espn.com/espn/rss/soccer/news",
     "https://www.espn.com/espn/rss/nba/news",
-    "https://www.espn.com/espn/rss/nfl/news",
-    "https://www.espn.com/espn/rss/mlb/news",
-    "https://www.espn.com/espn/rss/news",
-    "https://feeds.bbci.co.uk/sport/rss.xml",
     "https://feeds.bbci.co.uk/sport/football/rss.xml",
     "https://www.theguardian.com/football/rss",
-    "https://www.theguardian.com/sport/rss",
     "https://www.uefa.com/rssfeed/news/rss.xml",
+    "https://www.skysports.com/rss/11095",
     "https://www.nba.com/rss/nba_rss.xml"
   ],
   Anime: [
@@ -267,8 +268,10 @@ const rssFeeds = {
     "https://feeds.arstechnica.com/arstechnica/index",
     "https://www.zdnet.com/news/rss.xml",
     "https://www.infoq.com/feed/",
-    "https://dev.to/feed",
-    "https://github.blog/feed/"
+    "https://github.blog/feed/",
+    "https://venturebeat.com/feed/",
+    "https://www.technologyreview.com/feed/",
+    "https://feeds.bloomberg.com/technology/news.rss"
   ]
 };
 
@@ -333,6 +336,962 @@ const getMockStoriesForCategory = (category) =>
 const hasRealStories = (snapshot) =>
   Array.isArray(snapshot?.top_stories) &&
   snapshot.top_stories.some((story) => story.sourceUrl && !/example\.com/i.test(story.sourceUrl));
+
+const threadStopWords = new Set([
+  "about",
+  "after",
+  "amid",
+  "also",
+  "against",
+  "aged",
+  "ahead",
+  "arrive",
+  "appoint",
+  "appointed",
+  "bitcoin",
+  "before",
+  "buildup",
+  "camp",
+  "card",
+  "cards",
+  "champions",
+  "coach",
+  "dies",
+  "drop",
+  "drops",
+  "final",
+  "from",
+  "game",
+  "games",
+  "head",
+  "have",
+  "holdings",
+  "into",
+  "league",
+  "live",
+  "match",
+  "matches",
+  "more",
+  "over",
+  "party",
+  "players",
+  "pre",
+  "qualifier",
+  "qualifying",
+  "season",
+  "says",
+  "sports",
+  "team",
+  "teams",
+  "that",
+  "their",
+  "this",
+  "tournament",
+  "with",
+  "will",
+  "world",
+  "news",
+  "latest",
+  "launch",
+  "launches",
+  "launching",
+  "today",
+  "tokenized",
+  "tokenization",
+  "report",
+  "reports",
+  "rewards",
+  "revenue",
+  "update",
+  "updates"
+]);
+
+const threadGenericEntities = new Set([
+  "AI",
+  "Analyst",
+  "Anime",
+  "BBC",
+  "BIS",
+  "Bitcoin",
+  "BTC",
+  "Card",
+  "Cards",
+  "Champions League",
+  "Crypto",
+  "ETH",
+  "Ethereum",
+  "Episode",
+  "FA Cup",
+  "Film",
+  "Latest",
+  "Manga",
+  "May",
+  "News",
+  "Holdings",
+  "Launch",
+  "Payments",
+  "Premier League",
+  "Preview",
+  "Report",
+  "Season",
+  "Sports",
+  "Stablecoin",
+  "Stablecoins",
+  "Tech",
+  "The",
+  "Tokenized",
+  "Tokenization",
+  "USD",
+  "Visa",
+  "Wholesale",
+  "World Cup"
+]);
+
+const normalizeStoryUrl = (url = "") => String(url).trim().toLowerCase().replace(/[?#].*$/, "");
+
+const storyDateKey = (story, fallbackDate) => getAppDate(story?.publishedAt) ?? fallbackDate ?? null;
+
+const decodeThreadEntities = (text = "") =>
+  String(text)
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCharCode(parseInt(code, 16)))
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&apos;|&#39;/gi, "'")
+    .replace(/&nbsp;/gi, " ");
+
+const cleanThreadText = (text = "") =>
+  decodeThreadEntities(stripHtml(text))
+    .replace(/&[a-z0-9#]+;/gi, " ")
+    .replace(/[’']/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const getStoryThreadText = (story) => cleanThreadText(`${story?.headline ?? ""} ${story?.summary ?? ""}`);
+
+const tokenizeThreadText = (story, headlineOnly = false) => {
+  const text = cleanThreadText(headlineOnly ? story?.headline ?? "" : `${story?.headline ?? ""} ${story?.summary ?? ""}`)
+    .toLowerCase()
+    .replace(/[^a-z0-9$]+/g, " ");
+
+  return new Set(
+    text
+      .split(/\s+/)
+      .map((word) => word.trim())
+      .filter((word) => word.length >= 4 && !/^\d+$/.test(word) && !threadStopWords.has(word))
+      .slice(0, 80)
+  );
+};
+
+const titleCaseThreadTopic = (value = "") =>
+  value
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) =>
+      /^[A-Z0-9$]{2,}$/.test(word)
+        ? word
+        : word.slice(0, 1).toUpperCase() + word.slice(1).toLowerCase()
+    )
+    .join(" ");
+
+const normalizeThreadEntity = (value = "") =>
+  cleanThreadText(value)
+    .replace(/[’']s\b/gi, "")
+    .replace(/^[^A-Za-z0-9$]+|[^A-Za-z0-9$]+$/g, "")
+    .trim();
+
+const isUsefulThreadEntity = (value = "") => {
+  const entity = normalizeThreadEntity(value);
+  if (!entity || entity.length < 3 || threadGenericEntities.has(entity)) return false;
+  if (/^(?:\d+[\s-]*)?(?:BTC|ETH|SOL|USD|USDT|USDC)$/i.test(entity)) return false;
+  if (/^(?:Bitcoin|Ethereum|Solana|Crypto|Token|Tokens|Holdings|Revenue)$/i.test(entity)) return false;
+  if (/^\d+(?:\.\d+)?\s+(?:BTC|ETH|SOL|USD|USDT|USDC)$/i.test(entity)) return false;
+  if (/^\d{1,4}$/.test(entity) || /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/i.test(entity)) {
+    return false;
+  }
+
+  const meaningfulWords = entity
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((word) => word.length >= 3 && !threadStopWords.has(word));
+  return meaningfulWords.length > 0;
+};
+
+const extractThreadEntities = (story) => {
+  const text = getStoryThreadText(story);
+  const entities = new Set();
+  const entityPattern =
+    /\b(?:[A-Z][A-Za-z0-9$]*(?:[-'][A-ZA-Za-z0-9$]+)*|[A-Z0-9$]{2,})(?:\s+(?:[A-Z][A-Za-z0-9$]*(?:[-'][A-ZA-Za-z0-9$]+)*|[A-Z0-9$]{2,})){0,4}\b/g;
+
+  const headlinePrefix = cleanThreadText(story?.headline ?? "").match(/^(.{3,70}?)(?::|\s-\s|\sSeason\s|\sEpisode\s)/i)?.[1];
+  if (headlinePrefix && isUsefulThreadEntity(headlinePrefix)) entities.add(normalizeThreadEntity(headlinePrefix));
+
+  for (const match of text.matchAll(entityPattern)) {
+    const entity = normalizeThreadEntity(match[0]);
+    if (!isUsefulThreadEntity(entity)) continue;
+    entities.add(entity);
+  }
+
+  for (const token of tokenizeThreadText(story)) {
+    if (/^\$?[a-z0-9]{3,8}$/.test(token) && /[0-9$]/.test(token)) entities.add(token.toUpperCase());
+  }
+
+  return entities;
+};
+
+const getPrimaryThreadAnchors = (story) => {
+  const headlineStory = { ...story, summary: "" };
+  const anchors = new Set();
+
+  for (const entity of extractThreadEntities(headlineStory)) {
+    if (isUsefulThreadEntity(entity)) anchors.add(entity);
+  }
+
+  for (const token of tokenizeThreadText(headlineStory, true)) {
+    if (/^\$?[a-z0-9]{3,12}$/.test(token) && !/^\d+$/.test(token) && !threadStopWords.has(token)) {
+      const normalized = token.toUpperCase();
+      if (!threadGenericEntities.has(normalized) && !threadGenericEntities.has(titleCaseThreadTopic(token))) {
+        anchors.add(normalized);
+      }
+    }
+  }
+
+  return anchors;
+};
+
+const getSharedPrimaryAnchors = (story, candidate) =>
+  getSharedValues(getPrimaryThreadAnchors(story), getPrimaryThreadAnchors(candidate));
+
+const cryptoProductThreadTerms = new Set([
+  "earn",
+  "vault",
+  "vaults",
+  "defi",
+  "yield",
+  "liquidity",
+  "stablecoin",
+  "stablecoins",
+  "etf",
+  "etfs",
+  "treasury",
+  "sale",
+  "outflows",
+  "inflows",
+  "acquisition"
+]);
+
+const hasSharedCryptoProductContext = (story, candidate) => {
+  if (story?.category !== "Crypto" || candidate?.category !== "Crypto") return false;
+
+  const storyText = getStoryThreadText(story).toLowerCase();
+  const candidateText = getStoryThreadText(candidate).toLowerCase();
+  const sharedEntities = getSharedValues(extractThreadEntities(story), extractThreadEntities(candidate))
+    .filter(isUsefulThreadEntity);
+  if (sharedEntities.length === 0) return false;
+
+  let sharedTerms = 0;
+  for (const term of cryptoProductThreadTerms) {
+    if (storyText.includes(term) && candidateText.includes(term)) sharedTerms += 1;
+  }
+
+  return sharedTerms >= 2;
+};
+
+const getSharedCryptoProductTerms = (story, relatedItems = []) => {
+  if (story?.category !== "Crypto") return [];
+  const storyText = getStoryThreadText(story).toLowerCase();
+  const counts = new Map();
+
+  for (const item of relatedItems) {
+    const itemText = getStoryThreadText(item).toLowerCase();
+    for (const term of cryptoProductThreadTerms) {
+      if (storyText.includes(term) && itemText.includes(term)) {
+        counts.set(term, (counts.get(term) ?? 0) + 1);
+      }
+    }
+  }
+
+  return [...counts.entries()]
+    .sort((first, second) => second[1] - first[1])
+    .map(([term]) => titleCaseThreadTopic(term))
+    .slice(0, 2);
+};
+
+const getCryptoThreadBrand = (story, relatedItems = []) => {
+  if (story?.category !== "Crypto") return "";
+  const storyText = getStoryThreadText(story).toLowerCase();
+  const relatedText = relatedItems.map(getStoryThreadText).join(" ").toLowerCase();
+  const brands = ["kraken", "coinbase", "binance", "bybit", "okx", "moneygram", "stellar", "strategy", "polymarket", "veda", "privy"];
+
+  return titleCaseThreadTopic(brands.find((brand) => storyText.includes(brand) && relatedText.includes(brand)) ?? "");
+};
+
+const getSharedCount = (firstSet, secondSet) => {
+  let count = 0;
+  for (const value of firstSet) {
+    if (secondSet.has(value)) count += 1;
+  }
+  return count;
+};
+
+const getSharedValues = (firstSet, secondSet) => {
+  const values = [];
+  for (const value of firstSet) {
+    if (secondSet.has(value)) values.push(value);
+  }
+  return values;
+};
+
+const hasSharedDistinctivePhrase = (story, candidate) => {
+  const storyText = getStoryThreadText(story).toLowerCase();
+  const candidateText = getStoryThreadText(candidate).toLowerCase();
+  const words = [...tokenizeThreadText(story, true)].filter((word) => !/^\d+$/.test(word));
+
+  for (let size = 3; size >= 2; size -= 1) {
+    for (let index = 0; index <= words.length - size; index += 1) {
+      const phrase = words.slice(index, index + size).join(" ");
+      if (phrase.length >= 11 && candidateText.includes(phrase) && storyText.includes(phrase)) return true;
+    }
+  }
+
+  return false;
+};
+
+const getCleanHeadlineTopic = (story) => {
+  const headline = cleanThreadText(story?.headline ?? "")
+    .replace(/\s+[–-]\s+live\b.*$/i, "")
+    .replace(/\s*\|\s*.*$/i, "")
+    .replace(/\bpreview\b.*$/i, "preview")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!headline) return story?.category ?? "Thread";
+  return headline.length <= 76 ? headline : `${headline.slice(0, 73).trim()}...`;
+};
+
+const getCryptoCompanyThreadTopic = (story, sharedEntity = "") => {
+  if (story?.category !== "Crypto" || !sharedEntity) return "";
+  const text = getStoryThreadText(story).toLowerCase();
+  const entity = cleanThreadText(sharedEntity);
+  if (!entity || /^(bitcoin|btc|ethereum|eth|crypto)$/i.test(entity)) return "";
+
+  if (text.includes("holdings") && text.includes("bitcoin")) return `${entity} Bitcoin Holdings`;
+  if (text.includes("revenue")) return `${entity} Revenue Report`;
+  if (text.includes("stablecoin")) return `${entity} Stablecoin Launch`;
+  if (text.includes("tokenization") || text.includes("tokenized")) return `${entity} Tokenization Push`;
+  if (text.includes("etf")) return `${entity} ETF Flows`;
+  return "";
+};
+
+const getThreadReviewCachePath = (story, candidates) => {
+  const cacheDir = join(root, ".siftle", "cache", "threads");
+  mkdirSync(cacheDir, { recursive: true });
+  const candidateKey = candidates.map((candidate) => normalizeStoryUrl(candidate.sourceUrl)).sort().join("|");
+  const key = createHash("sha256")
+    .update(`${normalizeStoryUrl(story?.sourceUrl)}|${story?.headline ?? ""}|${candidateKey}`)
+    .digest("hex")
+    .slice(0, 32);
+  return join(cacheDir, `${key}.json`);
+};
+
+const threadReviewPromptVersion = "evidence-thread-judge-v5";
+
+const getThreadTopic = (story, relatedItems = []) => {
+  if (story?.category === "Anime") return getCleanHeadlineTopic(story);
+
+  const entityCounts = new Map();
+  const storyEntities = extractThreadEntities(story);
+
+  for (const item of relatedItems) {
+    for (const entity of getSharedValues(storyEntities, extractThreadEntities(item))) {
+      entityCounts.set(entity, (entityCounts.get(entity) ?? 0) + 1);
+    }
+  }
+
+  const sharedEntities = [...entityCounts.entries()]
+    .sort((first, second) => {
+      if (second[1] !== first[1]) return second[1] - first[1];
+      return second[0].length - first[0].length;
+    })
+    .map(([entity]) => entity)
+    .slice(0, 2);
+
+  const productTerms = getSharedCryptoProductTerms(story, relatedItems);
+  const cryptoBrand = getCryptoThreadBrand(story, relatedItems);
+  if (story?.category === "Crypto" && cryptoBrand && productTerms.length >= 1) {
+    const topic = `${cryptoBrand} ${productTerms[0]}${productTerms[1] ? ` / ${productTerms[1]}` : ""}`;
+    if (topic.length <= 70) return topic;
+  }
+
+  if (story?.category === "Crypto" && sharedEntities.length >= 1 && productTerms.length >= 1) {
+    const topic = [...sharedEntities.slice(0, 1), ...productTerms].join(" / ");
+    if (topic.length <= 70) return topic;
+  }
+
+  const cryptoCompanyTopic = getCryptoCompanyThreadTopic(story, sharedEntities[0]);
+  if (cryptoCompanyTopic) return cryptoCompanyTopic;
+
+  if (sharedEntities.length >= 2 && sharedEntities.join(" / ").length <= 70) return sharedEntities.join(" / ");
+
+  return getCleanHeadlineTopic(story);
+};
+
+const normalizeThreadReviewTopic = (topic, story, items) => {
+  const cleaned = cleanThreadText(topic);
+  const fallback = getThreadTopic(story, items);
+  if (!cleaned) return fallback;
+
+  const normalizedTopic = cleaned.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const normalizedHeadline = cleanThreadText(story?.headline ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const wordCount = cleaned.split(/\s+/).filter(Boolean).length;
+  const genericTopicPattern = /\b(latest|updates?|news|thread|story|today)\b/i;
+
+  if (cleaned.length > 72 || wordCount < 3 || wordCount > 10) return fallback;
+  if (normalizedHeadline && normalizedHeadline.includes(normalizedTopic) && normalizedTopic.length > 40) return fallback;
+  if (genericTopicPattern.test(cleaned) && !/\b(build|launch|rollout|probe|talks|deal|lawsuit|outage|earn|vault|finals|transfer)\b/i.test(cleaned)) {
+    return fallback;
+  }
+
+  return cleaned;
+};
+
+const storyForThreadReview = (story, index) => ({
+  id: index,
+  headline: cleanThreadText(story.headline ?? ""),
+  summary: cleanThreadText(story.ai_summary || story.summary || ""),
+  article_excerpt: cleanThreadText(`${story.headline ?? ""}. ${story.ai_summary || story.summary || ""}`).slice(0, 900),
+  source: story.source ?? "",
+  category: story.category ?? "",
+  publishedAt: story.publishedAt ?? "",
+  sourceUrl: story.sourceUrl ?? ""
+});
+
+const parseThreadReviewResponse = (data) => {
+  const content = data?.choices?.[0]?.message?.content ?? "";
+  const jsonText = content.match(/\{[\s\S]*\}/)?.[0];
+  if (!jsonText) return null;
+
+  try {
+    return JSON.parse(jsonText);
+  } catch {
+    return null;
+  }
+};
+
+const isSpecificThreadEvidence = (item) => {
+  const actor = cleanThreadText(item?.shared_actor ?? "");
+  const event = cleanThreadText(item?.shared_event ?? "");
+  const whyRelated = cleanThreadText(item?.why_related ?? item?.reason ?? "");
+  const whyNotBroad = cleanThreadText(item?.why_not_broad ?? "");
+  const combined = `${actor} ${event} ${whyRelated} ${whyNotBroad}`.toLowerCase();
+  const vagueValues = new Set(["", "same topic", "same category", "same company", "same actor", "same team", "same coin", "same sport", "related"]);
+
+  if (vagueValues.has(actor.toLowerCase()) || vagueValues.has(event.toLowerCase())) return false;
+  if (actor.length < 2 || event.length < 8 || whyRelated.length < 18 || whyNotBroad.length < 14) return false;
+  if (!/\b(not|rather than|because|specific|direct|same event|same product|same launch|same dispute|same deal|same outage|same report|same match|same transfer|same investigation|same earnings|same holdings)\b/i.test(whyNotBroad)) {
+    return false;
+  }
+  if (/\b(general|broad|category|industry|market|topic)\b/.test(combined) && !/\bnot\b/.test(whyNotBroad.toLowerCase())) {
+    return false;
+  }
+
+  return true;
+};
+
+const strictLocalThreadFallback = (story, scoredCandidates) => {
+  const items = scoredCandidates
+    .filter((item) => isStrictLocalThreadMatch(story, item.story, item.score))
+    .map((item) => item.story)
+    .slice(0, 6);
+
+  return {
+    topic: getThreadTopic(story, items),
+    count: items.length,
+    current: story,
+    items,
+    reviewed_by: "local-strict"
+  };
+};
+
+const synthesizeThreadTopicWith0G = async ({ story, items, apiKey, model, endpoint }) => {
+  if (!apiKey || !endpoint || !Array.isArray(items) || items.length < 1) return "";
+
+  const response = await fetch(`${endpoint}/chat/completions`, {
+    method: "POST",
+    signal: AbortSignal.timeout(Number(process.env.THREAD_TOPIC_TIMEOUT_MS ?? process.env.THREAD_REVIEW_TIMEOUT_MS ?? summaryTimeoutMs)),
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are Siftle's thread-title editor. Return ONLY valid JSON. Read the current article and the related articles, infer the single shared developing story, and write a concise topic. Do not copy a full headline. Use 4 to 9 words, title case, no source names, no dates unless essential, no question mark, no market framing."
+        },
+        {
+          role: "user",
+          content: JSON.stringify({
+            current: storyForThreadReview(story, "current"),
+            related_articles: items.slice(0, 4).map(storyForThreadReview),
+            required_output: {
+              thread_topic: "4-9 word topic naming the shared actor plus event/catalyst",
+              reasoning: "one short sentence explaining what the articles are talking about together"
+            },
+            good_examples: [
+              "Blue Origin New Glenn Launchpad Probe",
+              "Kraken Earn / Bitcoin Vault Rollout",
+              "Liverpool Andoni Iraola Talks",
+              "Amazon Prime Day 2026 Dates",
+              "Microsoft Build Copilot Announcements"
+            ]
+          })
+        }
+      ],
+      temperature: 0,
+      max_tokens: 500
+    })
+  });
+
+  if (!response.ok) throw await get0GHttpError(response, "0G thread topic");
+  const data = await response.json();
+  const parsed = parseThreadReviewResponse(data);
+  return cleanThreadText(parsed?.thread_topic ?? "");
+};
+
+const isStrictLocalThreadMatch = (story, candidate, score) => {
+  const sharedPrimaryAnchors = getSharedPrimaryAnchors(story, candidate);
+  const sharedEntities = getSharedValues(extractThreadEntities(story), extractThreadEntities(candidate))
+    .filter(isUsefulThreadEntity);
+  const sharedPhrase = hasSharedDistinctivePhrase(story, candidate);
+  const headlineOverlap = getSharedCount(tokenizeThreadText(story, true), tokenizeThreadText(candidate, true));
+
+  const hasCryptoProductContext = hasSharedCryptoProductContext(story, candidate);
+  if (sharedPrimaryAnchors.length === 0 && !hasCryptoProductContext) return false;
+
+  if (story?.category === "Sports") {
+    return score >= 0.58 && sharedEntities.length >= 1 && (sharedPhrase || headlineOverlap >= 2);
+  }
+
+  if (story?.category === "Tech") {
+    return score >= 0.56 && sharedEntities.length >= 1 && (sharedPhrase || headlineOverlap >= 2);
+  }
+
+  if (story?.category === "Anime") {
+    return score >= 0.48 && (sharedPhrase || headlineOverlap >= 1 || sharedEntities.length >= 1);
+  }
+
+  if (story?.category === "Crypto") {
+    return score >= 0.42 && (hasCryptoProductContext || (sharedPrimaryAnchors.length >= 1 && (sharedEntities.length >= 1 || sharedPhrase || headlineOverlap >= 2)));
+  }
+
+  return score >= 0.56 && sharedEntities.length >= 1;
+};
+
+const scoreThreadMatch = (story, candidate) => {
+  if (!story || !candidate || story.category !== candidate.category) return 0;
+  if (normalizeStoryUrl(story.sourceUrl) === normalizeStoryUrl(candidate.sourceUrl)) return 0;
+  if (!isThreadableStory(story) || !isThreadableStory(candidate)) return 0;
+
+  const storyTokens = tokenizeThreadText(story);
+  const candidateTokens = tokenizeThreadText(candidate);
+  if (storyTokens.size === 0 || candidateTokens.size === 0) return 0;
+
+  let overlap = 0;
+  for (const token of storyTokens) {
+    if (candidateTokens.has(token)) overlap += 1;
+  }
+
+  const storyHeadlineTokens = tokenizeThreadText(story, true);
+  const candidateHeadlineTokens = tokenizeThreadText(candidate, true);
+  const headlineOverlap = getSharedCount(storyHeadlineTokens, candidateHeadlineTokens);
+  const sharedEntities = getSharedCount(extractThreadEntities(story), extractThreadEntities(candidate));
+  const sharedPhrase = hasSharedDistinctivePhrase(story, candidate);
+  const hasAnchor = sharedEntities >= 1 || headlineOverlap >= 2 || sharedPhrase;
+  if (!hasAnchor || overlap < 2) return 0;
+
+  const baseScore = overlap / Math.min(storyTokens.size, candidateTokens.size);
+  const headlineBonus = Math.min(headlineOverlap * 0.08, 0.24);
+  const entityBonus = Math.min(sharedEntities * 0.14, 0.28);
+  const phraseBonus = sharedPhrase ? 0.18 : 0;
+  return baseScore + headlineBonus + entityBonus + phraseBonus;
+};
+
+const isThreadableStory = (story) => {
+  const headline = cleanThreadText(story?.headline ?? "").toLowerCase();
+  const summary = cleanThreadText(story?.summary ?? "").toLowerCase();
+  const text = `${headline} ${summary}`;
+
+  if (!headline || /example\.com/i.test(story?.sourceUrl ?? "")) return false;
+
+  const nonThreadPatterns = [
+    /\blive\b/,
+    /\btracker\b/,
+    /\branking\b/,
+    /\brankings\b/,
+    /\bguide\b/,
+    /\bpreview\b/,
+    /\broundup\b/,
+    /\brecap\b/,
+    /\bwallchart\b/,
+    /\bfixtures?\b/,
+    /\bschedule\b/,
+    /\bwhat to watch\b/,
+    /\bbest\b/,
+    /\btop \d+\b/,
+    /\bhow to\b/,
+    /\btips?\b/,
+    /\bcoupons?\b/,
+    /\bpromo codes?\b/,
+    /\bdeals?\b/,
+    /\breview\b/,
+    /\btransfer rumors?\b/,
+    /\btransfer rumours?\b/,
+    /\btransfer talk\b/,
+    /\bstorylines\b/,
+    /\bmatchups\b/
+  ];
+
+  if (nonThreadPatterns.some((pattern) => pattern.test(text))) return false;
+  return true;
+};
+
+const sortStoriesByPublishedAtDesc = (stories) =>
+  [...stories].sort((first, second) => {
+    const firstTime = new Date(first.publishedAt || 0).getTime();
+    const secondTime = new Date(second.publishedAt || 0).getTime();
+    return (Number.isNaN(secondTime) ? 0 : secondTime) - (Number.isNaN(firstTime) ? 0 : firstTime);
+  });
+
+const getHistoricalThreadCandidates = (story) => {
+  const currentDate = storyDateKey(story, getTodayKey());
+  const currentTime = new Date(story?.publishedAt || 0).getTime();
+  const seen = new Set([normalizeStoryUrl(story.sourceUrl)]);
+  const candidates = [];
+
+  const addSnapshotStories = (snapshot, fallbackDate) => {
+    for (const candidate of snapshot?.top_stories ?? []) {
+      const url = normalizeStoryUrl(candidate.sourceUrl);
+      if (!url || seen.has(url) || candidate.category !== story.category) continue;
+
+      const candidateDate = storyDateKey(candidate, fallbackDate);
+      const candidateTime = new Date(candidate.publishedAt || 0).getTime();
+      if (currentDate && candidateDate && candidateDate > currentDate) continue;
+      if (
+        currentDate &&
+        candidateDate === currentDate &&
+        !Number.isNaN(currentTime) &&
+        !Number.isNaN(candidateTime) &&
+        candidateTime >= currentTime
+      ) {
+        continue;
+      }
+
+      seen.add(url);
+      candidates.push({
+        ...candidate,
+        postedAt: candidate.publishedAt ? formatArchiveStoryDate(candidate.publishedAt, candidateDate ?? fallbackDate) : candidate.postedAt
+      });
+    }
+  };
+
+  if (existsSync(archiveDir)) {
+    for (const filename of readdirSync(archiveDir).filter((file) => file.endsWith(".json"))) {
+      const match = filename.match(/^(\d{4}-\d{2}-\d{2})-([a-z]+)\.json$/i);
+      if (!match) continue;
+      const [, date, categorySlug] = match;
+      if (currentDate && date > currentDate) continue;
+      if (categorySlug.toLowerCase() !== "all" && categorySlug.toLowerCase() !== story.category.toLowerCase()) continue;
+
+      try {
+        addSnapshotStories(JSON.parse(readFileSync(join(archiveDir, filename), "utf8")), date);
+      } catch {
+        // Ignore unreadable archive snapshots.
+      }
+    }
+  }
+
+  if (existsSync(publishedDir)) {
+    for (const filename of readdirSync(publishedDir).filter((file) => file.endsWith(".json"))) {
+      const match = filename.match(/^latest-([a-z]+)\.json$/i);
+      if (!match) continue;
+      const [, categorySlug] = match;
+      if (categorySlug.toLowerCase() !== "all" && categorySlug.toLowerCase() !== story.category.toLowerCase()) continue;
+
+      try {
+        const snapshot = JSON.parse(readFileSync(join(publishedDir, filename), "utf8"));
+        if (currentDate && snapshot.date > currentDate) continue;
+        addSnapshotStories(snapshot, snapshot.date);
+      } catch {
+        // Ignore unreadable published snapshots.
+      }
+    }
+  }
+
+  return candidates;
+};
+
+const getScoredThreadCandidates = (story) => {
+  if (!isThreadableStory(story)) return [];
+
+  return getHistoricalThreadCandidates(story)
+    .filter(isThreadableStory)
+    .map((candidate) => ({ story: candidate, score: scoreThreadMatch(story, candidate) }))
+    .filter((item) => item.score >= 0.28)
+    .sort((first, second) => {
+      if (second.score !== first.score) return second.score - first.score;
+      return new Date(second.story.publishedAt || 0).getTime() - new Date(first.story.publishedAt || 0).getTime();
+    });
+};
+
+const getLocalThreadForStory = (story) => {
+  const related = getScoredThreadCandidates(story).map((item) => item.story);
+
+  const items = sortStoriesByPublishedAtDesc(related).slice(0, 12);
+  return {
+    topic: getThreadTopic(story, items),
+    count: items.length,
+    current: story,
+    items
+  };
+};
+
+let threadReviewBudgetRemaining = threadReviewBudgetPerRefresh;
+
+const resetThreadReviewBudget = () => {
+  threadReviewBudgetRemaining = Math.max(0, threadReviewBudgetPerRefresh);
+};
+
+const canSpendThreadReview = () => {
+  if (threadReviewBudgetPerRefresh < 0) return true;
+  if (threadReviewBudgetRemaining <= 0) return false;
+  threadReviewBudgetRemaining -= 1;
+  return true;
+};
+
+const reviewThreadWith0G = async (story, scoredCandidates) => {
+  const candidates = scoredCandidates.slice(0, 14).map((item) => item.story);
+  if (candidates.length < 1) return strictLocalThreadFallback(story, scoredCandidates);
+
+  const cachePath = getThreadReviewCachePath(story, candidates);
+  const candidateKey = candidates.map((candidate) => normalizeStoryUrl(candidate.sourceUrl)).sort();
+  if (existsSync(cachePath)) {
+    try {
+      const cached = JSON.parse(readFileSync(cachePath, "utf8"));
+      if (cached.prompt_version === threadReviewPromptVersion && JSON.stringify(cached.candidate_key) === JSON.stringify(candidateKey)) {
+        const approvedUrls = new Set((cached.approved_source_urls ?? []).map(normalizeStoryUrl));
+        const items = candidates.filter((candidate) => approvedUrls.has(normalizeStoryUrl(candidate.sourceUrl)));
+        return {
+          topic: normalizeThreadReviewTopic(cached.topic, story, items),
+          count: items.length,
+          current: story,
+          items: sortStoriesByPublishedAtDesc(items).slice(0, 12),
+          reviewed_by: cached.provider ?? "cache"
+        };
+      }
+    } catch {
+      // Ignore broken thread review cache files.
+    }
+  }
+
+  const apiKey = process.env.ZERO_G_API_KEY || process.env.OG_COMPUTE_API_KEY;
+  const model = process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "zai-org/GLM-5-FP8";
+  if (!apiKey) return strictLocalThreadFallback(story, scoredCandidates);
+  if (!canSpendThreadReview()) return strictLocalThreadFallback(story, scoredCandidates);
+
+  try {
+    const service = await get0GService();
+    const endpoint = get0GEndpoint(service.url);
+    const response = await fetch(`${endpoint}/chat/completions`, {
+      method: "POST",
+      signal: AbortSignal.timeout(Number(process.env.THREAD_REVIEW_TIMEOUT_MS ?? summaryTimeoutMs)),
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          {
+            role: "system",
+            content:
+              [
+                "You are Siftle's senior news-thread editor. Return ONLY valid JSON.",
+                "Your job has two parts:",
+                "1. Decide whether older candidate articles belong in the same developing story as the current article.",
+                "2. Write the thread_topic by reading the current article plus the approved related articles and naming what the shared story is actually about.",
+                "For every candidate, give structured evidence: shared_actor, shared_event, why_related, why_not_broad, and confidence.",
+                "Approve articles that are the same specific event or a direct related development involving the same main actor, product, token, team, series, company, dispute, launch, outage, lawsuit, transfer, match, market catalyst, or product rail.",
+                "Reject articles that are merely in the same category, about the same broad sport/coin/company/team/person/series, or share generic terms.",
+                "For sports, same World Cup/league/coach/team is not enough without the same move/event/player/match.",
+                "For crypto, approve product-rail follow-ups when they share a concrete actor plus product context such as Kraken Earn/Vault, Strategy bitcoin sale/Polymarket, MoneyGram MGUSD/Stellar, ETF outflows, or Mt. Gox transfers. Same coin or price movement alone is not enough.",
+                "For crypto company treasury/mining stories, the same coin, holdings amount, revenue figure, or broad Bitcoin treasury theme is not enough. The stories must share the same company/entity and the same earnings, sale, holdings change, product, or regulatory event.",
+                "For payments/card stories, Visa, card, tokenized, rewards, payments, launch, or API alone are broad terms. Different Visa card integrations from different companies are not the same thread unless they share the same company, product, card program, or direct partnership update.",
+                "For anime/tech, same franchise/company/framework is not enough unless the update is a direct continuation.",
+                "Thread topic rules: do not copy the full headline, do not include source names, do not use dates unless essential, do not use vague labels like 'latest updates', and do not make a market question. Use 4 to 9 words, title case, and name the actor plus the event/catalyst.",
+                "Good topics: 'Blue Origin New Glenn Launchpad Probe', 'Kraken Earn / Bitcoin Vault Rollout', 'Liverpool Andoni Iraola Talks', 'Amazon Prime Day 2026 Dates', 'Microsoft Build Copilot Announcements'.",
+                "Bad topics: 'Blue Origin plans to launch New Glenn again this year after explosion', 'June 23 / 2026', 'Latest Tech Updates', 'Premier League / World Cup'.",
+                "Use the supplied fields only."
+              ].join(" ")
+          },
+          {
+            role: "user",
+            content: JSON.stringify({
+              current: storyForThreadReview(story, "current"),
+              candidates: candidates.map(storyForThreadReview),
+              required_output: {
+                thread_topic:
+                  "4-9 word title-case topic synthesized from the current article and approved related articles; name the shared actor and event/catalyst; empty string only if no approved same-story article",
+                approved: [
+                  {
+                    id: 0,
+                    same_story: true,
+                    shared_actor: "specific company/person/team/product/franchise shared by both articles",
+                    shared_event: "specific event/catalyst/update shared by both articles",
+                    why_related: "brief evidence from both articles showing the same developing story",
+                    why_not_broad: "brief note explaining why this is not merely same category/company/coin/team/theme",
+                    confidence: 0.0,
+                    reason: "brief reason tied to the same event"
+                  }
+                ],
+                reject_reason: "brief note if few or no candidates are same story"
+              },
+              approval_rule:
+                "Approve only when confidence is at least 0.80, shared_actor is specific, shared_event is specific, why_related cites evidence from both articles, and why_not_broad explains why it is not merely a broad match. Reject weak broad matches. Create thread_topic only after deciding which candidates are approved, using the current article and approved candidates together."
+            })
+          }
+        ],
+        temperature: 0,
+        max_tokens: 1600
+      })
+    });
+
+    if (!response.ok) throw await get0GHttpError(response, "0G thread review");
+
+    const data = await response.json();
+    const parsed = parseThreadReviewResponse(data);
+    const approvals = Array.isArray(parsed?.approved) ? parsed.approved : [];
+    const approvedIds = new Set(
+      approvals
+        .filter((item) => item?.same_story === true && Number(item.confidence) >= 0.8 && isSpecificThreadEvidence(item))
+        .map((item) => Number(item.id))
+        .filter((id) => Number.isInteger(id) && id >= 0 && id < candidates.length)
+    );
+    const items = candidates.filter((_, index) => approvedIds.has(index));
+    const evidence = approvals
+      .filter((item) => approvedIds.has(Number(item.id)))
+      .map((item) => ({
+        id: Number(item.id),
+        shared_actor: cleanThreadText(item.shared_actor ?? ""),
+        shared_event: cleanThreadText(item.shared_event ?? ""),
+        why_related: cleanThreadText(item.why_related ?? item.reason ?? ""),
+        why_not_broad: cleanThreadText(item.why_not_broad ?? ""),
+        confidence: Number(item.confidence) || 0
+      }));
+    if (items.length === 0) {
+      const payload = {
+        prompt_version: threadReviewPromptVersion,
+        candidate_key: candidateKey,
+        approved_source_urls: [],
+        evidence: [],
+        topic: "",
+        provider: "0g",
+        response_id: data?.id ?? null,
+        reviewed_at: new Date().toISOString()
+      };
+      writeFileSync(cachePath, JSON.stringify(payload, null, 2));
+      recordZeroGSuccess("thread_review");
+
+      return {
+        topic: "",
+        count: 0,
+        current: story,
+        items: [],
+        reviewed_by: "0g"
+      };
+    }
+
+    const topic = normalizeThreadReviewTopic(parsed?.thread_topic, story, items);
+    const payload = {
+      prompt_version: threadReviewPromptVersion,
+      candidate_key: candidateKey,
+      approved_source_urls: items.map((item) => item.sourceUrl),
+      evidence,
+      topic,
+      provider: "0g",
+      response_id: data?.id ?? null,
+      reviewed_at: new Date().toISOString()
+    };
+    writeFileSync(cachePath, JSON.stringify(payload, null, 2));
+    recordZeroGSuccess("thread_review");
+
+    return {
+      topic,
+      count: items.length,
+      current: story,
+      items: sortStoriesByPublishedAtDesc(items).slice(0, 12),
+      reviewed_by: "0g"
+    };
+  } catch (error) {
+    console.warn("0G thread review fallback:", error.message);
+    recordZeroGFallback("thread_review", error);
+    return strictLocalThreadFallback(story, scoredCandidates);
+  }
+};
+
+const getThreadForStory = async (story) => {
+  const scoredCandidates = getScoredThreadCandidates(story);
+  if (scoredCandidates.length < 1) return getLocalThreadForStory(story);
+  return reviewThreadWith0G(story, scoredCandidates);
+};
+
+const annotateStoriesWithThreads = async (stories = []) => {
+  const annotated = [];
+  for (const story of stories) {
+    const thread = await getThreadForStory(story);
+    if (thread.count < 1) {
+      const { thread: _thread, ...storyWithoutThread } = story;
+      annotated.push(storyWithoutThread);
+      continue;
+    }
+
+    annotated.push({
+      ...story,
+      thread: {
+        count: thread.count,
+        topic: thread.topic
+      }
+    });
+  }
+  return annotated;
+};
+
+const annotateSnapshotThreads = async (snapshot) =>
+  snapshot?.top_stories
+    ? {
+        ...snapshot,
+        top_stories: await annotateStoriesWithThreads(snapshot.top_stories)
+      }
+    : snapshot;
+
+const findStoryForThreadRequest = (category, sourceUrl) => {
+  const selectedCategory = normalizeCategory(category);
+  const url = normalizeStoryUrl(sourceUrl);
+  if (!url) return null;
+
+  const snapshots = selectedCategory === "All"
+    ? categories.map(readPublishedSnapshot).filter(Boolean)
+    : [readPublishedSnapshot(selectedCategory), readPublishedSnapshot("All")].filter(Boolean);
+
+  for (const snapshot of snapshots) {
+    const story = (snapshot.top_stories ?? []).find((item) => normalizeStoryUrl(item.sourceUrl) === url);
+    if (story) return story;
+  }
+
+  return null;
+};
 
 const sendJson = (response, statusCode, payload) => {
   response.writeHead(statusCode, {
@@ -965,6 +1924,68 @@ const get0GEndpoint = (serviceUrl) => {
   return `${normalized}/v1/proxy`;
 };
 
+const get0GHttpError = async (response, label) => {
+  let detail = "";
+  try {
+    detail = (await response.text()).replace(/\s+/g, " ").trim().slice(0, 240);
+  } catch {
+    detail = "";
+  }
+
+  return new Error(`${label} returned ${response.status}${detail ? `: ${detail}` : ""}`);
+};
+
+const zeroGStatus = {
+  configured: false,
+  last_success_at: null,
+  last_error_at: null,
+  last_error: null,
+  last_success_kind: null,
+  summary_success_count: 0,
+  summary_fallback_count: 0,
+  thread_review_success_count: 0,
+  thread_review_fallback_count: 0
+};
+
+const getZeroGConfigStatus = () => ({
+  api_key: Boolean(process.env.ZERO_G_API_KEY || process.env.OG_COMPUTE_API_KEY),
+  provider: Boolean(process.env.OG_COMPUTE_PROVIDER),
+  endpoint: Boolean(process.env.OG_COMPUTE_ENDPOINT || process.env.ZERO_G_ENDPOINT || process.env.OG_COMPUTE_URL || process.env.ZERO_G_URL),
+  model: process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "zai-org/GLM-5-FP8"
+});
+
+const getZeroGStatusSnapshot = () => {
+  const config = getZeroGConfigStatus();
+  return {
+    ...zeroGStatus,
+    configured: config.api_key && (config.endpoint || config.provider),
+    usage_mode: ogUsageMode,
+    auto_summaries_enabled: shouldAutoSummarizeWith0G,
+    thread_review_budget_per_refresh: threadReviewBudgetPerRefresh,
+    thread_review_budget_remaining: threadReviewBudgetRemaining,
+    config
+  };
+};
+
+const recordZeroGSuccess = (kind) => {
+  zeroGStatus.configured = getZeroGStatusSnapshot().configured;
+  zeroGStatus.last_success_at = new Date().toISOString();
+  zeroGStatus.last_success_kind = kind;
+  zeroGStatus.last_error = null;
+
+  if (kind === "thread_review") zeroGStatus.thread_review_success_count += 1;
+  else zeroGStatus.summary_success_count += 1;
+};
+
+const recordZeroGFallback = (kind, error) => {
+  zeroGStatus.configured = getZeroGStatusSnapshot().configured;
+  zeroGStatus.last_error_at = new Date().toISOString();
+  zeroGStatus.last_error = error?.message ?? String(error ?? "Unknown 0G error");
+
+  if (kind === "thread_review") zeroGStatus.thread_review_fallback_count += 1;
+  else zeroGStatus.summary_fallback_count += 1;
+};
+
 const summarizeWith0G = async (article, options = {}) => {
   const apiKey = process.env.ZERO_G_API_KEY || process.env.OG_COMPUTE_API_KEY;
   const model = process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "zai-org/GLM-5-FP8";
@@ -1023,7 +2044,7 @@ const summarizeWith0G = async (article, options = {}) => {
     });
 
     if (!response.ok) {
-      throw new Error(`0G returned ${response.status}`);
+      throw await get0GHttpError(response, "0G");
     }
 
     const data = await response.json();
@@ -1116,9 +2137,11 @@ const summarizeWith0G = async (article, options = {}) => {
       cachePath,
       JSON.stringify({ summary, cached_at: new Date().toISOString(), provider: "0g", proof: proofObj, prompt_version: summaryPromptVersion }, null, 2)
     );
+    recordZeroGSuccess("summary");
     return { summary, provider: "0g", proof: proofObj };
   } catch (error) {
     console.warn("0G summarization fallback:", error.message);
+    recordZeroGFallback("summary", error);
     const summary = cleanSummaryText(summarizeLocally(article));
     writeFileSync(cachePath, JSON.stringify({ summary, cached_at: new Date().toISOString(), provider: "local-fallback", prompt_version: summaryPromptVersion }, null, 2));
     return { summary, provider: "local-fallback", error: error.message };
@@ -1217,6 +2240,169 @@ const balanceArticlesBySource = (articles, maxPerSource = 8) => {
   });
 };
 
+const isFootballOrNbaArticle = (article) => {
+  if (article.category !== "Sports") return true;
+  const text = getArticleText(article);
+  const sourceKey = getArticleSourceKey(article);
+  const sourceUrl = String(article.sourceUrl ?? "").toLowerCase();
+  const hasTerm = (term) => new RegExp(`(^|[^a-z0-9])${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`, "i").test(text);
+  const lowValueSportsPatterns = [
+    /\bfootball daily\b/,
+    /\bpodcast\b/,
+    /\bwallchart\b/,
+    /\bquiz\b/,
+    /\bdownload your world cup\b/
+  ];
+  if (sourceUrl.includes("bbc.co.uk/sounds") || sourceUrl.includes("iplayer") || sourceUrl.includes("/audio/")) return false;
+  if (lowValueSportsPatterns.some((pattern) => pattern.test(text))) return false;
+
+  const blockedSports = [
+    "nfl",
+    "mlb",
+    "baseball",
+    "tennis",
+    "formula 1",
+    "f1",
+    "cricket",
+    "rugby",
+    "golf",
+    "boxing",
+    "ufc",
+    "mma",
+    "wnba",
+    "college basketball",
+    "mens college basketball",
+    "men's college basketball",
+    "womens college basketball",
+    "women's college basketball",
+    "college football",
+    "ncaa football",
+    "softball",
+    "nhl",
+    "hockey"
+  ];
+  const footballSignals = [
+    "football",
+    "soccer",
+    "premier league",
+    "champions league",
+    "europa league",
+    "uefa",
+    "fifa",
+    "world cup",
+    "la liga",
+    "serie a",
+    "bundesliga",
+    "mls",
+    "transfer",
+    "arsenal",
+    "chelsea",
+    "liverpool",
+    "manchester",
+    "real madrid",
+    "barcelona",
+    "psg",
+    "bayern",
+    "inter milan",
+    "ac milan",
+    "juventus"
+  ];
+  const soccerSpecificSignals = footballSignals.filter((signal) => signal !== "football");
+  const nbaSignals = ["nba", "lakers", "warriors", "celtics", "knicks", "mavericks", "nuggets", "timberwolves", "thunder", "spurs", "76ers"];
+  const hasFootballPath = sourceUrl.includes("/football/") || sourceUrl.includes("/soccer/") || sourceKey.includes("football");
+  const hasNbaPath = sourceUrl.includes("/nba/") || sourceKey.includes("nba.com");
+  const hasClubOrLeagueContext =
+    hasFootballPath || soccerSpecificSignals.filter((signal) => !["world cup", "fifa"].includes(signal)).some(hasTerm);
+  const isClearlySoccer = hasFootballPath || soccerSpecificSignals.some(hasTerm);
+  const isNba = hasNbaPath || nbaSignals.some(hasTerm);
+  const isFootball = isClearlySoccer || hasTerm("football");
+
+  if (!isFootball && !isNba) return false;
+  if (blockedSports.some((signal) => text.includes(signal))) {
+    return hasClubOrLeagueContext || hasNbaPath;
+  }
+
+  return true;
+};
+
+const isThreadFriendlyTechArticle = (article) => {
+  if (article.category !== "Tech") return true;
+
+  const sourceKey = getArticleSourceKey(article);
+  if (sourceKey.includes("dev.to")) return false;
+
+  const text = getArticleText(article);
+  const tutorialPatterns = [
+    /\bhow to\b/,
+    /\bi built\b/,
+    /\bi tried\b/,
+    /\bwhy every\b/,
+    /\bshould you\b/,
+    /\bmaster these\b/,
+    /\bkeywords?\b/,
+    /\barithmetic operators?\b/,
+    /\btype conversion\b/,
+    /\bfootguns?\b/,
+    /\btips?\b/,
+    /\btutorial\b/,
+    /\bguide\b/,
+    /\breview\b/,
+    /\bcoupons?\b/,
+    /\bpromo codes?\b/,
+    /\bdeals?\b/,
+    /\bhonesty traps?\b/,
+    /\bprompt tricks?\b/,
+    /\bi set\b/,
+    /\bi'?ve seen\b/,
+    /\bthis easy\b/,
+    /\b\d+\s+best\b/,
+    /\bbest\b.*\bai\b/,
+    /\bbest\b.*\bspeakers?\b/,
+    /\bvs\.\b/,
+    /\bbetter ai-generated images?\b/,
+    /\bspider-man\b/,
+    /\bmovie\b/,
+    /\btheaters?\b/,
+    /\bscreening\b/,
+    /\bopen-world\b/,
+    /\bdriving game\b/,
+    /\broast my setup\b/,
+    /\bwithout leaving the terminal\b/
+  ];
+  if (tutorialPatterns.some((pattern) => pattern.test(text))) return false;
+
+  const companyOrEventSignals = [
+    "launch",
+    "released",
+    "unveiled",
+    "announced",
+    "acquisition",
+    "funding",
+    "raises",
+    "lawsuit",
+    "regulator",
+    "breach",
+    "hack",
+    "outage",
+    "cloud",
+    "startup",
+    "google",
+    "apple",
+    "microsoft",
+    "meta",
+    "amazon",
+    "nvidia",
+    "openai",
+    "anthropic",
+    "github",
+    "spacex",
+    "tesla",
+    "alphabet"
+  ];
+
+  return companyOrEventSignals.some((signal) => text.includes(signal));
+};
+
 const runWithConcurrency = async (items, limit, worker) => {
   const results = new Array(items.length);
   let nextIndex = 0;
@@ -1255,18 +2441,20 @@ const buildStories = async (articles) => {
     };
   });
 
-  await runWithConcurrency(articles, summaryConcurrency, async (article, idx) => {
-    try {
-      const result = await summarizeWith0G(article);
-      if (result && result.summary) {
-        stories[idx].ai_summary = result.summary;
-        stories[idx].ai_provider = result.provider || "0g";
-        if (result.proof) stories[idx].ai_proof = result.proof;
+  if (shouldAutoSummarizeWith0G) {
+    await runWithConcurrency(articles, summaryConcurrency, async (article, idx) => {
+      try {
+        const result = await summarizeWith0G(article);
+        if (result && result.summary) {
+          stories[idx].ai_summary = result.summary;
+          stories[idx].ai_provider = result.provider || "0g";
+          if (result.proof) stories[idx].ai_proof = result.proof;
+        }
+      } catch (err) {
+        // ignore per-article errors; local summary already present
       }
-    } catch (err) {
-      // ignore per-article errors; local summary already present
-    }
-  });
+    });
+  }
 
   return stories;
 };
@@ -1311,14 +2499,39 @@ const mergeDailyStories = (freshStories, previousStories = []) => {
     }));
 };
 
+const sanitizeSnapshotForCategory = (snapshot) => {
+  if (!snapshot || !Array.isArray(snapshot.top_stories)) return snapshot;
+  const storyFilter =
+    snapshot.category === "Tech"
+      ? (story) => isThreadFriendlyTechArticle(story)
+      : snapshot.category === "Sports"
+        ? (story) => isFootballOrNbaArticle(story)
+      : snapshot.category === "All"
+        ? (story) =>
+            (story.category !== "Tech" || isThreadFriendlyTechArticle(story)) &&
+            (story.category !== "Sports" || isFootballOrNbaArticle(story))
+        : () => true;
+
+  return {
+    ...snapshot,
+    top_stories: snapshot.top_stories
+      .filter(storyFilter)
+      .map((story, index) => ({
+        ...story,
+        id: index + 1,
+        postedAt: story.publishedAt ? relativeTime(story.publishedAt) : story.postedAt
+      }))
+  };
+};
+
 const mergeWithTodaySnapshot = (snapshot) => {
   const previous = readPublishedSnapshot(snapshot.category);
   if (!previous || previous.date !== snapshot.date) return snapshot;
 
-  return {
+  return sanitizeSnapshotForCategory({
     ...snapshot,
     top_stories: mergeDailyStories(snapshot.top_stories, previous.top_stories)
-  };
+  });
 };
 
 const buildCategorySnapshot = async (category) => mergeWithTodaySnapshot(await generateSnapshot(category));
@@ -1485,7 +2698,7 @@ const getRecoverablePublishedSnapshot = async (category) => {
 
 const writePublishedSnapshot = (snapshot) => {
   mkdirSync(publishedDir, { recursive: true });
-  writeJsonFile(getLatestSnapshotPath(snapshot.category), snapshot);
+  writeJsonFile(getLatestSnapshotPath(snapshot.category), sanitizeSnapshotForCategory(snapshot));
 };
 
 const generateSnapshot = async (category) => {
@@ -1501,9 +2714,16 @@ const generateSnapshot = async (category) => {
   const dedupedArticles = dedupeArticles(repairedArticles).filter(
     (article) =>
       isArticleOnAppDate(article, date) &&
-      (selectedCategory === "All" || matchesCategorySignal(article, selectedCategory))
+      (selectedCategory === "All" || matchesCategorySignal(article, selectedCategory)) &&
+      (article.category !== "Sports" || isFootballOrNbaArticle(article)) &&
+      (article.category !== "Tech" || isThreadFriendlyTechArticle(article))
   );
-  const articles = selectedCategory === "Anime" ? balanceArticlesBySource(dedupedArticles, 8) : dedupedArticles;
+  const articles =
+    selectedCategory === "Anime"
+      ? balanceArticlesBySource(dedupedArticles, 8)
+      : selectedCategory === "Tech"
+        ? balanceArticlesBySource(dedupedArticles, 6)
+        : dedupedArticles;
   const stories = articles.length > 0 ? await buildStories(articles) : getMockStoriesForCategory(selectedCategory);
 
   const snapshot = {
@@ -1561,16 +2781,20 @@ const getPublishedFeed = async (category) => {
       published_at: new Date().toISOString(),
       status: "published"
     });
-    return readPublishedSnapshot("All");
+    return annotateSnapshotThreads(readPublishedSnapshot("All"));
   }
 
   const snapshot = await getRecoverablePublishedSnapshot(selectedCategory);
-  if (snapshot?.date === getTodayKey() && hasRealStories(snapshot)) return snapshot;
+  if (snapshot?.date === getTodayKey() && hasRealStories(snapshot)) {
+    const sanitized = sanitizeSnapshotForCategory(snapshot);
+    if (sanitized.top_stories.length !== snapshot.top_stories.length) writePublishedSnapshot(sanitized);
+    return annotateSnapshotThreads(sanitized);
+  }
 
-  return generateAndPublishFeed(selectedCategory);
+  return annotateSnapshotThreads(await generateAndPublishFeed(selectedCategory));
 };
 
-const refreshIntervalMinutes = Number(process.env.REFRESH_INTERVAL_MINUTES ?? 60);
+const refreshIntervalMinutes = Number(process.env.REFRESH_INTERVAL_MINUTES ?? 30);
 const publishedSnapshots = new Map();
 const publishStatus = {
   is_running: false,
@@ -1588,9 +2812,10 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
   publishStatus.is_running = true;
   publishStatus.last_started_at = new Date().toISOString();
   publishStatus.last_error = null;
+  resetThreadReviewBudget();
 
   try {
-    console.log(`Publishing hourly feeds (${reason})...`);
+    console.log(`Publishing feeds every ${refreshIntervalMinutes} minutes (${reason})...`);
     let failureCount = 0;
 
     for (const category of sourceCategories) {
@@ -1638,7 +2863,7 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
 
     publishStatus.last_finished_at = new Date().toISOString();
     publishStatus.last_error = failureCount > 0 ? `${failureCount} categories failed; previous published feeds kept where available` : null;
-    console.log("Hourly feeds published at", publishStatus.last_finished_at);
+    console.log("Scheduled feeds published at", publishStatus.last_finished_at);
     return { skipped: false, status: publishStatus };
   } catch (err) {
     publishStatus.last_error = err.message;
@@ -1669,7 +2894,8 @@ const server = createServer(async (request, response) => {
       time: new Date().toISOString(),
       refresh_interval_minutes: refreshIntervalMinutes,
       is_publishing: publishStatus.is_running,
-      last_finished_at: publishStatus.last_finished_at
+      last_finished_at: publishStatus.last_finished_at,
+      zero_g: getZeroGStatusSnapshot()
     };
 
     if (request.method === "HEAD") {
@@ -1693,12 +2919,41 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (requestUrl.pathname === "/api/thread" && request.method === "GET") {
+    try {
+      const category = requestUrl.searchParams.get("category") ?? "All";
+      const sourceUrl = requestUrl.searchParams.get("sourceUrl") ?? "";
+      const story = findStoryForThreadRequest(category, sourceUrl);
+      if (!story) {
+        sendJson(response, 404, { error: "Story not found" });
+        return;
+      }
+
+      const thread = await getThreadForStory(story);
+      if (thread.count < 1) {
+        sendJson(response, 404, { error: "Thread not available" });
+        return;
+      }
+
+      sendJson(response, 200, thread);
+    } catch (error) {
+      sendJson(response, 500, { error: error.message });
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/publish/status" && request.method === "GET") {
     sendJson(response, 200, {
       ...publishStatus,
       refresh_interval_minutes: refreshIntervalMinutes,
+      zero_g: getZeroGStatusSnapshot(),
       published_categories: categories.filter((category) => Boolean(readPublishedSnapshot(category)))
     });
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/0g/status" && request.method === "GET") {
+    sendJson(response, 200, getZeroGStatusSnapshot());
     return;
   }
 

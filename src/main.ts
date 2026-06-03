@@ -1,5 +1,5 @@
 import { categories, mockStories } from "./mockNews.js";
-import type { ArchiveDate, Category, NewsStory } from "./types.js";
+import type { ArchiveDate, Category, NewsStory, StoryThread } from "./types.js";
 
 declare global {
   interface Window {
@@ -20,6 +20,9 @@ const state: {
   archiveDates: ArchiveDate[];
   activeArchiveDate: string | null;
   activeShareStoryId: number | null;
+  selectedThreadUrl: string | null;
+  activeThread: StoryThread | null;
+  loadingThreadUrl: string | null;
   feedScrollY: number;
   hasLoadedFeed: boolean;
   showSaved: boolean;
@@ -33,6 +36,9 @@ const state: {
   archiveDates: [],
   activeArchiveDate: null,
   activeShareStoryId: null,
+  selectedThreadUrl: null,
+  activeThread: null,
+  loadingThreadUrl: null,
   feedScrollY: 0,
   hasLoadedFeed: false
   ,
@@ -214,27 +220,68 @@ const openStory = (storyId: number): void => {
 
   state.feedScrollY = window.scrollY;
   state.selectedStoryId = story.id;
+  state.selectedThreadUrl = null;
+  state.activeThread = null;
   window.history.pushState({}, "", `#story-${story.id}`);
   render();
   void loadStorySummary(story);
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
+const openThread = (story: NewsStory): void => {
+  state.feedScrollY = window.scrollY;
+  state.selectedStoryId = null;
+  state.selectedThreadUrl = story.sourceUrl;
+  state.activeThread = null;
+  state.loadingThreadUrl = story.sourceUrl;
+  window.history.pushState({}, "", `#thread-${story.id}`);
+  render();
+  void loadStoryThread(story);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
 const closeStory = (): void => {
   state.selectedStoryId = null;
+  state.selectedThreadUrl = null;
+  state.activeThread = null;
+  state.loadingThreadUrl = null;
   window.history.pushState({}, "", window.location.pathname);
   render();
   requestAnimationFrame(() => window.scrollTo({ top: state.feedScrollY, behavior: "auto" }));
 };
 
+const loadStoryThread = async (story: NewsStory): Promise<void> => {
+  try {
+    const response = await fetch(
+      apiUrl(`/api/thread?category=${encodeURIComponent(story.category)}&sourceUrl=${encodeURIComponent(story.sourceUrl)}`)
+    );
+    if (!response.ok) throw new Error(`Thread request failed with ${response.status}`);
+
+    state.activeThread = await response.json();
+    if (menuStatus) menuStatus.textContent = `${state.activeThread?.count ?? 0} related updates found`;
+  } catch (error) {
+    console.warn(error);
+    state.activeThread = null;
+    if (menuStatus) menuStatus.textContent = "Thread unavailable";
+  } finally {
+    state.loadingThreadUrl = null;
+    renderDetail();
+  }
+};
+
 const syncStoryFromHash = (): void => {
-  const match = window.location.hash.match(/^#story-(\d+)$/);
-  const story = match ? state.stories.find((item) => item.id === Number(match[1])) : undefined;
-  const wasInDetail = state.selectedStoryId !== null;
+  const storyMatch = window.location.hash.match(/^#story-(\d+)$/);
+  const threadMatch = window.location.hash.match(/^#thread-(\d+)$/);
+  const story = storyMatch ? state.stories.find((item) => item.id === Number(storyMatch[1])) : undefined;
+  const threadStory = threadMatch ? state.stories.find((item) => item.id === Number(threadMatch[1])) : undefined;
+  const wasInDetail = state.selectedStoryId !== null || state.selectedThreadUrl !== null;
   state.selectedStoryId = story?.id ?? null;
+  state.selectedThreadUrl = threadStory?.sourceUrl ?? null;
+  state.activeThread = null;
   render();
   if (story) void loadStorySummary(story);
-  if (!story && wasInDetail) {
+  if (threadStory) void loadStoryThread(threadStory);
+  if (!story && !threadStory && wasInDetail) {
     requestAnimationFrame(() => window.scrollTo({ top: state.feedScrollY, behavior: "auto" }));
   }
 };
@@ -245,6 +292,9 @@ const setArchiveStatus = (message: string): void => {
 
 const loadFeed = async (category: Category = state.activeCategory): Promise<void> => {
   state.selectedStoryId = null;
+  state.selectedThreadUrl = null;
+  state.activeThread = null;
+  state.loadingThreadUrl = null;
   state.showSaved = false;
   state.isLoading = false;
   renderCategories();
@@ -333,11 +383,38 @@ const renderCategories = (): void => {
     .join("");
 };
 
+const hasThread = (story: NewsStory): boolean => (story.thread?.count ?? 0) >= 1;
+
+const formatThreadCount = (count = 0): string => `${count} past ${count === 1 ? "update" : "updates"}`;
+
+const sortThreadItemsNewestFirst = (items: NewsStory[] = []): NewsStory[] =>
+  [...items].sort((first, second) => {
+    const firstTime = new Date(first.publishedAt || 0).getTime();
+    const secondTime = new Date(second.publishedAt || 0).getTime();
+    return (Number.isNaN(secondTime) ? 0 : secondTime) - (Number.isNaN(firstTime) ? 0 : firstTime);
+  });
+
+const renderDesktopThreadButton = (story: NewsStory): string =>
+  hasThread(story)
+    ? `<button class="card-source-button thread-button" type="button" data-thread-story-id="${story.id}">Thread (${story.thread?.count})</button>`
+    : "";
+
+const renderMobileThreadButton = (story: NewsStory): string =>
+  hasThread(story)
+    ? `<button class="mobile-action-btn thread-btn" type="button" data-thread-story-id="${story.id}">Thread</button>`
+    : "";
+
+const renderBookmarkIcon = (): string =>
+  `<svg class="action-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.75h10a1.75 1.75 0 0 1 1.75 1.75v14.25L12 16.35l-6.75 4.4V6.5A1.75 1.75 0 0 1 7 4.75Z"/></svg>`;
+
+const renderExportIcon = (): string =>
+  `<svg class="action-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4.75"/><path d="m7.25 9.5 4.75-4.75 4.75 4.75"/><path d="M5 13.25v4.5A2.25 2.25 0 0 0 7.25 20h9.5A2.25 2.25 0 0 0 19 17.75v-4.5"/></svg>`;
+
 const renderStories = (): void => {
   if (!storyList) return;
 
   const stories = getFilteredStories();
-  storyList.hidden = Boolean(state.selectedStoryId);
+  storyList.hidden = Boolean(state.selectedStoryId || state.selectedThreadUrl);
 
   if (state.isLoading) {
     storyList.innerHTML = state.stories.length > 0 ? storyList.innerHTML : "";
@@ -362,11 +439,11 @@ const renderStories = (): void => {
             </div>
             <div class="story-card-actions">
               <button class="bookmark-button" type="button" data-bookmark-url="${story.sourceUrl}" aria-pressed="${story.saved ? "true" : "false"}" aria-label="${story.saved ? "Remove saved story" : "Save story"}">
-                <span></span>
+                ${renderBookmarkIcon()}
               </button>
               <div class="share-control">
                 <button class="export-button" type="button" aria-label="Export story card" data-export-id="${story.id}" aria-expanded="${state.activeShareStoryId === story.id}">
-                  <span></span>
+                  ${renderExportIcon()}
                 </button>
                 <div class="share-menu" ${state.activeShareStoryId === story.id ? "" : "hidden"}>
                   <button type="button" data-export-action="save" data-export-story-id="${story.id}">Save image</button>
@@ -387,6 +464,7 @@ const renderStories = (): void => {
           </div>
 
           <div class="card-action-row desktop-only">
+            ${renderDesktopThreadButton(story)}
             ${/example\\.com/i.test(story.sourceUrl)
               ? `<a class="card-source-button disabled" href="#" onclick="event.preventDefault(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
               : `<a class="card-source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
@@ -415,6 +493,7 @@ const renderStories = (): void => {
               </div>
             </div>
             <div class="mobile-card-actions">
+              ${renderMobileThreadButton(story)}
               ${/example\\.com/i.test(story.sourceUrl)
                 ? `<a class="mobile-action-btn source-btn disabled" href="#" onclick="event.preventDefault(); event.stopPropagation(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
                 : `<a class="mobile-action-btn source-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Open source</a>`}
@@ -447,11 +526,11 @@ const renderStories = (): void => {
             </div>
             <div class="story-card-actions">
               <button class="bookmark-button" type="button" data-bookmark-url="${story.sourceUrl}" aria-pressed="${story.saved ? "true" : "false"}" aria-label="${story.saved ? "Remove saved story" : "Save story"}">
-                <span></span>
+                ${renderBookmarkIcon()}
               </button>
               <div class="share-control">
                 <button class="export-button" type="button" aria-label="Export story card" data-export-id="${story.id}" aria-expanded="${state.activeShareStoryId === story.id}">
-                  <span></span>
+                  ${renderExportIcon()}
                 </button>
                 <div class="share-menu" ${state.activeShareStoryId === story.id ? "" : "hidden"}>
                   <button type="button" data-export-action="save" data-export-story-id="${story.id}">Save image</button>
@@ -472,6 +551,7 @@ const renderStories = (): void => {
           </div>
 
           <div class="card-action-row desktop-only">
+            ${renderDesktopThreadButton(story)}
             ${/example\\.com/i.test(story.sourceUrl)
               ? `<a class="card-source-button disabled" href="#" onclick="event.preventDefault(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
               : `<a class="card-source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
@@ -500,6 +580,7 @@ const renderStories = (): void => {
               </div>
             </div>
             <div class="mobile-card-actions">
+              ${renderMobileThreadButton(story)}
               ${/example\\.com/i.test(story.sourceUrl)
                 ? `<a class="mobile-action-btn source-btn disabled" href="#" onclick="event.preventDefault(); event.stopPropagation(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
                 : `<a class="mobile-action-btn source-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Open source</a>`}
@@ -748,8 +829,70 @@ const handleStoryExport = async (storyId: number, action: "save" | "share"): Pro
   }
 };
 
+const renderThreadTimelineItem = (story: NewsStory, label: string): string => `
+  <article class="thread-item">
+    <div class="thread-dot" aria-hidden="true"></div>
+    <div class="thread-item-body">
+      <div class="thread-meta">
+        <span class="category-chip ${story.category}">${story.category}</span>
+        <span>${label} - ${story.source}</span>
+      </div>
+      <h3>${story.headline}</h3>
+      <p>${cleanSummaryText(story.ai_summary || story.summary)}</p>
+      ${/example\\.com/i.test(story.sourceUrl)
+        ? ""
+        : `<a class="thread-source-link" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
+    </div>
+  </article>
+`;
+
+const renderThreadView = (): void => {
+  if (!storyDetail || !storyList) return;
+
+  const seedStory = state.stories.find((item) => item.sourceUrl === state.selectedThreadUrl);
+  storyList.hidden = true;
+  storyDetail.hidden = false;
+  storyDetail.classList.add("fullscreen");
+  document.body.classList.add("detail-mode");
+
+  if (!seedStory) {
+    storyDetail.innerHTML = "";
+    return;
+  }
+
+  const isLoading = state.loadingThreadUrl === seedStory.sourceUrl;
+  const thread = state.activeThread;
+  storyDetail.innerHTML = `
+    <div class="detail-container thread-container">
+      <button class="back-button" type="button" data-back-to-feed aria-label="Go back to feed">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Back to feed
+      </button>
+      <article class="detail-card thread-card">
+        <div class="detail-topline">
+          <span class="category-chip ${seedStory.category}">${seedStory.category}</span>
+          <span>${formatThreadCount(thread?.count ?? seedStory.thread?.count ?? 0)}</span>
+        </div>
+        <h2>${thread?.topic || seedStory.thread?.topic || seedStory.headline}</h2>
+        <p class="thread-intro">Follow how this story has been developing through related Siftle archive updates.</p>
+        <div class="thread-timeline">
+          ${renderThreadTimelineItem(seedStory, "Latest")}
+          ${isLoading
+            ? `<div class="thread-loading">Finding related updates...</div>`
+            : sortThreadItemsNewestFirst(thread?.items ?? []).map((item) => renderThreadTimelineItem(item, item.postedAt || "Earlier")).join("")}
+        </div>
+      </article>
+    </div>
+  `;
+};
+
 const renderDetail = (): void => {
   if (!storyDetail || !storyList) return;
+
+  if (state.selectedThreadUrl) {
+    renderThreadView();
+    return;
+  }
 
   const story = state.stories.find((item) => item.id === state.selectedStoryId);
   if (!story) {
@@ -830,9 +973,17 @@ todayButton?.addEventListener("click", () => {
 
 storyList?.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
+  const threadButton = target.closest<HTMLButtonElement>("[data-thread-story-id]");
   const exportButton = target.closest<HTMLButtonElement>("[data-export-id]");
   const exportAction = target.closest<HTMLButtonElement>("[data-export-action]");
   const storyCard = target.closest<HTMLElement>("[data-story-id]");
+
+  if (threadButton) {
+    event.stopPropagation();
+    const story = state.stories.find((item) => item.id === Number(threadButton.dataset.threadStoryId));
+    if (story) openThread(story);
+    return;
+  }
 
   const bookmarkBtn = target.closest<HTMLButtonElement>(".mobile-bookmark-btn, .bookmark-button");
   if (bookmarkBtn) {
