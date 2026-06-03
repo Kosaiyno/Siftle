@@ -17,11 +17,14 @@ const maxArticleAgeHours = Number(process.env.MAX_ARTICLE_AGE_HOURS ?? 36);
 const rssItemsPerFeed = Number(process.env.RSS_ITEMS_PER_FEED ?? 30);
 const summaryConcurrency = Number(process.env.SUMMARY_CONCURRENCY ?? 2);
 const summaryTimeoutMs = Number(process.env.SUMMARY_TIMEOUT_MS ?? 45000);
+const threadReviewTimeoutMs = Number(process.env.THREAD_REVIEW_TIMEOUT_MS ?? 25000);
 const appTimeZone = process.env.APP_TIME_ZONE || "Africa/Lagos";
 const allowedOrigin = process.env.ALLOWED_ORIGIN || process.env.ALLOWED_ORIGINS || "*";
 const ogUsageMode = process.env.OG_USAGE_MODE || "conserve";
 const shouldAutoSummarizeWith0G = ogUsageMode === "full";
 const threadReviewBudgetPerRefresh = Number(process.env.THREAD_REVIEW_BUDGET_PER_REFRESH ?? 12);
+const threadPrepConcurrency = Number(process.env.THREAD_PREP_CONCURRENCY ?? 2);
+const enableFeedThreadPreviews = process.env.ENABLE_FEED_THREAD_PREVIEWS === "true";
 
 const loadEnv = () => {
   const envPath = join(root, ".env");
@@ -818,7 +821,7 @@ const synthesizeThreadTopicWith0G = async ({ story, items, apiKey, model, endpoi
 
   const response = await fetch(`${endpoint}/chat/completions`, {
     method: "POST",
-    signal: AbortSignal.timeout(Number(process.env.THREAD_TOPIC_TIMEOUT_MS ?? process.env.THREAD_REVIEW_TIMEOUT_MS ?? summaryTimeoutMs)),
+    signal: AbortSignal.timeout(Number(process.env.THREAD_TOPIC_TIMEOUT_MS ?? threadReviewTimeoutMs)),
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`
@@ -1106,7 +1109,7 @@ const reviewThreadWith0G = async (story, scoredCandidates) => {
     const endpoint = get0GEndpoint(service.url);
     const response = await fetch(`${endpoint}/chat/completions`, {
       method: "POST",
-      signal: AbortSignal.timeout(Number(process.env.THREAD_REVIEW_TIMEOUT_MS ?? summaryTimeoutMs)),
+      signal: AbortSignal.timeout(threadReviewTimeoutMs),
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`
@@ -1247,10 +1250,40 @@ const getThreadForStory = async (story) => {
   return reviewThreadWith0G(story, scoredCandidates);
 };
 
-const annotateStoriesWithThreads = async (stories = []) => {
+const getThreadPreviewForStory = (story) => {
+  const scoredCandidates = getScoredThreadCandidates(story);
+  if (scoredCandidates.length < 1) return getLocalThreadForStory(story);
+
+  const candidates = scoredCandidates.slice(0, 14).map((item) => item.story);
+  const cachePath = getThreadReviewCachePath(story, candidates);
+  const candidateKey = candidates.map((candidate) => normalizeStoryUrl(candidate.sourceUrl)).sort();
+
+  if (existsSync(cachePath)) {
+    try {
+      const cached = JSON.parse(readFileSync(cachePath, "utf8"));
+      if (cached.prompt_version === threadReviewPromptVersion && JSON.stringify(cached.candidate_key) === JSON.stringify(candidateKey)) {
+        const approvedUrls = new Set((cached.approved_source_urls ?? []).map(normalizeStoryUrl));
+        const items = candidates.filter((candidate) => approvedUrls.has(normalizeStoryUrl(candidate.sourceUrl)));
+        return {
+          topic: normalizeThreadReviewTopic(cached.topic, story, items),
+          count: items.length,
+          current: story,
+          items: sortStoriesByPublishedAtDesc(items).slice(0, 12),
+          reviewed_by: cached.provider ?? "cache"
+        };
+      }
+    } catch {
+      // Ignore broken thread preview cache files.
+    }
+  }
+
+  return strictLocalThreadFallback(story, scoredCandidates);
+};
+
+const annotateStoriesWithThreads = (stories = []) => {
   const annotated = [];
   for (const story of stories) {
-    const thread = await getThreadForStory(story);
+    const thread = getThreadPreviewForStory(story);
     if (thread.count < 1) {
       const { thread: _thread, ...storyWithoutThread } = story;
       annotated.push(storyWithoutThread);
@@ -1268,13 +1301,66 @@ const annotateStoriesWithThreads = async (stories = []) => {
   return annotated;
 };
 
-const annotateSnapshotThreads = async (snapshot) =>
-  snapshot?.top_stories
+const annotateSnapshotThreads = (snapshot) =>
+  enableFeedThreadPreviews && snapshot?.top_stories
     ? {
         ...snapshot,
-        top_stories: await annotateStoriesWithThreads(snapshot.top_stories)
+        top_stories: annotateStoriesWithThreads(snapshot.top_stories)
       }
     : snapshot;
+
+const stripPreparedThreadPayload = (thread) =>
+  thread
+    ? {
+        topic: thread.topic,
+        count: thread.count,
+        current: thread.current,
+        items: thread.items,
+        reviewed_by: thread.reviewed_by
+      }
+    : null;
+
+const prepareSnapshotThreads = async (snapshot) => {
+  if (!snapshot?.top_stories?.length) return snapshot;
+
+  const preparedStories = await runWithConcurrency(snapshot.top_stories, threadPrepConcurrency, async (story) => {
+    const thread = await getThreadForStory(story);
+    if (thread.count < 1) {
+      const { thread: _thread, ...storyWithoutThread } = story;
+      return { story: storyWithoutThread, thread: null };
+    }
+
+    const preparedThread = stripPreparedThreadPayload(thread);
+    return {
+      story: {
+        ...story,
+        thread: {
+          count: thread.count,
+          topic: thread.topic
+        }
+      },
+      thread: preparedThread
+    };
+  });
+
+  const threads = {};
+  for (const item of preparedStories) {
+    if (item.thread?.count >= 1) threads[normalizeStoryUrl(item.story.sourceUrl)] = item.thread;
+  }
+
+  return {
+    ...snapshot,
+    top_stories: preparedStories.map((item) => item.story),
+    threads,
+    thread_metadata: {
+      prepared_at: new Date().toISOString(),
+      prepared_count: Object.keys(threads).length,
+      thread_review_budget_per_refresh: threadReviewBudgetPerRefresh,
+      thread_prep_concurrency: threadPrepConcurrency,
+      feed_ready: true
+    }
+  };
+};
 
 const findStoryForThreadRequest = (category, sourceUrl) => {
   const selectedCategory = normalizeCategory(category);
@@ -1288,6 +1374,23 @@ const findStoryForThreadRequest = (category, sourceUrl) => {
   for (const snapshot of snapshots) {
     const story = (snapshot.top_stories ?? []).find((item) => normalizeStoryUrl(item.sourceUrl) === url);
     if (story) return story;
+  }
+
+  return null;
+};
+
+const findPreparedThreadForRequest = (category, sourceUrl) => {
+  const selectedCategory = normalizeCategory(category);
+  const url = normalizeStoryUrl(sourceUrl);
+  if (!url) return null;
+
+  const snapshots = selectedCategory === "All"
+    ? categories.map(readPublishedSnapshot).filter(Boolean)
+    : [readPublishedSnapshot(selectedCategory), readPublishedSnapshot("All")].filter(Boolean);
+
+  for (const snapshot of snapshots) {
+    const thread = snapshot.threads?.[url];
+    if (thread?.count >= 1) return thread;
   }
 
   return null;
@@ -1961,8 +2064,11 @@ const getZeroGStatusSnapshot = () => {
     configured: config.api_key && (config.endpoint || config.provider),
     usage_mode: ogUsageMode,
     auto_summaries_enabled: shouldAutoSummarizeWith0G,
+    feed_thread_previews_enabled: enableFeedThreadPreviews,
     thread_review_budget_per_refresh: threadReviewBudgetPerRefresh,
     thread_review_budget_remaining: threadReviewBudgetRemaining,
+    thread_review_timeout_ms: threadReviewTimeoutMs,
+    thread_prep_concurrency: threadPrepConcurrency,
     config
   };
 };
@@ -2534,7 +2640,7 @@ const mergeWithTodaySnapshot = (snapshot) => {
   });
 };
 
-const buildCategorySnapshot = async (category) => mergeWithTodaySnapshot(await generateSnapshot(category));
+const buildCategorySnapshot = async (category) => prepareSnapshotThreads(mergeWithTodaySnapshot(await generateSnapshot(category)));
 
 const buildAllSnapshotFromCategories = async () => {
   const today = getTodayKey();
@@ -2564,7 +2670,14 @@ const buildAllSnapshotFromCategories = async () => {
       max_article_age_hours: maxArticleAgeHours,
       composed_from_categories: sourceCategories
     },
-    top_stories: mergeDailyStories(categorySnapshots.flatMap((snapshot) => snapshot.top_stories), [])
+    top_stories: mergeDailyStories(categorySnapshots.flatMap((snapshot) => snapshot.top_stories), []),
+    threads: categorySnapshots.reduce((threads, snapshot) => ({ ...threads, ...(snapshot.threads ?? {}) }), {}),
+    thread_metadata: {
+      prepared_at: new Date().toISOString(),
+      prepared_count: categorySnapshots.reduce((count, snapshot) => count + Number(snapshot.thread_metadata?.prepared_count ?? 0), 0),
+      composed_from_categories: sourceCategories,
+      feed_ready: true
+    }
   };
 };
 
@@ -2662,6 +2775,10 @@ const readPublishedSnapshot = (category) => {
 const getRecoverablePublishedSnapshot = async (category) => {
   const selectedCategory = normalizeCategory(category);
   const current = readPublishedSnapshot(selectedCategory);
+  if (current?.date === getTodayKey() && hasRealStories(current)) {
+    return current;
+  }
+
   if (!isShelbyArchiveConfigured() || current?.archive?.provider === "shelby") {
     return current;
   }
@@ -2699,6 +2816,87 @@ const getRecoverablePublishedSnapshot = async (category) => {
 const writePublishedSnapshot = (snapshot) => {
   mkdirSync(publishedDir, { recursive: true });
   writeJsonFile(getLatestSnapshotPath(snapshot.category), sanitizeSnapshotForCategory(snapshot));
+};
+
+const updateSnapshotStorySummary = (snapshot, article, result) => {
+  const url = normalizeStoryUrl(article?.sourceUrl);
+  if (!snapshot?.top_stories?.length || !url || !result?.summary) return null;
+
+  let changed = false;
+  const topStories = snapshot.top_stories.map((story) => {
+    if (normalizeStoryUrl(story.sourceUrl) !== url) return story;
+    changed = true;
+    return {
+      ...story,
+      ai_summary: cleanSummaryText(result.summary),
+      ai_provider: result.provider || "0g",
+      ...(result.proof ? { ai_proof: result.proof } : {})
+    };
+  });
+
+  if (!changed) return null;
+
+  const updatedThreads = snapshot.threads
+    ? Object.fromEntries(
+        Object.entries(snapshot.threads).map(([threadUrl, thread]) => [
+          threadUrl,
+          {
+            ...thread,
+            current: normalizeStoryUrl(thread?.current?.sourceUrl) === url
+              ? { ...thread.current, ai_summary: cleanSummaryText(result.summary), ai_provider: result.provider || "0g", ...(result.proof ? { ai_proof: result.proof } : {}) }
+              : thread.current,
+            items: (thread?.items ?? []).map((item) =>
+              normalizeStoryUrl(item.sourceUrl) === url
+                ? { ...item, ai_summary: cleanSummaryText(result.summary), ai_provider: result.provider || "0g", ...(result.proof ? { ai_proof: result.proof } : {}) }
+                : item
+            )
+          }
+        ])
+      )
+    : snapshot.threads;
+
+  return {
+    ...snapshot,
+    top_stories: topStories,
+    threads: updatedThreads,
+    summary_metadata: {
+      ...(snapshot.summary_metadata ?? {}),
+      last_summary_saved_at: new Date().toISOString(),
+      last_summary_source_url: article.sourceUrl,
+      last_summary_provider: result.provider || "0g"
+    }
+  };
+};
+
+const persistSummaryToPublishedFeeds = async (article, result) => {
+  if (!article?.sourceUrl || !result?.summary) return;
+
+  const targetCategories = [...new Set([article.category, "All"].filter(Boolean).map(normalizeCategory))];
+  for (const category of targetCategories) {
+    const snapshot = readPublishedSnapshot(category);
+    const updated = updateSnapshotStorySummary(snapshot, article, result);
+    if (!updated) continue;
+
+    const localPublished = {
+      ...updated,
+      published_at: new Date().toISOString(),
+      status: "published"
+    };
+    writePublishedSnapshot(localPublished);
+
+    void archiveSnapshot(localPublished)
+      .then((archive) => {
+        writePublishedSnapshot({
+          ...localPublished,
+          archive,
+          published_at: new Date().toISOString(),
+          status: "published"
+        });
+      })
+      .catch((error) => {
+        console.warn(`Summary archive fallback for ${category}:`, error.message);
+      });
+  }
 };
 
 const generateSnapshot = async (category) => {
@@ -2771,6 +2969,11 @@ const generateAndPublishFeed = async (category) => publishSnapshot(await buildCa
 const getPublishedFeed = async (category) => {
   const selectedCategory = normalizeCategory(category);
   if (selectedCategory === "All") {
+    const currentAll = readPublishedSnapshot("All");
+    if (currentAll?.date === getTodayKey() && hasRealStories(currentAll)) {
+      return annotateSnapshotThreads(currentAll);
+    }
+
     const composed = await buildAllSnapshotFromCategories();
     writePublishedSnapshot({
       ...composed,
@@ -2929,6 +3132,12 @@ const server = createServer(async (request, response) => {
         return;
       }
 
+      const preparedThread = findPreparedThreadForRequest(category, sourceUrl);
+      if (preparedThread?.count >= 1) {
+        sendJson(response, 200, preparedThread);
+        return;
+      }
+
       const thread = await getThreadForStory(story);
       if (thread.count < 1) {
         sendJson(response, 404, { error: "Thread not available" });
@@ -2997,9 +3206,13 @@ const server = createServer(async (request, response) => {
 
   if (requestUrl.pathname === "/api/summary" && request.method === "POST") {
     readJsonBody(request)
-      .then((article) => {
+      .then(async (article) => {
         const force = Boolean(article && article.force);
-        return summarizeWith0G(article, { force });
+        const result = await summarizeWith0G(article, { force });
+        if (result?.provider !== "local-fallback" && result?.provider !== "local-no-key") {
+          await persistSummaryToPublishedFeeds(article, result);
+        }
+        return result;
       })
       .then((payload) => sendJson(response, 200, payload))
       .catch((error) => sendJson(response, 500, { error: error.message }));
