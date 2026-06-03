@@ -17,13 +17,14 @@ const maxArticleAgeHours = Number(process.env.MAX_ARTICLE_AGE_HOURS ?? 36);
 const rssItemsPerFeed = Number(process.env.RSS_ITEMS_PER_FEED ?? 30);
 const summaryConcurrency = Number(process.env.SUMMARY_CONCURRENCY ?? 2);
 const summaryTimeoutMs = Number(process.env.SUMMARY_TIMEOUT_MS ?? 45000);
-const threadReviewTimeoutMs = Number(process.env.THREAD_REVIEW_TIMEOUT_MS ?? 25000);
+const threadReviewTimeoutMs = Number(process.env.THREAD_REVIEW_TIMEOUT_MS ?? 90000);
 const appTimeZone = process.env.APP_TIME_ZONE || "Africa/Lagos";
 const allowedOrigin = process.env.ALLOWED_ORIGIN || process.env.ALLOWED_ORIGINS || "*";
 const ogUsageMode = process.env.OG_USAGE_MODE || "conserve";
 const shouldAutoSummarizeWith0G = ogUsageMode === "full";
 const threadReviewBudgetPerRefresh = Number(process.env.THREAD_REVIEW_BUDGET_PER_REFRESH ?? 12);
-const threadPrepConcurrency = Number(process.env.THREAD_PREP_CONCURRENCY ?? 2);
+const threadPrepConcurrency = Number(process.env.THREAD_PREP_CONCURRENCY ?? 1);
+const threadReviewCandidateLimit = Number(process.env.THREAD_REVIEW_CANDIDATE_LIMIT ?? 8);
 const enableFeedThreadPreviews = process.env.ENABLE_FEED_THREAD_PREVIEWS === "true";
 
 const loadEnv = () => {
@@ -816,6 +817,14 @@ const strictLocalThreadFallback = (story, scoredCandidates) => {
   };
 };
 
+const emptyReviewedThread = (story, reviewedBy = "0g-unavailable") => ({
+  topic: "",
+  count: 0,
+  current: story,
+  items: [],
+  reviewed_by: reviewedBy
+});
+
 const synthesizeThreadTopicWith0G = async ({ story, items, apiKey, model, endpoint }) => {
   if (!apiKey || !endpoint || !Array.isArray(items) || items.length < 1) return "";
 
@@ -1075,7 +1084,7 @@ const canSpendThreadReview = () => {
 };
 
 const reviewThreadWith0G = async (story, scoredCandidates) => {
-  const candidates = scoredCandidates.slice(0, 14).map((item) => item.story);
+  const candidates = scoredCandidates.slice(0, Math.max(1, threadReviewCandidateLimit)).map((item) => item.story);
   if (candidates.length < 1) return strictLocalThreadFallback(story, scoredCandidates);
 
   const cachePath = getThreadReviewCachePath(story, candidates);
@@ -1099,13 +1108,12 @@ const reviewThreadWith0G = async (story, scoredCandidates) => {
     }
   }
 
-  const apiKey = process.env.ZERO_G_API_KEY || process.env.OG_COMPUTE_API_KEY;
-  const model = process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "zai-org/GLM-5-FP8";
+  const { apiKey, model } = getThread0GConfig();
   if (!apiKey) return strictLocalThreadFallback(story, scoredCandidates);
-  if (!canSpendThreadReview()) return strictLocalThreadFallback(story, scoredCandidates);
+  if (!canSpendThreadReview()) return emptyReviewedThread(story, "0g-budget-exhausted");
 
   try {
-    const service = await get0GService();
+    const service = await getThread0GService();
     const endpoint = get0GEndpoint(service.url);
     const response = await fetch(`${endpoint}/chat/completions`, {
       method: "POST",
@@ -1240,7 +1248,7 @@ const reviewThreadWith0G = async (story, scoredCandidates) => {
   } catch (error) {
     console.warn("0G thread review fallback:", error.message);
     recordZeroGFallback("thread_review", error);
-    return strictLocalThreadFallback(story, scoredCandidates);
+    return emptyReviewedThread(story, "0g-error");
   }
 };
 
@@ -1980,45 +1988,70 @@ const getSummaryCachePath = (article) => {
 };
 
 let zeroGBrokerPromise;
-let zeroGServicePromise;
+const zeroGServicePromises = new Map();
 
-const get0GService = async () => {
+const get0GServiceFor = async ({ providerAddress, envEndpoint, label = "0G compute" } = {}) => {
   const rpcUrl = process.env.OG_RPC_URL || "https://evmrpc.0g.ai";
-  const providerAddress = process.env.OG_COMPUTE_PROVIDER;
-  const envEndpoint = process.env.OG_COMPUTE_ENDPOINT || process.env.ZERO_G_ENDPOINT || process.env.OG_COMPUTE_URL || process.env.ZERO_G_URL;
+  const cacheKey = `${label}:${providerAddress ?? ""}:${envEndpoint ?? ""}`;
 
   // If an explicit endpoint is provided via env, prefer it and skip broker discovery.
   if (envEndpoint) {
-    if (!zeroGServicePromise) {
-      zeroGServicePromise = Promise.resolve({ url: String(envEndpoint).replace(/\/$/, ""), provider: providerAddress ?? "env-endpoint" });
+    if (!zeroGServicePromises.has(cacheKey)) {
+      zeroGServicePromises.set(cacheKey, Promise.resolve({ url: String(envEndpoint).replace(/\/$/, ""), provider: providerAddress ?? "env-endpoint" }));
     }
-    return zeroGServicePromise;
+    return zeroGServicePromises.get(cacheKey);
   }
 
   if (!providerAddress) {
-    throw new Error("Missing OG_COMPUTE_PROVIDER");
+    throw new Error(`Missing ${label} provider`);
   }
 
   if (!zeroGBrokerPromise) {
     zeroGBrokerPromise = createZGComputeNetworkReadOnlyBroker(rpcUrl);
   }
 
-  if (!zeroGServicePromise) {
-    zeroGServicePromise = zeroGBrokerPromise.then(async (broker) => {
+  if (!zeroGServicePromises.has(cacheKey)) {
+    zeroGServicePromises.set(cacheKey, zeroGBrokerPromise.then(async (broker) => {
       const services = await broker.inference.listServiceWithDetail(0, 50, true);
       const service = services.find(
         (entry) => entry.provider?.toLowerCase() === providerAddress.toLowerCase()
       );
 
       if (!service?.url) {
-        throw new Error("0G compute provider endpoint not found");
+        throw new Error(`${label} provider endpoint not found`);
       }
 
       return service;
-    });
+    }));
   }
 
-  return zeroGServicePromise;
+  return zeroGServicePromises.get(cacheKey);
+};
+
+const get0GService = async () => {
+  const providerAddress = process.env.OG_COMPUTE_PROVIDER;
+  const envEndpoint = process.env.OG_COMPUTE_ENDPOINT || process.env.ZERO_G_ENDPOINT || process.env.OG_COMPUTE_URL || process.env.ZERO_G_URL;
+  return get0GServiceFor({ providerAddress, envEndpoint, label: "0G compute" });
+};
+
+const getThread0GConfig = () => ({
+  apiKey: process.env.THREAD_ZERO_G_API_KEY || process.env.THREAD_OG_COMPUTE_API_KEY || process.env.ZERO_G_API_KEY || process.env.OG_COMPUTE_API_KEY,
+  model: process.env.THREAD_ZERO_G_MODEL || process.env.THREAD_OG_COMPUTE_MODEL || process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "zai-org/GLM-5-FP8",
+  providerAddress: process.env.THREAD_OG_COMPUTE_PROVIDER || process.env.OG_COMPUTE_PROVIDER,
+  envEndpoint:
+    process.env.THREAD_OG_COMPUTE_ENDPOINT ||
+    process.env.THREAD_ZERO_G_ENDPOINT ||
+    process.env.THREAD_OG_COMPUTE_URL ||
+    process.env.THREAD_ZERO_G_URL ||
+    process.env.OG_COMPUTE_ENDPOINT ||
+    process.env.ZERO_G_ENDPOINT ||
+    process.env.OG_COMPUTE_URL ||
+    process.env.ZERO_G_URL
+});
+
+const getThread0GService = async () => {
+  const { providerAddress, envEndpoint } = getThread0GConfig();
+  return get0GServiceFor({ providerAddress, envEndpoint, label: "thread 0G compute" });
 };
 
 const get0GEndpoint = (serviceUrl) => {
@@ -2057,6 +2090,27 @@ const getZeroGConfigStatus = () => ({
   model: process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "zai-org/GLM-5-FP8"
 });
 
+const getThreadZeroGConfigStatus = () => {
+  const config = getThread0GConfig();
+  const usesThreadOverride = Boolean(
+    process.env.THREAD_ZERO_G_API_KEY ||
+    process.env.THREAD_OG_COMPUTE_API_KEY ||
+    process.env.THREAD_OG_COMPUTE_ENDPOINT ||
+    process.env.THREAD_ZERO_G_ENDPOINT ||
+    process.env.THREAD_OG_COMPUTE_PROVIDER ||
+    process.env.THREAD_OG_COMPUTE_MODEL ||
+    process.env.THREAD_ZERO_G_MODEL
+  );
+
+  return {
+    api_key: Boolean(config.apiKey),
+    provider: Boolean(config.providerAddress),
+    endpoint: Boolean(config.envEndpoint),
+    model: config.model,
+    uses_thread_override: usesThreadOverride
+  };
+};
+
 const getZeroGStatusSnapshot = () => {
   const config = getZeroGConfigStatus();
   return {
@@ -2069,7 +2123,9 @@ const getZeroGStatusSnapshot = () => {
     thread_review_budget_remaining: threadReviewBudgetRemaining,
     thread_review_timeout_ms: threadReviewTimeoutMs,
     thread_prep_concurrency: threadPrepConcurrency,
-    config
+    thread_review_candidate_limit: threadReviewCandidateLimit,
+    config,
+    thread_config: getThreadZeroGConfigStatus()
   };
 };
 
@@ -2997,7 +3053,7 @@ const getPublishedFeed = async (category) => {
   return annotateSnapshotThreads(await generateAndPublishFeed(selectedCategory));
 };
 
-const refreshIntervalMinutes = Number(process.env.REFRESH_INTERVAL_MINUTES ?? 30);
+const refreshIntervalMinutes = Number(process.env.REFRESH_INTERVAL_MINUTES ?? 60);
 const publishedSnapshots = new Map();
 const publishStatus = {
   is_running: false,
