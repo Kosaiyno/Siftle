@@ -32,7 +32,6 @@ const state: {
   marketTradeAmount: number;
   marketEvidenceOverrides: Record<string, MarketEvidenceOverride>;
   checkedMarketEvidence: Record<string, boolean>;
-  marketThreadSheetOpen: boolean;
   marketSnapshots: Record<string, ArcMarketSnapshot>;
   loadingMarketSnapshotId: string | null;
   loadingMarketEvidenceId: string | null;
@@ -61,7 +60,6 @@ const state: {
   marketTradeAmount: 100,
   marketEvidenceOverrides: {},
   checkedMarketEvidence: {},
-  marketThreadSheetOpen: false,
   marketSnapshots: {},
   loadingMarketSnapshotId: null,
   loadingMarketEvidenceId: null,
@@ -1526,16 +1524,11 @@ const renderMarketDetail = (market: MarketPreview): void => {
             </div>
           </details>
         </div>
-        <button class="market-thread-drawer-trigger" type="button" data-market-thread-sheet>
-          <span>Evidence thread</span>
-          <strong>${marketView.evidence.length} updates</strong>
-        </button>
-        <section class="market-evidence-thread ${state.marketThreadSheetOpen ? "open" : ""}">
-          <div class="market-thread-sheet-backdrop" data-market-thread-sheet></div>
+        <section class="market-evidence-thread">
           <div class="market-thread-sheet-panel">
-          <button class="market-thread-sheet-handle" type="button" data-market-thread-sheet aria-label="Close evidence thread">
+          <div class="market-thread-sheet-handle" data-market-thread-drag aria-label="Drag evidence thread">
             <span></span>
-          </button>
+          </div>
           <header>
             <div>
               <span class="market-kicker">Evidence thread</span>
@@ -1752,7 +1745,6 @@ storyList?.addEventListener("click", (event) => {
   const marketCard = target.closest<HTMLButtonElement>("[data-market-id]");
   if (marketCard) {
     state.selectedMarketId = marketCard.dataset.marketId ?? null;
-    state.marketThreadSheetOpen = false;
     window.history.pushState({}, "", `#market-${state.selectedMarketId}`);
     render();
     requestAnimationFrame(() => {
@@ -1823,13 +1815,7 @@ storyDetail?.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
   if (target.closest("[data-back-markets]")) {
     state.selectedMarketId = null;
-    state.marketThreadSheetOpen = false;
     window.history.pushState({}, "", "#markets");
-    render();
-    return;
-  }
-  if (target.closest("[data-market-thread-sheet]")) {
-    state.marketThreadSheetOpen = !state.marketThreadSheetOpen;
     render();
     return;
   }
@@ -1861,6 +1847,61 @@ storyDetail?.addEventListener("input", (event) => {
   state.marketTradeAmount = Math.max(0, Number(target.value) || 0);
   render();
 });
+
+let marketSheetDragStartY = 0;
+let marketSheetDragStartHeight = 0;
+let activeMarketSheetPointerId: number | null = null;
+
+const getMarketSheetBounds = (): { min: number; max: number; snap: number } => {
+  const viewport = window.innerHeight || 720;
+  return {
+    min: Math.round(viewport * 0.28),
+    snap: Math.round(viewport * 0.38),
+    max: Math.round(viewport * 0.72)
+  };
+};
+
+const setMarketSheetHeight = (height: number): void => {
+  const { min, max } = getMarketSheetBounds();
+  const nextHeight = Math.max(min, Math.min(max, height));
+  document.documentElement.style.setProperty("--market-thread-sheet-height", `${nextHeight}px`);
+};
+
+storyDetail?.addEventListener("pointerdown", (event) => {
+  const handle = (event.target as HTMLElement).closest<HTMLElement>("[data-market-thread-drag]");
+  if (!handle) return;
+  const panel = document.querySelector<HTMLElement>(".market-thread-sheet-panel");
+  if (!panel) return;
+
+  activeMarketSheetPointerId = event.pointerId;
+  marketSheetDragStartY = event.clientY;
+  marketSheetDragStartHeight = panel.getBoundingClientRect().height;
+  handle.setPointerCapture(event.pointerId);
+  document.body.classList.add("market-sheet-dragging");
+});
+
+storyDetail?.addEventListener("pointermove", (event) => {
+  if (activeMarketSheetPointerId !== event.pointerId) return;
+  event.preventDefault();
+  const delta = marketSheetDragStartY - event.clientY;
+  setMarketSheetHeight(marketSheetDragStartHeight + delta);
+});
+
+const finishMarketSheetDrag = (event: PointerEvent): void => {
+  if (activeMarketSheetPointerId !== event.pointerId) return;
+  const panel = document.querySelector<HTMLElement>(".market-thread-sheet-panel");
+  if (panel) {
+    const { min, snap, max } = getMarketSheetBounds();
+    const height = panel.getBoundingClientRect().height;
+    const nextHeight = height > (snap + max) / 2 ? max : height < (min + snap) / 2 ? min : snap;
+    setMarketSheetHeight(nextHeight);
+  }
+  activeMarketSheetPointerId = null;
+  document.body.classList.remove("market-sheet-dragging");
+};
+
+storyDetail?.addEventListener("pointerup", finishMarketSheetDrag);
+storyDetail?.addEventListener("pointercancel", finishMarketSheetDrag);
 
 window.addEventListener("popstate", syncStoryFromHash);
 

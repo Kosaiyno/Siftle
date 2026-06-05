@@ -5480,3 +5480,137 @@ h4 {
     line-height: 1.12;
   }
 }
+
+/* Final mobile market sheet: always visible, draggable, no click trigger. */
+@media (max-width: 640px) {
+  :root {
+    --market-thread-sheet-height: 38vh;
+  }
+
+  body.market-sheet-dragging {
+    user-select: none;
+    touch-action: none;
+  }
+
+  .story-detail.fullscreen:has(.market-detail-container) {
+    padding: 10px 14px 0 !important;
+    overflow: hidden !important;
+  }
+
+  .story-detail.fullscreen .market-detail-container {
+    display: flex !important;
+    flex-direction: column;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    padding-bottom: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .market-detail-container > .back-button {
+    flex: 0 0 auto;
+    min-height: 36px !important;
+    margin: 0 0 9px !important;
+  }
+
+  .story-detail.fullscreen .market-story-surface {
+    display: flex !important;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    border-radius: 22px 22px 0 0;
+  }
+
+  .market-decision-surface {
+    flex: 1 1 auto;
+    max-block-size: none !important;
+    min-height: 0;
+    padding: 12px 12px calc(var(--market-thread-sheet-height) + 90px) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    contain: none !important;
+    scrollbar-width: none;
+  }
+
+  .market-decision-surface::-webkit-scrollbar {
+    display: none;
+  }
+
+  .market-thread-drawer-trigger,
+  .market-thread-sheet-backdrop {
+    display: none !important;
+  }
+
+  .market-evidence-thread {
+    display: contents !important;
+  }
+
+  .market-thread-sheet-panel {
+    position: fixed !important;
+    z-index: 78;
+    right: 14px;
+    bottom: max(76px, calc(68px + env(safe-area-inset-bottom)));
+    left: 14px;
+    display: flex;
+    flex-direction: column;
+    height: var(--market-thread-sheet-height);
+    min-height: 210px;
+    max-height: 72vh;
+    padding: 9px 14px 18px;
+    overflow-y: auto;
+    border: 1px solid rgba(202, 215, 239, 0.94);
+    border-radius: 24px 24px 18px 18px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.96));
+    box-shadow:
+      0 -20px 54px rgba(24, 36, 78, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    transform: none !important;
+    transition: height 180ms ease;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+
+  .market-sheet-dragging .market-thread-sheet-panel {
+    transition: none;
+  }
+
+  .market-thread-sheet-handle {
+    position: sticky;
+    top: -2px;
+    z-index: 3;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    min-height: 28px;
+    margin: -2px 0 4px;
+    padding: 0;
+    cursor: grab;
+    touch-action: none;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.75));
+  }
+
+  .market-sheet-dragging .market-thread-sheet-handle {
+    cursor: grabbing;
+  }
+
+  .market-thread-sheet-handle span {
+    width: 44px;
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(117, 130, 154, 0.36);
+  }
+
+  .market-thread-sheet-panel > header {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: start;
+  }
+
+  .market-thread-sheet-panel h3 {
+    margin: 7px 0 0;
+    font-size: clamp(1.22rem, 5.5vw, 1.58rem) !important;
+    line-height: 1.12;
+  }
+}
