@@ -5,6 +5,7 @@ import { BrowserProvider, Contract, JsonRpcProvider, formatUnits, parseUnits } f
 import type { Eip1193Provider } from "ethers";
 
 export const ARC_TESTNET_CHAIN_ID = 5042002;
+const ARC_TESTNET_CHAIN_ID_HEX = "0x4cef52";
 export const ARC_TESTNET_USDC =
   (window as Window & { ARC_TESTNET_USDC_ADDRESS?: string }).ARC_TESTNET_USDC_ADDRESS ||
   "0x3600000000000000000000000000000000000000";
@@ -29,7 +30,8 @@ const SIFTLE_MARKET_ABI = [
   "function noShares(address owner) view returns (uint256)",
   "function totalYesShares() view returns (uint256)",
   "function totalNoShares() view returns (uint256)",
-  "function impliedYesProbability() view returns (uint256)"
+  "function impliedYesProbability() view returns (uint256)",
+  "function outcome() view returns (uint8)"
 ];
 
 export interface ArcMarketSnapshot {
@@ -38,11 +40,20 @@ export interface ArcMarketSnapshot {
   volumeUsdc: number;
   yesSharesUsdc: number;
   noSharesUsdc: number;
+  outcome: 0 | 1 | 2 | 3;
 }
 
 export interface ArcMarketPosition {
   yesSharesUsdc: number;
   noSharesUsdc: number;
+}
+
+interface InjectedWalletProvider extends Eip1193Provider {
+  isRabby?: boolean;
+  isMetaMask?: boolean;
+  selectedAddress?: string;
+  on?: (event: string, callback: (...args: unknown[]) => void) => void;
+  removeListener?: (event: string, callback: (...args: unknown[]) => void) => void;
 }
 
 export const arcTestnet = defineChain({
@@ -76,7 +87,12 @@ const appKit = projectId
         analytics: false,
         email: false,
         socials: false
-      }
+      },
+      enableInjected: true,
+      enableEIP6963: true,
+      enableCoinbase: true,
+      enableBaseAccount: true,
+      enableReconnect: false
     })
   : null;
 
@@ -97,9 +113,67 @@ const requestRpc = async <T>(method: string, params: unknown[]): Promise<T> => {
 export const isWalletConnectConfigured = (): boolean => Boolean(appKit);
 
 let walletConnectPromise: Promise<string> | null = null;
+let injectedWalletProvider: InjectedWalletProvider | null = null;
+let injectedWalletAddress: string | null = null;
 
-export const connectArcWallet = async (): Promise<string> => {
-  if (!appKit) throw new Error("Add REOWN_PROJECT_ID to enable WalletConnect");
+const getInjectedWalletProvider = (): InjectedWalletProvider | null => {
+  const ethereum = window.ethereum as (InjectedWalletProvider & { providers?: InjectedWalletProvider[] }) | undefined;
+  if (!ethereum) return null;
+  const providers = ethereum.providers;
+  return providers?.find((provider) => provider.isRabby) || providers?.find((provider) => provider.isMetaMask) || ethereum;
+};
+
+const getInjectedAccounts = async (provider: InjectedWalletProvider): Promise<string[]> => {
+  const accounts = await provider.request({ method: "eth_accounts" });
+  return Array.isArray(accounts) ? accounts.map(String) : [];
+};
+
+const switchInjectedWalletToArc = async (provider: InjectedWalletProvider): Promise<void> => {
+  try {
+    await provider.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: ARC_TESTNET_CHAIN_ID_HEX }]
+    });
+  } catch (error) {
+    const code = (error as { code?: number | string }).code;
+    if (code !== 4902 && code !== "4902") throw error;
+    await provider.request({
+      method: "wallet_addEthereumChain",
+      params: [{
+        chainId: ARC_TESTNET_CHAIN_ID_HEX,
+        chainName: "Arc Testnet",
+        nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
+        rpcUrls: [ARC_TESTNET_RPC_URL],
+        blockExplorerUrls: [ARC_TESTNET_EXPLORER]
+      }]
+    });
+  }
+};
+
+const connectInjectedArcWallet = async (): Promise<string | null> => {
+  const provider = getInjectedWalletProvider();
+  if (!provider) return null;
+  if (walletConnectPromise) return walletConnectPromise;
+
+  walletConnectPromise = (async () => {
+    const accounts = await provider.request({ method: "eth_requestAccounts" });
+    const account = Array.isArray(accounts) ? String(accounts[0] || "") : "";
+    if (!account) throw new Error("Wallet connection declined");
+    await switchInjectedWalletToArc(provider);
+    injectedWalletProvider = provider;
+    injectedWalletAddress = account;
+    return account;
+  })().finally(() => {
+    window.setTimeout(() => {
+      walletConnectPromise = null;
+    }, 1500);
+  });
+
+  return walletConnectPromise;
+};
+
+const connectAppKitArcWallet = async (): Promise<string> => {
+  if (!appKit) throw new Error("Install Rabby, MetaMask, or add REOWN_PROJECT_ID to enable WalletConnect");
   const connectedAddress = appKit.getAddress("eip155");
   if (connectedAddress) return connectedAddress;
 
@@ -107,8 +181,8 @@ export const connectArcWallet = async (): Promise<string> => {
 
   walletConnectPromise = (async () => {
     await appKit.close().catch(() => undefined);
-    await appKit.open({ namespace: "eip155" });
-    return appKit.getAddress("eip155") || "";
+    await appKit.open({ view: "Connect", namespace: "eip155" });
+    return appKit.getAddress("eip155") || waitForWalletAddress();
   })().finally(() => {
     window.setTimeout(() => {
       walletConnectPromise = null;
@@ -118,11 +192,67 @@ export const connectArcWallet = async (): Promise<string> => {
   return walletConnectPromise;
 };
 
-export const getConnectedArcWallet = (): string | null => appKit?.getAddress("eip155") || null;
+const waitForWalletAddress = async (): Promise<string> => {
+  const immediateAddress = appKit?.getAddress("eip155");
+  if (immediateAddress) return immediateAddress;
+
+  return new Promise((resolve, reject) => {
+    if (!appKit) {
+      reject(new Error("Add REOWN_PROJECT_ID to enable WalletConnect"));
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      unsubscribe();
+      reject(new Error("Wallet connection timed out. Open your wallet and approve the request."));
+    }, 60000);
+
+    const unsubscribe = appKit.subscribeAccount((account) => {
+      if (!account.address) return;
+      window.clearTimeout(timeout);
+      unsubscribe();
+      resolve(account.address);
+    }, "eip155");
+  });
+};
+
+export const connectArcWallet = async (): Promise<string> => {
+  if (appKit) return connectAppKitArcWallet();
+
+  try {
+    const injectedAccount = await connectInjectedArcWallet();
+    if (injectedAccount) return injectedAccount;
+  } catch (error) {
+    console.warn("Injected wallet connection failed", error);
+    walletConnectPromise = null;
+  }
+
+  throw new Error("Install Rabby, MetaMask, or add REOWN_PROJECT_ID to enable WalletConnect");
+};
+
+export const getConnectedArcWallet = (): string | null =>
+  appKit?.getAddress("eip155") || injectedWalletAddress || injectedWalletProvider?.selectedAddress || null;
 
 export const subscribeArcWallet = (callback: (address: string | null) => void): (() => void) => {
-  if (!appKit) return () => undefined;
-  return appKit.subscribeAccount((account) => callback(account.address || null), "eip155");
+  if (appKit) return appKit.subscribeAccount((account) => callback(account.address || null), "eip155");
+
+  const provider = getInjectedWalletProvider();
+  if (provider?.on) {
+    const accountsChanged = (accounts: unknown): void => {
+      const nextAccounts = Array.isArray(accounts) ? accounts.map(String) : [];
+      injectedWalletAddress = nextAccounts[0] || null;
+      injectedWalletProvider = injectedWalletAddress ? provider : null;
+      callback(nextAccounts[0] || null);
+    };
+    provider.on("accountsChanged", accountsChanged);
+    void getInjectedAccounts(provider).then((accounts) => {
+      injectedWalletAddress = accounts[0] || null;
+      if (injectedWalletAddress) injectedWalletProvider = provider;
+      callback(injectedWalletAddress);
+    }).catch(() => undefined);
+    return () => provider.removeListener?.("accountsChanged", accountsChanged);
+  }
+  return () => undefined;
 };
 
 export const readArcUsdcBalance = async (account: string): Promise<string> => {
@@ -135,9 +265,27 @@ export const readArcUsdcBalance = async (account: string): Promise<string> => {
 };
 
 const getSigner = async () => {
-  if (!appKit) throw new Error("Add REOWN_PROJECT_ID to enable WalletConnect");
-  const account = appKit.getAddress("eip155") || (await connectArcWallet());
+  const appKitAccount = appKit?.getAddress("eip155");
+  if (appKitAccount && appKit) {
+    await appKit.switchNetwork(arcTestnet, { throwOnFailure: true });
+    const walletProvider = appKit.getWalletProvider();
+    if (!walletProvider) throw new Error("Wallet provider unavailable");
+    const provider = new BrowserProvider(walletProvider as Eip1193Provider, ARC_TESTNET_CHAIN_ID);
+    return { signer: await provider.getSigner(), account: appKitAccount };
+  }
+
+  if (injectedWalletProvider) {
+    const accounts = await getInjectedAccounts(injectedWalletProvider);
+    const account = accounts[0] || (await connectArcWallet());
+    injectedWalletAddress = account;
+    await switchInjectedWalletToArc(injectedWalletProvider);
+    const provider = new BrowserProvider(injectedWalletProvider, ARC_TESTNET_CHAIN_ID);
+    return { signer: await provider.getSigner(), account };
+  }
+
+  const account = appKit?.getAddress("eip155") || (await connectArcWallet());
   if (!account) throw new Error("Connect your wallet first");
+  if (!appKit) throw new Error("Install Rabby, MetaMask, or add REOWN_PROJECT_ID to enable WalletConnect");
   await appKit.switchNetwork(arcTestnet, { throwOnFailure: true });
   const walletProvider = appKit.getWalletProvider();
   if (!walletProvider) throw new Error("Wallet provider unavailable");
@@ -147,10 +295,11 @@ const getSigner = async () => {
 
 export const readArcMarketSnapshot = async (marketAddress: string): Promise<ArcMarketSnapshot> => {
   const market = new Contract(marketAddress, SIFTLE_MARKET_ABI, publicProvider);
-  const [totalYes, totalNo, probability] = await Promise.all([
+  const [totalYes, totalNo, probability, outcome] = await Promise.all([
     market.totalYesShares() as Promise<bigint>,
     market.totalNoShares() as Promise<bigint>,
-    market.impliedYesProbability() as Promise<bigint>
+    market.impliedYesProbability() as Promise<bigint>,
+    market.outcome() as Promise<bigint>
   ]);
   const yesPriceCents = Math.round(Number(probability) / 100);
   const yesSharesUsdc = Number(formatUnits(totalYes, 6));
@@ -160,7 +309,8 @@ export const readArcMarketSnapshot = async (marketAddress: string): Promise<ArcM
     noPriceCents: 100 - yesPriceCents,
     volumeUsdc: yesSharesUsdc + noSharesUsdc,
     yesSharesUsdc,
-    noSharesUsdc
+    noSharesUsdc,
+    outcome: Number(outcome) as 0 | 1 | 2 | 3
   };
 };
 

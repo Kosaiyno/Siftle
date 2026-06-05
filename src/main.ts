@@ -6,12 +6,13 @@ import {
   executeArcMarketOrder,
   getConnectedArcWallet,
   isWalletConnectConfigured,
+  readArcMarketPosition,
   readArcMarketSnapshot,
   readArcUsdcBalance,
   shortenAddress,
   subscribeArcWallet
 } from "./arc.js";
-import type { ArcMarketSnapshot } from "./arc.js";
+import type { ArcMarketPosition, ArcMarketSnapshot } from "./arc.js";
 
 declare global {
   interface Window {
@@ -30,11 +31,11 @@ const state: {
   marketOrderMode: "buy" | "sell";
   marketTradeSide: "yes" | "no";
   marketTradeAmount: number;
-  marketEvidenceOverrides: Record<string, MarketEvidenceOverride>;
-  checkedMarketEvidence: Record<string, boolean>;
   marketSnapshots: Record<string, ArcMarketSnapshot>;
+  marketPositions: Record<string, ArcMarketPosition>;
   loadingMarketSnapshotId: string | null;
-  loadingMarketEvidenceId: string | null;
+  loadingPortfolioPositions: boolean;
+  walletConnecting: boolean;
   walletAddress: string | null;
   walletBalance: string | null;
   activeCategory: Category;
@@ -58,11 +59,11 @@ const state: {
   marketOrderMode: "buy",
   marketTradeSide: "yes",
   marketTradeAmount: 100,
-  marketEvidenceOverrides: {},
-  checkedMarketEvidence: {},
   marketSnapshots: {},
+  marketPositions: {},
   loadingMarketSnapshotId: null,
-  loadingMarketEvidenceId: null,
+  loadingPortfolioPositions: false,
+  walletConnecting: false,
   walletAddress: null,
   walletBalance: null,
   activeCategory: "All",
@@ -92,6 +93,7 @@ interface MarketPreview {
   closes: string;
   resolution: string;
   threadTopic: string;
+  threadStoryId: number;
   updates: number;
   movement: number;
   volume: string;
@@ -108,18 +110,6 @@ interface MarketPreview {
   }[];
 }
 
-interface MarketEvidenceOverride {
-  threadTopic: string;
-  evidence: MarketPreview["evidence"];
-  reviewedBy?: string;
-}
-
-const marketThreadMatchers: Record<string, { category: Exclude<Category, "All">; terms: string[] }> = {
-  "new-glenn-2026": { category: "Tech", terms: ["blue origin", "new glenn"] },
-  "strategy-bitcoin-sale": { category: "Crypto", terms: ["strategy", "saylor", "mstr", "bitcoin sale", "btc sale"] },
-  "nba-finals": { category: "Sports", terms: ["spurs", "san antonio", "wembanyama", "nba finals"] }
-};
-
 const marketPreviews: MarketPreview[] = [
   {
     id: "new-glenn-2026",
@@ -129,6 +119,7 @@ const marketPreviews: MarketPreview[] = [
     closes: "December 31, 2026",
     resolution: "Resolves Yes when a New Glenn vehicle lifts off on an orbital launch attempt before the deadline.",
     threadTopic: "Blue Origin New Glenn Launchpad Probe",
+    threadStoryId: 9001,
     updates: 4,
     movement: 7,
     volume: "$184K",
@@ -172,6 +163,7 @@ const marketPreviews: MarketPreview[] = [
     closes: "July 1, 2026",
     resolution: "Resolves Yes if Strategy publicly reports selling Bitcoin before the deadline.",
     threadTopic: "Strategy Bitcoin Sale And Market Resolution",
+    threadStoryId: 9002,
     updates: 9,
     movement: -6,
     volume: "$427K",
@@ -269,6 +261,7 @@ const marketPreviews: MarketPreview[] = [
     closes: "At the conclusion of the 2026 NBA Finals",
     resolution: "Resolves Yes if the San Antonio Spurs are declared 2026 NBA champions.",
     threadTopic: "Spurs 2026 NBA Finals Run",
+    threadStoryId: 9003,
     updates: 5,
     movement: -4,
     volume: "$296K",
@@ -379,8 +372,9 @@ const renderWalletState = (): void => {
   if (walletButton) {
     const label = walletButton.querySelector<HTMLElement>(".wallet-button-label");
     walletButton.classList.toggle("connected", Boolean(state.walletAddress));
+    walletButton.disabled = state.walletConnecting;
     walletButton.setAttribute("aria-label", state.walletAddress ? `Wallet ${shortenAddress(state.walletAddress)}` : "Connect wallet");
-    if (label) label.textContent = state.walletAddress ? "Wallet" : "Connect wallet";
+    if (label) label.textContent = state.walletConnecting ? "Connecting" : state.walletAddress ? "Wallet" : "Connect wallet";
     walletButton.title = state.walletAddress
       ? `${state.walletBalance ?? "0"} Arc Testnet USDC - ${shortenAddress(state.walletAddress)}`
       : isWalletConnectConfigured()
@@ -392,16 +386,21 @@ const renderWalletState = (): void => {
 window.addEventListener("resize", renderWalletState);
 
 const connectWallet = async (): Promise<void> => {
+  if (state.walletConnecting) return;
+  state.walletConnecting = true;
+  renderWalletState();
   try {
     const account = await connectArcWallet();
     if (account) {
       state.walletAddress = account;
       state.walletBalance = await readArcUsdcBalance(account);
+      await loadPortfolioPositions();
       showActionToast("Connected to Arc Testnet");
     }
   } catch (error) {
     showActionToast(error instanceof Error ? error.message : "Wallet connection failed");
   } finally {
+    state.walletConnecting = false;
     renderWalletState();
   }
 };
@@ -751,81 +750,13 @@ const sortThreadItemsNewestFirst = (items: NewsStory[] = []): NewsStory[] =>
     return (Number.isNaN(secondTime) ? 0 : secondTime) - (Number.isNaN(firstTime) ? 0 : firstTime);
   });
 
-const getMarketView = (market: MarketPreview): MarketPreview => {
-  const override = state.marketEvidenceOverrides[market.id];
-  if (!override) return market;
-  return {
-    ...market,
-    threadTopic: override.threadTopic || market.threadTopic,
-    updates: override.evidence.length,
-    evidence: override.evidence
-  };
-};
+const getMarketView = (market: MarketPreview): MarketPreview => market;
 
 const getMarketAddress = (market: MarketPreview): string =>
   market.marketAddress || window.SIFTLE_MARKET_ADDRESSES?.[market.id] || "";
 
 const formatMoney = (value: number): string =>
   value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-const formatMarketEvidenceDate = (story: NewsStory, index: number): string => {
-  if (index === 0) return "Latest";
-  const value = story.publishedAt ? new Date(story.publishedAt) : null;
-  if (!value || Number.isNaN(value.getTime())) return story.postedAt || "";
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(value);
-};
-
-const storyToMarketEvidence = (story: NewsStory, index: number): MarketPreview["evidence"][number] => ({
-  date: formatMarketEvidenceDate(story, index),
-  source: story.source,
-  headline: cleanSummaryText(story.headline),
-  summary: safeStorySummary(story, story.ai_summary),
-  impact: "",
-  direction: "flat",
-  sourceUrl: story.sourceUrl
-});
-
-const loadMarketEvidence = async (market: MarketPreview): Promise<void> => {
-  const matcher = marketThreadMatchers[market.id];
-  if (!matcher) return;
-  if (state.marketEvidenceOverrides[market.id] || state.checkedMarketEvidence[market.id] || state.loadingMarketEvidenceId === market.id) {
-    return;
-  }
-
-  state.loadingMarketEvidenceId = market.id;
-  try {
-    const feedResponse = await fetch(apiUrl(`/api/feed?category=${encodeURIComponent(matcher.category)}`));
-    if (!feedResponse.ok) throw new Error(`Market feed request failed with ${feedResponse.status}`);
-    const feed = await feedResponse.json();
-    const candidates = ((feed.top_stories ?? []) as NewsStory[]).filter(
-      (story) =>
-        matcher.terms.some((term) => `${story.headline} ${story.summary}`.toLowerCase().includes(term)) &&
-        (story.thread?.count ?? 0) >= 1
-    );
-    const seed = candidates.sort((first, second) => (second.thread?.count ?? 0) - (first.thread?.count ?? 0))[0];
-    if (!seed) return;
-
-    const threadResponse = await fetch(
-      apiUrl(`/api/thread?category=${encodeURIComponent(seed.category)}&sourceUrl=${encodeURIComponent(seed.sourceUrl)}`)
-    );
-    if (!threadResponse.ok) throw new Error(`Market thread request failed with ${threadResponse.status}`);
-    const thread = (await threadResponse.json()) as StoryThread & { reviewed_by?: string };
-    const timeline = [thread.current, ...sortThreadItemsNewestFirst(thread.items ?? [])].filter(Boolean);
-    if (timeline.length < 1) return;
-
-    state.marketEvidenceOverrides[market.id] = {
-      threadTopic: thread.topic || market.threadTopic,
-      evidence: timeline.map(storyToMarketEvidence),
-      reviewedBy: thread.reviewed_by
-    };
-  } catch (error) {
-    console.warn(error);
-  } finally {
-    state.checkedMarketEvidence[market.id] = true;
-    state.loadingMarketEvidenceId = null;
-    if (state.activeSurface === "markets" && state.selectedMarketId === market.id) render();
-  }
-};
 
 const loadMarketSnapshot = async (market: MarketPreview): Promise<void> => {
   const marketAddress = getMarketAddress(market);
@@ -839,6 +770,32 @@ const loadMarketSnapshot = async (market: MarketPreview): Promise<void> => {
   } finally {
     state.loadingMarketSnapshotId = null;
     if (state.activeSurface === "markets") render();
+  }
+};
+
+const loadPortfolioPositions = async (): Promise<void> => {
+  if (!state.walletAddress || state.loadingPortfolioPositions) return;
+
+  state.loadingPortfolioPositions = true;
+  try {
+    const entries = await Promise.all(
+      marketPreviews.map(async (market) => {
+        const marketAddress = getMarketAddress(market);
+        if (!marketAddress) return [market.id, { yesSharesUsdc: 0, noSharesUsdc: 0 }] as const;
+        const [position, snapshot] = await Promise.all([
+          readArcMarketPosition(marketAddress, state.walletAddress!),
+          readArcMarketSnapshot(marketAddress)
+        ]);
+        state.marketSnapshots[market.id] = snapshot;
+        return [market.id, position] as const;
+      })
+    );
+    state.marketPositions = Object.fromEntries(entries);
+  } catch (error) {
+    console.warn(error);
+  } finally {
+    state.loadingPortfolioPositions = false;
+    if (state.activeSurface === "portfolio") render();
   }
 };
 
@@ -863,8 +820,10 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
       Math.max(0, Number(state.marketTradeAmount) || 0)
     );
     delete state.marketSnapshots[market.id];
+    delete state.marketPositions[market.id];
     state.walletAddress = getConnectedArcWallet();
     if (state.walletAddress) state.walletBalance = await readArcUsdcBalance(state.walletAddress);
+    await loadPortfolioPositions();
     showActionToast(`Trade confirmed ${txHash.slice(0, 8)}...`);
   } catch (error) {
     showActionToast(error instanceof Error ? error.message : "Arc trade failed");
@@ -1457,10 +1416,7 @@ const renderMarketCard = (market: MarketPreview): string => {
 const renderMarketDetail = (market: MarketPreview): void => {
   if (!storyList || !storyDetail) return;
   const marketView = getMarketView(market);
-  const evidenceStatus =
-    state.loadingMarketEvidenceId === market.id && !state.checkedMarketEvidence[market.id]
-      ? "Checking thread..."
-      : `${marketView.evidence.length} updates`;
+  const evidenceStatus = `${marketView.evidence.length} updates`;
   const marketAddress = getMarketAddress(market);
   const snapshot = state.marketSnapshots[market.id];
   const yesPrice = snapshot?.yesPriceCents ?? (marketAddress ? market.probability : 0);
@@ -1476,7 +1432,6 @@ const renderMarketDetail = (market: MarketPreview): void => {
   storyDetail.hidden = false;
   storyDetail.classList.add("fullscreen");
   document.body.classList.add("detail-mode");
-  void loadMarketEvidence(market);
   void loadMarketSnapshot(market);
   storyDetail.innerHTML = `
     <div class="detail-container market-detail-container">
@@ -1541,10 +1496,6 @@ const renderMarketDetail = (market: MarketPreview): void => {
           </div>
         </div>
         <section class="market-evidence-thread">
-          <div class="market-thread-sheet-panel">
-          <div class="market-thread-sheet-handle" data-market-thread-drag aria-label="Drag market thread">
-            <span></span>
-          </div>
           <header>
             <div>
               <span class="market-kicker">Market thread</span>
@@ -1567,7 +1518,6 @@ const renderMarketDetail = (market: MarketPreview): void => {
                 </div>
               </article>
             `).join("")}
-          </div>
           </div>
         </section>
       </article>
@@ -1620,6 +1570,42 @@ const showFeedSurface = (): void => {
   storyList?.classList.remove("markets-list");
 };
 
+const getMarketOutcomeLabel = (outcome?: number): string => {
+  if (outcome === 1) return "Yes resolved";
+  if (outcome === 2) return "No resolved";
+  if (outcome === 3) return "Invalid";
+  return "Open";
+};
+
+const renderPortfolioPositionCard = (market: MarketPreview): string => {
+  const position = state.marketPositions[market.id] || { yesSharesUsdc: 0, noSharesUsdc: 0 };
+  const snapshot = state.marketSnapshots[market.id];
+  const totalShares = position.yesSharesUsdc + position.noSharesUsdc;
+  const yesValue = position.yesSharesUsdc * ((snapshot?.yesPriceCents ?? market.probability) / 100);
+  const noValue = position.noSharesUsdc * ((snapshot?.noPriceCents ?? 100 - market.probability) / 100);
+  const currentValue = yesValue + noValue;
+  const outcome = getMarketOutcomeLabel(snapshot?.outcome);
+
+  return `
+    <article class="portfolio-position-card">
+      <div class="portfolio-position-top">
+        <span class="category-chip ${market.category}">${market.category}</span>
+        <span>${outcome}</span>
+      </div>
+      <h2>${market.question}</h2>
+      <div class="portfolio-position-stats">
+        <div><span>Current value</span><strong>$${formatMoney(currentValue)}</strong></div>
+        <div><span>Yes shares</span><strong>$${formatMoney(position.yesSharesUsdc)}</strong></div>
+        <div><span>No shares</span><strong>$${formatMoney(position.noSharesUsdc)}</strong></div>
+      </div>
+      <div class="portfolio-position-footer">
+        <span>${totalShares > 0 ? `$${formatMoney(totalShares)} total shares` : "No shares"}</span>
+        <span>Closes ${market.closes}</span>
+      </div>
+    </article>
+  `;
+};
+
 const renderPortfolio = (): void => {
   if (!storyList || !storyDetail) return;
   briefHero?.toggleAttribute("hidden", true);
@@ -1631,12 +1617,21 @@ const renderPortfolio = (): void => {
   storyDetail.hidden = true;
   storyList.hidden = false;
   storyList.classList.add("markets-list");
+  if (state.walletAddress && Object.keys(state.marketPositions).length === 0 && !state.loadingPortfolioPositions) {
+    void loadPortfolioPositions();
+  }
+  const portfolioMarkets = marketPreviews.filter((market) => {
+    const position = state.marketPositions[market.id];
+    return position && position.yesSharesUsdc + position.noSharesUsdc > 0;
+  });
+  const openPositions = portfolioMarkets.filter((market) => (state.marketSnapshots[market.id]?.outcome ?? 0) === 0);
+  const finalizedPositions = portfolioMarkets.filter((market) => (state.marketSnapshots[market.id]?.outcome ?? 0) !== 0);
   storyList.innerHTML = `
     <section class="portfolio-surface">
       <header>
         <span>Arc Testnet</span>
         <h1>Portfolio</h1>
-        <p>Your positions, outcomes, and available USDC will live here.</p>
+        <p>Track your open shares, resolved outcomes, and available Arc testnet USDC.</p>
       </header>
       <div class="portfolio-wallet-state">
         <div>
@@ -1644,8 +1639,28 @@ const renderPortfolio = (): void => {
           <strong>${state.walletAddress ? `${state.walletBalance ?? "0"} USDC` : "Connect wallet"}</strong>
           <small>${state.walletAddress ? shortenAddress(state.walletAddress) : "WalletConnect secures your market account."}</small>
         </div>
-        <button type="button" data-connect-wallet>${state.walletAddress ? "Manage wallet" : "Connect wallet"}</button>
+        <button type="button" data-connect-wallet ${state.walletConnecting ? "disabled" : ""}>${state.walletConnecting ? "Connecting" : state.walletAddress ? "Manage wallet" : "Connect wallet"}</button>
       </div>
+      <div class="portfolio-section-tabs">
+        <span>Open ${openPositions.length}</span>
+        <span>Finalized ${finalizedPositions.length}</span>
+      </div>
+      ${state.loadingPortfolioPositions
+        ? `<div class="portfolio-empty">Reading your Arc positions...</div>`
+        : !state.walletAddress
+          ? `<div class="portfolio-empty">Connect your wallet to see open and finalized market positions.</div>`
+          : portfolioMarkets.length === 0
+            ? `<div class="portfolio-empty">No positions found for this wallet yet. Confirmed trades will appear here after the Arc transaction settles.</div>`
+            : `
+              <section class="portfolio-position-section">
+                <h2>Open positions</h2>
+                ${openPositions.length ? openPositions.map(renderPortfolioPositionCard).join("") : `<div class="portfolio-empty compact">No open positions.</div>`}
+              </section>
+              <section class="portfolio-position-section">
+                <h2>Finalized</h2>
+                ${finalizedPositions.length ? finalizedPositions.map(renderPortfolioPositionCard).join("") : `<div class="portfolio-empty compact">No finalized positions yet.</div>`}
+              </section>
+            `}
     </section>
   `;
 };
@@ -1763,11 +1778,6 @@ storyList?.addEventListener("click", (event) => {
     state.selectedMarketId = marketCard.dataset.marketId ?? null;
     window.history.pushState({}, "", `#market-${state.selectedMarketId}`);
     render();
-    requestAnimationFrame(() => {
-      const timeline = document.querySelector<HTMLElement>(".market-thread-sheet-panel");
-      setMarketSheetHeight(getMarketSheetBounds().snap);
-      if (timeline) timeline.scrollTop = 0;
-    });
     window.scrollTo({ top: 0, behavior: "smooth" });
     return;
   }
@@ -1862,63 +1872,29 @@ storyDetail?.addEventListener("input", (event) => {
   const target = event.target as HTMLInputElement;
   if (!target.matches("[data-market-amount]")) return;
   state.marketTradeAmount = Math.max(0, Number(target.value) || 0);
-  render();
+  const market = marketPreviews.find((item) => item.id === state.selectedMarketId);
+  const snapshot = market ? state.marketSnapshots[market.id] : undefined;
+  const activePrice = state.marketTradeSide === "yes"
+    ? snapshot?.yesPriceCents ?? market?.probability ?? 0
+    : snapshot?.noPriceCents ?? (market ? 100 - market.probability : 0);
+  const payout = activePrice > 0 ? state.marketTradeAmount / (activePrice / 100) : 0;
+  const payoutValue = storyDetail.querySelector<HTMLElement>(".market-inline-payout strong");
+  if (payoutValue) payoutValue.textContent = `$${formatMoney(payout)}`;
 });
 
-let marketSheetDragStartY = 0;
-let marketSheetDragStartHeight = 0;
-let activeMarketSheetPointerId: number | null = null;
-
-const getMarketSheetBounds = (): { min: number; max: number; snap: number } => {
-  const viewport = window.innerHeight || 720;
-  return {
-    min: Math.round(viewport * 0.2),
-    snap: Math.round(viewport * 0.26),
-    max: Math.round(viewport * 0.72)
-  };
-};
-
-const setMarketSheetHeight = (height: number): void => {
-  const { min, max } = getMarketSheetBounds();
-  const nextHeight = Math.max(min, Math.min(max, height));
-  document.documentElement.style.setProperty("--market-thread-sheet-height", `${nextHeight}px`);
-};
-
-storyDetail?.addEventListener("pointerdown", (event) => {
-  const handle = (event.target as HTMLElement).closest<HTMLElement>("[data-market-thread-drag]");
-  if (!handle) return;
-  const panel = document.querySelector<HTMLElement>(".market-thread-sheet-panel");
-  if (!panel) return;
-
-  activeMarketSheetPointerId = event.pointerId;
-  marketSheetDragStartY = event.clientY;
-  marketSheetDragStartHeight = panel.getBoundingClientRect().height;
-  handle.setPointerCapture(event.pointerId);
-  document.body.classList.add("market-sheet-dragging");
-});
-
-storyDetail?.addEventListener("pointermove", (event) => {
-  if (activeMarketSheetPointerId !== event.pointerId) return;
-  event.preventDefault();
-  const delta = marketSheetDragStartY - event.clientY;
-  setMarketSheetHeight(marketSheetDragStartHeight + delta);
-});
-
-const finishMarketSheetDrag = (event: PointerEvent): void => {
-  if (activeMarketSheetPointerId !== event.pointerId) return;
-  const panel = document.querySelector<HTMLElement>(".market-thread-sheet-panel");
-  if (panel) {
-    const { min, snap, max } = getMarketSheetBounds();
-    const height = panel.getBoundingClientRect().height;
-    const nextHeight = height > (snap + max) / 2 ? max : height < (min + snap) / 2 ? min : snap;
-    setMarketSheetHeight(nextHeight);
+storyDetail?.addEventListener("focusin", (event) => {
+  const target = event.target as HTMLElement;
+  if (target.matches("[data-market-amount]")) {
+    document.body.classList.add("market-amount-focused");
   }
-  activeMarketSheetPointerId = null;
-  document.body.classList.remove("market-sheet-dragging");
-};
+});
 
-storyDetail?.addEventListener("pointerup", finishMarketSheetDrag);
-storyDetail?.addEventListener("pointercancel", finishMarketSheetDrag);
+storyDetail?.addEventListener("focusout", (event) => {
+  const target = event.target as HTMLElement;
+  if (target.matches("[data-market-amount]")) {
+    window.setTimeout(() => document.body.classList.remove("market-amount-focused"), 120);
+  }
+});
 
 window.addEventListener("popstate", syncStoryFromHash);
 
@@ -2005,6 +1981,7 @@ if (initialWallet) {
 subscribeArcWallet((address) => {
   state.walletAddress = address;
   state.walletBalance = null;
+  state.marketPositions = {};
   renderWalletState();
   if (address) {
     void readArcUsdcBalance(address).then((balance) => {
@@ -2012,5 +1989,6 @@ subscribeArcWallet((address) => {
       renderWalletState();
       if (state.activeSurface === "portfolio") render();
     });
+    void loadPortfolioPositions();
   }
 });
