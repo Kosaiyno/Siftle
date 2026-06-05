@@ -1,9 +1,23 @@
 import { categories, mockStories } from "./mockNews.js";
 import type { ArchiveDate, Category, NewsStory, StoryThread } from "./types.js";
+import {
+  ARC_TESTNET_FAUCET,
+  connectArcWallet,
+  executeArcMarketOrder,
+  getConnectedArcWallet,
+  isWalletConnectConfigured,
+  readArcMarketSnapshot,
+  readArcUsdcBalance,
+  shortenAddress,
+  subscribeArcWallet
+} from "./arc.js";
+import type { ArcMarketSnapshot } from "./arc.js";
 
 declare global {
   interface Window {
     SIFTLE_API_BASE?: string;
+    REOWN_PROJECT_ID?: string;
+    SIFTLE_MARKET_ADDRESSES?: Record<string, string>;
   }
 }
 
@@ -11,6 +25,18 @@ const apiBase = (window.SIFTLE_API_BASE || "").replace(/\/$/, "");
 const apiUrl = (path: string): string => `${apiBase}${path}`;
 
 const state: {
+  activeSurface: "feed" | "markets" | "portfolio";
+  selectedMarketId: string | null;
+  marketOrderMode: "buy" | "sell";
+  marketTradeSide: "yes" | "no";
+  marketTradeAmount: number;
+  marketEvidenceOverrides: Record<string, MarketEvidenceOverride>;
+  checkedMarketEvidence: Record<string, boolean>;
+  marketSnapshots: Record<string, ArcMarketSnapshot>;
+  loadingMarketSnapshotId: string | null;
+  loadingMarketEvidenceId: string | null;
+  walletAddress: string | null;
+  walletBalance: string | null;
   activeCategory: Category;
   stories: NewsStory[];
   isLoading: boolean;
@@ -27,6 +53,18 @@ const state: {
   hasLoadedFeed: boolean;
   showSaved: boolean;
 } = {
+  activeSurface: "feed",
+  selectedMarketId: null,
+  marketOrderMode: "buy",
+  marketTradeSide: "yes",
+  marketTradeAmount: 100,
+  marketEvidenceOverrides: {},
+  checkedMarketEvidence: {},
+  marketSnapshots: {},
+  loadingMarketSnapshotId: null,
+  loadingMarketEvidenceId: null,
+  walletAddress: null,
+  walletBalance: null,
   activeCategory: "All",
   stories: mockStories,
   isLoading: false,
@@ -44,6 +82,247 @@ const state: {
   ,
   showSaved: false
 };
+
+interface MarketPreview {
+  id: string;
+  category: Exclude<Category, "All">;
+  question: string;
+  probability: number;
+  marketAddress?: string;
+  closes: string;
+  resolution: string;
+  threadTopic: string;
+  updates: number;
+  movement: number;
+  volume: string;
+  traders: string;
+  liquidity: string;
+  evidence: {
+    date: string;
+    source: string;
+    headline: string;
+    summary: string;
+    impact: string;
+    direction: "up" | "down" | "flat";
+    sourceUrl: string;
+  }[];
+}
+
+interface MarketEvidenceOverride {
+  threadTopic: string;
+  evidence: MarketPreview["evidence"];
+  reviewedBy?: string;
+}
+
+const marketThreadMatchers: Record<string, { category: Exclude<Category, "All">; terms: string[] }> = {
+  "new-glenn-2026": { category: "Tech", terms: ["blue origin", "new glenn"] },
+  "strategy-bitcoin-sale": { category: "Crypto", terms: ["strategy", "saylor", "mstr", "bitcoin sale", "btc sale"] },
+  "nba-finals": { category: "Sports", terms: ["spurs", "san antonio", "wembanyama", "nba finals"] }
+};
+
+const marketPreviews: MarketPreview[] = [
+  {
+    id: "new-glenn-2026",
+    category: "Tech",
+    question: "Will Blue Origin launch New Glenn again before December 31, 2026?",
+    probability: 68,
+    closes: "December 31, 2026",
+    resolution: "Resolves Yes when a New Glenn vehicle lifts off on an orbital launch attempt before the deadline.",
+    threadTopic: "Blue Origin New Glenn Launchpad Probe",
+    updates: 4,
+    movement: 7,
+    volume: "$184K",
+    traders: "1,284",
+    liquidity: "$61K",
+    evidence: [
+      {
+        date: "Latest",
+        source: "TechCrunch",
+        headline: "Blue Origin plans to launch New Glenn again this year after explosion",
+        summary: "CEO Dave Limp said damage to the company's launchpad in Florida was not as bad as expected.",
+        impact: "+7%",
+        direction: "up",
+        sourceUrl: "https://techcrunch.com/2026/06/02/blue-origin-plans-to-launch-new-glenn-again-this-year-after-explosion/"
+      },
+      {
+        date: "Jun 2",
+        source: "Engadget",
+        headline: "Blue Origin CEO says New Glenn will fly again before the year ends",
+        summary: "Dave Limp provided an update on the investigation into the New Glenn launchpad explosion.",
+        impact: "+11%",
+        direction: "up",
+        sourceUrl: "https://www.engadget.com/2185458/blue-origin-new-glenn-launchpad-explosion-repair-update/"
+      },
+      {
+        date: "May 29",
+        source: "Ars Technica",
+        headline: "How long will it take to rebuild Blue Origin's launch pad? We asked some SpaceX vets.",
+        summary: "Former SpaceX engineers assess the work required to rebuild Blue Origin's damaged launch pad.",
+        impact: "-8%",
+        direction: "down",
+        sourceUrl: "https://arstechnica.com/space/2026/06/how-long-will-it-take-to-rebuild-blue-origins-launch-pad-we-asked-some-spacex-vets/"
+      }
+    ]
+  },
+  {
+    id: "strategy-bitcoin-sale",
+    category: "Crypto",
+    question: "Will Strategy report another Bitcoin sale before July 1, 2026?",
+    probability: 42,
+    closes: "July 1, 2026",
+    resolution: "Resolves Yes if Strategy publicly reports selling Bitcoin before the deadline.",
+    threadTopic: "Strategy Bitcoin Sale And Market Resolution",
+    updates: 9,
+    movement: -6,
+    volume: "$427K",
+    traders: "3,106",
+    liquidity: "$138K",
+    evidence: [
+      {
+        date: "Latest",
+        source: "Cointelegraph",
+        headline: "Polymarket users cry foul after Strategy sale market resolves to no",
+        summary: "A Polymarket contract on whether Strategy sold Bitcoin by May 31 resolved to no after traders disputed how the sale should count.",
+        impact: "-6%",
+        direction: "down",
+        sourceUrl: "https://cointelegraph.com/news/polymarket-dispute-strategys-bitcoin-sale-resolves-no"
+      },
+      {
+        date: "Jun 2",
+        source: "CoinDesk",
+        headline: "Strategy sold bitcoin in late May, and told the market in June. Here's how Polymarket bettors are fighting over when it counts.",
+        summary: "A $79 million market hinges on whether a sale disclosed June 1 can count toward a deadline that passed May 31.",
+        impact: "+9%",
+        direction: "up",
+        sourceUrl: "https://www.coindesk.com/markets/2026/06/02/strategy-sold-bitcoin-in-late-may-and-told-the-market-in-june-here-s-how-polymarket-bettors-are-fighting-over-when-it-counts"
+      },
+      {
+        date: "Jun 1",
+        source: "The Block",
+        headline: "Strategy bitcoin sale timing throws wrench into $20 million Polymarket pool",
+        summary: "A Polymarket pool asking whether Strategy would sell any of its bitcoin before May 31 drew more than $20 million in volume.",
+        impact: "Opened",
+        direction: "flat",
+        sourceUrl: "https://www.theblock.co/post/403213/strategy-bitcoin-sale-timing-throws-wrench-20-million-polymarket-pool"
+      },
+      {
+        date: "Jun 2",
+        source: "Cointelegraph",
+        headline: "Strategy's Bitcoin sale causes clash for $80M in Polymarket bets",
+        summary: "A clash erupted over the timing and disclosure of Strategy's recent Bitcoin sale, with more than $80 million traded on the disputed outcome.",
+        impact: "+5%",
+        direction: "up",
+        sourceUrl: "https://cointelegraph.com/news/strategys-bitcoin-sale-causes-clash-on-80m-in-polymarket-bets"
+      },
+      {
+        date: "Jun 2",
+        source: "The Block",
+        headline: "Bitcoin slides toward $70,000 as Strategy's BTC sale and geopolitical risks weigh on crypto",
+        summary: "Analysts said the sale was relatively small but sent a bearish signal to the broader market.",
+        impact: "+3%",
+        direction: "up",
+        sourceUrl: "https://www.theblock.co/post/403286/bitcoin-slides-geopolitical-risks-strategy-btc-sale"
+      },
+      {
+        date: "Jun 2",
+        source: "CoinDesk",
+        headline: "Tom Lee calls Strategy's bitcoin sale classic bottom behavior",
+        summary: "Tom Lee said minor sales from key holders and institutional outflows are typical market-bottom behavior.",
+        impact: "-7%",
+        direction: "down",
+        sourceUrl: "https://www.coindesk.com/markets/2026/06/02/tom-lee-dismisses-bitcoin-fears-over-michael-saylor-first-bitcoin-sale-and-etf-outflows"
+      },
+      {
+        date: "Jun 2",
+        source: "The Block",
+        headline: "Polymarket faces backlash over disputed Strategy bitcoin sale market",
+        summary: "Polymarket faced continued backlash from traders who bet Yes on whether Strategy would sell bitcoin by May 31.",
+        impact: "+4%",
+        direction: "up",
+        sourceUrl: "https://www.theblock.co/post/403312/polymarket-faces-backlash-strategy-bitcoin-sale"
+      },
+      {
+        date: "Jun 3",
+        source: "Decrypt",
+        headline: "Strategy Wanted to 'Inoculate' the Bitcoin Market - Has Its BTC Sale Backfired?",
+        summary: "Experts are divided over whether the sale exposed a structural crack in Strategy's Bitcoin flywheel.",
+        impact: "-2%",
+        direction: "down",
+        sourceUrl: "https://decrypt.co/369904/strategy-wanted-to-inoculate-the-bitcoin-market-has-its-btc-sale-backfired"
+      },
+      {
+        date: "Jun 1",
+        source: "CoinDesk",
+        headline: "It's not 2022 anymore: What Strategy's first bitcoin sale can and can't tell us about this one",
+        summary: "Strategy has evolved into a more complex bitcoin-finance machine since it last sold BTC three and a half years ago.",
+        impact: "Opened",
+        direction: "flat",
+        sourceUrl: "https://www.coindesk.com/markets/2026/06/01/strategy-s-second-bitcoin-sale-revives-memories-of-2022"
+      }
+    ]
+  },
+  {
+    id: "nba-finals",
+    category: "Sports",
+    question: "Will the San Antonio Spurs win the 2026 NBA Finals?",
+    probability: 37,
+    closes: "At the conclusion of the 2026 NBA Finals",
+    resolution: "Resolves Yes if the San Antonio Spurs are declared 2026 NBA champions.",
+    threadTopic: "Spurs 2026 NBA Finals Run",
+    updates: 5,
+    movement: -4,
+    volume: "$296K",
+    traders: "2,418",
+    liquidity: "$94K",
+    evidence: [
+      {
+        date: "Latest",
+        source: "ESPN",
+        headline: "Wemby vows revival after Spurs 'let that one go'",
+        summary: "Victor Wembanyama accepted responsibility for the Game 1 loss but said he was not worried about the Spurs as the series unfolds.",
+        impact: "-4%",
+        direction: "down",
+        sourceUrl: "https://www.espn.com/nba/story/_/id/48963130/wembanyama-confident-spurs-bounce-back-game-1-loss"
+      },
+      {
+        date: "Jun 3",
+        source: "ESPN",
+        headline: "Knicks stay hot, steal Game 1 behind Brunson's 30",
+        summary: "Jalen Brunson scored 13 of his 30 points in the fourth quarter as New York erased a 14-point deficit.",
+        impact: "-12%",
+        direction: "down",
+        sourceUrl: "https://www.espn.com/nba/story/_/id/48962034/brunson-keys-late-surge-knicks-steal-game-1-san-antonio"
+      },
+      {
+        date: "Jun 1",
+        source: "NBA",
+        headline: "Experts' picks for Knicks-Spurs, Finals MVP",
+        summary: "ESPN experts make their picks for the NBA Finals winner and Finals MVP.",
+        impact: "Opened",
+        direction: "flat",
+        sourceUrl: "https://www.espn.com/nba/story/_/id/48939418/nba-finals-2026-experts-picks-knicks-spurs-finals-mvp-brunson-wembanyama"
+      },
+      {
+        date: "May 30",
+        source: "ESPN",
+        headline: "NBA Finals: Victor Wembanyama, Spurs have already made history",
+        summary: "The Spurs and their generational big man enter the NBA Finals having already made history.",
+        impact: "+14%",
+        direction: "up",
+        sourceUrl: "https://www.espn.com/nba/story/_/id/48949784/how-victor-wembanyama-san-antonio-spurs-already-made-history-new-york-knicks-nba-finals"
+      },
+      {
+        date: "May 27",
+        source: "NBA",
+        headline: "Top reactions to Spurs reaching NBA Finals",
+        summary: "The sports world reacts to the San Antonio Spurs reaching the NBA Finals.",
+        impact: "+9%",
+        direction: "up",
+        sourceUrl: "https://www.espn.com/nba/story/_/id/48910495/nba-playoffs-western-conference-finals-san-antonio-spurs-oklahoma-city-thunder-game-7-social-reaction"
+      }
+    ]
+  }
+];
 
 const SAVED_KEY = "siftle.savedUrls";
 let savedUrls = new Set<string>();
@@ -87,8 +366,45 @@ const menuStatus = document.querySelector<HTMLParagraphElement>("#menuStatus");
 const archiveDateSelect = document.querySelector<HTMLSelectElement>("#archiveDateSelect");
 const archiveStatus = document.querySelector<HTMLSpanElement>("#archiveStatus");
 const todayButton = document.querySelector<HTMLButtonElement>("#todayButton");
+const briefHero = document.querySelector<HTMLElement>(".brief-hero");
+const archiveControls = document.querySelector<HTMLElement>("#archiveControls");
+const topMarketsButton = document.querySelector<HTMLButtonElement>("[data-surface='markets']");
+const topNewsButton = document.querySelector<HTMLButtonElement>("[data-surface='feed']");
+const walletButton = document.querySelector<HTMLButtonElement>("#walletButton");
+const bottomNavButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-bottom-nav]"));
 
 let toastTimer: number | undefined;
+
+const renderWalletState = (): void => {
+  if (walletButton) {
+    const label = walletButton.querySelector<HTMLElement>(".wallet-button-label");
+    walletButton.classList.toggle("connected", Boolean(state.walletAddress));
+    walletButton.setAttribute("aria-label", state.walletAddress ? `Wallet ${shortenAddress(state.walletAddress)}` : "Connect wallet");
+    if (label) label.textContent = state.walletAddress ? "Wallet" : "Connect wallet";
+    walletButton.title = state.walletAddress
+      ? `${state.walletBalance ?? "0"} Arc Testnet USDC - ${shortenAddress(state.walletAddress)}`
+      : isWalletConnectConfigured()
+        ? "Connect wallet"
+        : "WalletConnect setup needed";
+  }
+};
+
+window.addEventListener("resize", renderWalletState);
+
+const connectWallet = async (): Promise<void> => {
+  try {
+    const account = await connectArcWallet();
+    if (account) {
+      state.walletAddress = account;
+      state.walletBalance = await readArcUsdcBalance(account);
+      showActionToast("Connected to Arc Testnet");
+    }
+  } catch (error) {
+    showActionToast(error instanceof Error ? error.message : "Wallet connection failed");
+  } finally {
+    renderWalletState();
+  }
+};
 
 const showActionToast = (message: string): void => {
   let toast = document.querySelector<HTMLDivElement>("#actionToast");
@@ -262,14 +578,38 @@ const loadStoryThread = async (story: NewsStory): Promise<void> => {
   } catch (error) {
     console.warn(error);
     state.activeThread = null;
+    delete story.thread;
+    state.selectedThreadUrl = null;
+    window.history.replaceState({}, "", window.location.pathname);
+    showActionToast("That timeline no longer has a verified past update");
     if (menuStatus) menuStatus.textContent = "Thread unavailable";
   } finally {
     state.loadingThreadUrl = null;
-    renderDetail();
+    render();
   }
 };
 
 const syncStoryFromHash = (): void => {
+  const marketMatch = window.location.hash.match(/^#market-(.+)$/);
+  if (window.location.hash === "#markets" || marketMatch) {
+    state.activeSurface = "markets";
+    state.selectedMarketId = marketMatch?.[1] ?? null;
+    state.selectedStoryId = null;
+    state.selectedThreadUrl = null;
+    state.activeThread = null;
+    render();
+    return;
+  }
+  if (window.location.hash === "#portfolio") {
+    state.activeSurface = "portfolio";
+    state.selectedMarketId = null;
+    state.selectedStoryId = null;
+    state.selectedThreadUrl = null;
+    render();
+    return;
+  }
+
+  state.activeSurface = "feed";
   const storyMatch = window.location.hash.match(/^#story-(\d+)$/);
   const threadMatch = window.location.hash.match(/^#thread-(\d+)$/);
   const story = storyMatch ? state.stories.find((item) => item.id === Number(storyMatch[1])) : undefined;
@@ -291,6 +631,8 @@ const setArchiveStatus = (message: string): void => {
 };
 
 const loadFeed = async (category: Category = state.activeCategory): Promise<void> => {
+  state.activeSurface = "feed";
+  state.selectedMarketId = null;
   state.selectedStoryId = null;
   state.selectedThreadUrl = null;
   state.activeThread = null;
@@ -393,6 +735,129 @@ const sortThreadItemsNewestFirst = (items: NewsStory[] = []): NewsStory[] =>
     const secondTime = new Date(second.publishedAt || 0).getTime();
     return (Number.isNaN(secondTime) ? 0 : secondTime) - (Number.isNaN(firstTime) ? 0 : firstTime);
   });
+
+const getMarketView = (market: MarketPreview): MarketPreview => {
+  const override = state.marketEvidenceOverrides[market.id];
+  if (!override) return market;
+  return {
+    ...market,
+    threadTopic: override.threadTopic || market.threadTopic,
+    updates: override.evidence.length,
+    evidence: override.evidence
+  };
+};
+
+const getMarketAddress = (market: MarketPreview): string =>
+  market.marketAddress || window.SIFTLE_MARKET_ADDRESSES?.[market.id] || "";
+
+const formatMoney = (value: number): string =>
+  value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const formatMarketEvidenceDate = (story: NewsStory, index: number): string => {
+  if (index === 0) return "Latest";
+  const value = story.publishedAt ? new Date(story.publishedAt) : null;
+  if (!value || Number.isNaN(value.getTime())) return story.postedAt || "";
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(value);
+};
+
+const storyToMarketEvidence = (story: NewsStory, index: number): MarketPreview["evidence"][number] => ({
+  date: formatMarketEvidenceDate(story, index),
+  source: story.source,
+  headline: cleanSummaryText(story.headline),
+  summary: cleanSummaryText(story.ai_summary || story.summary),
+  impact: "",
+  direction: "flat",
+  sourceUrl: story.sourceUrl
+});
+
+const loadMarketEvidence = async (market: MarketPreview): Promise<void> => {
+  const matcher = marketThreadMatchers[market.id];
+  if (!matcher) return;
+  if (state.marketEvidenceOverrides[market.id] || state.checkedMarketEvidence[market.id] || state.loadingMarketEvidenceId === market.id) {
+    return;
+  }
+
+  state.loadingMarketEvidenceId = market.id;
+  try {
+    const feedResponse = await fetch(apiUrl(`/api/feed?category=${encodeURIComponent(matcher.category)}`));
+    if (!feedResponse.ok) throw new Error(`Market feed request failed with ${feedResponse.status}`);
+    const feed = await feedResponse.json();
+    const candidates = ((feed.top_stories ?? []) as NewsStory[]).filter(
+      (story) =>
+        matcher.terms.some((term) => `${story.headline} ${story.summary}`.toLowerCase().includes(term)) &&
+        (story.thread?.count ?? 0) >= 1
+    );
+    const seed = candidates.sort((first, second) => (second.thread?.count ?? 0) - (first.thread?.count ?? 0))[0];
+    if (!seed) return;
+
+    const threadResponse = await fetch(
+      apiUrl(`/api/thread?category=${encodeURIComponent(seed.category)}&sourceUrl=${encodeURIComponent(seed.sourceUrl)}`)
+    );
+    if (!threadResponse.ok) throw new Error(`Market thread request failed with ${threadResponse.status}`);
+    const thread = (await threadResponse.json()) as StoryThread & { reviewed_by?: string };
+    const timeline = [thread.current, ...sortThreadItemsNewestFirst(thread.items ?? [])].filter(Boolean);
+    if (timeline.length < 1) return;
+
+    state.marketEvidenceOverrides[market.id] = {
+      threadTopic: thread.topic || market.threadTopic,
+      evidence: timeline.map(storyToMarketEvidence),
+      reviewedBy: thread.reviewed_by
+    };
+  } catch (error) {
+    console.warn(error);
+  } finally {
+    state.checkedMarketEvidence[market.id] = true;
+    state.loadingMarketEvidenceId = null;
+    if (state.activeSurface === "markets" && state.selectedMarketId === market.id) render();
+  }
+};
+
+const loadMarketSnapshot = async (market: MarketPreview): Promise<void> => {
+  const marketAddress = getMarketAddress(market);
+  if (!marketAddress || state.marketSnapshots[market.id] || state.loadingMarketSnapshotId === market.id) return;
+
+  state.loadingMarketSnapshotId = market.id;
+  try {
+    state.marketSnapshots[market.id] = await readArcMarketSnapshot(marketAddress);
+  } catch (error) {
+    console.warn(error);
+  } finally {
+    state.loadingMarketSnapshotId = null;
+    if (state.activeSurface === "markets") render();
+  }
+};
+
+const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<void> => {
+  const market = marketPreviews.find((item) => item.id === marketId);
+  if (!market) return;
+
+  state.marketTradeSide = side;
+  const marketAddress = getMarketAddress(market);
+  if (!marketAddress) {
+    showActionToast("Deploy this Arc market contract before trading");
+    render();
+    return;
+  }
+
+  try {
+    showActionToast("Preparing Arc transaction...");
+    const txHash = await executeArcMarketOrder(
+      marketAddress,
+      state.marketOrderMode,
+      side,
+      Math.max(0, Number(state.marketTradeAmount) || 0)
+    );
+    delete state.marketSnapshots[market.id];
+    state.walletAddress = getConnectedArcWallet();
+    if (state.walletAddress) state.walletBalance = await readArcUsdcBalance(state.walletAddress);
+    showActionToast(`Trade confirmed ${txHash.slice(0, 8)}...`);
+  } catch (error) {
+    showActionToast(error instanceof Error ? error.message : "Arc trade failed");
+  } finally {
+    renderWalletState();
+    render();
+  }
+};
 
 const renderDesktopThreadButton = (story: NewsStory): string =>
   hasThread(story)
@@ -862,6 +1327,20 @@ const renderThreadView = (): void => {
 
   const isLoading = state.loadingThreadUrl === seedStory.sourceUrl;
   const thread = state.activeThread;
+  if (isLoading && !thread) {
+    storyDetail.innerHTML = `
+      <div class="detail-container thread-container">
+        <button class="back-button" type="button" data-back-to-feed>Back to feed</button>
+        <article class="detail-card thread-card thread-verifying">
+          <span class="market-kicker">Verifying timeline</span>
+          <h2>${seedStory.thread?.topic || seedStory.headline}</h2>
+          <div class="thread-loading">Checking the published timeline and its past updates...</div>
+        </article>
+      </div>
+    `;
+    return;
+  }
+
   storyDetail.innerHTML = `
     <div class="detail-container thread-container">
       <button class="back-button" type="button" data-back-to-feed aria-label="Go back to feed">
@@ -871,15 +1350,13 @@ const renderThreadView = (): void => {
       <article class="detail-card thread-card">
         <div class="detail-topline">
           <span class="category-chip ${seedStory.category}">${seedStory.category}</span>
-          <span>${formatThreadCount(thread?.count ?? seedStory.thread?.count ?? 0)}</span>
+          <span>${formatThreadCount(thread?.items?.length ?? 0)}</span>
         </div>
         <h2>${thread?.topic || seedStory.thread?.topic || seedStory.headline}</h2>
         <p class="thread-intro">Follow how this story has been developing through related Siftle archive updates.</p>
         <div class="thread-timeline">
           ${renderThreadTimelineItem(seedStory, "Latest")}
-          ${isLoading
-            ? `<div class="thread-loading">Finding related updates...</div>`
-            : sortThreadItemsNewestFirst(thread?.items ?? []).map((item) => renderThreadTimelineItem(item, item.postedAt || "Earlier")).join("")}
+          ${sortThreadItemsNewestFirst(thread?.items ?? []).map((item) => renderThreadTimelineItem(item, item.postedAt || "Earlier")).join("")}
         </div>
       </article>
     </div>
@@ -933,7 +1410,241 @@ const renderDetail = (): void => {
   `;
 };
 
+const renderMarketCard = (market: MarketPreview): string => {
+  const snapshot = state.marketSnapshots[market.id];
+  const marketAddress = getMarketAddress(market);
+  const yesPrice = snapshot?.yesPriceCents;
+  const probabilityLabel = yesPrice === undefined ? "--" : `${yesPrice}%`;
+  const shareLabel =
+    yesPrice === undefined ? (marketAddress ? "Loading Arc pools" : "Arc setup required") : `Yes ${yesPrice}¢ · No ${100 - yesPrice}¢`;
+
+  return `
+    <button class="market-card" type="button" data-market-id="${market.id}">
+      <div class="market-card-topline">
+        <span class="category-chip ${market.category}">${market.category}</span>
+        <span class="market-card-updates">${getMarketView(market).evidence.length} updates</span>
+      </div>
+      <h2>${market.question}</h2>
+      <div class="market-probability-row">
+        <strong>${probabilityLabel}</strong>
+        <span>${marketAddress ? "market probability" : "pending deployment"}</span>
+        <span class="market-share-prices">${shareLabel}</span>
+      </div>
+      <div class="market-meter" aria-hidden="true"><span style="width: ${yesPrice ?? 0}%"></span></div>
+      <div class="market-card-footer">
+        <span>${getMarketView(market).evidence.length} thread updates</span>
+        <span>${snapshot ? `$${Math.round(snapshot.volumeUsdc).toLocaleString()} volume` : `Closes ${market.closes}`}</span>
+      </div>
+    </button>
+  `;
+};
+
+const renderMarketDetail = (market: MarketPreview): void => {
+  if (!storyList || !storyDetail) return;
+  const marketView = getMarketView(market);
+  const evidenceStatus =
+    state.loadingMarketEvidenceId === market.id && !state.checkedMarketEvidence[market.id]
+      ? "Checking thread..."
+      : `${marketView.evidence.length} updates`;
+  const marketAddress = getMarketAddress(market);
+  const snapshot = state.marketSnapshots[market.id];
+  const yesPrice = snapshot?.yesPriceCents ?? (marketAddress ? market.probability : 0);
+  const noPrice = snapshot?.noPriceCents ?? (marketAddress ? 100 - market.probability : 0);
+  const yesPriceLabel = marketAddress ? `${yesPrice}¢` : "--";
+  const noPriceLabel = marketAddress ? `${noPrice}¢` : "--";
+  const activePrice = state.marketTradeSide === "yes" ? yesPrice : noPrice;
+  const amount = Math.max(0, Number(state.marketTradeAmount) || 0);
+  const projectedPayout = activePrice > 0 ? amount / (activePrice / 100) : 0;
+  const orderLabel = state.marketOrderMode === "buy" ? "Buy" : "Sell";
+  const marketStatus = marketAddress ? "Arc testnet live" : "Contract not deployed";
+  storyList.hidden = true;
+  storyDetail.hidden = false;
+  storyDetail.classList.add("fullscreen");
+  document.body.classList.add("detail-mode");
+  void loadMarketEvidence(market);
+  void loadMarketSnapshot(market);
+  storyDetail.innerHTML = `
+    <div class="detail-container market-detail-container">
+      <button class="back-button" type="button" data-back-markets>Back to markets</button>
+      <article class="market-detail-card market-story-surface">
+        <div class="market-decision-surface">
+          <div class="market-detail-topline">
+            <span class="category-chip ${market.category}">${market.category}</span>
+            <span class="market-detail-updates">${marketView.evidence.length} evidence updates</span>
+          </div>
+          <h2>${market.question}</h2>
+          <div class="market-decision-row">
+            <div class="market-trade-panel">
+              <div class="market-order-mode" aria-label="Order type">
+                <button type="button" class="${state.marketOrderMode === "buy" ? "active" : ""}" data-market-order-mode="buy">Buy</button>
+                <button type="button" class="${state.marketOrderMode === "sell" ? "active" : ""}" data-market-order-mode="sell">Sell</button>
+              </div>
+              <div class="market-order-ticket">
+                <div class="market-amount-panel">
+                  <label for="marketAmountInput">Amount</label>
+                  <div class="market-amount-input">
+                    <div class="market-amount-entry">
+                      <span>$</span>
+                      <input id="marketAmountInput" type="number" min="0" step="1" inputmode="decimal" value="${amount}" data-market-amount />
+                    </div>
+                    <div class="market-inline-payout">
+                      <span>${state.marketOrderMode === "buy" ? "Projected payout" : "Estimated proceeds"}</span>
+                      <strong>$${formatMoney(projectedPayout)}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="market-action-grid" aria-label="${orderLabel} shares">
+                <button type="button" class="market-side yes ${state.marketTradeSide === "yes" ? "active" : ""}" data-market-trade-side="yes" data-market-trade="yes">
+                  <span>${orderLabel} Yes</span>
+                  <strong>${yesPriceLabel}</strong>
+                </button>
+                <button type="button" class="market-side no ${state.marketTradeSide === "no" ? "active" : ""}" data-market-trade-side="no" data-market-trade="no">
+                  <span>${orderLabel} No</span>
+                  <strong>${noPriceLabel}</strong>
+                </button>
+              </div>
+            </div>
+          </div>
+          <p class="market-volume">
+            <span>${marketStatus}</span>
+            <strong>${snapshot ? `$${Math.round(snapshot.volumeUsdc).toLocaleString()} USDC volume` : marketAddress ? "Reading Arc pool" : "Deploy Arc market to trade"}</strong>
+          </p>
+          <details class="market-resolution">
+            <summary>
+              <span><strong>Resolution rules</strong></span>
+              <span>View</span>
+            </summary>
+            <div>
+              <dl class="market-resolution-facts">
+                <div><dt>Closes</dt><dd>${market.closes}</dd></div>
+                <div><dt>Resolves using</dt><dd>Official announcement and verified reporting</dd></div>
+              </dl>
+              <p>${market.resolution}</p>
+            </div>
+          </details>
+        </div>
+        <section class="market-evidence-thread">
+          <header>
+            <div>
+              <span class="market-kicker">Evidence thread</span>
+              <h3>${marketView.threadTopic}</h3>
+            </div>
+            <span>${evidenceStatus}</span>
+          </header>
+          <p class="market-thread-intro">Read the developments shaping this market, newest first.</p>
+          <div class="market-thread-timeline">
+            ${marketView.evidence.map((item) => `
+              <article class="market-thread-update">
+                <div class="market-thread-marker"></div>
+                <div>
+                  <div class="market-thread-update-meta">
+                    <span>${item.date} · ${item.source}</span>
+                  </div>
+                  <h4>${item.headline}</h4>
+                  <p>${item.summary}</p>
+                  <a class="market-thread-source-link" href="${item.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>
+                </div>
+              </article>
+            `).join("")}
+          </div>
+        </section>
+      </article>
+    </div>
+  `;
+};
+
+const renderMarkets = (): void => {
+  if (!storyList || !storyDetail) return;
+  briefHero?.toggleAttribute("hidden", true);
+  archiveControls?.toggleAttribute("hidden", true);
+  categoryTabs?.toggleAttribute("hidden", true);
+  topMarketsButton?.classList.add("active");
+  topNewsButton?.classList.remove("active");
+  marketPreviews.forEach((market) => void loadMarketSnapshot(market));
+
+  if (state.selectedMarketId) {
+    const market = marketPreviews.find((item) => item.id === state.selectedMarketId);
+    if (market) renderMarketDetail(market);
+    return;
+  }
+
+  document.body.classList.remove("detail-mode");
+  storyDetail.hidden = true;
+  storyDetail.classList.remove("fullscreen");
+  storyList.hidden = false;
+  storyList.classList.add("markets-list");
+  storyList.innerHTML = `
+    <header class="markets-header">
+      <div>
+        <h1>Markets</h1>
+        <p>Predict what happens next, with the full story already attached.</p>
+      </div>
+      <a class="arc-faucet-button" href="${ARC_TESTNET_FAUCET}" target="_blank" rel="noreferrer">Get testnet USDC</a>
+    </header>
+    <section class="markets-grid" aria-label="Prediction markets">
+      ${marketPreviews.map(renderMarketCard).join("")}
+    </section>
+  `;
+};
+
+const showFeedSurface = (): void => {
+  state.activeSurface = "feed";
+  state.selectedMarketId = null;
+  briefHero?.removeAttribute("hidden");
+  archiveControls?.removeAttribute("hidden");
+  categoryTabs?.removeAttribute("hidden");
+  topMarketsButton?.classList.remove("active");
+  topNewsButton?.classList.add("active");
+  storyList?.classList.remove("markets-list");
+};
+
+const renderPortfolio = (): void => {
+  if (!storyList || !storyDetail) return;
+  briefHero?.toggleAttribute("hidden", true);
+  archiveControls?.toggleAttribute("hidden", true);
+  categoryTabs?.toggleAttribute("hidden", true);
+  topMarketsButton?.classList.remove("active");
+  topNewsButton?.classList.remove("active");
+  document.body.classList.remove("detail-mode");
+  storyDetail.hidden = true;
+  storyList.hidden = false;
+  storyList.classList.add("markets-list");
+  storyList.innerHTML = `
+    <section class="portfolio-surface">
+      <header>
+        <span>Arc Testnet</span>
+        <h1>Portfolio</h1>
+        <p>Your positions, outcomes, and available USDC will live here.</p>
+      </header>
+      <div class="portfolio-wallet-state">
+        <div>
+          <span>Available balance</span>
+          <strong>${state.walletAddress ? `${state.walletBalance ?? "0"} USDC` : "Connect wallet"}</strong>
+          <small>${state.walletAddress ? shortenAddress(state.walletAddress) : "WalletConnect secures your market account."}</small>
+        </div>
+        <button type="button" data-connect-wallet>${state.walletAddress ? "Manage wallet" : "Connect wallet"}</button>
+      </div>
+    </section>
+  `;
+};
+
 const render = (): void => {
+  bottomNavButtons.forEach((button) => {
+    const target = button.dataset.bottomNav;
+    button.classList.toggle("active", target === "saved" ? state.showSaved : target === state.activeSurface && !state.showSaved);
+  });
+
+  if (state.activeSurface === "markets") {
+    renderMarkets();
+    return;
+  }
+  if (state.activeSurface === "portfolio") {
+    renderPortfolio();
+    return;
+  }
+
+  showFeedSurface();
   renderCategories();
   renderStories();
   renderDetail();
@@ -952,6 +1663,59 @@ categoryTabs?.addEventListener("click", (event) => {
   resetFeedScroll();
   render();
   void loadFeed(state.activeCategory);
+});
+
+topMarketsButton?.addEventListener("click", () => {
+  state.feedScrollY = window.scrollY;
+  state.activeSurface = "markets";
+  state.selectedMarketId = null;
+  state.selectedStoryId = null;
+  state.selectedThreadUrl = null;
+  window.history.pushState({}, "", "#markets");
+  resetFeedScroll();
+  render();
+});
+
+topNewsButton?.addEventListener("click", () => {
+  state.activeSurface = "feed";
+  state.showSaved = false;
+  window.history.pushState({}, "", window.location.pathname);
+  resetFeedScroll();
+  render();
+});
+
+walletButton?.addEventListener("click", () => void connectWallet());
+
+document.addEventListener("click", (event) => {
+  const target = event.target as HTMLElement;
+  if (target.closest("[data-connect-wallet]")) void connectWallet();
+});
+
+bottomNavButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const target = button.dataset.bottomNav;
+    state.selectedMarketId = null;
+    state.selectedStoryId = null;
+    state.selectedThreadUrl = null;
+    state.showSaved = target === "saved";
+
+    if (target === "markets") {
+      state.activeSurface = "markets";
+      window.history.pushState({}, "", "#markets");
+    } else if (target === "portfolio") {
+      state.activeSurface = "portfolio";
+      window.history.pushState({}, "", "#portfolio");
+    } else {
+      state.activeSurface = "feed";
+      window.history.pushState({}, "", window.location.pathname);
+      if (target === "saved") {
+        loadSavedFromStorage();
+        applySavedFlags();
+      }
+    }
+    resetFeedScroll();
+    render();
+  });
 });
 
 archiveDateSelect?.addEventListener("change", () => {
@@ -973,6 +1737,19 @@ todayButton?.addEventListener("click", () => {
 
 storyList?.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
+  const marketCard = target.closest<HTMLButtonElement>("[data-market-id]");
+  if (marketCard) {
+    state.selectedMarketId = marketCard.dataset.marketId ?? null;
+    window.history.pushState({}, "", `#market-${state.selectedMarketId}`);
+    render();
+    requestAnimationFrame(() => {
+      const timeline = document.querySelector<HTMLElement>(".market-evidence-thread");
+      if (timeline) timeline.scrollTop = 0;
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+
   const threadButton = target.closest<HTMLButtonElement>("[data-thread-story-id]");
   const exportButton = target.closest<HTMLButtonElement>("[data-export-id]");
   const exportAction = target.closest<HTMLButtonElement>("[data-export-action]");
@@ -1031,8 +1808,39 @@ storyList?.addEventListener("keydown", (event) => {
 
 storyDetail?.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
+  if (target.closest("[data-back-markets]")) {
+    state.selectedMarketId = null;
+    window.history.pushState({}, "", "#markets");
+    render();
+    return;
+  }
+  const tradeButton = target.closest<HTMLButtonElement>("[data-market-trade]");
+  if (tradeButton && state.selectedMarketId) {
+    const side = tradeButton.dataset.marketTrade as "yes" | "no";
+    void placeMarketOrder(state.selectedMarketId, side);
+    return;
+  }
+  const tradeSide = target.closest<HTMLButtonElement>("[data-market-trade-side]");
+  if (tradeSide) {
+    state.marketTradeSide = tradeSide.dataset.marketTradeSide as "yes" | "no";
+    render();
+    return;
+  }
+  const orderMode = target.closest<HTMLButtonElement>("[data-market-order-mode]");
+  if (orderMode) {
+    state.marketOrderMode = orderMode.dataset.marketOrderMode as "buy" | "sell";
+    render();
+    return;
+  }
   const backButton = target.closest<HTMLButtonElement>("[data-back-to-feed]");
   if (backButton) closeStory();
+});
+
+storyDetail?.addEventListener("input", (event) => {
+  const target = event.target as HTMLInputElement;
+  if (!target.matches("[data-market-amount]")) return;
+  state.marketTradeAmount = Math.max(0, Number(target.value) || 0);
+  render();
 });
 
 window.addEventListener("popstate", syncStoryFromHash);
@@ -1070,6 +1878,7 @@ document.addEventListener("click", (event) => {
   }
 
   if (button.dataset.menuAction === "saved") {
+    showFeedSurface();
     // Show only saved stories from localStorage
     loadSavedFromStorage();
     applySavedFlags();
@@ -1083,6 +1892,7 @@ document.addEventListener("click", (event) => {
 });
 
 render();
+renderWalletState();
 void loadArchiveIndex();
 void loadFeed();
 
@@ -1104,4 +1914,26 @@ archivePill?.addEventListener("click", (e) => {
   if (!archiveControlsEl) return;
   const isOpen = archiveControlsEl.classList.toggle("mobile-open");
   if (isOpen) setTimeout(() => archiveControlsEl.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+});
+
+const initialWallet = getConnectedArcWallet();
+if (initialWallet) {
+  state.walletAddress = initialWallet;
+  void readArcUsdcBalance(initialWallet).then((balance) => {
+    state.walletBalance = balance;
+    renderWalletState();
+  });
+}
+
+subscribeArcWallet((address) => {
+  state.walletAddress = address;
+  state.walletBalance = null;
+  renderWalletState();
+  if (address) {
+    void readArcUsdcBalance(address).then((balance) => {
+      state.walletBalance = balance;
+      renderWalletState();
+      if (state.activeSurface === "portfolio") render();
+    });
+  }
 });

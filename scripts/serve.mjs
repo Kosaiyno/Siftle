@@ -24,7 +24,9 @@ const ogUsageMode = process.env.OG_USAGE_MODE || "conserve";
 const shouldAutoSummarizeWith0G = ogUsageMode === "full";
 const threadReviewBudgetPerRefresh = Number(process.env.THREAD_REVIEW_BUDGET_PER_REFRESH ?? 12);
 const threadPrepConcurrency = Number(process.env.THREAD_PREP_CONCURRENCY ?? 1);
-const threadReviewCandidateLimit = Number(process.env.THREAD_REVIEW_CANDIDATE_LIMIT ?? 8);
+const threadReviewCandidateLimit = Number(process.env.THREAD_REVIEW_CANDIDATE_LIMIT ?? 5);
+const threadReviewSameDayCandidateLimit = Number(process.env.THREAD_REVIEW_SAME_DAY_CANDIDATE_LIMIT ?? 1);
+const threadReviewCandidatesPerDay = Number(process.env.THREAD_REVIEW_CANDIDATES_PER_DAY ?? 3);
 const enableFeedThreadPreviews = process.env.ENABLE_FEED_THREAD_PREVIEWS === "true";
 
 const loadEnv = () => {
@@ -698,7 +700,7 @@ const getThreadReviewCachePath = (story, candidates) => {
   return join(cacheDir, `${key}.json`);
 };
 
-const threadReviewPromptVersion = "evidence-thread-judge-v5";
+const threadReviewPromptVersion = "persistent-timeline-judge-v9";
 
 const getThreadTopic = (story, relatedItems = []) => {
   if (story?.category === "Anime") return getCleanHeadlineTopic(story);
@@ -763,11 +765,26 @@ const storyForThreadReview = (story, index) => ({
   id: index,
   headline: cleanThreadText(story.headline ?? ""),
   summary: cleanThreadText(story.ai_summary || story.summary || ""),
-  article_excerpt: cleanThreadText(`${story.headline ?? ""}. ${story.ai_summary || story.summary || ""}`).slice(0, 900),
+  article_excerpt: cleanThreadText(`${story.headline ?? ""}. ${story.ai_summary || story.summary || ""}`).slice(0, 650),
   source: story.source ?? "",
   category: story.category ?? "",
   publishedAt: story.publishedAt ?? "",
-  sourceUrl: story.sourceUrl ?? ""
+  calendar_date: storyDateKey(story),
+  sourceUrl: story.sourceUrl ?? "",
+  ...(story.__threadContext
+    ? {
+        existing_thread_context: {
+          topic: story.__threadContext.topic,
+          count: story.__threadContext.items.length,
+          reviewed_by: story.__threadContext.reviewed_by,
+          timeline: story.__threadContext.items.slice(0, 10).map((item) => ({
+            headline: cleanThreadText(item.headline ?? ""),
+            calendar_date: storyDateKey(item),
+            summary: cleanThreadText(item.ai_summary || item.summary || "").slice(0, 220)
+          }))
+        }
+      }
+    : {})
 });
 
 const parseThreadReviewResponse = (data) => {
@@ -920,15 +937,17 @@ const scoreThreadMatch = (story, candidate) => {
   const candidateHeadlineTokens = tokenizeThreadText(candidate, true);
   const headlineOverlap = getSharedCount(storyHeadlineTokens, candidateHeadlineTokens);
   const sharedEntities = getSharedCount(extractThreadEntities(story), extractThreadEntities(candidate));
+  const sharedPrimaryAnchors = getSharedCount(getPrimaryThreadAnchors(story), getPrimaryThreadAnchors(candidate));
   const sharedPhrase = hasSharedDistinctivePhrase(story, candidate);
-  const hasAnchor = sharedEntities >= 1 || headlineOverlap >= 2 || sharedPhrase;
-  if (!hasAnchor || overlap < 2) return 0;
+  const hasAnchor = sharedPrimaryAnchors >= 1 || sharedEntities >= 1 || headlineOverlap >= 2 || sharedPhrase;
+  if (!hasAnchor || (overlap < 2 && sharedPrimaryAnchors < 1)) return 0;
 
   const baseScore = overlap / Math.min(storyTokens.size, candidateTokens.size);
   const headlineBonus = Math.min(headlineOverlap * 0.08, 0.24);
   const entityBonus = Math.min(sharedEntities * 0.14, 0.28);
+  const anchorBonus = Math.min(sharedPrimaryAnchors * 0.1, 0.2);
   const phraseBonus = sharedPhrase ? 0.18 : 0;
-  return baseScore + headlineBonus + entityBonus + phraseBonus;
+  return baseScore + headlineBonus + entityBonus + anchorBonus + phraseBonus;
 };
 
 const isThreadableStory = (story) => {
@@ -984,7 +1003,23 @@ const getHistoricalThreadCandidates = (story) => {
   const candidates = [];
 
   const addSnapshotStories = (snapshot, fallbackDate) => {
-    for (const candidate of snapshot?.top_stories ?? []) {
+    const threadContextByUrl = new Map();
+    const archivedThreadStories = Object.values(snapshot?.threads ?? {}).flatMap((thread) => {
+      const items = [...(thread?.current ? [thread.current] : []), ...(thread?.items ?? [])];
+      const context = {
+        topic: thread?.topic ?? "",
+        reviewed_by: thread?.reviewed_by ?? "",
+        items
+      };
+      for (const item of items) {
+        const url = normalizeStoryUrl(item?.sourceUrl);
+        if (url) threadContextByUrl.set(url, context);
+      }
+      return items;
+    });
+    const snapshotStories = [...(snapshot?.top_stories ?? []), ...archivedThreadStories];
+
+    for (const candidate of snapshotStories) {
       const url = normalizeStoryUrl(candidate.sourceUrl);
       if (!url || seen.has(url) || candidate.category !== story.category) continue;
 
@@ -1004,6 +1039,7 @@ const getHistoricalThreadCandidates = (story) => {
       seen.add(url);
       candidates.push({
         ...candidate,
+        ...(threadContextByUrl.has(url) ? { __threadContext: threadContextByUrl.get(url) } : {}),
         postedAt: candidate.publishedAt ? formatArchiveStoryDate(candidate.publishedAt, candidateDate ?? fallbackDate) : candidate.postedAt
       });
     }
@@ -1051,11 +1087,103 @@ const getScoredThreadCandidates = (story) => {
   return getHistoricalThreadCandidates(story)
     .filter(isThreadableStory)
     .map((candidate) => ({ story: candidate, score: scoreThreadMatch(story, candidate) }))
-    .filter((item) => item.score >= 0.28)
+    .filter((item) => item.score >= 0.2)
     .sort((first, second) => {
       if (second.score !== first.score) return second.score - first.score;
       return new Date(second.story.publishedAt || 0).getTime() - new Date(first.story.publishedAt || 0).getTime();
     });
+};
+
+const selectThreadReviewCandidates = (story, scoredCandidates) => {
+  const limit = Math.max(1, threadReviewCandidateLimit);
+  const currentDate = storyDateKey(story, getTodayKey());
+  const priorDay = [];
+  const sameDay = [];
+
+  for (const item of scoredCandidates) {
+    const candidateDate = storyDateKey(item.story);
+    if (currentDate && candidateDate && candidateDate < currentDate) priorDay.push(item);
+    else sameDay.push(item);
+  }
+
+  if (priorDay.length === 0) return [];
+
+  const priorDayGroups = new Map();
+  for (const item of priorDay) {
+    const date = storyDateKey(item.story) ?? "unknown";
+    const group = priorDayGroups.get(date) ?? [];
+    group.push(item);
+    priorDayGroups.set(date, group);
+  }
+
+  const orderedDays = [...priorDayGroups.keys()].sort().reverse();
+  const selectedPriorDay = [];
+  const maxPerDay = Math.max(1, threadReviewCandidatesPerDay);
+  for (let round = 0; round < maxPerDay && selectedPriorDay.length < limit; round += 1) {
+    for (const date of orderedDays) {
+      const item = priorDayGroups.get(date)?.[round];
+      if (item) selectedPriorDay.push(item);
+      if (selectedPriorDay.length >= limit) break;
+    }
+  }
+
+  const sameDayLimit = Math.max(0, Math.min(threadReviewSameDayCandidateLimit, limit));
+  const selectedSameDay = sameDay.slice(0, Math.min(sameDayLimit, Math.max(0, limit - selectedPriorDay.length)));
+
+  return [...selectedPriorDay, ...selectedSameDay].slice(0, limit);
+};
+
+const expandApprovedThreadItems = (story, approvedItems) => {
+  const currentUrl = normalizeStoryUrl(story.sourceUrl);
+  const currentDate = storyDateKey(story, getTodayKey());
+  const seen = new Set([currentUrl]);
+  const expanded = [];
+
+  const addItem = (item) => {
+    const url = normalizeStoryUrl(item?.sourceUrl);
+    const date = storyDateKey(item);
+    if (!url || seen.has(url) || item?.category !== story.category) return;
+    if (currentDate && date && date >= currentDate) return;
+    seen.add(url);
+    const { __threadContext: _threadContext, ...cleanItem } = item;
+    expanded.push(cleanItem);
+  };
+
+  for (const item of approvedItems) {
+    addItem(item);
+    const context = item.__threadContext;
+    if (!context || context.reviewed_by !== "0g") continue;
+    for (const contextItem of context.items ?? []) addItem(contextItem);
+  }
+
+  return sortStoriesByPublishedAtDesc(expanded).slice(0, 16);
+};
+
+const normalizeValidThread = (thread, seedStory = thread?.current) => {
+  if (!thread || !seedStory) return null;
+
+  const currentUrl = normalizeStoryUrl(seedStory.sourceUrl);
+  const currentDate = storyDateKey(seedStory, getTodayKey());
+  const seen = new Set([currentUrl]);
+  const items = [];
+
+  for (const item of sortStoriesByPublishedAtDesc(thread.items ?? [])) {
+    const url = normalizeStoryUrl(item?.sourceUrl);
+    const date = storyDateKey(item);
+    if (!url || seen.has(url) || item?.category !== seedStory.category) continue;
+    if (!currentDate || !date || date >= currentDate) continue;
+    seen.add(url);
+    items.push(item);
+  }
+
+  if (items.length < 1) return null;
+
+  return {
+    ...thread,
+    current: seedStory,
+    count: items.length,
+    items: items.slice(0, 16)
+  };
 };
 
 const getLocalThreadForStory = (story) => {
@@ -1084,8 +1212,8 @@ const canSpendThreadReview = () => {
 };
 
 const reviewThreadWith0G = async (story, scoredCandidates) => {
-  const candidates = scoredCandidates.slice(0, Math.max(1, threadReviewCandidateLimit)).map((item) => item.story);
-  if (candidates.length < 1) return strictLocalThreadFallback(story, scoredCandidates);
+  const candidates = selectThreadReviewCandidates(story, scoredCandidates).map((item) => item.story);
+  if (candidates.length < 1) return emptyReviewedThread(story, "no-prior-day-candidates");
 
   const cachePath = getThreadReviewCachePath(story, candidates);
   const candidateKey = candidates.map((candidate) => normalizeStoryUrl(candidate.sourceUrl)).sort();
@@ -1094,14 +1222,16 @@ const reviewThreadWith0G = async (story, scoredCandidates) => {
       const cached = JSON.parse(readFileSync(cachePath, "utf8"));
       if (cached.prompt_version === threadReviewPromptVersion && JSON.stringify(cached.candidate_key) === JSON.stringify(candidateKey)) {
         const approvedUrls = new Set((cached.approved_source_urls ?? []).map(normalizeStoryUrl));
-        const items = candidates.filter((candidate) => approvedUrls.has(normalizeStoryUrl(candidate.sourceUrl)));
-        return {
+        const items = Array.isArray(cached.thread_items)
+          ? cached.thread_items
+          : expandApprovedThreadItems(story, candidates.filter((candidate) => approvedUrls.has(normalizeStoryUrl(candidate.sourceUrl))));
+        return normalizeValidThread({
           topic: normalizeThreadReviewTopic(cached.topic, story, items),
           count: items.length,
           current: story,
           items: sortStoriesByPublishedAtDesc(items).slice(0, 12),
           reviewed_by: cached.provider ?? "cache"
-        };
+        }, story) ?? emptyReviewedThread(story, "invalid-cache");
       }
     } catch {
       // Ignore broken thread review cache files.
@@ -1133,8 +1263,17 @@ const reviewThreadWith0G = async (story, scoredCandidates) => {
                 "Your job has two parts:",
                 "1. Decide whether older candidate articles belong in the same developing story as the current article.",
                 "2. Write the thread_topic by reading the current article plus the approved related articles and naming what the shared story is actually about.",
-                "For every candidate, give structured evidence: shared_actor, shared_event, why_related, why_not_broad, and confidence.",
-                "Approve articles that are the same specific event or a direct related development involving the same main actor, product, token, team, series, company, dispute, launch, outage, lawsuit, transfer, match, market catalyst, or product rail.",
+                "A Siftle thread is a timeline of meaningful developments over time, not a bundle of outlets repeating the same news.",
+                "For every candidate, classify relationship as prior_development, material_follow_up, duplicate_coverage, or unrelated, then give structured evidence.",
+                "Approve prior_development and material_follow_up articles involving the same main actor, product, token, team, series, company, dispute, launch, outage, lawsuit, transfer, match, market catalyst, or product rail.",
+                "Treat a direct causal chain as one developing story: the initiating event, immediate reaction, dispute caused by it, official response, consequence, investigation, and later resolution may belong together.",
+                "Example: Strategy's bitcoin sale, the Polymarket timing dispute caused by that sale, backlash over the market outcome, and the later UMA resolution form one developing timeline.",
+                "Do not approve other Strategy treasury news or unrelated Polymarket platform news unless it directly continues that same catalyst.",
+                "Some candidates include existing_thread_context from a previously 0G-reviewed timeline. Approve that candidate when the current article clearly continues the same root catalyst; Siftle will preserve the verified older timeline automatically.",
+                "Reject duplicate_coverage: another outlet reporting substantially the same facts without a new development, even when the actor and event match.",
+                "Same-day articles may only be approved as material_follow_up when they add a clearly new event, decision, result, response, consequence, or milestone.",
+                "A valid displayed thread must include at least one approved article from an earlier calendar day than the current article.",
+                "Keep the JSON concise. Do not output entries for rejected candidates; summarize rejections in reject_reason.",
                 "Reject articles that are merely in the same category, about the same broad sport/coin/company/team/person/series, or share generic terms.",
                 "For sports, same World Cup/league/coach/team is not enough without the same move/event/player/match.",
                 "For crypto, approve product-rail follow-ups when they share a concrete actor plus product context such as Kraken Earn/Vault, Strategy bitcoin sale/Polymarket, MoneyGram MGUSD/Stellar, ETF outflows, or Mt. Gox transfers. Same coin or price movement alone is not enough.",
@@ -1161,6 +1300,7 @@ const reviewThreadWith0G = async (story, scoredCandidates) => {
                     same_story: true,
                     shared_actor: "specific company/person/team/product/franchise shared by both articles",
                     shared_event: "specific event/catalyst/update shared by both articles",
+                    relationship: "prior_development | material_follow_up | duplicate_coverage | unrelated",
                     why_related: "brief evidence from both articles showing the same developing story",
                     why_not_broad: "brief note explaining why this is not merely same category/company/coin/team/theme",
                     confidence: 0.0,
@@ -1170,12 +1310,12 @@ const reviewThreadWith0G = async (story, scoredCandidates) => {
                 reject_reason: "brief note if few or no candidates are same story"
               },
               approval_rule:
-                "Approve only when confidence is at least 0.80, shared_actor is specific, shared_event is specific, why_related cites evidence from both articles, and why_not_broad explains why it is not merely a broad match. Reject weak broad matches. Create thread_topic only after deciding which candidates are approved, using the current article and approved candidates together."
+                "Approve only relationship prior_development or material_follow_up, confidence at least 0.80, specific shared_actor and shared_event, evidence from both articles, and a clear explanation that it is not broad or duplicate coverage. The final approved set must include at least one article from an earlier calendar day. Reject same-day duplicate reports. Create thread_topic only after deciding which candidates are approved."
             })
           }
         ],
         temperature: 0,
-        max_tokens: 1600
+        max_tokens: 900
       })
     });
 
@@ -1186,17 +1326,30 @@ const reviewThreadWith0G = async (story, scoredCandidates) => {
     const approvals = Array.isArray(parsed?.approved) ? parsed.approved : [];
     const approvedIds = new Set(
       approvals
-        .filter((item) => item?.same_story === true && Number(item.confidence) >= 0.8 && isSpecificThreadEvidence(item))
+        .filter(
+          (item) =>
+            item?.same_story === true &&
+            ["prior_development", "material_follow_up"].includes(cleanThreadText(item.relationship ?? "").toLowerCase()) &&
+            Number(item.confidence) >= 0.8 &&
+            isSpecificThreadEvidence(item)
+        )
         .map((item) => Number(item.id))
         .filter((id) => Number.isInteger(id) && id >= 0 && id < candidates.length)
     );
-    const items = candidates.filter((_, index) => approvedIds.has(index));
+    const approvedItems = candidates.filter((_, index) => approvedIds.has(index));
+    const currentDate = storyDateKey(story, getTodayKey());
+    const hasPriorDayDevelopment = approvedItems.some((item) => {
+      const candidateDate = storyDateKey(item);
+      return Boolean(currentDate && candidateDate && candidateDate < currentDate);
+    });
+    const items = hasPriorDayDevelopment ? expandApprovedThreadItems(story, approvedItems) : [];
     const evidence = approvals
       .filter((item) => approvedIds.has(Number(item.id)))
       .map((item) => ({
         id: Number(item.id),
         shared_actor: cleanThreadText(item.shared_actor ?? ""),
         shared_event: cleanThreadText(item.shared_event ?? ""),
+        relationship: cleanThreadText(item.relationship ?? ""),
         why_related: cleanThreadText(item.why_related ?? item.reason ?? ""),
         why_not_broad: cleanThreadText(item.why_not_broad ?? ""),
         confidence: Number(item.confidence) || 0
@@ -1206,6 +1359,7 @@ const reviewThreadWith0G = async (story, scoredCandidates) => {
         prompt_version: threadReviewPromptVersion,
         candidate_key: candidateKey,
         approved_source_urls: [],
+        thread_items: [],
         evidence: [],
         topic: "",
         provider: "0g",
@@ -1229,6 +1383,7 @@ const reviewThreadWith0G = async (story, scoredCandidates) => {
       prompt_version: threadReviewPromptVersion,
       candidate_key: candidateKey,
       approved_source_urls: items.map((item) => item.sourceUrl),
+      thread_items: items,
       evidence,
       topic,
       provider: "0g",
@@ -1238,13 +1393,13 @@ const reviewThreadWith0G = async (story, scoredCandidates) => {
     writeFileSync(cachePath, JSON.stringify(payload, null, 2));
     recordZeroGSuccess("thread_review");
 
-    return {
+    return normalizeValidThread({
       topic,
       count: items.length,
       current: story,
       items: sortStoriesByPublishedAtDesc(items).slice(0, 12),
       reviewed_by: "0g"
-    };
+    }, story) ?? emptyReviewedThread(story, "invalid-reviewed-thread");
   } catch (error) {
     console.warn("0G thread review fallback:", error.message);
     recordZeroGFallback("thread_review", error);
@@ -1252,10 +1407,26 @@ const reviewThreadWith0G = async (story, scoredCandidates) => {
   }
 };
 
-const getThreadForStory = async (story) => {
-  const scoredCandidates = getScoredThreadCandidates(story);
-  if (scoredCandidates.length < 1) return getLocalThreadForStory(story);
+const getThreadForStory = async (story, existingScoredCandidates) => {
+  const scoredCandidates = existingScoredCandidates ?? getScoredThreadCandidates(story);
+  if (scoredCandidates.length < 1) return emptyReviewedThread(story, "no-candidates");
   return reviewThreadWith0G(story, scoredCandidates);
+};
+
+const getThreadOpportunity = (story, scoredCandidates) => {
+  const currentDate = storyDateKey(story, getTodayKey());
+  const priorDayCandidates = scoredCandidates.filter((item) => {
+    const date = storyDateKey(item.story);
+    return Boolean(currentDate && date && date < currentDate);
+  });
+  const distinctPriorDays = new Set(priorDayCandidates.map((item) => storyDateKey(item.story)).filter(Boolean)).size;
+  const strongestScore = priorDayCandidates[0]?.score ?? 0;
+
+  return {
+    distinctPriorDays,
+    priorDayCount: priorDayCandidates.length,
+    score: distinctPriorDays * 10 + Math.min(priorDayCandidates.length, 10) + strongestScore
+  };
 };
 
 const getThreadPreviewForStory = (story) => {
@@ -1331,15 +1502,49 @@ const stripPreparedThreadPayload = (thread) =>
 const prepareSnapshotThreads = async (snapshot) => {
   if (!snapshot?.top_stories?.length) return snapshot;
 
-  const preparedStories = await runWithConcurrency(snapshot.top_stories, threadPrepConcurrency, async (story) => {
-    const thread = await getThreadForStory(story);
-    if (thread.count < 1) {
+  const workItems = snapshot.top_stories
+    .map((story, index) => {
+      const scoredCandidates = getScoredThreadCandidates(story);
+      return { story, index, scoredCandidates, opportunity: getThreadOpportunity(story, scoredCandidates) };
+    })
+    .sort((first, second) => {
+      if (second.opportunity.score !== first.opportunity.score) return second.opportunity.score - first.opportunity.score;
+      return first.index - second.index;
+    });
+
+  const preparedWorkItems = await runWithConcurrency(workItems, threadPrepConcurrency, async (workItem) => {
+    const { story, index, scoredCandidates, opportunity } = workItem;
+    if (opportunity.distinctPriorDays < 1) {
       const { thread: _thread, ...storyWithoutThread } = story;
-      return { story: storyWithoutThread, thread: null };
+      return { index, story: storyWithoutThread, thread: null };
+    }
+
+    const thread = await getThreadForStory(story, scoredCandidates);
+    if (thread.count < 1) {
+      const previousThread = snapshot.threads?.[normalizeStoryUrl(story.sourceUrl)];
+      if (previousThread?.count >= 1 && ["0g-error", "0g-budget-exhausted"].includes(thread.reviewed_by)) {
+        return {
+          index,
+          story: {
+            ...story,
+            thread: {
+              count: previousThread.count,
+              topic: previousThread.topic
+            }
+          },
+          thread: previousThread
+        };
+      }
+
+      if (thread.reviewed_by === "0g") persistPreparedThreadLocally(story, null);
+      const { thread: _thread, ...storyWithoutThread } = story;
+      return { index, story: storyWithoutThread, thread: null };
     }
 
     const preparedThread = stripPreparedThreadPayload(thread);
+    persistPreparedThreadLocally(story, preparedThread);
     return {
+      index,
       story: {
         ...story,
         thread: {
@@ -1350,6 +1555,7 @@ const prepareSnapshotThreads = async (snapshot) => {
       thread: preparedThread
     };
   });
+  const preparedStories = preparedWorkItems.sort((first, second) => first.index - second.index);
 
   const threads = {};
   for (const item of preparedStories) {
@@ -1365,6 +1571,7 @@ const prepareSnapshotThreads = async (snapshot) => {
       prepared_count: Object.keys(threads).length,
       thread_review_budget_per_refresh: threadReviewBudgetPerRefresh,
       thread_prep_concurrency: threadPrepConcurrency,
+      preparation_order: "multi-day-opportunity-first",
       feed_ready: true
     }
   };
@@ -1398,7 +1605,9 @@ const findPreparedThreadForRequest = (category, sourceUrl) => {
 
   for (const snapshot of snapshots) {
     const thread = snapshot.threads?.[url];
-    if (thread?.count >= 1) return thread;
+    const story = (snapshot.top_stories ?? []).find((item) => normalizeStoryUrl(item.sourceUrl) === url);
+    const validThread = normalizeValidThread(thread, story ?? thread?.current);
+    if (validThread) return validThread;
   }
 
   return null;
@@ -2124,8 +2333,126 @@ const getZeroGStatusSnapshot = () => {
     thread_review_timeout_ms: threadReviewTimeoutMs,
     thread_prep_concurrency: threadPrepConcurrency,
     thread_review_candidate_limit: threadReviewCandidateLimit,
+    thread_review_same_day_candidate_limit: threadReviewSameDayCandidateLimit,
+    thread_review_candidates_per_day: threadReviewCandidatesPerDay,
+    thread_review_budget_scope: "per-category",
     config,
     thread_config: getThreadZeroGConfigStatus()
+  };
+};
+
+const modelPriceDefaults = {
+  "zai-org/GLM-5-FP8": { input: 1.54, output: 4.94 },
+  "zai-org/GLM-5.1-FP8": { input: 2.2, output: 2.2 },
+  "glm-5.1": { input: 1.87, output: 1.87 },
+  "glm-5": { input: 1.31, output: 1.31 },
+  "deepseek-v4-pro": { input: 3.73, output: 3.73 },
+  "deepseek-v4-flash": { input: 0.31, output: 0.31 },
+  "deepseek/deepseek-chat-v3-0324": { input: 0.65, output: 0.65 },
+  "qwen3.6-plus": { input: 0.62, output: 0.62 },
+  "qwen/qwen3-vl-30b-a3b-instruct": { input: 0.04, output: 0.04 },
+  "0GM-1.0-35B-A3B": { input: 0.41, output: 0.41 }
+};
+
+const getModelPrice = (model, inputEnvName, outputEnvName) => {
+  const fallback = modelPriceDefaults[model] ?? { input: 1, output: 1 };
+  return {
+    input_per_1m: Number(process.env[inputEnvName] ?? fallback.input),
+    output_per_1m: Number(process.env[outputEnvName] ?? fallback.output),
+    source: process.env[inputEnvName] || process.env[outputEnvName] ? "env" : modelPriceDefaults[model] ? "default" : "unknown-default"
+  };
+};
+
+const estimateSpend = ({ inputTokens, outputTokens, price }) => {
+  const inputCost = (inputTokens / 1_000_000) * price.input_per_1m;
+  const outputCost = (outputTokens / 1_000_000) * price.output_per_1m;
+  return Number((inputCost + outputCost).toFixed(6));
+};
+
+const getZeroGCostEstimate = () => {
+  const summaryModel = process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "zai-org/GLM-5-FP8";
+  const threadConfig = getThread0GConfig();
+  const threadModel = threadConfig.model;
+  const sourceCategoryCount = sourceCategories.length;
+  const threadCallsPerFullRefresh =
+    threadReviewBudgetPerRefresh < 0 ? null : threadReviewBudgetPerRefresh * sourceCategoryCount;
+  const threadInputTokensPerCall = Number(
+    process.env.THREAD_REVIEW_EST_INPUT_TOKENS ?? 3200 + threadReviewCandidateLimit * 260
+  );
+  const threadOutputTokensPerCall = Number(process.env.THREAD_REVIEW_EST_OUTPUT_TOKENS ?? 900);
+  const summaryInputTokensPerCall = Number(process.env.SUMMARY_EST_INPUT_TOKENS ?? 500);
+  const summaryOutputTokensPerCall = Number(process.env.SUMMARY_EST_OUTPUT_TOKENS ?? 500);
+  const summaryRetryOutputTokens = Number(process.env.SUMMARY_RETRY_EST_OUTPUT_TOKENS ?? 700);
+  const threadPrice = getModelPrice(
+    threadModel,
+    "THREAD_OG_PRICE_INPUT_PER_1M",
+    "THREAD_OG_PRICE_OUTPUT_PER_1M"
+  );
+  const summaryPrice = getModelPrice(
+    summaryModel,
+    "OG_PRICE_INPUT_PER_1M",
+    "OG_PRICE_OUTPUT_PER_1M"
+  );
+  const threadCostPerCall = estimateSpend({
+    inputTokens: threadInputTokensPerCall,
+    outputTokens: threadOutputTokensPerCall,
+    price: threadPrice
+  });
+  const summaryCostPerCall = estimateSpend({
+    inputTokens: summaryInputTokensPerCall,
+    outputTokens: summaryOutputTokensPerCall,
+    price: summaryPrice
+  });
+  const summaryWorstRetryCost = estimateSpend({
+    inputTokens: summaryInputTokensPerCall * 2,
+    outputTokens: summaryOutputTokensPerCall + summaryRetryOutputTokens,
+    price: summaryPrice
+  });
+
+  return {
+    unit: "0G",
+    note: "Estimates use configured max/output budgets and rough input-token assumptions. Actual provider billing can vary by prompt length and response size.",
+    assumptions: {
+      source_categories: sourceCategories,
+      thread_budget_scope: "per-category",
+      thread_calls_per_category: threadReviewBudgetPerRefresh,
+      thread_calls_per_full_refresh: threadCallsPerFullRefresh,
+      auto_summaries_on_refresh: shouldAutoSummarizeWith0G,
+      summaries_are_cached: true,
+      token_estimates_can_be_overridden_with_env: [
+        "THREAD_REVIEW_EST_INPUT_TOKENS",
+        "THREAD_REVIEW_EST_OUTPUT_TOKENS",
+        "SUMMARY_EST_INPUT_TOKENS",
+        "SUMMARY_EST_OUTPUT_TOKENS",
+        "SUMMARY_RETRY_EST_OUTPUT_TOKENS"
+      ],
+      price_overrides: [
+        "THREAD_OG_PRICE_INPUT_PER_1M",
+        "THREAD_OG_PRICE_OUTPUT_PER_1M",
+        "OG_PRICE_INPUT_PER_1M",
+        "OG_PRICE_OUTPUT_PER_1M"
+      ]
+    },
+    thread_review: {
+      model: threadModel,
+      price: threadPrice,
+      estimated_input_tokens_per_call: threadInputTokensPerCall,
+      estimated_output_tokens_per_call: threadOutputTokensPerCall,
+      estimated_cost_per_call: threadCostPerCall,
+      estimated_cost_per_category_refresh:
+        threadReviewBudgetPerRefresh < 0 ? null : Number((threadCostPerCall * threadReviewBudgetPerRefresh).toFixed(6)),
+      estimated_cost_per_full_refresh:
+        threadCallsPerFullRefresh === null ? null : Number((threadCostPerCall * threadCallsPerFullRefresh).toFixed(6))
+    },
+    summary: {
+      model: summaryModel,
+      price: summaryPrice,
+      estimated_input_tokens_per_call: summaryInputTokensPerCall,
+      estimated_output_tokens_per_call: summaryOutputTokensPerCall,
+      estimated_cost_per_uncached_summary: summaryCostPerCall,
+      estimated_worst_case_with_retry: summaryWorstRetryCost,
+      refresh_cost_in_conserve_mode: shouldAutoSummarizeWith0G ? "not-applicable" : 0
+    }
   };
 };
 
@@ -2645,15 +2972,28 @@ const sortStoriesNewestFirst = (stories) =>
   });
 
 const mergeDailyStories = (freshStories, previousStories = []) => {
-  const seen = new Set();
+  const mergedByKey = new Map();
 
-  return sortStoriesNewestFirst([...freshStories, ...previousStories])
-    .filter((story) => {
-      const key = getStoryDedupeKey(story);
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
+  for (const story of previousStories) {
+    const key = getStoryDedupeKey(story);
+    if (key) mergedByKey.set(key, story);
+  }
+
+  for (const story of freshStories) {
+    const key = getStoryDedupeKey(story);
+    if (!key) continue;
+    const previous = mergedByKey.get(key);
+    mergedByKey.set(key, {
+      ...(previous ?? {}),
+      ...story,
+      ...(story.thread ? { thread: story.thread } : previous?.thread ? { thread: previous.thread } : {}),
+      ...(story.ai_summary ? { ai_summary: story.ai_summary } : previous?.ai_summary ? { ai_summary: previous.ai_summary } : {}),
+      ...(story.ai_provider ? { ai_provider: story.ai_provider } : previous?.ai_provider ? { ai_provider: previous.ai_provider } : {}),
+      ...(story.ai_proof ? { ai_proof: story.ai_proof } : previous?.ai_proof ? { ai_proof: previous.ai_proof } : {})
+    });
+  }
+
+  return sortStoriesNewestFirst([...mergedByKey.values()])
     .map((story, index) => ({
       ...story,
       id: index + 1,
@@ -2674,15 +3014,37 @@ const sanitizeSnapshotForCategory = (snapshot) => {
             (story.category !== "Sports" || isFootballOrNbaArticle(story))
         : () => true;
 
+  const filteredStories = snapshot.top_stories.filter(storyFilter);
+  const validThreads = {};
+  const sanitizedStories = filteredStories.map((story, index) => {
+    const url = normalizeStoryUrl(story.sourceUrl);
+    const validThread = normalizeValidThread(snapshot.threads?.[url], story);
+    if (validThread) validThreads[url] = validThread;
+
+    const { thread: _thread, ...storyWithoutThread } = story;
+    return {
+      ...storyWithoutThread,
+      ...(validThread
+        ? {
+            thread: {
+              count: validThread.count,
+              topic: validThread.topic
+            }
+          }
+        : {}),
+      id: index + 1,
+      postedAt: story.publishedAt ? relativeTime(story.publishedAt) : story.postedAt
+    };
+  });
+
   return {
     ...snapshot,
-    top_stories: snapshot.top_stories
-      .filter(storyFilter)
-      .map((story, index) => ({
-        ...story,
-        id: index + 1,
-        postedAt: story.publishedAt ? relativeTime(story.publishedAt) : story.postedAt
-      }))
+    top_stories: sanitizedStories,
+    threads: validThreads,
+    thread_metadata: {
+      ...(snapshot.thread_metadata ?? {}),
+      prepared_count: Object.keys(validThreads).length
+    }
   };
 };
 
@@ -2692,7 +3054,9 @@ const mergeWithTodaySnapshot = (snapshot) => {
 
   return sanitizeSnapshotForCategory({
     ...snapshot,
-    top_stories: mergeDailyStories(snapshot.top_stories, previous.top_stories)
+    top_stories: mergeDailyStories(snapshot.top_stories, previous.top_stories),
+    threads: previous.threads ?? {},
+    thread_metadata: previous.thread_metadata
   });
 };
 
@@ -2872,6 +3236,49 @@ const getRecoverablePublishedSnapshot = async (category) => {
 const writePublishedSnapshot = (snapshot) => {
   mkdirSync(publishedDir, { recursive: true });
   writeJsonFile(getLatestSnapshotPath(snapshot.category), sanitizeSnapshotForCategory(snapshot));
+};
+
+const persistPreparedThreadLocally = (story, thread) => {
+  const url = normalizeStoryUrl(story?.sourceUrl);
+  if (!url) return;
+  const validThread = normalizeValidThread(thread, story);
+
+  for (const category of [...new Set([story.category, "All"].map(normalizeCategory))]) {
+    const snapshot = readPublishedSnapshot(category);
+    if (!snapshot?.top_stories?.length) continue;
+
+    const hasStory = snapshot.top_stories.some((item) => normalizeStoryUrl(item.sourceUrl) === url);
+    if (!hasStory) continue;
+
+    const threads = { ...(snapshot.threads ?? {}) };
+    if (validThread) threads[url] = validThread;
+    else delete threads[url];
+
+    writePublishedSnapshot({
+      ...snapshot,
+      top_stories: snapshot.top_stories.map((item) => {
+        if (normalizeStoryUrl(item.sourceUrl) !== url) return item;
+        if (validThread) {
+          return {
+            ...item,
+            thread: {
+              count: validThread.count,
+              topic: validThread.topic
+            }
+          };
+        }
+        const { thread: _thread, ...storyWithoutThread } = item;
+        return storyWithoutThread;
+      }),
+      threads,
+      thread_metadata: {
+        ...(snapshot.thread_metadata ?? {}),
+        progressively_prepared_at: new Date().toISOString(),
+        prepared_count: Object.keys(threads).length,
+        feed_ready: true
+      }
+    });
+  }
 };
 
 const updateSnapshotStorySummary = (snapshot, article, result) => {
@@ -3079,6 +3486,7 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
 
     for (const category of sourceCategories) {
       try {
+        resetThreadReviewBudget();
         const snapshot = await generateAndPublishFeed(category);
         publishedSnapshots.set(category, snapshot);
         publishStatus.categories[category] = {
@@ -3219,6 +3627,11 @@ const server = createServer(async (request, response) => {
 
   if (requestUrl.pathname === "/api/0g/status" && request.method === "GET") {
     sendJson(response, 200, getZeroGStatusSnapshot());
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/0g/cost" && request.method === "GET") {
+    sendJson(response, 200, getZeroGCostEstimate());
     return;
   }
 

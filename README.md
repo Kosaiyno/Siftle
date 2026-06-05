@@ -23,6 +23,53 @@ The app supports:
 - Story threads that connect related updates over time
 - Shelby-backed daily archive snapshots
 - 0G Compute-backed AI work with local fallbacks
+- Arc Testnet wallet connection and USDC-backed prediction markets
+
+## Arc Testnet Markets
+
+Siftle uses prediction markets where verified news threads provide the evidence layer and Arc Testnet USDC provides collateral, gas, and settlement.
+
+Current Arc integration:
+
+- Arc Testnet chain ID `5042002`
+- Arc RPC and explorer configuration
+- WalletConnect support through Reown AppKit
+- Arc Testnet USDC balance display
+- Real Foundry contracts for market creation, Yes/No collateral, sellback, resolution, and redemption
+- Per-market Arc contract addresses exposed to the browser through `dist/client-config.js`
+- Frontend approve + buy flow for Arc Testnet USDC
+- Frontend sell flow for open Yes/No shares before resolution
+- On-chain market probability and volume reads from market pools
+
+Arc Testnet USDC has no real financial value. These markets are testnet contracts for validating the product loop: thread evidence, wallet connection, USDC approval, buy/sell shares, and later resolution/redemption.
+
+Create a public project ID at [Reown Cloud](https://cloud.reown.com/) and set `REOWN_PROJECT_ID` in `.env` to enable the wallet modal locally and in production.
+
+The grant thesis is straightforward: Siftle turns verified, multi-day news threads into transparent evidence for stablecoin-settled prediction markets. Arc is a strong fit because it explicitly supports prediction markets, uses USDC for gas, and provides deterministic sub-second finality.
+
+See [`contracts/README.md`](contracts/README.md) for the official Arc deployment flow.
+
+Required market env variables:
+
+```txt
+ARC_TESTNET_RPC_URL=https://rpc.testnet.arc.network
+ARC_TESTNET_USDC_ADDRESS=0x3600000000000000000000000000000000000000
+REOWN_PROJECT_ID=
+SIFTLE_MARKET_FACTORY_ADDRESS=
+SIFTLE_MARKET_NEW_GLENN_ADDRESS=
+SIFTLE_MARKET_STRATEGY_BTC_SALE_ADDRESS=
+SIFTLE_MARKET_NBA_FINALS_ADDRESS=
+SIFTLE_MARKET_RESOLVER=
+ARC_DEPLOYER_PRIVATE_KEY=
+```
+
+Only public values are written into `dist/client-config.js`: the Reown project ID, USDC address, and market contract addresses. The deployer private key and resolver stay server/local only.
+
+After changing market addresses, rebuild so the browser config updates:
+
+```bash
+npm run build
+```
 
 ## Threads
 
@@ -140,17 +187,29 @@ OG_COMPUTE_MODEL=zai-org/GLM-5-FP8
 THREAD_OG_COMPUTE_PROVIDER=
 THREAD_OG_COMPUTE_ENDPOINT=
 THREAD_OG_COMPUTE_API_KEY=
-THREAD_OG_COMPUTE_MODEL=deepseek-v4-pro
+THREAD_OG_COMPUTE_MODEL=deepseek-v4-flash
 OG_USAGE_MODE=conserve
 THREAD_REVIEW_BUDGET_PER_REFRESH=12
 SUMMARY_TIMEOUT_MS=45000
 THREAD_REVIEW_TIMEOUT_MS=90000
 THREAD_PREP_CONCURRENCY=1
-THREAD_REVIEW_CANDIDATE_LIMIT=8
+THREAD_REVIEW_CANDIDATE_LIMIT=5
+THREAD_REVIEW_SAME_DAY_CANDIDATE_LIMIT=1
+THREAD_REVIEW_CANDIDATES_PER_DAY=3
 
 SHELBY_UPLOAD_URL=
 SHELBY_API_KEY=
 REQUIRE_SHELBY_UPLOAD=false
+
+ARC_TESTNET_RPC_URL=https://rpc.testnet.arc.network
+ARC_TESTNET_USDC_ADDRESS=0x3600000000000000000000000000000000000000
+REOWN_PROJECT_ID=
+SIFTLE_MARKET_FACTORY_ADDRESS=
+SIFTLE_MARKET_NEW_GLENN_ADDRESS=
+SIFTLE_MARKET_STRATEGY_BTC_SALE_ADDRESS=
+SIFTLE_MARKET_NBA_FINALS_ADDRESS=
+SIFTLE_MARKET_RESOLVER=
+ARC_DEPLOYER_PRIVATE_KEY=
 ```
 
 Fallback behavior:
@@ -195,4 +254,4 @@ Near-term focus:
 - Use 0G Compute for high-value judgment, not wasteful background work
 - Preserve daily history on Shelby
 
-Later, prediction markets can be added on top of strong threads, where a market is created only when a story has enough credible updates and a clear future outcome.
+Prediction markets are live on Arc testnet for the current prototype markets. The next product step is market creation rules: deciding which verified threads deserve a market, generating clear resolution rules, and keeping market evidence synced to the original Siftle thread.
