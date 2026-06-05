@@ -32,7 +32,7 @@ const state: {
   marketTradeAmount: number;
   marketEvidenceOverrides: Record<string, MarketEvidenceOverride>;
   checkedMarketEvidence: Record<string, boolean>;
-  marketThreadSheetExpanded: boolean;
+  marketThreadSheetOpen: boolean;
   marketSnapshots: Record<string, ArcMarketSnapshot>;
   loadingMarketSnapshotId: string | null;
   loadingMarketEvidenceId: string | null;
@@ -61,7 +61,7 @@ const state: {
   marketTradeAmount: 100,
   marketEvidenceOverrides: {},
   checkedMarketEvidence: {},
-  marketThreadSheetExpanded: false,
+  marketThreadSheetOpen: false,
   marketSnapshots: {},
   loadingMarketSnapshotId: null,
   loadingMarketEvidenceId: null,
@@ -1526,8 +1526,14 @@ const renderMarketDetail = (market: MarketPreview): void => {
             </div>
           </details>
         </div>
-        <section class="market-evidence-thread ${state.marketThreadSheetExpanded ? "expanded" : ""}">
-          <button class="market-thread-sheet-handle" type="button" data-market-thread-sheet aria-label="${state.marketThreadSheetExpanded ? "Lower evidence thread" : "Raise evidence thread"}">
+        <button class="market-thread-drawer-trigger" type="button" data-market-thread-sheet>
+          <span>Evidence thread</span>
+          <strong>${marketView.evidence.length} updates</strong>
+        </button>
+        <section class="market-evidence-thread ${state.marketThreadSheetOpen ? "open" : ""}">
+          <div class="market-thread-sheet-backdrop" data-market-thread-sheet></div>
+          <div class="market-thread-sheet-panel">
+          <button class="market-thread-sheet-handle" type="button" data-market-thread-sheet aria-label="Close evidence thread">
             <span></span>
           </button>
           <header>
@@ -1552,6 +1558,7 @@ const renderMarketDetail = (market: MarketPreview): void => {
                 </div>
               </article>
             `).join("")}
+          </div>
           </div>
         </section>
       </article>
@@ -1745,7 +1752,7 @@ storyList?.addEventListener("click", (event) => {
   const marketCard = target.closest<HTMLButtonElement>("[data-market-id]");
   if (marketCard) {
     state.selectedMarketId = marketCard.dataset.marketId ?? null;
-    state.marketThreadSheetExpanded = false;
+    state.marketThreadSheetOpen = false;
     window.history.pushState({}, "", `#market-${state.selectedMarketId}`);
     render();
     requestAnimationFrame(() => {
@@ -1816,13 +1823,13 @@ storyDetail?.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
   if (target.closest("[data-back-markets]")) {
     state.selectedMarketId = null;
-    state.marketThreadSheetExpanded = false;
+    state.marketThreadSheetOpen = false;
     window.history.pushState({}, "", "#markets");
     render();
     return;
   }
   if (target.closest("[data-market-thread-sheet]")) {
-    state.marketThreadSheetExpanded = !state.marketThreadSheetExpanded;
+    state.marketThreadSheetOpen = !state.marketThreadSheetOpen;
     render();
     return;
   }
