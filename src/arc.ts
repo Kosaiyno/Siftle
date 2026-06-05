@@ -96,10 +96,26 @@ const requestRpc = async <T>(method: string, params: unknown[]): Promise<T> => {
 
 export const isWalletConnectConfigured = (): boolean => Boolean(appKit);
 
+let walletConnectPromise: Promise<string> | null = null;
+
 export const connectArcWallet = async (): Promise<string> => {
   if (!appKit) throw new Error("Add REOWN_PROJECT_ID to enable WalletConnect");
-  await appKit.open();
-  return appKit.getAddress("eip155") || "";
+  const connectedAddress = appKit.getAddress("eip155");
+  if (connectedAddress) return connectedAddress;
+
+  if (walletConnectPromise) return walletConnectPromise;
+
+  walletConnectPromise = (async () => {
+    await appKit.close().catch(() => undefined);
+    await appKit.open({ namespace: "eip155" });
+    return appKit.getAddress("eip155") || "";
+  })().finally(() => {
+    window.setTimeout(() => {
+      walletConnectPromise = null;
+    }, 1200);
+  });
+
+  return walletConnectPromise;
 };
 
 export const getConnectedArcWallet = (): string | null => appKit?.getAddress("eip155") || null;

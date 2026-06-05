@@ -2156,7 +2156,24 @@ const summarizeLocally = (article) => {
   return base.length > 220 ? `${base.slice(0, 217).trim()}...` : base;
 };
 
-const summaryPromptVersion = "grounded-v2";
+const summaryPromptVersion = "grounded-v3";
+
+const summarizeLocallyTight = (article) =>
+  stripHtml(article?.summary || article?.headline || "")
+    .replace(/\s+/g, " ")
+    .split(/\s+/)
+    .slice(0, 58)
+    .join(" ")
+    .trim();
+
+const looksLikeBadSummary = (summary = "") =>
+  /(\*\*?\s*critique|attempt\s*\d|prompt says|let'?s try|tighter version|word count|violat(?:e|es)|output only|valid json|the model|the prompt)/i.test(summary);
+
+const limitSummaryWords = (summary = "", maxWords = 62) => {
+  const words = summary.split(/\s+/).filter(Boolean);
+  if (words.length <= maxWords) return summary;
+  return `${words.slice(0, maxWords).join(" ").replace(/[,:;]+$/, "")}.`;
+};
 
 const cleanSummaryText = (value = "") => {
   let summary = String(value ?? "").trim();
@@ -2181,12 +2198,15 @@ const cleanSummaryText = (value = "") => {
     break;
   }
 
-  return stripHtml(summary)
+  summary = stripHtml(summary)
     .replace(/^["'{\s]+/, "")
     .replace(/["'}\s]+$/, "")
     .replace(/^summary\s*:\s*/i, "")
     .replace(/\s+/g, " ")
     .trim();
+
+  if (looksLikeBadSummary(summary)) return "";
+  return limitSummaryWords(summary);
 };
 
 const getSummaryCachePath = (article) => {
@@ -2515,7 +2535,7 @@ const summarizeWith0G = async (article, options = {}) => {
           {
                 role: "system",
                 content:
-                  "You summarize news for Siftle. Return strict JSON with exactly one key: summary. The summary must be one neutral, reader-friendly paragraph between 70 and 120 words. Use only the supplied headline, description, source, and category. Do not add outside facts, dates, figures, names, quotes, predictions, or broad background that is not directly supported by the input. If the input is short, write a shorter careful summary instead of filling space. Output ONLY valid JSON."
+                  "You summarize news for Siftle. Return strict JSON with exactly one key: summary. Write one neutral paragraph in 35 to 65 words. Use only the supplied headline and description. Do not critique the prompt, mention attempts, explain your process, add outside facts, add predictions, or pad with generic context. If details are limited, write a shorter precise summary. Output ONLY valid JSON."
               },
           {
             role: "user",
@@ -2528,7 +2548,7 @@ const summarizeWith0G = async (article, options = {}) => {
           }
         ],
         temperature: 0.12,
-        max_tokens: 500
+        max_tokens: 180
       })
     });
 
@@ -2553,7 +2573,7 @@ const summarizeWith0G = async (article, options = {}) => {
     let summary = extractSummaryFromResponse(data);
 
     // Retry only when the model returns something unusably short, while staying grounded.
-    const minWords = 45;
+    const minWords = 24;
     const wordCount = summary.split(/\s+/).filter(Boolean).length;
     if (wordCount < minWords) {
       try {
@@ -2570,7 +2590,7 @@ const summarizeWith0G = async (article, options = {}) => {
               {
                 role: "system",
                 content:
-                  "You summarize news for Siftle. Return strict JSON with exactly one key: summary. Write one neutral paragraph between 70 and 120 words using only the supplied article fields. Do not invent or import external context. If details are limited, stay brief and precise. Output ONLY valid JSON."
+                  "You summarize news for Siftle. Return strict JSON with exactly one key: summary. Write one neutral paragraph in 35 to 65 words using only the supplied article fields. Never include critique, attempt labels, prompt commentary, markdown, or outside context. If details are limited, stay brief and precise. Output ONLY valid JSON."
               },
               {
                 role: "user",
@@ -2583,7 +2603,7 @@ const summarizeWith0G = async (article, options = {}) => {
               }
             ],
             temperature: 0.08,
-            max_tokens: 700
+            max_tokens: 180
           })
         });
 
@@ -2604,7 +2624,7 @@ const summarizeWith0G = async (article, options = {}) => {
     }
 
     if (!summary) {
-      summary = summarizeLocally(article);
+      summary = summarizeLocallyTight(article);
     }
 
     summary = cleanSummaryText(summary);
@@ -2618,7 +2638,7 @@ const summarizeWith0G = async (article, options = {}) => {
     };
 
     // If we performed local expansion, mark it in the proof.
-    if (summary && summary.split(/\s+/).filter(Boolean).length >= minWords && summary !== summarizeLocally(article)) {
+    if (summary && summary.split(/\s+/).filter(Boolean).length >= minWords && summary !== summarizeLocallyTight(article)) {
       // nothing special — best-effort
     }
 
@@ -2631,7 +2651,7 @@ const summarizeWith0G = async (article, options = {}) => {
   } catch (error) {
     console.warn("0G summarization fallback:", error.message);
     recordZeroGFallback("summary", error);
-    const summary = cleanSummaryText(summarizeLocally(article));
+    const summary = cleanSummaryText(summarizeLocallyTight(article));
     writeFileSync(cachePath, JSON.stringify({ summary, cached_at: new Date().toISOString(), provider: "local-fallback", prompt_version: summaryPromptVersion }, null, 2));
     return { summary, provider: "local-fallback", error: error.message };
   }
