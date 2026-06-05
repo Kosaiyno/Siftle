@@ -32,6 +32,7 @@ const state: {
   marketTradeAmount: number;
   marketEvidenceOverrides: Record<string, MarketEvidenceOverride>;
   checkedMarketEvidence: Record<string, boolean>;
+  marketThreadSheetExpanded: boolean;
   marketSnapshots: Record<string, ArcMarketSnapshot>;
   loadingMarketSnapshotId: string | null;
   loadingMarketEvidenceId: string | null;
@@ -60,6 +61,7 @@ const state: {
   marketTradeAmount: 100,
   marketEvidenceOverrides: {},
   checkedMarketEvidence: {},
+  marketThreadSheetExpanded: false,
   marketSnapshots: {},
   loadingMarketSnapshotId: null,
   loadingMarketEvidenceId: null,
@@ -1524,7 +1526,10 @@ const renderMarketDetail = (market: MarketPreview): void => {
             </div>
           </details>
         </div>
-        <section class="market-evidence-thread">
+        <section class="market-evidence-thread ${state.marketThreadSheetExpanded ? "expanded" : ""}">
+          <button class="market-thread-sheet-handle" type="button" data-market-thread-sheet aria-label="${state.marketThreadSheetExpanded ? "Lower evidence thread" : "Raise evidence thread"}">
+            <span></span>
+          </button>
           <header>
             <div>
               <span class="market-kicker">Evidence thread</span>
@@ -1740,6 +1745,7 @@ storyList?.addEventListener("click", (event) => {
   const marketCard = target.closest<HTMLButtonElement>("[data-market-id]");
   if (marketCard) {
     state.selectedMarketId = marketCard.dataset.marketId ?? null;
+    state.marketThreadSheetExpanded = false;
     window.history.pushState({}, "", `#market-${state.selectedMarketId}`);
     render();
     requestAnimationFrame(() => {
@@ -1810,7 +1816,13 @@ storyDetail?.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
   if (target.closest("[data-back-markets]")) {
     state.selectedMarketId = null;
+    state.marketThreadSheetExpanded = false;
     window.history.pushState({}, "", "#markets");
+    render();
+    return;
+  }
+  if (target.closest("[data-market-thread-sheet]")) {
+    state.marketThreadSheetExpanded = !state.marketThreadSheetExpanded;
     render();
     return;
   }
