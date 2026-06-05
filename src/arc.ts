@@ -172,17 +172,33 @@ const connectInjectedArcWallet = async (): Promise<string | null> => {
   return walletConnectPromise;
 };
 
+const ensureAppKitArcNetwork = async (): Promise<void> => {
+  if (!appKit) return;
+  try {
+    await appKit.switchNetwork(arcTestnet, { throwOnFailure: true });
+  } catch (error) {
+    throw new Error(error instanceof Error
+      ? `Add or switch to Arc Testnet in your wallet: ${error.message}`
+      : "Add or switch to Arc Testnet in your wallet");
+  }
+};
+
 const connectAppKitArcWallet = async (): Promise<string> => {
   if (!appKit) throw new Error("Install Rabby, MetaMask, or add REOWN_PROJECT_ID to enable WalletConnect");
   const connectedAddress = appKit.getAddress("eip155");
-  if (connectedAddress) return connectedAddress;
+  if (connectedAddress) {
+    await ensureAppKitArcNetwork();
+    return connectedAddress;
+  }
 
   if (walletConnectPromise) return walletConnectPromise;
 
   walletConnectPromise = (async () => {
     await appKit.close().catch(() => undefined);
     await appKit.open({ view: "Connect", namespace: "eip155" });
-    return appKit.getAddress("eip155") || waitForWalletAddress();
+    const account = appKit.getAddress("eip155") || await waitForWalletAddress();
+    await ensureAppKitArcNetwork();
+    return account;
   })().finally(() => {
     window.setTimeout(() => {
       walletConnectPromise = null;
@@ -267,7 +283,7 @@ export const readArcUsdcBalance = async (account: string): Promise<string> => {
 const getSigner = async () => {
   const appKitAccount = appKit?.getAddress("eip155");
   if (appKitAccount && appKit) {
-    await appKit.switchNetwork(arcTestnet, { throwOnFailure: true });
+    await ensureAppKitArcNetwork();
     const walletProvider = appKit.getWalletProvider();
     if (!walletProvider) throw new Error("Wallet provider unavailable");
     const provider = new BrowserProvider(walletProvider as Eip1193Provider, ARC_TESTNET_CHAIN_ID);
@@ -286,7 +302,7 @@ const getSigner = async () => {
   const account = appKit?.getAddress("eip155") || (await connectArcWallet());
   if (!account) throw new Error("Connect your wallet first");
   if (!appKit) throw new Error("Install Rabby, MetaMask, or add REOWN_PROJECT_ID to enable WalletConnect");
-  await appKit.switchNetwork(arcTestnet, { throwOnFailure: true });
+  await ensureAppKitArcNetwork();
   const walletProvider = appKit.getWalletProvider();
   if (!walletProvider) throw new Error("Wallet provider unavailable");
   const provider = new BrowserProvider(walletProvider as Eip1193Provider, ARC_TESTNET_CHAIN_ID);
