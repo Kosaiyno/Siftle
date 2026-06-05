@@ -5076,3 +5076,132 @@ h4 {
   fill: rgba(49, 87, 255, 0.13);
   stroke-width: 1.45;
 }
+
+/* Mobile market split view: keep evidence visible immediately. */
+@media (max-width: 640px) {
+  .story-detail.fullscreen:has(.market-detail-container) {
+    padding: 8px 10px 8px !important;
+    overflow: hidden !important;
+  }
+
+  .story-detail.fullscreen .market-detail-container {
+    display: flex;
+    flex-direction: column;
+    inline-size: 100% !important;
+    max-inline-size: 100% !important;
+    height: calc(100dvh - 16px) !important;
+    min-height: 0;
+    margin: 0 !important;
+  }
+
+  .market-detail-container > .back-button {
+    flex: 0 0 auto;
+    min-height: 34px !important;
+    margin: 0 0 7px !important;
+  }
+
+  .story-detail.fullscreen .market-story-surface {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden !important;
+    border-radius: 20px;
+  }
+
+  .market-decision-surface {
+    flex: 0 0 auto;
+    max-block-size: 49%;
+    gap: 7px !important;
+    padding: 10px 10px 9px !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+  }
+
+  .market-decision-surface::-webkit-scrollbar {
+    display: none;
+  }
+
+  .market-detail-topline {
+    gap: 8px;
+  }
+
+  .market-decision-surface > h2 {
+    font-size: clamp(1.28rem, 5.8vw, 1.58rem) !important;
+    line-height: 1.08 !important;
+  }
+
+  .market-decision-surface .market-trade-panel {
+    gap: 7px !important;
+    padding: 6px !important;
+  }
+
+  .market-order-mode button {
+    min-height: 34px;
+  }
+
+  .market-order-ticket {
+    padding: 6px !important;
+  }
+
+  .market-order-ticket .market-amount-input {
+    min-height: 66px !important;
+    padding: 8px 11px !important;
+  }
+
+  .market-amount-panel label {
+    font-size: 0.72rem;
+  }
+
+  .market-amount-input span {
+    font-size: 1.35rem !important;
+  }
+
+  .market-amount-input input {
+    font-size: 1.65rem !important;
+  }
+
+  .market-inline-payout,
+  .market-order-ticket .market-inline-payout span,
+  .market-inline-payout strong {
+    font-size: 0.68rem !important;
+  }
+
+  .market-action-grid .market-side {
+    min-height: 49px !important;
+    border-bottom-width: 3px !important;
+  }
+
+  .market-volume {
+    margin: 5px 4px 0 !important;
+    font-size: 0.72rem !important;
+  }
+
+  .market-resolution summary {
+    min-height: 36px !important;
+    padding: 6px 8px !important;
+  }
+
+  .market-evidence-thread {
+    flex: 1 1 51%;
+    min-height: 0 !important;
+    gap: 12px !important;
+    padding: 15px 14px 98px !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+  }
+
+  .market-evidence-thread > header {
+    align-items: start !important;
+  }
+
+  .market-evidence-thread h3 {
+    font-size: clamp(1.28rem, 5.8vw, 1.58rem) !important;
+    line-height: 1.12;
+  }
+
+  .market-thread-intro {
+    font-size: 0.84rem;
+    line-height: 1.35;
+  }
+}
