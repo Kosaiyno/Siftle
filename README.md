@@ -154,6 +154,12 @@ Build:
 npm run build
 ```
 
+Run regression checks:
+
+```bash
+npm test
+```
+
 Start local backend/frontend:
 
 ```bash
@@ -234,6 +240,8 @@ GET  /api/feed?category=Sports
 GET  /api/feed?category=Anime
 GET  /api/feed?category=Tech
 GET  /api/thread?category=Crypto&sourceUrl=...
+GET  /api/market-thread?id=strategy-bitcoin-sale
+GET  /api/feed-health
 GET  /api/archive
 GET  /api/archive?date=YYYY-MM-DD&category=Crypto
 GET  /api/publish/status
@@ -241,6 +249,8 @@ POST /api/publish/refresh
 POST /api/summary
 POST /api/archive
 ```
+
+Feed health is the first place to check when a category looks stale. It reports generated time, story counts, real-vs-fallback counts, newest story age, source counts, thread counts, and warnings such as `fallback-mixed-with-real`, `not-newest-first`, or `published-snapshot-stale`.
 
 `/api/0g/status` shows whether 0G is configured, whether it has succeeded recently, fallback counts, usage mode, and remaining thread-review budget.
 

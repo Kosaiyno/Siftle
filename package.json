@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/writeClientConfig.mjs && tsc --noEmit && node scripts/buildClient.mjs",
-    "start": "node scripts/serve.mjs"
+    "start": "node scripts/serve.mjs",
+    "test": "node --test scripts/*.test.mjs"
   },
   "devDependencies": {
     "@shelby-protocol/cli": "^0.0.29",

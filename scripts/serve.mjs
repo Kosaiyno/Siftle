@@ -10,6 +10,8 @@ import {
   listShelbyArchiveFiles,
   uploadShelbySnapshot
 } from "./shelbyArchive.mjs";
+import { analyzeFeedSnapshot, isDevelopmentFallbackStory } from "./feedQuality.mjs";
+import { marketThreadRules, storyMatchesMarketThreadRule } from "./marketThreadRules.mjs";
 
 const root = resolve(process.cwd());
 const port = Number(process.env.PORT ?? 5173);
@@ -342,8 +344,6 @@ const getMockStoriesForCategory = (category) =>
 const hasRealStories = (snapshot) =>
   Array.isArray(snapshot?.top_stories) &&
   snapshot.top_stories.some((story) => story.sourceUrl && !/example\.com/i.test(story.sourceUrl));
-
-const isDevelopmentFallbackStory = (story) => !story?.sourceUrl || /example\.com/i.test(story.sourceUrl);
 
 const threadStopWords = new Set([
   "about",
@@ -1623,45 +1623,6 @@ const findPreparedThreadForRequest = (category, sourceUrl) => {
   }
 
   return null;
-};
-
-const marketThreadRules = {
-  "new-glenn-2026": {
-    category: "Tech",
-    includeAll: ["blue origin", "new glenn"],
-    includeAny: ["launch", "launchpad", "explosion", "probe", "fly", "again", "vehicle"],
-    reject: ["spacex", "starship", "falcon"]
-  },
-  "strategy-bitcoin-sale": {
-    category: "Crypto",
-    includeAnySets: [
-      ["strategy", "microstrategy"],
-      ["bitcoin", "btc"],
-      ["sale", "sell", "selling", "sold", "sells", "holdings", "treasury", "mstr", "polymarket"]
-    ],
-    reject: ["hive", "kraken", "bitcoin holdings via lending", "coinbase", "moneygram", "tether", "visa"]
-  },
-  "nba-finals": {
-    category: "Sports",
-    includeAnySets: [
-      ["san antonio", "wembanyama", "nba spurs", "spurs"],
-      ["nba", "finals", "game", "knicks", "western conference"]
-    ],
-    reject: ["tottenham", "liverpool", "arsenal", "premier league", "football", "soccer", "levy", "usmnt", "wedding"]
-  }
-};
-
-const getMarketRuleText = (story) =>
-  cleanThreadText(`${story?.headline ?? ""} ${story?.summary ?? ""} ${story?.ai_summary ?? ""}`).toLowerCase();
-
-const storyMatchesMarketThreadRule = (story, rule) => {
-  if (!story || story.category !== rule.category) return false;
-  const text = getMarketRuleText(story);
-  if (rule.reject?.some((term) => text.includes(term))) return false;
-  if (rule.includeAll?.some((term) => !text.includes(term))) return false;
-  if (rule.includeAny?.length && !rule.includeAny.some((term) => text.includes(term))) return false;
-  if (rule.includeAnySets?.some((terms) => !terms.some((term) => text.includes(term)))) return false;
-  return true;
 };
 
 const getPublishedStoriesForMarketRule = (rule) => {
@@ -3321,6 +3282,36 @@ const readPublishedSnapshot = (category) => {
   return normalizeSnapshotSummaries(JSON.parse(readFileSync(filePath, "utf8")));
 };
 
+const getFeedHealthSnapshot = () => {
+  const checkedAt = new Date();
+  const feeds = categories.reduce((result, category) => {
+    const snapshot = readPublishedSnapshot(category);
+    result[category] = snapshot
+      ? analyzeFeedSnapshot(snapshot, { now: checkedAt, refreshIntervalMinutes })
+      : {
+          category,
+          status: "warning",
+          generated_at: null,
+          age_minutes: null,
+          story_count: 0,
+          real_story_count: 0,
+          fallback_story_count: 0,
+          thread_count: 0,
+          newest_story: null,
+          source_counts: {},
+          warnings: ["missing-published-snapshot"]
+        };
+    return result;
+  }, {});
+
+  return {
+    checked_at: checkedAt.toISOString(),
+    refresh_interval_minutes: refreshIntervalMinutes,
+    status: Object.values(feeds).some((feed) => feed.status !== "ok") ? "warning" : "ok",
+    feeds
+  };
+};
+
 const getRecoverablePublishedSnapshot = async (category) => {
   const selectedCategory = normalizeCategory(category);
   const current = readPublishedSnapshot(selectedCategory);
@@ -3765,8 +3756,14 @@ const server = createServer(async (request, response) => {
       ...publishStatus,
       refresh_interval_minutes: refreshIntervalMinutes,
       zero_g: getZeroGStatusSnapshot(),
+      feed_health: getFeedHealthSnapshot(),
       published_categories: categories.filter((category) => Boolean(readPublishedSnapshot(category)))
     });
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/feed-health" && request.method === "GET") {
+    sendJson(response, 200, getFeedHealthSnapshot());
     return;
   }
 
