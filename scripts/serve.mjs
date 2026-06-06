@@ -343,6 +343,8 @@ const hasRealStories = (snapshot) =>
   Array.isArray(snapshot?.top_stories) &&
   snapshot.top_stories.some((story) => story.sourceUrl && !/example\.com/i.test(story.sourceUrl));
 
+const isDevelopmentFallbackStory = (story) => !story?.sourceUrl || /example\.com/i.test(story.sourceUrl);
+
 const threadStopWords = new Set([
   "about",
   "after",
@@ -2954,6 +2956,22 @@ const isThreadFriendlyTechArticle = (article) => {
     /\bscreening\b/,
     /\bopen-world\b/,
     /\bdriving game\b/,
+    /\bvideo games?\b/,
+    /\bgaming\b/,
+    /\bgame reveals?\b/,
+    /\bgame trailer\b/,
+    /\bgameplay\b/,
+    /\b2d platforming\b/,
+    /\bconsoles?\s+and\s+pc\b/,
+    /\bduck detective\b/,
+    /\bcreepy-cute mystery\b/,
+    /\bprevent her murder\b/,
+    /\bfinal fantasy\b/,
+    /\bstar wars\b/,
+    /\bnintendo\b/,
+    /\bplaystation\b/,
+    /\bxbox\b/,
+    /\bcoolest gadgets?\b/,
     /\broast my setup\b/,
     /\bwithout leaving the terminal\b/
   ];
@@ -3072,8 +3090,12 @@ const sortStoriesNewestFirst = (stories) =>
 
 const mergeDailyStories = (freshStories, previousStories = []) => {
   const mergedByKey = new Map();
+  const freshHasRealStories = freshStories.some((story) => !isDevelopmentFallbackStory(story));
+  const previousStoriesToMerge = freshHasRealStories
+    ? previousStories.filter((story) => !isDevelopmentFallbackStory(story))
+    : previousStories;
 
-  for (const story of previousStories) {
+  for (const story of previousStoriesToMerge) {
     const key = getStoryDedupeKey(story);
     if (key) mergedByKey.set(key, story);
   }
@@ -3092,7 +3114,12 @@ const mergeDailyStories = (freshStories, previousStories = []) => {
     });
   }
 
-  return sortStoriesNewestFirst([...mergedByKey.values()])
+  const mergedStories = [...mergedByKey.values()];
+  const hasRealStoriesInMerge = mergedStories.some((story) => !isDevelopmentFallbackStory(story));
+
+  return sortStoriesNewestFirst(
+    hasRealStoriesInMerge ? mergedStories.filter((story) => !isDevelopmentFallbackStory(story)) : mergedStories
+  )
     .map((story, index) => ({
       ...story,
       id: index + 1,
@@ -3113,7 +3140,10 @@ const sanitizeSnapshotForCategory = (snapshot) => {
             (story.category !== "Sports" || isFootballOrNbaArticle(story))
         : () => true;
 
-  const filteredStories = snapshot.top_stories.filter(storyFilter);
+  const categoryStories = snapshot.top_stories.filter(storyFilter);
+  const filteredStories = categoryStories.some((story) => !isDevelopmentFallbackStory(story))
+    ? categoryStories.filter((story) => !isDevelopmentFallbackStory(story))
+    : categoryStories;
   const validThreads = {};
   const sanitizedStories = filteredStories.map((story, index) => {
     const url = normalizeStoryUrl(story.sourceUrl);
