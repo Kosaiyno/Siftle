@@ -12,6 +12,7 @@ import {
 } from "./shelbyArchive.mjs";
 import { analyzeFeedSnapshot, isDevelopmentFallbackStory } from "./feedQuality.mjs";
 import { marketThreadRules, storyMatchesMarketThreadRule } from "./marketThreadRules.mjs";
+import { isWithinThreadHistoryWindow } from "./threadWindow.mjs";
 
 const root = resolve(process.cwd());
 const port = Number(process.env.PORT ?? 5173);
@@ -29,6 +30,7 @@ const threadPrepConcurrency = Number(process.env.THREAD_PREP_CONCURRENCY ?? 1);
 const threadReviewCandidateLimit = Number(process.env.THREAD_REVIEW_CANDIDATE_LIMIT ?? 5);
 const threadReviewSameDayCandidateLimit = Number(process.env.THREAD_REVIEW_SAME_DAY_CANDIDATE_LIMIT ?? 3);
 const threadReviewCandidatesPerDay = Number(process.env.THREAD_REVIEW_CANDIDATES_PER_DAY ?? 3);
+const threadHistoryWindowHours = Number(process.env.THREAD_HISTORY_WINDOW_HOURS ?? 48);
 const enableFeedThreadPreviews = process.env.ENABLE_FEED_THREAD_PREVIEWS === "true";
 
 const loadEnv = () => {
@@ -1001,6 +1003,7 @@ const sortStoriesByPublishedAtDesc = (stories) =>
 const getHistoricalThreadCandidates = (story) => {
   const currentDate = storyDateKey(story, getTodayKey());
   const currentTime = new Date(story?.publishedAt || 0).getTime();
+  const hasCurrentTime = !Number.isNaN(currentTime);
   const seen = new Set([normalizeStoryUrl(story.sourceUrl)]);
   const candidates = [];
 
@@ -1028,6 +1031,9 @@ const getHistoricalThreadCandidates = (story) => {
       const candidateDate = storyDateKey(candidate, fallbackDate);
       const candidateTime = new Date(candidate.publishedAt || 0).getTime();
       if (currentDate && candidateDate && candidateDate > currentDate) continue;
+      if (hasCurrentTime && !Number.isNaN(candidateTime) && !isWithinThreadHistoryWindow(story.publishedAt, candidate.publishedAt, threadHistoryWindowHours)) {
+        continue;
+      }
       if (
         currentDate &&
         candidateDate === currentDate &&
@@ -1583,7 +1589,8 @@ const prepareSnapshotThreads = async (snapshot) => {
       prepared_count: Object.keys(threads).length,
       thread_review_budget_per_refresh: threadReviewBudgetPerRefresh,
       thread_prep_concurrency: threadPrepConcurrency,
-      preparation_order: "multi-day-opportunity-first",
+      thread_history_window_hours: threadHistoryWindowHours,
+      preparation_order: "rolling-window-opportunity-first",
       feed_ready: true
     }
   };
@@ -2397,6 +2404,7 @@ const getZeroGStatusSnapshot = () => {
     thread_review_candidate_limit: threadReviewCandidateLimit,
     thread_review_same_day_candidate_limit: threadReviewSameDayCandidateLimit,
     thread_review_candidates_per_day: threadReviewCandidatesPerDay,
+    thread_history_window_hours: threadHistoryWindowHours,
     thread_review_budget_scope: "per-category",
     config,
     thread_config: getThreadZeroGConfigStatus()
@@ -2477,6 +2485,7 @@ const getZeroGCostEstimate = () => {
     assumptions: {
       source_categories: sourceCategories,
       thread_budget_scope: "per-category",
+      thread_history_window_hours: threadHistoryWindowHours,
       thread_calls_per_category: threadReviewBudgetPerRefresh,
       thread_calls_per_full_refresh: threadCallsPerFullRefresh,
       auto_summaries_on_refresh: shouldAutoSummarizeWith0G,
@@ -3133,7 +3142,8 @@ const sanitizeSnapshotForCategory = (snapshot) => {
     threads: validThreads,
     thread_metadata: {
       ...(snapshot.thread_metadata ?? {}),
-      prepared_count: Object.keys(validThreads).length
+      prepared_count: Object.keys(validThreads).length,
+      thread_history_window_hours: threadHistoryWindowHours
     }
   };
 };
@@ -3185,6 +3195,7 @@ const buildAllSnapshotFromCategories = async () => {
     thread_metadata: {
       prepared_at: new Date().toISOString(),
       prepared_count: categorySnapshots.reduce((count, snapshot) => count + Number(snapshot.thread_metadata?.prepared_count ?? 0), 0),
+      thread_history_window_hours: threadHistoryWindowHours,
       composed_from_categories: sourceCategories,
       feed_ready: true
     }
@@ -3307,6 +3318,7 @@ const getFeedHealthSnapshot = () => {
   return {
     checked_at: checkedAt.toISOString(),
     refresh_interval_minutes: refreshIntervalMinutes,
+    thread_history_window_hours: threadHistoryWindowHours,
     status: Object.values(feeds).some((feed) => feed.status !== "ok") ? "warning" : "ok",
     feeds
   };
@@ -3395,6 +3407,7 @@ const persistPreparedThreadLocally = (story, thread) => {
         ...(snapshot.thread_metadata ?? {}),
         progressively_prepared_at: new Date().toISOString(),
         prepared_count: Object.keys(threads).length,
+        thread_history_window_hours: threadHistoryWindowHours,
         feed_ready: true
       }
     });

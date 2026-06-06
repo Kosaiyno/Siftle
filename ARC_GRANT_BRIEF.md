@@ -2,7 +2,7 @@
 
 ## One Line
 
-Siftle turns verified, multi-day news threads into transparent evidence for USDC-settled prediction markets on Arc.
+Siftle turns verified rolling news threads into transparent evidence for USDC-settled prediction markets on Arc.
 
 ## Why Arc
 
@@ -14,7 +14,7 @@ Siftle turns verified, multi-day news threads into transparent evidence for USDC
 ## What Is Already Working
 
 - Multi-source news ingestion across Crypto, Sports, Anime, and Tech
-- Shelby-backed archive and multi-day thread history
+- Shelby-backed 48-hour rolling testnet archive and thread history
 - 0G-reviewed story grouping and thread topics
 - Prediction-market discovery and evidence-thread UX
 - Arc Testnet wallet connection, network switching, and USDC balance display

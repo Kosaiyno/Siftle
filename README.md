@@ -1,6 +1,6 @@
 # Siftle
 
-Siftle is a thread-first news and prediction market app for fast-moving internet categories. It pulls fresh stories, groups meaningful multi-day developments into strict story threads, archives daily snapshots on Shelby, uses 0G Compute where deeper AI judgment is worth the cost, and turns selected verified threads into Arc testnet USDC prediction markets.
+Siftle is a thread-first news and prediction market app for fast-moving internet categories. It pulls fresh stories, groups meaningful rolling developments into strict story threads, archives short-lived testnet snapshots on Shelby, uses 0G Compute where deeper AI judgment is worth the cost, and turns selected verified threads into Arc testnet USDC prediction markets.
 
 Current categories:
 
@@ -20,7 +20,7 @@ The app supports:
 - Saved and archived story views
 - Source links for every story
 - On-demand AI summaries
-- Story threads that connect related updates over time
+- 48-hour rolling story threads aligned with Shelby testnet retention
 - Thread-backed prediction markets with clear resolution rules
 - Shelby-backed daily archive snapshots
 - 0G Compute-backed AI work with local fallbacks
@@ -46,7 +46,7 @@ Arc Testnet USDC has no real financial value. These markets are testnet contract
 
 Create a public project ID at [Reown Cloud](https://cloud.reown.com/) and set `REOWN_PROJECT_ID` in `.env` to enable the wallet modal locally and in production.
 
-The grant thesis is straightforward: Siftle turns verified, multi-day news threads into transparent evidence for stablecoin-settled prediction markets. Arc is a strong fit because it explicitly supports prediction markets, uses USDC for gas, and provides deterministic sub-second finality.
+The grant thesis is straightforward: Siftle turns verified rolling news threads into transparent evidence for stablecoin-settled prediction markets. Arc is a strong fit because it explicitly supports prediction markets, uses USDC for gas, and provides deterministic sub-second finality.
 
 See [`contracts/README.md`](contracts/README.md) for the official Arc deployment flow.
 
@@ -74,12 +74,13 @@ npm run build
 
 ## Threads
 
-Threads connect a current story to older related updates so readers can see how a topic has unfolded.
+Threads connect a current story to recent related updates so readers can see how a topic has unfolded inside the active testnet retention window.
 
 Thread behavior:
 
 - A thread button appears when a story has at least one related past update.
 - Threads are ordered newest first, with the latest/current update on top and older updates below.
+- On Shelby testnet, Siftle intentionally limits thread history to the last 48 hours by default through `THREAD_HISTORY_WINDOW_HOURS=48`.
 - Thread topics are generated to describe the shared story, not just copied from one headline.
 - Thread matching uses local candidate search first, then 0G Compute for stricter review when budget allows.
 - Threads must not group duplicate same-news coverage from multiple sources as if it were a developing timeline. Multiple outlets reporting the same event on the same day should be treated as duplicate coverage, not separate thread updates, unless a later article adds a real new development.
@@ -105,17 +106,20 @@ Useful defaults:
 ```txt
 OG_USAGE_MODE=conserve
 THREAD_REVIEW_BUDGET_PER_REFRESH=12
+THREAD_HISTORY_WINDOW_HOURS=48
 SUMMARY_TIMEOUT_MS=45000
 REFRESH_INTERVAL_MINUTES=60
 ```
 
 Set `OG_USAGE_MODE=full` only if you want automatic 0G summaries during feed generation.
 
-## Shelby Archive
+## Shelby Testnet Archive
 
-Shelby is the archive layer for Siftle.
+Shelby is the rolling testnet archive layer for Siftle.
 
-Siftle stores daily category snapshots so old stories do not remain in today's feed. This lets the app keep the live feed fresh while preserving past updates for archive browsing and thread history.
+Shelbynet currently has a 48-hour maximum blob expiration. Siftle aligns with that limit instead of adding renewal complexity during testnet: daily category snapshots are uploaded as short-lived Shelby blobs, and thread discovery uses a 48-hour rolling history window.
+
+This keeps the prototype stable, reduces moving parts, and helps control 0G Compute spend because fewer older candidates need review. If longer-retention testnet access becomes available, Siftle can expand the window and add selective renewal logic for high-value thread and market evidence.
 
 Archived snapshots include:
 
@@ -126,7 +130,7 @@ Archived snapshots include:
 - Local or 0G summaries
 - Archive metadata
 
-If Shelby is not configured, Siftle writes local archive files under `.siftle/archive` during development.
+If Shelby is not configured or a testnet blob expires, Siftle writes and reads local archive files under `.siftle/archive` during development so the app degrades gracefully.
 
 ## News Sources
 
@@ -205,6 +209,7 @@ THREAD_PREP_CONCURRENCY=1
 THREAD_REVIEW_CANDIDATE_LIMIT=5
 THREAD_REVIEW_SAME_DAY_CANDIDATE_LIMIT=1
 THREAD_REVIEW_CANDIDATES_PER_DAY=3
+THREAD_HISTORY_WINDOW_HOURS=48
 
 SHELBY_UPLOAD_URL=
 SHELBY_API_KEY=
@@ -265,6 +270,6 @@ Near-term focus:
 - Improve source quality per category
 - Keep thread matching strict
 - Use 0G Compute for high-value judgment, not wasteful background work
-- Preserve daily history on Shelby
+- Keep Shelby usage aligned with the 48-hour testnet retention window
 
-Prediction markets are live on Arc testnet for the current prototype markets. The next product step is market creation rules: deciding which verified threads deserve a market, generating clear resolution rules, and keeping market evidence synced to the original Siftle thread.
+Prediction markets are live on Arc testnet for the current prototype markets. The next product step is market creation rules: deciding which verified 48-hour threads deserve a market, generating clear resolution rules, and keeping market evidence synced to the original Siftle thread.
