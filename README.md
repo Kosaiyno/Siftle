@@ -1,6 +1,6 @@
 # Siftle
 
-Siftle is a clean daily news app for fast-moving internet categories. It pulls fresh stories, filters them by category, archives daily snapshots on Shelby, and uses 0G Compute where deeper AI judgment is worth the cost.
+Siftle is a thread-first news and prediction market app for fast-moving internet categories. It pulls fresh stories, groups meaningful multi-day developments into strict story threads, archives daily snapshots on Shelby, uses 0G Compute where deeper AI judgment is worth the cost, and turns selected verified threads into Arc testnet USDC prediction markets.
 
 Current categories:
 
@@ -21,6 +21,7 @@ The app supports:
 - Source links for every story
 - On-demand AI summaries
 - Story threads that connect related updates over time
+- Thread-backed prediction markets with clear resolution rules
 - Shelby-backed daily archive snapshots
 - 0G Compute-backed AI work with local fallbacks
 - Arc Testnet wallet connection and USDC-backed prediction markets
