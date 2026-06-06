@@ -374,6 +374,7 @@ const briefHero = document.querySelector<HTMLElement>(".brief-hero");
 const archiveControls = document.querySelector<HTMLElement>("#archiveControls");
 const topMarketsButton = document.querySelector<HTMLButtonElement>("[data-surface='markets']");
 const topNewsButton = document.querySelector<HTMLButtonElement>("[data-surface='feed']");
+const topPortfolioButton = document.querySelector<HTMLButtonElement>("[data-surface='portfolio']");
 const walletButton = document.querySelector<HTMLButtonElement>("#walletButton");
 const bottomNavButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-bottom-nav]"));
 
@@ -1595,6 +1596,7 @@ const renderMarkets = (): void => {
   categoryTabs?.toggleAttribute("hidden", true);
   topMarketsButton?.classList.add("active");
   topNewsButton?.classList.remove("active");
+  topPortfolioButton?.classList.remove("active");
   marketPreviews.forEach((market) => void loadMarketSnapshot(market));
   marketPreviews.forEach((market) => void loadMarketEvidence(market));
 
@@ -1631,6 +1633,7 @@ const showFeedSurface = (): void => {
   categoryTabs?.removeAttribute("hidden");
   topMarketsButton?.classList.remove("active");
   topNewsButton?.classList.add("active");
+  topPortfolioButton?.classList.remove("active");
   storyList?.classList.remove("markets-list");
 };
 
@@ -1677,6 +1680,7 @@ const renderPortfolio = (): void => {
   categoryTabs?.toggleAttribute("hidden", true);
   topMarketsButton?.classList.remove("active");
   topNewsButton?.classList.remove("active");
+  topPortfolioButton?.classList.add("active");
   document.body.classList.remove("detail-mode");
   storyDetail.hidden = true;
   storyList.hidden = false;
@@ -1780,6 +1784,18 @@ topNewsButton?.addEventListener("click", () => {
   state.activeSurface = "feed";
   state.showSaved = false;
   window.history.pushState({}, "", window.location.pathname);
+  resetFeedScroll();
+  render();
+});
+
+topPortfolioButton?.addEventListener("click", () => {
+  state.feedScrollY = window.scrollY;
+  state.activeSurface = "portfolio";
+  state.selectedMarketId = null;
+  state.selectedStoryId = null;
+  state.selectedThreadUrl = null;
+  state.showSaved = false;
+  window.history.pushState({}, "", "#portfolio");
   resetFeedScroll();
   render();
 });

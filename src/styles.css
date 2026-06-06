@@ -527,7 +527,8 @@ button {
 }
 
 .top-saved,
-.top-markets {
+.top-markets,
+.top-portfolio {
   height: 38px;
   border: 0;
   border-radius: 12px;
@@ -643,6 +644,7 @@ body.detail-mode .archive-controls,
 body.detail-mode .top-actions,
 body.detail-mode .top-saved,
 body.detail-mode .top-markets,
+body.detail-mode .top-portfolio,
 body.detail-mode .menu-button,
 body.detail-mode .profile-dot {
   display: none;
@@ -665,6 +667,7 @@ body.detail-mode .profile-dot {
 
 .top-compact-controls .top-saved,
 .top-compact-controls .top-markets,
+.top-compact-controls .top-portfolio,
 .top-compact-controls .wallet-button,
 .top-compact-controls .archive-pill {
   min-height: 40px;
@@ -681,7 +684,8 @@ body.detail-mode .profile-dot {
 }
 
 .top-compact-controls .archive-pill:hover,
-.top-compact-controls .top-markets:hover {
+.top-compact-controls .top-markets:hover,
+.top-compact-controls .top-portfolio:hover {
   border-color: rgba(68,82,255,0.14);
   color: var(--blue);
 }
@@ -2595,6 +2599,7 @@ h1 {
   }
 
   .site-header .top-markets,
+  .site-header .top-portfolio,
   .site-header .wallet-button {
     min-height: 34px !important;
     padding: 5px 8px !important;
@@ -2730,6 +2735,7 @@ body::before {
 
 .top-compact-controls .top-saved,
 .top-compact-controls .top-markets,
+.top-compact-controls .top-portfolio,
 .top-compact-controls .archive-pill,
 .archive-controls select,
 .archive-controls button {
@@ -2744,6 +2750,7 @@ body::before {
 
 .top-compact-controls .top-saved:hover,
 .top-compact-controls .top-markets:hover,
+.top-compact-controls .top-portfolio:hover,
 .top-compact-controls .archive-pill:hover,
 .archive-controls button:hover {
   color: #1f35d8;
@@ -2752,7 +2759,8 @@ body::before {
   transform: translateY(-1px);
 }
 
-.top-compact-controls .top-markets.active {
+.top-compact-controls .top-markets.active,
+.top-compact-controls .top-portfolio.active {
   color: #fff;
   border-color: transparent;
   background: #17213a;
@@ -4406,6 +4414,7 @@ h1 {
 
   .top-compact-controls .top-saved,
   .top-compact-controls .top-markets,
+  .top-compact-controls .top-portfolio,
   .top-compact-controls .archive-pill {
     min-height: 34px;
     padding: 6px 10px;

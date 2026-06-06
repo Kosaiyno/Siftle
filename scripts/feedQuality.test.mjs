@@ -39,7 +39,7 @@ test("feed health accepts real stories sorted newest first", () => {
   };
 
   assert.equal(isSortedNewestFirst(snapshot.top_stories), true);
-  assert.equal(assertFeedSnapshotQuality(snapshot).status, "ok");
+  assert.equal(assertFeedSnapshotQuality(snapshot, { now: new Date("2026-06-06T12:10:00.000Z") }).status, "ok");
 });
 
 test("feed health rejects feeds that are not newest first", () => {
