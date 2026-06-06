@@ -3,7 +3,7 @@ services:
     name: siftle-backend
     env: node
     plan: free
-    buildCommand: "npm ci"
+    buildCommand: "npm install && npm run build"
     startCommand: "npm start"
     autoDeploy: true
     # Do NOT include secrets here. Add these environment variables in the
