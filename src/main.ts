@@ -33,7 +33,10 @@ const state: {
   marketTradeAmount: number;
   marketSnapshots: Record<string, ArcMarketSnapshot>;
   marketPositions: Record<string, ArcMarketPosition>;
+  marketEvidenceOverrides: Record<string, MarketEvidenceOverride>;
+  checkedMarketEvidence: Record<string, boolean>;
   loadingMarketSnapshotId: string | null;
+  loadingMarketEvidenceId: string | null;
   loadingPortfolioPositions: boolean;
   walletConnecting: boolean;
   walletAddress: string | null;
@@ -61,7 +64,10 @@ const state: {
   marketTradeAmount: 100,
   marketSnapshots: {},
   marketPositions: {},
+  marketEvidenceOverrides: {},
+  checkedMarketEvidence: {},
   loadingMarketSnapshotId: null,
+  loadingMarketEvidenceId: null,
   loadingPortfolioPositions: false,
   walletConnecting: false,
   walletAddress: null,
@@ -109,6 +115,29 @@ interface MarketPreview {
     sourceUrl: string;
   }[];
 }
+
+interface MarketEvidenceOverride {
+  threadTopic: string;
+  evidence: MarketPreview["evidence"];
+}
+
+const marketThreadMatchers: Record<
+  string,
+  { category: Exclude<Category, "All">; terms: string[] }
+> = {
+  "new-glenn-2026": {
+    category: "Tech",
+    terms: ["blue origin", "new glenn", "launchpad"]
+  },
+  "strategy-bitcoin-sale": {
+    category: "Crypto",
+    terms: ["strategy", "saylor", "mstr", "bitcoin sale", "btc sale", "polymarket"]
+  },
+  "nba-finals": {
+    category: "Sports",
+    terms: ["spurs", "san antonio", "wembanyama", "nba finals"]
+  }
+};
 
 const marketPreviews: MarketPreview[] = [
   {
@@ -750,7 +779,72 @@ const sortThreadItemsNewestFirst = (items: NewsStory[] = []): NewsStory[] =>
     return (Number.isNaN(secondTime) ? 0 : secondTime) - (Number.isNaN(firstTime) ? 0 : firstTime);
   });
 
-const getMarketView = (market: MarketPreview): MarketPreview => market;
+const getMarketView = (market: MarketPreview): MarketPreview => {
+  const override = state.marketEvidenceOverrides[market.id];
+  return override ? { ...market, ...override, updates: override.evidence.length } : market;
+};
+
+const marketEvidenceDate = (story: NewsStory, index: number): string => {
+  if (index === 0) return "Latest";
+  if (!story.publishedAt) return story.postedAt;
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(story.publishedAt));
+};
+
+const storyToMarketEvidence = (story: NewsStory, index: number): MarketPreview["evidence"][number] => ({
+  date: marketEvidenceDate(story, index),
+  source: story.source,
+  headline: story.headline,
+  summary: safeStorySummary(story, story.ai_summary),
+  impact: index === 0 ? "Latest" : "Update",
+  direction: "flat",
+  sourceUrl: story.sourceUrl
+});
+
+const storyMatchesMarket = (story: NewsStory, terms: string[]): boolean => {
+  const haystack = `${story.headline} ${story.summary}`.toLowerCase();
+  return terms.some((term) => haystack.includes(term));
+};
+
+const loadMarketEvidence = async (market: MarketPreview): Promise<void> => {
+  const matcher = marketThreadMatchers[market.id];
+  if (!matcher || state.checkedMarketEvidence[market.id] || state.loadingMarketEvidenceId === market.id) return;
+
+  state.loadingMarketEvidenceId = market.id;
+  try {
+    const feedResponse = await fetch(apiUrl(`/api/feed?category=${encodeURIComponent(matcher.category)}`));
+    if (!feedResponse.ok) throw new Error(`Market evidence feed failed with ${feedResponse.status}`);
+
+    const feed = await feedResponse.json();
+    const stories = ((feed.top_stories ?? []) as NewsStory[]).filter((story) => storyMatchesMarket(story, matcher.terms));
+    const seed = stories.find((story) => (story.thread?.count ?? 0) >= 1) ?? stories[0];
+    if (!seed) return;
+
+    const threadResponse = await fetch(
+      apiUrl(`/api/thread?category=${encodeURIComponent(seed.category)}&sourceUrl=${encodeURIComponent(seed.sourceUrl)}`)
+    );
+
+    const threadStories = threadResponse.ok
+      ? [seed, ...sortThreadItemsNewestFirst(((await threadResponse.json()) as StoryThread).items ?? [])]
+      : [seed, ...stories.slice(1)];
+    const evidence = threadStories
+      .filter((story, index, items) => items.findIndex((item) => item.sourceUrl === story.sourceUrl) === index)
+      .slice(0, 8)
+      .map(storyToMarketEvidence);
+
+    if (evidence.length > 0) {
+      state.marketEvidenceOverrides[market.id] = {
+        threadTopic: seed.thread?.topic || market.threadTopic,
+        evidence
+      };
+    }
+  } catch (error) {
+    console.warn(error);
+  } finally {
+    state.checkedMarketEvidence[market.id] = true;
+    state.loadingMarketEvidenceId = null;
+    if (state.activeSurface === "markets") render();
+  }
+};
 
 const getMarketAddress = (market: MarketPreview): string =>
   market.marketAddress || window.SIFTLE_MARKET_ADDRESSES?.[market.id] || "";
@@ -1416,7 +1510,10 @@ const renderMarketCard = (market: MarketPreview): string => {
 const renderMarketDetail = (market: MarketPreview): void => {
   if (!storyList || !storyDetail) return;
   const marketView = getMarketView(market);
-  const evidenceStatus = `${marketView.evidence.length} updates`;
+  const evidenceStatus =
+    state.loadingMarketEvidenceId === market.id && !state.checkedMarketEvidence[market.id]
+      ? "Checking thread..."
+      : `${marketView.evidence.length} updates`;
   const marketAddress = getMarketAddress(market);
   const snapshot = state.marketSnapshots[market.id];
   const yesPrice = snapshot?.yesPriceCents ?? (marketAddress ? market.probability : 0);
@@ -1433,6 +1530,7 @@ const renderMarketDetail = (market: MarketPreview): void => {
   storyDetail.classList.add("fullscreen");
   document.body.classList.add("detail-mode");
   void loadMarketSnapshot(market);
+  void loadMarketEvidence(market);
   storyDetail.innerHTML = `
     <div class="detail-container market-detail-container">
       <button class="back-button" type="button" data-back-markets>Back to markets</button>
@@ -1533,6 +1631,7 @@ const renderMarkets = (): void => {
   topMarketsButton?.classList.add("active");
   topNewsButton?.classList.remove("active");
   marketPreviews.forEach((market) => void loadMarketSnapshot(market));
+  marketPreviews.forEach((market) => void loadMarketEvidence(market));
 
   if (state.selectedMarketId) {
     const market = marketPreviews.find((item) => item.id === state.selectedMarketId);

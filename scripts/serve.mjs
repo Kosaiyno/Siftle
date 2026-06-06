@@ -25,7 +25,7 @@ const shouldAutoSummarizeWith0G = ogUsageMode === "full";
 const threadReviewBudgetPerRefresh = Number(process.env.THREAD_REVIEW_BUDGET_PER_REFRESH ?? 12);
 const threadPrepConcurrency = Number(process.env.THREAD_PREP_CONCURRENCY ?? 1);
 const threadReviewCandidateLimit = Number(process.env.THREAD_REVIEW_CANDIDATE_LIMIT ?? 5);
-const threadReviewSameDayCandidateLimit = Number(process.env.THREAD_REVIEW_SAME_DAY_CANDIDATE_LIMIT ?? 1);
+const threadReviewSameDayCandidateLimit = Number(process.env.THREAD_REVIEW_SAME_DAY_CANDIDATE_LIMIT ?? 3);
 const threadReviewCandidatesPerDay = Number(process.env.THREAD_REVIEW_CANDIDATES_PER_DAY ?? 3);
 const enableFeedThreadPreviews = process.env.ENABLE_FEED_THREAD_PREVIEWS === "true";
 
@@ -1136,14 +1136,19 @@ const selectThreadReviewCandidates = (story, scoredCandidates) => {
 const expandApprovedThreadItems = (story, approvedItems) => {
   const currentUrl = normalizeStoryUrl(story.sourceUrl);
   const currentDate = storyDateKey(story, getTodayKey());
+  const currentTime = new Date(story?.publishedAt || 0).getTime();
   const seen = new Set([currentUrl]);
   const expanded = [];
 
   const addItem = (item) => {
     const url = normalizeStoryUrl(item?.sourceUrl);
     const date = storyDateKey(item);
+    const itemTime = new Date(item?.publishedAt || 0).getTime();
     if (!url || seen.has(url) || item?.category !== story.category) return;
-    if (currentDate && date && date >= currentDate) return;
+    if (currentDate && date && date > currentDate) return;
+    if (currentDate && date === currentDate) {
+      if (!Number.isFinite(currentTime) || !Number.isFinite(itemTime) || itemTime >= currentTime) return;
+    }
     seen.add(url);
     const { __threadContext: _threadContext, ...cleanItem } = item;
     expanded.push(cleanItem);
@@ -1164,14 +1169,19 @@ const normalizeValidThread = (thread, seedStory = thread?.current) => {
 
   const currentUrl = normalizeStoryUrl(seedStory.sourceUrl);
   const currentDate = storyDateKey(seedStory, getTodayKey());
+  const currentTime = new Date(seedStory?.publishedAt || 0).getTime();
   const seen = new Set([currentUrl]);
   const items = [];
 
   for (const item of sortStoriesByPublishedAtDesc(thread.items ?? [])) {
     const url = normalizeStoryUrl(item?.sourceUrl);
     const date = storyDateKey(item);
+    const itemTime = new Date(item?.publishedAt || 0).getTime();
     if (!url || seen.has(url) || item?.category !== seedStory.category) continue;
-    if (!currentDate || !date || date >= currentDate) continue;
+    if (!currentDate || !date || date > currentDate) continue;
+    if (date === currentDate) {
+      if (!Number.isFinite(currentTime) || !Number.isFinite(itemTime) || itemTime >= currentTime) continue;
+    }
     seen.add(url);
     items.push(item);
   }
