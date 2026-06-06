@@ -83,6 +83,7 @@ Thread behavior:
 - Thread matching uses local candidate search first, then 0G Compute for stricter review when budget allows.
 - Threads must not group duplicate same-news coverage from multiple sources as if it were a developing timeline. Multiple outlets reporting the same event on the same day should be treated as duplicate coverage, not separate thread updates, unless a later article adds a real new development.
 - Broad keyword overlap is not enough. Stories must share a specific actor, product, event, team, launch, dispute, outage, market catalyst, or direct continuation.
+- Market threads must mirror prepared Siftle threads. A market should pull the latest exact matching story plus older verified updates from the original thread, not rebuild evidence with broad keyword matching.
 
 This is especially important for future prediction markets, where noisy or unrelated threads would create bad market context.
 

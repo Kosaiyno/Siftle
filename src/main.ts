@@ -121,24 +121,6 @@ interface MarketEvidenceOverride {
   evidence: MarketPreview["evidence"];
 }
 
-const marketThreadMatchers: Record<
-  string,
-  { category: Exclude<Category, "All">; terms: string[] }
-> = {
-  "new-glenn-2026": {
-    category: "Tech",
-    terms: ["blue origin", "new glenn", "launchpad"]
-  },
-  "strategy-bitcoin-sale": {
-    category: "Crypto",
-    terms: ["strategy", "saylor", "mstr", "bitcoin sale", "btc sale", "polymarket"]
-  },
-  "nba-finals": {
-    category: "Sports",
-    terms: ["spurs", "san antonio", "wembanyama", "nba finals"]
-  }
-};
-
 const marketPreviews: MarketPreview[] = [
   {
     id: "new-glenn-2026",
@@ -800,40 +782,23 @@ const storyToMarketEvidence = (story: NewsStory, index: number): MarketPreview["
   sourceUrl: story.sourceUrl
 });
 
-const storyMatchesMarket = (story: NewsStory, terms: string[]): boolean => {
-  const haystack = `${story.headline} ${story.summary}`.toLowerCase();
-  return terms.some((term) => haystack.includes(term));
-};
-
 const loadMarketEvidence = async (market: MarketPreview): Promise<void> => {
-  const matcher = marketThreadMatchers[market.id];
-  if (!matcher || state.checkedMarketEvidence[market.id] || state.loadingMarketEvidenceId === market.id) return;
+  if (state.checkedMarketEvidence[market.id] || state.loadingMarketEvidenceId === market.id) return;
 
   state.loadingMarketEvidenceId = market.id;
   try {
-    const feedResponse = await fetch(apiUrl(`/api/feed?category=${encodeURIComponent(matcher.category)}`));
-    if (!feedResponse.ok) throw new Error(`Market evidence feed failed with ${feedResponse.status}`);
+    const threadResponse = await fetch(apiUrl(`/api/market-thread?id=${encodeURIComponent(market.id)}`));
+    if (!threadResponse.ok) return;
 
-    const feed = await feedResponse.json();
-    const stories = ((feed.top_stories ?? []) as NewsStory[]).filter((story) => storyMatchesMarket(story, matcher.terms));
-    const seed = stories.find((story) => (story.thread?.count ?? 0) >= 1) ?? stories[0];
-    if (!seed) return;
-
-    const threadResponse = await fetch(
-      apiUrl(`/api/thread?category=${encodeURIComponent(seed.category)}&sourceUrl=${encodeURIComponent(seed.sourceUrl)}`)
-    );
-
-    const threadStories = threadResponse.ok
-      ? [seed, ...sortThreadItemsNewestFirst(((await threadResponse.json()) as StoryThread).items ?? [])]
-      : [seed, ...stories.slice(1)];
+    const thread = (await threadResponse.json()) as StoryThread;
+    const threadStories = [thread.current, ...sortThreadItemsNewestFirst(thread.items ?? [])];
     const evidence = threadStories
       .filter((story, index, items) => items.findIndex((item) => item.sourceUrl === story.sourceUrl) === index)
-      .slice(0, 8)
       .map(storyToMarketEvidence);
 
-    if (evidence.length > 0) {
+    if (evidence.length >= 2) {
       state.marketEvidenceOverrides[market.id] = {
-        threadTopic: seed.thread?.topic || market.threadTopic,
+        threadTopic: thread.topic || market.threadTopic,
         evidence
       };
     }

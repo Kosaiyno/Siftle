@@ -1623,6 +1623,75 @@ const findPreparedThreadForRequest = (category, sourceUrl) => {
   return null;
 };
 
+const marketThreadRules = {
+  "new-glenn-2026": {
+    category: "Tech",
+    includeAll: ["blue origin", "new glenn"],
+    includeAny: ["launch", "launchpad", "explosion", "probe", "fly", "again", "vehicle"],
+    reject: ["spacex", "starship", "falcon"]
+  },
+  "strategy-bitcoin-sale": {
+    category: "Crypto",
+    includeAnySets: [
+      ["strategy", "microstrategy"],
+      ["bitcoin", "btc"],
+      ["sale", "sell", "selling", "sold", "sells", "holdings", "treasury", "mstr", "polymarket"]
+    ],
+    reject: ["hive", "kraken", "bitcoin holdings via lending", "coinbase", "moneygram", "tether", "visa"]
+  },
+  "nba-finals": {
+    category: "Sports",
+    includeAnySets: [
+      ["san antonio", "wembanyama", "nba spurs", "spurs"],
+      ["nba", "finals", "game", "knicks", "western conference"]
+    ],
+    reject: ["tottenham", "liverpool", "arsenal", "premier league", "football", "soccer", "levy", "usmnt", "wedding"]
+  }
+};
+
+const getMarketRuleText = (story) =>
+  cleanThreadText(`${story?.headline ?? ""} ${story?.summary ?? ""} ${story?.ai_summary ?? ""}`).toLowerCase();
+
+const storyMatchesMarketThreadRule = (story, rule) => {
+  if (!story || story.category !== rule.category) return false;
+  const text = getMarketRuleText(story);
+  if (rule.reject?.some((term) => text.includes(term))) return false;
+  if (rule.includeAll?.some((term) => !text.includes(term))) return false;
+  if (rule.includeAny?.length && !rule.includeAny.some((term) => text.includes(term))) return false;
+  if (rule.includeAnySets?.some((terms) => !terms.some((term) => text.includes(term)))) return false;
+  return true;
+};
+
+const getPublishedStoriesForMarketRule = (rule) => {
+  const snapshots = [readPublishedSnapshot(rule.category), readPublishedSnapshot("All")].filter(Boolean);
+  const seen = new Set();
+  const stories = [];
+
+  for (const snapshot of snapshots) {
+    for (const story of snapshot.top_stories ?? []) {
+      const url = normalizeStoryUrl(story.sourceUrl);
+      if (!url || seen.has(url) || !storyMatchesMarketThreadRule(story, rule)) continue;
+      seen.add(url);
+      stories.push(story);
+    }
+  }
+
+  return sortStoriesByPublishedAtDesc(stories);
+};
+
+const findPreparedMarketThread = (marketId) => {
+  const rule = marketThreadRules[marketId];
+  if (!rule) return null;
+
+  for (const story of getPublishedStoriesForMarketRule(rule)) {
+    const thread = findPreparedThreadForRequest(rule.category, story.sourceUrl);
+    const validThread = normalizeValidThread(thread, story);
+    if (validThread?.count >= 1) return validThread;
+  }
+
+  return null;
+};
+
 const sendJson = (response, statusCode, payload) => {
   response.writeHead(statusCode, {
     "Content-Type": "application/json; charset=utf-8",
@@ -3635,6 +3704,22 @@ const server = createServer(async (request, response) => {
       const thread = await getThreadForStory(story);
       if (thread.count < 1) {
         sendJson(response, 404, { error: "Thread not available" });
+        return;
+      }
+
+      sendJson(response, 200, thread);
+    } catch (error) {
+      sendJson(response, 500, { error: error.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/market-thread" && request.method === "GET") {
+    try {
+      const marketId = requestUrl.searchParams.get("id") ?? "";
+      const thread = findPreparedMarketThread(marketId);
+      if (!thread?.count) {
+        sendJson(response, 404, { error: "Market thread not available" });
         return;
       }
 
