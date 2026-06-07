@@ -34,6 +34,20 @@ test("Strategy market accepts MicroStrategy bitcoin sale context", () => {
   );
 });
 
+test("Strategy market accepts Saylor buy and underwater pressure context", () => {
+  assert.equal(
+    storyMatchesMarketThreadRule(
+      story(
+        "Crypto",
+        "Michael Saylor hints at fresh bitcoin buy with add more dots post as Strategy sits $11.7 billion underwater",
+        "Strategy remains under pressure after its recent Bitcoin sale while Saylor signals another BTC purchase."
+      ),
+      marketThreadRules["strategy-bitcoin-sale"]
+    ),
+    true
+  );
+});
+
 test("Strategy market rejects unrelated bitcoin treasury companies", () => {
   assert.equal(
     storyMatchesMarketThreadRule(

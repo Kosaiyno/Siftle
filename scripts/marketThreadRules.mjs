@@ -12,7 +12,7 @@ export const marketThreadRules = {
     includeAnySets: [
       ["microstrategy", "mstr", "michael saylor", "saylor", "strategy's", "strategy report", "strategy reports", "strategy sale", "strategy sold", "strategy bitcoin"],
       ["bitcoin", "btc"],
-      ["sale", "sell", "selling", "sold", "sells", "holdings", "treasury", "mstr", "polymarket"]
+      ["sale", "sell", "selling", "sold", "sells", "buy", "buying", "bought", "add more dots", "underwater", "unrealized", "loss", "losses", "holdings", "treasury", "mstr", "polymarket"]
     ],
     reject: ["hive", "kraken", "bitcoin holdings via lending", "coinbase", "moneygram", "tether", "visa", "bitcoin price"]
   },

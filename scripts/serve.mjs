@@ -3286,7 +3286,20 @@ const sanitizeSnapshotForCategory = (snapshot) => {
   const validThreads = {};
   const sanitizedStories = filteredStories.map((story, index) => {
     const url = normalizeStoryUrl(story.sourceUrl);
-    const validThread = normalizeValidThread(snapshot.threads?.[url], story);
+    let validThread = normalizeValidThread(snapshot.threads?.[url], story);
+    if (!validThread) {
+      const marketRuleEntry = Object.entries(marketThreadRules).find(([, rule]) => storyMatchesMarketThreadRule(story, rule));
+      if (marketRuleEntry) {
+        const [marketId] = marketRuleEntry;
+        const marketThread = getMarketThread(marketId);
+        validThread = normalizeValidThread({
+          topic: marketThread?.topic ?? marketThreadRules[marketId]?.topic,
+          current: story,
+          items: [marketThread?.current, ...(marketThread?.items ?? [])].filter(Boolean),
+          reviewed_by: `${marketThread?.reviewed_by ?? "market-thread"}+feed-market-bridge`
+        }, story);
+      }
+    }
     if (validThread) validThreads[url] = validThread;
 
     const { thread: _thread, ...storyWithoutThread } = story;
