@@ -72,6 +72,8 @@ const categories = ["All", "Crypto", "Sports", "Anime", "Tech"];
 const sourceCategories = categories.filter((category) => category !== "All");
 const archiveDir = join(root, ".siftle", "archive");
 const publishedDir = join(root, ".siftle", "published");
+const marketThreadStoreDir = join(root, ".siftle", "market-threads");
+const marketThreadSeedDir = join(root, "data", "marketThreads");
 
 const getAppDate = (value = new Date()) => {
   const date = value instanceof Date ? value : new Date(value);
@@ -1693,6 +1695,74 @@ const findPreparedMarketThread = (marketId) => {
 
     if (ruleThread?.count >= 1) return ruleThread;
   }
+
+  return null;
+};
+
+const getMarketThreadStorePath = (marketId) => join(marketThreadStoreDir, `${marketId}.json`);
+const getMarketThreadSeedPath = (marketId) => join(marketThreadSeedDir, `${marketId}.json`);
+
+const readJsonIfExists = (filePath) => {
+  if (!existsSync(filePath)) return null;
+  try {
+    return JSON.parse(readFileSync(filePath, "utf8"));
+  } catch {
+    return null;
+  }
+};
+
+const normalizeMarketThreadPayload = (thread, marketId) => {
+  const rule = marketThreadRules[marketId];
+  if (!rule || !thread?.current) return null;
+  if (thread.current.category !== rule.category) return null;
+
+  const normalized = normalizeValidThread({
+    topic: thread.topic || rule.topic,
+    current: thread.current,
+    items: thread.items ?? [],
+    reviewed_by: thread.reviewed_by ?? "local-market-thread"
+  }, thread.current);
+
+  if (!normalized?.count) return null;
+
+  return {
+    ...normalized,
+    topic: normalized.topic || rule.topic,
+    market_id: marketId,
+    saved_market_thread: true
+  };
+};
+
+const readStoredMarketThread = (marketId) => {
+  const stored = normalizeMarketThreadPayload(readJsonIfExists(getMarketThreadStorePath(marketId)), marketId);
+  if (stored) return stored;
+
+  return normalizeMarketThreadPayload(readJsonIfExists(getMarketThreadSeedPath(marketId)), marketId);
+};
+
+const writeStoredMarketThread = (marketId, thread) => {
+  const normalized = normalizeMarketThreadPayload(thread, marketId);
+  if (!normalized) return null;
+
+  try {
+    mkdirSync(marketThreadStoreDir, { recursive: true });
+    writeJsonFile(getMarketThreadStorePath(marketId), {
+      ...normalized,
+      saved_at: new Date().toISOString()
+    });
+  } catch {
+    // Market threads should remain readable even if local persistence is unavailable.
+  }
+
+  return normalized;
+};
+
+const getMarketThread = (marketId) => {
+  const prepared = findPreparedMarketThread(marketId);
+  if (prepared?.count) return writeStoredMarketThread(marketId, prepared) ?? prepared;
+
+  const stored = readStoredMarketThread(marketId);
+  if (stored?.count) return writeStoredMarketThread(marketId, stored) ?? stored;
 
   return null;
 };
@@ -3831,7 +3901,7 @@ const server = createServer(async (request, response) => {
   if (requestUrl.pathname === "/api/market-thread" && request.method === "GET") {
     try {
       const marketId = requestUrl.searchParams.get("id") ?? "";
-      const thread = findPreparedMarketThread(marketId);
+      const thread = getMarketThread(marketId);
       if (!thread?.count) {
         sendJson(response, 404, { error: "Market thread not available" });
         return;

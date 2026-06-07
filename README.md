@@ -86,6 +86,8 @@ Thread behavior:
 - Threads must not group duplicate same-news coverage from multiple sources as if it were a developing timeline. Multiple outlets reporting the same event on the same day should be treated as duplicate coverage, not separate thread updates, unless a later article adds a real new development.
 - Broad keyword overlap is not enough. Stories must share a specific actor, product, event, team, launch, dispute, outage, market catalyst, or direct continuation.
 - Market threads must mirror prepared Siftle threads. A market should pull the latest exact matching story plus older verified updates from the original thread, not rebuild evidence with broad keyword matching.
+- Active market threads also have a local persistence layer. When a valid market thread is prepared, Siftle saves it under `.siftle/market-threads`; if the next live RSS batch does not include a fresh exact match, the market still shows the saved evidence instead of disappearing.
+- Curated market thread seeds can live in `data/marketThreads`. These are for high-value prototype markets where the evidence must remain stable while Shelby testnet retention is limited.
 
 This is especially important for future prediction markets, where noisy or unrelated threads would create bad market context.
 
@@ -121,6 +123,8 @@ Shelby is the rolling testnet archive layer for Siftle.
 Shelbynet currently has a 48-hour maximum blob expiration. Siftle aligns with that limit instead of adding renewal complexity during testnet: daily category snapshots are uploaded as short-lived Shelby blobs, and thread discovery uses a 48-hour rolling history window.
 
 This keeps the prototype stable, reduces moving parts, and helps control 0G Compute spend because fewer older candidates need review. If longer-retention testnet access becomes available, Siftle can expand the window and add selective renewal logic for high-value thread and market evidence.
+
+During testnet, market threads may keep local curated seeds for important markets. That local layer is not a replacement for Shelby; it is a prototype safety net so active markets keep consistent evidence while the public archive stays aligned with the 48-hour Shelby window.
 
 Archived snapshots include:
 
