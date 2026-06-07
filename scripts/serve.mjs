@@ -32,6 +32,7 @@ const threadReviewSameDayCandidateLimit = Number(process.env.THREAD_REVIEW_SAME_
 const threadReviewCandidatesPerDay = Number(process.env.THREAD_REVIEW_CANDIDATES_PER_DAY ?? 3);
 const threadHistoryWindowHours = Number(process.env.THREAD_HISTORY_WINDOW_HOURS ?? 48);
 const enableFeedThreadPreviews = process.env.ENABLE_FEED_THREAD_PREVIEWS === "true";
+const allowMockFeeds = process.env.ALLOW_MOCK_FEEDS === "true";
 
 const loadEnv = () => {
   const envPath = join(root, ".env");
@@ -249,7 +250,11 @@ const rssFeeds = {
     "https://bitcoinmagazine.com/.rss/full/",
     "https://www.dlnews.com/rss/",
     "https://www.theblock.co/rss.xml",
-    "https://blockworks.com/feed"
+    "https://blockworks.com/feed",
+    "https://cryptopotato.com/feed/",
+    "https://www.newsbtc.com/feed/",
+    "https://bitcoinist.com/feed/",
+    "https://www.coinspeaker.com/news/feed/"
   ],
   Sports: [
     "https://www.espn.com/espn/rss/soccer/news",
@@ -1653,10 +1658,40 @@ const findPreparedMarketThread = (marketId) => {
   const rule = marketThreadRules[marketId];
   if (!rule) return null;
 
-  for (const story of getPublishedStoriesForMarketRule(rule)) {
+  const matchingStories = getPublishedStoriesForMarketRule(rule);
+  for (const story of matchingStories) {
     const thread = findPreparedThreadForRequest(rule.category, story.sourceUrl);
     const validThread = normalizeValidThread(thread, story);
     if (validThread?.count >= 1) return validThread;
+  }
+
+  const latestStory = matchingStories[0];
+  if (!latestStory) return null;
+
+  for (const story of matchingStories.slice(1)) {
+    const previousThread = findPreparedThreadForRequest(rule.category, story.sourceUrl);
+    const validPreviousThread = normalizeValidThread(previousThread, story);
+    if (!validPreviousThread?.count) continue;
+
+    const bridgedThread = normalizeValidThread({
+      ...validPreviousThread,
+      current: latestStory,
+      items: [story, ...(validPreviousThread.items ?? [])],
+      reviewed_by: `${validPreviousThread.reviewed_by ?? "prepared"}+latest-market-seed`
+    }, latestStory);
+
+    if (bridgedThread?.count >= 1) return bridgedThread;
+  }
+
+  if (matchingStories.length >= 2) {
+    const ruleThread = normalizeValidThread({
+      topic: rule.topic,
+      current: latestStory,
+      items: matchingStories.slice(1, 8),
+      reviewed_by: "strict-market-rule"
+    }, latestStory);
+
+    if (ruleThread?.count >= 1) return ruleThread;
   }
 
   return null;
@@ -2907,11 +2942,17 @@ const isThreadFriendlyTechArticle = (article) => {
     /\btutorial\b/,
     /\bguide\b/,
     /\breview\b/,
+    /\balternatives?\b/,
+    /\blooking to ditch\b/,
+    /\bbest kindle\b/,
+    /\bbest .*alternatives?\b/,
     /\bcoupons?\b/,
     /\bpromo codes?\b/,
     /\bdeals?\b/,
     /\bhonesty traps?\b/,
     /\bprompt tricks?\b/,
+    /\btricks to try\b/,
+    /\bway more customizable\b/,
     /\bi set\b/,
     /\bi'?ve seen\b/,
     /\bthis easy\b/,
@@ -2961,6 +3002,19 @@ const isThreadFriendlyTechArticle = (article) => {
     "hack",
     "outage",
     "cloud",
+    "ai",
+    "security",
+    "privacy",
+    "data center",
+    "datacenter",
+    "developer",
+    "software",
+    "platform",
+    "chip",
+    "chips",
+    "semiconductor",
+    "database",
+    "infrastructure",
     "startup",
     "google",
     "apple",
@@ -2971,12 +3025,32 @@ const isThreadFriendlyTechArticle = (article) => {
     "openai",
     "anthropic",
     "github",
+    "cloudflare",
+    "oracle",
+    "xai",
+    "perplexity",
+    "blue origin",
+    "palantir",
+    "databricks",
     "spacex",
     "tesla",
     "alphabet"
   ];
 
-  return companyOrEventSignals.some((signal) => text.includes(signal));
+  const trustedTechSources = [
+    "techcrunch.com",
+    "theverge.com",
+    "wired.com",
+    "zdnet.com",
+    "infoq.com",
+    "github.blog",
+    "venturebeat.com",
+    "technologyreview.com",
+    "bloomberg.com",
+    "arstechnica.com"
+  ];
+
+  return trustedTechSources.some((source) => sourceKey.includes(source)) || companyOrEventSignals.some((signal) => text.includes(signal));
 };
 
 const runWithConcurrency = async (items, limit, worker) => {
@@ -3518,7 +3592,11 @@ const generateSnapshot = async (category) => {
       : selectedCategory === "Tech"
         ? balanceArticlesBySource(dedupedArticles, 6)
         : dedupedArticles;
-  const stories = articles.length > 0 ? await buildStories(articles) : getMockStoriesForCategory(selectedCategory);
+  const stories = articles.length > 0
+    ? await buildStories(articles)
+    : allowMockFeeds
+      ? getMockStoriesForCategory(selectedCategory)
+      : [];
 
   const snapshot = {
     date,
@@ -3529,7 +3607,9 @@ const generateSnapshot = async (category) => {
       guardian: Boolean(process.env.GUARDIAN_API_KEY),
       zero_g: Boolean(process.env.ZERO_G_API_KEY || process.env.OG_COMPUTE_API_KEY),
       shelby: isShelbyArchiveConfigured(),
-      max_article_age_hours: maxArticleAgeHours
+      max_article_age_hours: maxArticleAgeHours,
+      mock_fallback_enabled: allowMockFeeds,
+      real_article_count: articles.length
     },
     top_stories: stories
   };

@@ -1,21 +1,24 @@
 export const marketThreadRules = {
   "new-glenn-2026": {
     category: "Tech",
+    topic: "Blue Origin New Glenn Launchpad Probe",
     includeAll: ["blue origin", "new glenn"],
     includeAny: ["launch", "launchpad", "explosion", "probe", "fly", "again", "vehicle"],
     reject: ["spacex", "starship", "falcon"]
   },
   "strategy-bitcoin-sale": {
     category: "Crypto",
+    topic: "Strategy Bitcoin Sale Fallout",
     includeAnySets: [
-      ["strategy", "microstrategy"],
+      ["microstrategy", "mstr", "michael saylor", "saylor", "strategy's", "strategy report", "strategy reports", "strategy sale", "strategy sold", "strategy bitcoin"],
       ["bitcoin", "btc"],
       ["sale", "sell", "selling", "sold", "sells", "holdings", "treasury", "mstr", "polymarket"]
     ],
-    reject: ["hive", "kraken", "bitcoin holdings via lending", "coinbase", "moneygram", "tether", "visa"]
+    reject: ["hive", "kraken", "bitcoin holdings via lending", "coinbase", "moneygram", "tether", "visa", "bitcoin price"]
   },
   "nba-finals": {
     category: "Sports",
+    topic: "Spurs 2026 NBA Finals Run",
     includeAnySets: [
       ["san antonio", "wembanyama", "nba spurs", "spurs"],
       ["nba", "finals", "game", "knicks", "western conference"]

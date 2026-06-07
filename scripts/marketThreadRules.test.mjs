@@ -44,6 +44,16 @@ test("Strategy market rejects unrelated bitcoin treasury companies", () => {
   );
 });
 
+test("Strategy market rejects generic bitcoin price strategy stories", () => {
+  assert.equal(
+    storyMatchesMarketThreadRule(
+      story("Crypto", "Bitcoin Price Plunges To $59K", "Traders are watching support levels and adjusting their market strategy after liquidations."),
+      marketThreadRules["strategy-bitcoin-sale"]
+    ),
+    false
+  );
+});
+
 test("New Glenn market accepts Blue Origin launchpad context", () => {
   assert.equal(
     storyMatchesMarketThreadRule(
@@ -52,4 +62,10 @@ test("New Glenn market accepts Blue Origin launchpad context", () => {
     ),
     true
   );
+});
+
+test("market rules expose stable thread topics", () => {
+  assert.equal(marketThreadRules["nba-finals"].topic, "Spurs 2026 NBA Finals Run");
+  assert.equal(marketThreadRules["strategy-bitcoin-sale"].topic, "Strategy Bitcoin Sale Fallout");
+  assert.equal(marketThreadRules["new-glenn-2026"].topic, "Blue Origin New Glenn Launchpad Probe");
 });

@@ -109,6 +109,7 @@ THREAD_REVIEW_BUDGET_PER_REFRESH=12
 THREAD_HISTORY_WINDOW_HOURS=48
 SUMMARY_TIMEOUT_MS=45000
 REFRESH_INTERVAL_MINUTES=60
+ALLOW_MOCK_FEEDS=false
 ```
 
 Set `OG_USAGE_MODE=full` only if you want automatic 0G summaries during feed generation.
@@ -138,7 +139,7 @@ Siftle uses RSS feeds first, with NewsData.io and The Guardian available when AP
 
 Current source direction:
 
-- Crypto: CoinDesk, Cointelegraph, Decrypt, The Block, CryptoSlate, Bitcoin Magazine, DL News, Blockworks
+- Crypto: CoinDesk, Cointelegraph, Decrypt, The Block, CryptoSlate, Bitcoin Magazine, DL News, Blockworks, CryptoPotato, NewsBTC, Bitcoinist, CoinSpeaker
 - Sports: football and NBA only for now, including ESPN soccer/NBA, BBC Football, The Guardian Football, UEFA, Sky Sports football, NBA RSS
 - Anime: anime and manga news sources, including Anime News Network and related feeds
 - Tech: company, product, AI, cloud, startup, platform, security, and major tech company news from sources such as The Verge, TechCrunch, Wired, Engadget, Ars Technica, ZDNet, InfoQ, GitHub Blog, VentureBeat, MIT Technology Review, and Bloomberg Technology
@@ -210,6 +211,7 @@ THREAD_REVIEW_CANDIDATE_LIMIT=5
 THREAD_REVIEW_SAME_DAY_CANDIDATE_LIMIT=1
 THREAD_REVIEW_CANDIDATES_PER_DAY=3
 THREAD_HISTORY_WINDOW_HOURS=48
+ALLOW_MOCK_FEEDS=false
 
 SHELBY_UPLOAD_URL=
 SHELBY_API_KEY=
@@ -229,7 +231,7 @@ ARC_DEPLOYER_PRIVATE_KEY=
 Fallback behavior:
 
 - If news API keys are missing, RSS feeds still run.
-- If real sources fail or return no fresh articles, mock stories are used only as a development fallback.
+- If real sources fail or return no fresh articles, Siftle returns an empty category by default. Mock stories are opt-in for local demos with `ALLOW_MOCK_FEEDS=true`.
 - If 0G is unavailable, Siftle falls back to local summaries and strict local thread matching.
 - If Shelby is unavailable, snapshots are archived locally.
 
