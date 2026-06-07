@@ -60,6 +60,9 @@ SIFTLE_MARKET_FACTORY_ADDRESS=
 SIFTLE_MARKET_NEW_GLENN_ADDRESS=
 SIFTLE_MARKET_STRATEGY_BTC_SALE_ADDRESS=
 SIFTLE_MARKET_NBA_FINALS_ADDRESS=
+SIFTLE_MARKET_ENGLAND_WORLD_CUP_OPENER_ADDRESS=
+SIFTLE_MARKET_NEYMAR_WORLD_CUP_OPENER_ADDRESS=
+SIFTLE_MARKET_IRAN_WORLD_CUP_VISAS_ADDRESS=
 SIFTLE_MARKET_RESOLVER=
 ARC_DEPLOYER_PRIVATE_KEY=
 ```
@@ -148,7 +151,7 @@ Current source direction:
 - Anime: anime and manga news sources, including Anime News Network and related feeds
 - Tech: company, product, AI, cloud, startup, platform, security, and major tech company news from sources such as The Verge, TechCrunch, Wired, Engadget, Ars Technica, ZDNet, InfoQ, GitHub Blog, VentureBeat, MIT Technology Review, and Bloomberg Technology
 
-Sports is intentionally narrowed to football and NBA. Tech is intentionally filtered away from tutorials, personal dev posts, coupons, reviews, and low-value how-to content so it can produce better threads and future market candidates.
+Sports is intentionally narrowed to football and NBA. The first football markets focus on World Cup storylines where the evidence naturally develops over multiple updates: England opener preparation, Neymar's Brazil fitness watch, and Iran's visa dispute. Tech is intentionally filtered away from tutorials, personal dev posts, coupons, reviews, and low-value how-to content so it can produce better threads and future market candidates.
 
 ## Local Development
 
@@ -228,6 +231,9 @@ SIFTLE_MARKET_FACTORY_ADDRESS=
 SIFTLE_MARKET_NEW_GLENN_ADDRESS=
 SIFTLE_MARKET_STRATEGY_BTC_SALE_ADDRESS=
 SIFTLE_MARKET_NBA_FINALS_ADDRESS=
+SIFTLE_MARKET_ENGLAND_WORLD_CUP_OPENER_ADDRESS=
+SIFTLE_MARKET_NEYMAR_WORLD_CUP_OPENER_ADDRESS=
+SIFTLE_MARKET_IRAN_WORLD_CUP_VISAS_ADDRESS=
 SIFTLE_MARKET_RESOLVER=
 ARC_DEPLOYER_PRIVATE_KEY=
 ```

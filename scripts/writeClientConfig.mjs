@@ -20,7 +20,10 @@ const arcUsdcAddress = publicValue("ARC_TESTNET_USDC_ADDRESS");
 const marketAddresses = {
   "new-glenn-2026": publicValue("SIFTLE_MARKET_NEW_GLENN_ADDRESS"),
   "strategy-bitcoin-sale": publicValue("SIFTLE_MARKET_STRATEGY_BTC_SALE_ADDRESS"),
-  "nba-finals": publicValue("SIFTLE_MARKET_NBA_FINALS_ADDRESS")
+  "nba-finals": publicValue("SIFTLE_MARKET_NBA_FINALS_ADDRESS"),
+  "england-world-cup-opener": publicValue("SIFTLE_MARKET_ENGLAND_WORLD_CUP_OPENER_ADDRESS"),
+  "neymar-world-cup-opener": publicValue("SIFTLE_MARKET_NEYMAR_WORLD_CUP_OPENER_ADDRESS"),
+  "iran-world-cup-visas": publicValue("SIFTLE_MARKET_IRAN_WORLD_CUP_VISAS_ADDRESS")
 };
 const outputPath = join(root, "dist", "client-config.js");
 

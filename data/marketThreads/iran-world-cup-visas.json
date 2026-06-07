@@ -1,0 +1,72 @@
+{
+  "topic": "Iran World Cup Visa Dispute",
+  "reviewed_by": "curated-local-market-thread",
+  "current": {
+    "id": "market-iran-world-cup-visas-current",
+    "category": "Sports",
+    "headline": "Iran says U.S. denied visas to key WC officials",
+    "summary": "Iran's soccer federation accused the United States of denying visas to key managerial and administrative members of its World Cup team.",
+    "source": "espn.com",
+    "sourceUrl": "https://www.espn.com/soccer/story/_/id/48984862/iran-usa-world-cup-visas-officials-2026",
+    "imageUrl": "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=80",
+    "publishedAt": "Sun, 7 Jun 2026 04:43:02 EST",
+    "readTime": "2 min read"
+  },
+  "items": [
+    {
+      "id": "market-iran-world-cup-visas-01",
+      "category": "Sports",
+      "headline": "Iran players receive U.S. visas for World Cup",
+      "summary": "A U.S. official confirmed Iran's World Cup players received visas to enter and compete in the United States.",
+      "source": "espn.com",
+      "sourceUrl": "https://www.espn.com/soccer/story/_/id/48977850/iran-players-receive-us-visas-2026-world-cup",
+      "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Fri, 5 Jun 2026 23:51:01 EST",
+      "readTime": "2 min read"
+    },
+    {
+      "id": "market-iran-world-cup-visas-02",
+      "category": "Sports",
+      "headline": "Iran's World Cup players receive visas to enter US, White House official says",
+      "summary": "Iran's World Cup players reportedly received U.S. visas after the team moved its training base.",
+      "source": "theguardian.com",
+      "sourceUrl": "https://www.theguardian.com/football/2026/jun/05/iran-world-cup-visas-united-states",
+      "imageUrl": "https://i.guim.co.uk/img/media/5a971a456d1ccf83483579203d7c5e4fca07d8ab/556_0_5563_4451/master/5563.jpg?width=140&amp;quality=85&amp;auto=format&amp;fit=max&amp;s=01a7b5b83c2ee106aba711778af846b0",
+      "publishedAt": "Fri, 05 Jun 2026 18:13:14 GMT",
+      "readTime": "2 min read"
+    },
+    {
+      "id": "market-iran-world-cup-visas-03",
+      "category": "Sports",
+      "headline": "Iran players: U.S. politics, war affect WC prep",
+      "summary": "Iran midfielder Saeid Ezatolahi said politics and war have affected the team's World Cup preparation.",
+      "source": "espn.com",
+      "sourceUrl": "https://www.espn.com/soccer/story/_/id/48964030/iran-players-admit-us-politics-war-affect-world-cup-preparations",
+      "imageUrl": "https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Thu, 4 Jun 2026 10:54:14 EST",
+      "readTime": "2 min read"
+    },
+    {
+      "id": "market-iran-world-cup-visas-04",
+      "category": "Sports",
+      "headline": "Source: Iran expects U.S., Mexico visas this week",
+      "summary": "Iran expected Mexico and U.S. entry visas shortly before its opening World Cup match.",
+      "source": "espn.com",
+      "sourceUrl": "https://www.espn.com/soccer/story/_/id/48949687/iran-expects-us-mexico-visas-arrive-week",
+      "imageUrl": "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Wed, 3 Jun 2026 09:26:07 EST",
+      "readTime": "2 min read"
+    },
+    {
+      "id": "market-iran-world-cup-visas-05",
+      "category": "Sports",
+      "headline": "Iran star Azmoun shock omission from WCup squad",
+      "summary": "Iran finalized its World Cup squad amid unusual political and sporting pressure.",
+      "source": "espn.com",
+      "sourceUrl": "https://www.espn.com/soccer/story/_/id/48939448/iran-star-sardar-azmoun-shock-omission-world-cup-squad",
+      "imageUrl": "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Tue, 2 Jun 2026 02:21:11 EST",
+      "readTime": "2 min read"
+    }
+  ]
+}

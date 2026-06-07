@@ -1,0 +1,61 @@
+{
+  "topic": "Neymar Brazil World Cup Fitness Watch",
+  "reviewed_by": "curated-local-market-thread",
+  "current": {
+    "id": "market-neymar-world-cup-opener-current",
+    "category": "Sports",
+    "headline": "Brazil's Ancelotti: Neymar to have MRI Monday",
+    "summary": "Neymar will have an MRI scan to evaluate his right calf injury as Brazil monitors his race to be fit for the World Cup.",
+    "source": "espn.com",
+    "sourceUrl": "https://www.espn.com/soccer/story/_/id/48975653/brazil-coach-ancelotti-confirms-neymar-mri-monday",
+    "imageUrl": "https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1200&q=80",
+    "publishedAt": "Fri, 5 Jun 2026 12:46:37 EST",
+    "readTime": "2 min read"
+  },
+  "items": [
+    {
+      "id": "market-neymar-world-cup-opener-01",
+      "category": "Sports",
+      "headline": "Neymar to miss Brazil's final pre-WC friendly",
+      "summary": "Neymar will not travel with Brazil for their final pre-World Cup friendly against Egypt.",
+      "source": "espn.com",
+      "sourceUrl": "https://www.espn.com/soccer/story/_/id/48965996/neymar-miss-brazil-final-pre-world-cup-friendly-vs-egypt",
+      "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Thu, 4 Jun 2026 10:54:15 EST",
+      "readTime": "2 min read"
+    },
+    {
+      "id": "market-neymar-world-cup-opener-02",
+      "category": "Sports",
+      "headline": "Ancelotti: Neymar must battle Vini for minutes",
+      "summary": "Carlo Ancelotti said Neymar will compete with Vinicius Junior and Raphinha for playing time if fit.",
+      "source": "espn.com",
+      "sourceUrl": "https://www.espn.com/soccer/story/_/id/48937625/brazil-ancelotti-neymar-battle-vinicius-raphinha-minutes",
+      "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Mon, 1 Jun 2026 10:21:22 EST",
+      "readTime": "2 min read"
+    },
+    {
+      "id": "market-neymar-world-cup-opener-03",
+      "category": "Sports",
+      "headline": "Ancelotti: No regrets selecting injured Neymar",
+      "summary": "Brazil coach Carlo Ancelotti said he had no plans to replace Neymar in the World Cup squad.",
+      "source": "espn.com",
+      "sourceUrl": "https://www.espn.com/soccer/story/_/id/48922562/brazil-carlo-ancelotti-neymar-injury-2026-world-cup",
+      "imageUrl": "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Sun, 31 May 2026 05:16:50 EST",
+      "readTime": "2 min read"
+    },
+    {
+      "id": "market-neymar-world-cup-opener-04",
+      "category": "Sports",
+      "headline": "Injured Neymar could miss Brazil's World Cup opener",
+      "summary": "Brazil forward Neymar was set to miss friendly matches against Panama and Egypt after a calf injury.",
+      "source": "feeds.bbci.co.uk",
+      "sourceUrl": "https://www.bbc.com/sport/football/articles/cdrp41erye0o?at_medium=RSS&at_campaign=rss",
+      "imageUrl": "https://ichef.bbci.co.uk/ace/standard/240/cpsprodpb/f539/live/734efb30-5a9c-11f1-9626-f75d5d5577d2.jpg",
+      "publishedAt": "Thu, 28 May 2026 14:16:00 GMT",
+      "readTime": "2 min read"
+    }
+  ]
+}

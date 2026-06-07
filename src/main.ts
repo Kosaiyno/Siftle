@@ -325,6 +325,138 @@ const marketPreviews: MarketPreview[] = [
         sourceUrl: "https://www.espn.com/nba/story/_/id/48910495/nba-playoffs-western-conference-finals-san-antonio-spurs-oklahoma-city-thunder-game-7-social-reaction"
       }
     ]
+  },
+  {
+    id: "england-world-cup-opener",
+    category: "Sports",
+    question: "Will England win their opening 2026 World Cup match?",
+    probability: 54,
+    closes: "At the final whistle of England's opening 2026 World Cup match",
+    resolution: "Resolves Yes if England's first 2026 FIFA World Cup match ends with England winning in regulation or after extra time if extra time is officially part of that match result. A draw, loss, cancellation without a played opener, or unresolved result resolves No.",
+    threadTopic: "England World Cup Opener Prep",
+    threadStoryId: 9004,
+    updates: 5,
+    movement: 2,
+    volume: "$0",
+    traders: "0",
+    liquidity: "$0",
+    evidence: [
+      {
+        date: "Latest",
+        source: "BBC Sport",
+        headline: "This was a training game - England & Tuchel now need to get serious",
+        summary: "England have one more game to prepare for their World Cup campaign, and the performance sharpened questions around Tuchel's setup.",
+        impact: "Opened",
+        direction: "flat",
+        sourceUrl: "https://www.bbc.com/sport/football/articles/c3ryd490rz7o?at_medium=RSS&at_campaign=rss"
+      },
+      {
+        date: "Jun 7",
+        source: "ESPN",
+        headline: "England win over New Zealand provides reminder of Harry Kane",
+        summary: "England's victory underlined how central Harry Kane remains to their World Cup hopes.",
+        impact: "Opened",
+        direction: "flat",
+        sourceUrl: "https://www.espn.com/soccer/story/_/id/48986657/england-win-new-zealand-reminder-harry-kane-importance"
+      },
+      {
+        date: "Jun 5",
+        source: "The Guardian",
+        headline: "Tuchel confident sharp Kane is in perfect form to lead England at World Cup",
+        summary: "Thomas Tuchel said Kane is in top shape as England finish their World Cup preparations.",
+        impact: "Opened",
+        direction: "flat",
+        sourceUrl: "https://www.theguardian.com/football/2026/jun/05/tuchel-confident-sharp-kane-is-in-perfect-form-to-lead-england-at-world-cup"
+      }
+    ]
+  },
+  {
+    id: "neymar-world-cup-opener",
+    category: "Sports",
+    question: "Will Neymar play in Brazil's opening 2026 World Cup match?",
+    probability: 46,
+    closes: "At the final whistle of Brazil's opening 2026 World Cup match",
+    resolution: "Resolves Yes if Neymar officially appears on the pitch for Brazil in its opening 2026 FIFA World Cup match. Being named in the squad or on the bench without playing resolves No.",
+    threadTopic: "Neymar Brazil World Cup Fitness Watch",
+    threadStoryId: 9005,
+    updates: 5,
+    movement: -5,
+    volume: "$0",
+    traders: "0",
+    liquidity: "$0",
+    evidence: [
+      {
+        date: "Latest",
+        source: "ESPN",
+        headline: "Brazil's Ancelotti: Neymar to have MRI Monday",
+        summary: "Neymar is set for an MRI as Brazil monitors his calf injury before the World Cup.",
+        impact: "Opened",
+        direction: "flat",
+        sourceUrl: "https://www.espn.com/soccer/story/_/id/48975653/brazil-coach-ancelotti-confirms-neymar-mri-monday"
+      },
+      {
+        date: "Jun 4",
+        source: "ESPN",
+        headline: "Neymar to miss Brazil's final pre-WC friendly",
+        summary: "Neymar will miss Brazil's final friendly against Egypt while recovering from the calf issue.",
+        impact: "Opened",
+        direction: "flat",
+        sourceUrl: "https://www.espn.com/soccer/story/_/id/48965996/neymar-miss-brazil-final-pre-world-cup-friendly-vs-egypt"
+      },
+      {
+        date: "May 31",
+        source: "ESPN",
+        headline: "Ancelotti: No regrets selecting injured Neymar",
+        summary: "Carlo Ancelotti said he had no plans to replace Neymar in Brazil's World Cup squad.",
+        impact: "Opened",
+        direction: "flat",
+        sourceUrl: "https://www.espn.com/soccer/story/_/id/48922562/brazil-carlo-ancelotti-neymar-injury-2026-world-cup"
+      }
+    ]
+  },
+  {
+    id: "iran-world-cup-visas",
+    category: "Sports",
+    question: "Will Iran's World Cup visa dispute be resolved before their opening match?",
+    probability: 39,
+    closes: "At kickoff of Iran's opening 2026 World Cup match",
+    resolution: "Resolves Yes if credible reporting confirms Iran's players and key team officials have the required tournament travel visas before kickoff of Iran's opening match. Any reported unresolved denial or travel block for key team officials at kickoff resolves No.",
+    threadTopic: "Iran World Cup Visa Dispute",
+    threadStoryId: 9006,
+    updates: 5,
+    movement: -8,
+    volume: "$0",
+    traders: "0",
+    liquidity: "$0",
+    evidence: [
+      {
+        date: "Latest",
+        source: "ESPN",
+        headline: "Iran says U.S. denied visas to key WC officials",
+        summary: "Iran accused the United States of denying visas to key managerial and administrative members of its World Cup team.",
+        impact: "Opened",
+        direction: "flat",
+        sourceUrl: "https://www.espn.com/soccer/story/_/id/48984862/iran-usa-world-cup-visas-officials-2026"
+      },
+      {
+        date: "Jun 6",
+        source: "ESPN",
+        headline: "Iran players receive U.S. visas for World Cup",
+        summary: "A U.S. official confirmed Iran's World Cup players received visas to enter and compete in the United States.",
+        impact: "Opened",
+        direction: "flat",
+        sourceUrl: "https://www.espn.com/soccer/story/_/id/48977850/iran-players-receive-us-visas-2026-world-cup"
+      },
+      {
+        date: "Jun 5",
+        source: "The Guardian",
+        headline: "Iran's World Cup players receive visas to enter US, White House official says",
+        summary: "Iran's players reportedly received U.S. visas, though the team had already shifted its training base.",
+        impact: "Opened",
+        direction: "flat",
+        sourceUrl: "https://www.theguardian.com/football/2026/jun/05/iran-world-cup-visas-united-states"
+      }
+    ]
   }
 ];
 

@@ -1733,11 +1733,37 @@ const normalizeMarketThreadPayload = (thread, marketId) => {
   };
 };
 
-const readStoredMarketThread = (marketId) => {
-  const stored = normalizeMarketThreadPayload(readJsonIfExists(getMarketThreadStorePath(marketId)), marketId);
-  if (stored) return stored;
+const mergeMarketThreads = (marketId, primaryThread, secondaryThread) => {
+  const rule = marketThreadRules[marketId];
+  const primary = normalizeMarketThreadPayload(primaryThread, marketId);
+  const secondary = normalizeMarketThreadPayload(secondaryThread, marketId);
+  if (!primary) return secondary;
+  if (!secondary) return primary;
 
-  return normalizeMarketThreadPayload(readJsonIfExists(getMarketThreadSeedPath(marketId)), marketId);
+  const stories = sortStoriesByPublishedAtDesc([
+    primary.current,
+    ...(primary.items ?? []),
+    secondary.current,
+    ...(secondary.items ?? [])
+  ]);
+  const [current, ...items] = stories;
+  if (!current) return primary;
+
+  return normalizeMarketThreadPayload({
+    topic: primary.topic || secondary.topic || rule.topic,
+    current,
+    items,
+    reviewed_by: `${primary.reviewed_by ?? "prepared"}+${secondary.reviewed_by ?? "stored"}`
+  }, marketId);
+};
+
+const readStoredMarketThread = (marketId) => {
+  const stored = readJsonIfExists(getMarketThreadStorePath(marketId));
+  const seed = readJsonIfExists(getMarketThreadSeedPath(marketId));
+  const merged = mergeMarketThreads(marketId, stored, seed);
+  if (merged) return merged;
+
+  return normalizeMarketThreadPayload(stored, marketId) ?? normalizeMarketThreadPayload(seed, marketId);
 };
 
 const writeStoredMarketThread = (marketId, thread) => {
@@ -1759,10 +1785,9 @@ const writeStoredMarketThread = (marketId, thread) => {
 
 const getMarketThread = (marketId) => {
   const prepared = findPreparedMarketThread(marketId);
-  if (prepared?.count) return writeStoredMarketThread(marketId, prepared) ?? prepared;
-
   const stored = readStoredMarketThread(marketId);
-  if (stored?.count) return writeStoredMarketThread(marketId, stored) ?? stored;
+  const merged = mergeMarketThreads(marketId, prepared, stored) ?? prepared ?? stored;
+  if (merged?.count) return writeStoredMarketThread(marketId, merged) ?? merged;
 
   return null;
 };

@@ -24,6 +24,35 @@ export const marketThreadRules = {
       ["nba", "finals", "game", "knicks", "western conference"]
     ],
     reject: ["tottenham", "liverpool", "arsenal", "premier league", "football", "soccer", "levy", "usmnt", "wedding"]
+  },
+  "england-world-cup-opener": {
+    category: "Sports",
+    topic: "England World Cup Opener Prep",
+    includeAnySets: [
+      ["england", "tuchel", "harry kane", "kane", "bellingham"],
+      ["world cup", "opener", "warm-up", "warmup", "new zealand", "florida", "tampa", "squad", "heat"]
+    ],
+    reject: ["women's world cup", "women", "qualifier", "cricket", "ghana", "wales", "netherlands", "dutch"]
+  },
+  "neymar-world-cup-opener": {
+    category: "Sports",
+    topic: "Neymar Brazil World Cup Fitness Watch",
+    includeAnySets: [
+      ["neymar"],
+      ["brazil", "ancelotti", "cbf"],
+      ["world cup", "opener", "calf", "injury", "mri", "training", "fit", "minutes"]
+    ],
+    reject: ["romario", "lille", "davide ancelotti", "manchester united"]
+  },
+  "iran-world-cup-visas": {
+    category: "Sports",
+    topic: "Iran World Cup Visa Dispute",
+    includeAnySets: [
+      ["iran", "team melli"],
+      ["world cup", "wcup"],
+      ["visa", "visas", "u.s.", "us ", "united states", "mexico", "officials"]
+    ],
+    reject: ["switzerland", "embolo", "australia", "socceroos"]
   }
 };
 

@@ -1,0 +1,72 @@
+{
+  "topic": "England World Cup Opener Prep",
+  "reviewed_by": "curated-local-market-thread",
+  "current": {
+    "id": "market-england-world-cup-opener-current",
+    "category": "Sports",
+    "headline": "England win over New Zealand provides reminder of Harry Kane",
+    "summary": "England's victory underlined how central Harry Kane remains to their World Cup hopes.",
+    "source": "espn.com",
+    "sourceUrl": "https://www.espn.com/soccer/story/_/id/48986657/england-win-new-zealand-reminder-harry-kane-importance",
+    "imageUrl": "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=80",
+    "publishedAt": "Sun, 7 Jun 2026 04:27:58 EST",
+    "readTime": "2 min read"
+  },
+  "items": [
+    {
+      "id": "market-england-world-cup-opener-01",
+      "category": "Sports",
+      "headline": "This was a training game - England & Tuchel now need to get serious",
+      "summary": "England have one more game to prepare for their World Cup campaign, and the performance sharpened questions around Thomas Tuchel's setup.",
+      "source": "feeds.bbci.co.uk",
+      "sourceUrl": "https://www.bbc.com/sport/football/articles/c3ryd490rz7o?at_medium=RSS&at_campaign=rss",
+      "imageUrl": "https://ichef.bbci.co.uk/ace/standard/240/cpsprodpb/54c1/live/24b29080-61f5-11f1-89a3-d1f559421220.jpg",
+      "publishedAt": "Sat, 06 Jun 2026 23:35:51 GMT",
+      "readTime": "2 min read"
+    },
+    {
+      "id": "market-england-world-cup-opener-02",
+      "category": "Sports",
+      "headline": "Tuchel confident sharp Kane is in perfect form to lead England at World Cup",
+      "summary": "Thomas Tuchel said Harry Kane is in top shape as England finish their World Cup preparations.",
+      "source": "theguardian.com",
+      "sourceUrl": "https://www.theguardian.com/football/2026/jun/05/tuchel-confident-sharp-kane-is-in-perfect-form-to-lead-england-at-world-cup",
+      "imageUrl": "https://i.guim.co.uk/img/media/9359e5295ca5fe53cad655e12bd1b0fb78251903/1192_235_4718_3774/master/4718.jpg?width=140&amp;quality=85&amp;auto=format&amp;fit=max&amp;s=4dfb06133ddf49ad96654196999f0aa8",
+      "publishedAt": "Fri, 05 Jun 2026 20:53:05 GMT",
+      "readTime": "2 min read"
+    },
+    {
+      "id": "market-england-world-cup-opener-03",
+      "category": "Sports",
+      "headline": "England to use palm-cooling devices at World Cup",
+      "summary": "Jordan Henderson praised England's heat and recovery preparation as the squad adapts for World Cup conditions.",
+      "source": "feeds.bbci.co.uk",
+      "sourceUrl": "https://www.bbc.com/sport/football/articles/cj0p0e90z9vo?at_medium=RSS&at_campaign=rss",
+      "imageUrl": "https://ichef.bbci.co.uk/ace/standard/240/cpsprodpb/9813/live/602b6960-60de-11f1-82ca-1380a42b6773.jpg",
+      "publishedAt": "Fri, 05 Jun 2026 12:54:51 GMT",
+      "readTime": "2 min read"
+    },
+    {
+      "id": "market-england-world-cup-opener-04",
+      "category": "Sports",
+      "headline": "England's heatseekers begin World Cup countdown with Tampa test",
+      "summary": "England's data-driven World Cup preparation continued with a New Zealand friendly in Tampa heat.",
+      "source": "theguardian.com",
+      "sourceUrl": "https://www.theguardian.com/football/2026/jun/05/england-world-cup-countdown-new-zealand-friendly-tampa-heat",
+      "imageUrl": "https://i.guim.co.uk/img/media/9de0147c3101a2b470786919a0bd1900815097fe/274_0_3892_3113/master/3892.jpg?width=140&amp;quality=85&amp;auto=format&amp;fit=max&amp;s=277f82b884c17bf92cb2962a78f47020",
+      "publishedAt": "Fri, 05 Jun 2026 11:07:32 GMT",
+      "readTime": "2 min read"
+    },
+    {
+      "id": "market-england-world-cup-opener-05",
+      "category": "Sports",
+      "headline": "England arrive in Florida for pre-World Cup camp",
+      "summary": "England players and Thomas Tuchel arrived in West Palm Beach to begin their pre-World Cup camp.",
+      "source": "feeds.bbci.co.uk",
+      "sourceUrl": "https://www.bbc.com/sport/football/articles/cx2181zx13po?at_medium=RSS&at_campaign=rss",
+      "imageUrl": "https://ichef.bbci.co.uk/ace/standard/240/cpsprodpb/1d33/live/43588dd0-5e69-11f1-89a3-d1f559421220.jpg",
+      "publishedAt": "Tue, 02 Jun 2026 10:26:25 GMT",
+      "readTime": "2 min read"
+    }
+  ]
+}
