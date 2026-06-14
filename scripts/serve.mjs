@@ -4073,15 +4073,20 @@ const callCircleApi = async (path, method, body, userToken = null) => {
   if (userToken) {
     headers["X-User-Token"] = userToken;
   }
-  const circleApiUrl = process.env.CIRCLE_API_URL || "https://api-sandbox.circle.com";
-  const response = await fetch(`${circleApiUrl}${path}`, {
+  const circleApiUrl = process.env.CIRCLE_API_URL || "https://api.circle.com";
+  const url = `${circleApiUrl}${path}`;
+  console.log(`[Circle API] ${method} ${url}`);
+  const response = await fetch(url, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined
   });
   
-  const data = await response.json();
+  const text = await response.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = { raw: text }; }
   if (!response.ok) {
+    console.error(`[Circle API ERROR] ${response.status} ${response.statusText} -> ${text}`);
     const err = new Error(data.message || `Circle API error: ${response.status}`);
     err.code = data.code;
     throw err;
