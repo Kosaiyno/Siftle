@@ -1286,8 +1286,17 @@ const normalizeValidThread = (thread, seedStory = thread?.current) => {
 
   if (items.length < 1) return null;
 
+  let cleanReviewedBy = thread.reviewed_by;
+  if (typeof cleanReviewedBy === "string" && cleanReviewedBy.length > 80) {
+    cleanReviewedBy = cleanReviewedBy.split("+").filter((v, i, a) => a.indexOf(v) === i).join("+");
+    if (cleanReviewedBy.length > 80) {
+      cleanReviewedBy = cleanReviewedBy.slice(0, 80) + "...";
+    }
+  }
+
   return {
     ...thread,
+    reviewed_by: cleanReviewedBy,
     current: stripStoryTempFields(seedStory),
     count: items.length,
     items: items.slice(0, 16).map(stripStoryTempFields)
