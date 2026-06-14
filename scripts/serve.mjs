@@ -4110,7 +4110,10 @@ const server = createServer(async (request, response) => {
             host: smtpHost,
             port: Number(process.env.SMTP_PORT || 587),
             secure: Number(process.env.SMTP_PORT) === 465,
-            auth: { user: smtpUser, pass: smtpPass }
+            auth: { user: smtpUser, pass: smtpPass },
+            connectionTimeout: 10000, // 10 seconds
+            greetingTimeout: 10000,   // 10 seconds
+            socketTimeout: 15000      // 15 seconds
           });
 
           const formattedOtp = otp.slice(0, 3) + " " + otp.slice(3);
