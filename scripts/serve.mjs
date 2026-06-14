@@ -2,6 +2,9 @@ import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
+import { setDefaultResultOrder } from "node:dns";
+
+setDefaultResultOrder("ipv4first");
 import nodemailer from "nodemailer";
 import { createZGComputeNetworkReadOnlyBroker } from "@0gfoundation/0g-compute-ts-sdk";
 import {
@@ -4712,4 +4715,13 @@ const server = createServer(async (request, response) => {
 
 server.listen(port, () => {
   console.log(`Siftle frontend running at http://localhost:${port}`);
+  
+  // Diagnostic Circle config check
+  const key = process.env.CIRCLE_API_KEY;
+  if (key) {
+    const clean = key.trim().replace(/^["']|["']$/g, "");
+    console.log(`[CIRCLE CONFIG CHECK] Key length: ${clean.length}, starts with: ${clean.substring(0, 20)}..., ends with: ...${clean.substring(clean.length - 8)}`);
+  } else {
+    console.log(`[CIRCLE CONFIG CHECK] CIRCLE_API_KEY is missing!`);
+  }
 });
