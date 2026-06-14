@@ -9,7 +9,10 @@ export const ARC_TESTNET_EXPLORER = "https://testnet.arcscan.app";
 export const ARC_TESTNET_FAUCET = "https://faucet.circle.com/";
 export const ARC_TESTNET_RPC_URL = "https://rpc.testnet.arc.network";
 
-const apiBase = ((window as any).SIFTLE_API_BASE || "").replace(/\/$/, "");
+let apiBase = ((window as any).SIFTLE_API_BASE || "").replace(/\/$/, "");
+if (!apiBase && typeof window !== "undefined" && window.location.hostname.endsWith("vercel.app")) {
+  apiBase = "https://siftle.onrender.com";
+}
 const apiUrl = (path: string): string => `${apiBase}${path}`;
 
 const BALANCE_OF_SELECTOR = "0x70a08231";
