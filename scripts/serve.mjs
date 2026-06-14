@@ -1256,6 +1256,12 @@ const expandApprovedThreadItems = (story, approvedItems) => {
   return sortStoriesByPublishedAtDesc(expanded).slice(0, 16);
 };
 
+const stripStoryTempFields = (story) => {
+  if (!story) return story;
+  const { __threadContext, thread, ...clean } = story;
+  return clean;
+};
+
 const normalizeValidThread = (thread, seedStory = thread?.current) => {
   if (!thread || !seedStory) return null;
 
@@ -1282,9 +1288,9 @@ const normalizeValidThread = (thread, seedStory = thread?.current) => {
 
   return {
     ...thread,
-    current: seedStory,
+    current: stripStoryTempFields(seedStory),
     count: items.length,
-    items: items.slice(0, 16)
+    items: items.slice(0, 16).map(stripStoryTempFields)
   };
 };
 
