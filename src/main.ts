@@ -797,8 +797,9 @@ const loadFeed = async (category: Category = state.activeCategory): Promise<void
   state.activeThread = null;
   state.loadingThreadUrl = null;
   state.showSaved = false;
-  state.isLoading = false;
+  state.isLoading = true;
   renderCategories();
+  render();
 
   try {
     const endpoint = state.activeArchiveDate
@@ -920,6 +921,7 @@ const loadMarketEvidence = async (market: MarketPreview): Promise<void> => {
   if (state.checkedMarketEvidence[market.id] || state.loadingMarketEvidenceId === market.id) return;
 
   state.loadingMarketEvidenceId = market.id;
+  if (state.activeSurface === "markets") render();
   try {
     const threadResponse = await fetch(apiUrl(`/api/market-thread?id=${encodeURIComponent(market.id)}`));
     if (!threadResponse.ok) return;
@@ -956,6 +958,7 @@ const loadMarketSnapshot = async (market: MarketPreview): Promise<void> => {
   if (!marketAddress || state.marketSnapshots[market.id] || state.loadingMarketSnapshotId === market.id) return;
 
   state.loadingMarketSnapshotId = market.id;
+  if (state.activeSurface === "markets") render();
   try {
     state.marketSnapshots[market.id] = await readArcMarketSnapshot(marketAddress);
   } catch (error) {
@@ -970,6 +973,7 @@ const loadPortfolioPositions = async (): Promise<void> => {
   if (!state.walletAddress || state.loadingPortfolioPositions) return;
 
   state.loadingPortfolioPositions = true;
+  if (state.activeSurface === "portfolio") render();
   try {
     const entries = await Promise.all(
       marketPreviews.map(async (market) => {
@@ -1042,6 +1046,119 @@ const renderBookmarkIcon = (): string =>
 const renderExportIcon = (): string =>
   `<svg class="action-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4.75"/><path d="m7.25 9.5 4.75-4.75 4.75 4.75"/><path d="M5 13.25v4.5A2.25 2.25 0 0 0 7.25 20h9.5A2.25 2.25 0 0 0 19 17.75v-4.5"/></svg>`;
 
+const renderSkeletonAria = (label: string): string =>
+  `<span class="skeleton-aria-label" role="status" aria-live="polite">${label}</span>`;
+
+const renderStoryCardSkeleton = (): string => `
+  <article class="story-card skeleton-card" aria-hidden="true">
+    <div class="story-topline desktop-only">
+      <div class="skeleton skeleton-line sm"></div>
+      <div class="skeleton skeleton-line xs"></div>
+    </div>
+    <div class="skeleton skeleton-image desktop-only"></div>
+    <div class="story-copy desktop-only">
+      <div class="skeleton skeleton-chip"></div>
+      <div class="skeleton skeleton-line xl" style="height: 22px; margin-top: 12px;"></div>
+      <div class="skeleton skeleton-line lg" style="height: 22px;"></div>
+      <div class="skeleton skeleton-line md" style="margin-top: 8px;"></div>
+    </div>
+    <div class="mobile-card-inner mobile-only">
+      <div class="mobile-card-body">
+        <div class="mobile-card-text">
+          <div class="skeleton skeleton-chip"></div>
+          <div class="skeleton skeleton-line xl" style="height: 18px; margin-top: 10px;"></div>
+          <div class="skeleton skeleton-line lg" style="height: 18px;"></div>
+          <div class="skeleton skeleton-line sm" style="margin-top: 8px;"></div>
+        </div>
+        <div class="skeleton skeleton-image" style="width: 88px; height: 88px; border-radius: 14px;"></div>
+      </div>
+    </div>
+  </article>
+`;
+
+const renderStoryListSkeleton = (count = 4): string =>
+  `${renderSkeletonAria("Loading stories")}${Array.from({ length: count }, renderStoryCardSkeleton).join("")}`;
+
+const renderSummarySkeleton = (): string => `
+  <div class="detail-summary-skeleton" aria-hidden="true">
+    ${renderSkeletonAria("Loading AI summary")}
+    <div class="skeleton skeleton-line lg"></div>
+    <div class="skeleton skeleton-line xl"></div>
+    <div class="skeleton skeleton-line md"></div>
+    <div class="skeleton skeleton-line sm"></div>
+  </div>
+`;
+
+const renderThreadTimelineSkeleton = (count = 3): string => `
+  <div class="thread-skeleton-timeline" aria-hidden="true">
+    ${renderSkeletonAria("Loading thread timeline")}
+    ${Array.from({ length: count }, () => `
+      <div class="thread-skeleton-item">
+        <div class="skeleton thread-skeleton-dot"></div>
+        <div>
+          <div class="skeleton skeleton-line sm" style="margin-bottom: 12px;"></div>
+          <div class="skeleton skeleton-line xl" style="height: 18px;"></div>
+          <div class="skeleton skeleton-line lg" style="height: 18px; margin-top: 8px;"></div>
+          <div class="skeleton skeleton-line md" style="margin-top: 12px;"></div>
+        </div>
+      </div>
+    `).join("")}
+  </div>
+`;
+
+const renderMarketCardSkeletonInner = (): string => `
+  <div class="market-card-topline">
+    <div class="skeleton skeleton-chip"></div>
+    <div class="skeleton skeleton-line xs"></div>
+  </div>
+  <div class="skeleton skeleton-line xl" style="height: 24px;"></div>
+  <div class="skeleton skeleton-line lg" style="height: 24px;"></div>
+  <div class="market-probability-row">
+    <div class="skeleton skeleton-probability"></div>
+    <div class="skeleton skeleton-line sm"></div>
+  </div>
+  <div class="skeleton skeleton-meter"></div>
+  <div class="market-card-footer">
+    <div class="skeleton skeleton-line sm"></div>
+    <div class="skeleton skeleton-line xs"></div>
+  </div>
+`;
+
+const renderMarketEvidenceSkeleton = (count = 3): string => `
+  <div class="market-evidence-skeleton" aria-hidden="true">
+    ${renderSkeletonAria("Loading market evidence")}
+    ${Array.from({ length: count }, () => `
+      <div class="market-evidence-skeleton-item">
+        <div class="skeleton thread-skeleton-dot"></div>
+        <div>
+          <div class="skeleton skeleton-line sm" style="margin-bottom: 10px;"></div>
+          <div class="skeleton skeleton-line xl" style="height: 16px;"></div>
+          <div class="skeleton skeleton-line lg" style="height: 16px; margin-top: 8px;"></div>
+          <div class="skeleton skeleton-line md" style="margin-top: 10px;"></div>
+        </div>
+      </div>
+    `).join("")}
+  </div>
+`;
+
+const renderPortfolioSkeleton = (count = 2): string => `
+  <div class="portfolio-skeleton-grid" aria-hidden="true">
+    ${renderSkeletonAria("Loading portfolio positions")}
+    ${Array.from({ length: count }, () => `
+      <article class="portfolio-skeleton-card">
+        <div class="skeleton skeleton-line sm"></div>
+        <div class="skeleton skeleton-line xl" style="height: 20px;"></div>
+        <div class="skeleton skeleton-line lg" style="height: 20px;"></div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 6px;">
+          <div class="skeleton skeleton-line md" style="height: 36px;"></div>
+          <div class="skeleton skeleton-line md" style="height: 36px;"></div>
+          <div class="skeleton skeleton-line md" style="height: 36px;"></div>
+        </div>
+      </article>
+    `).join("")}
+  </div>
+`;
+
 const renderStories = (): void => {
   if (!storyList) return;
 
@@ -1049,7 +1166,7 @@ const renderStories = (): void => {
   storyList.hidden = Boolean(state.selectedStoryId || state.selectedThreadUrl);
 
   if (state.isLoading) {
-    storyList.innerHTML = state.stories.length > 0 ? storyList.innerHTML : "";
+    storyList.innerHTML = renderStoryListSkeleton(4);
     return;
   }
 
@@ -1503,7 +1620,8 @@ const renderThreadView = (): void => {
         <article class="detail-card thread-card thread-verifying">
           <span class="market-kicker">Verifying timeline</span>
           <h2>${seedStory.thread?.topic || seedStory.headline}</h2>
-          <div class="thread-loading">Checking the published timeline and its past updates...</div>
+          <p class="thread-intro">Checking the published timeline and its past updates.</p>
+          ${renderThreadTimelineSkeleton(3)}
         </article>
       </div>
     `;
@@ -1571,7 +1689,7 @@ const renderDetail = (): void => {
         <img class="detail-image" src="${story.imageUrl}" alt="" />
         <section class="detail-summary ${story.category}">
           <strong>AI summary</strong>
-          <p>${isLoadingSummary ? "Preparing a short AI summary..." : summary}</p>
+          ${isLoadingSummary ? renderSummarySkeleton() : `<p>${summary}</p>`}
         </section>
         <a class="source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>
       </article>
@@ -1582,10 +1700,20 @@ const renderDetail = (): void => {
 const renderMarketCard = (market: MarketPreview): string => {
   const snapshot = state.marketSnapshots[market.id];
   const marketAddress = getMarketAddress(market);
+  const isLoadingSnapshot = Boolean(marketAddress && !snapshot);
   const yesPrice = snapshot?.yesPriceCents;
   const probabilityLabel = yesPrice === undefined ? "--" : `${yesPrice}%`;
   const shareLabel =
     yesPrice === undefined ? (marketAddress ? "Loading Arc pools" : "Arc setup required") : `Yes ${yesPrice}¢ · No ${100 - yesPrice}¢`;
+
+  if (isLoadingSnapshot) {
+    return `
+      <div class="market-card skeleton-market-card" aria-busy="true">
+        ${renderMarketCardSkeletonInner()}
+        ${renderSkeletonAria("Loading market data")}
+      </div>
+    `;
+  }
 
   return `
     <button class="market-card" type="button" data-market-id="${market.id}">
@@ -1611,16 +1739,14 @@ const renderMarketCard = (market: MarketPreview): string => {
 const renderMarketDetail = (market: MarketPreview): void => {
   if (!storyList || !storyDetail) return;
   const marketView = getMarketView(market);
-  const evidenceStatus =
-    state.loadingMarketEvidenceId === market.id && !state.checkedMarketEvidence[market.id]
-      ? "Checking thread..."
-      : `${marketView.evidence.length} updates`;
+  const isLoadingEvidence = !state.checkedMarketEvidence[market.id];
   const marketAddress = getMarketAddress(market);
   const snapshot = state.marketSnapshots[market.id];
+  const isLoadingSnapshot = Boolean(marketAddress && !snapshot);
   const yesPrice = snapshot?.yesPriceCents ?? (marketAddress ? market.probability : 0);
   const noPrice = snapshot?.noPriceCents ?? (marketAddress ? 100 - market.probability : 0);
-  const yesPriceLabel = marketAddress ? `${yesPrice}¢` : "--";
-  const noPriceLabel = marketAddress ? `${noPrice}¢` : "--";
+  const yesPriceLabel = isLoadingSnapshot ? "" : marketAddress ? `${yesPrice}¢` : "--";
+  const noPriceLabel = isLoadingSnapshot ? "" : marketAddress ? `${noPrice}¢` : "--";
   const activePrice = state.marketTradeSide === "yes" ? yesPrice : noPrice;
   const amount = Math.max(0, Number(state.marketTradeAmount) || 0);
   const projectedPayout = activePrice > 0 ? amount / (activePrice / 100) : 0;
@@ -1639,7 +1765,7 @@ const renderMarketDetail = (market: MarketPreview): void => {
         <div class="market-decision-surface">
           <div class="market-detail-topline">
             <span class="category-chip ${market.category}">${market.category}</span>
-            <span class="market-detail-updates">${marketView.evidence.length} evidence updates</span>
+            <span class="market-detail-updates">${isLoadingEvidence ? "Loading evidence" : `${marketView.evidence.length} evidence updates`}</span>
           </div>
           <h2>${market.question}</h2>
           <div class="market-decision-row">
@@ -1664,20 +1790,27 @@ const renderMarketDetail = (market: MarketPreview): void => {
                 </div>
               </div>
               <div class="market-action-grid" aria-label="${orderLabel} shares">
-                <button type="button" class="market-side yes ${state.marketTradeSide === "yes" ? "active" : ""}" data-market-trade-side="yes" data-market-trade="yes">
-                  <span>${orderLabel} Yes</span>
-                  <strong>${yesPriceLabel}</strong>
-                </button>
-                <button type="button" class="market-side no ${state.marketTradeSide === "no" ? "active" : ""}" data-market-trade-side="no" data-market-trade="no">
-                  <span>${orderLabel} No</span>
-                  <strong>${noPriceLabel}</strong>
-                </button>
+                ${isLoadingSnapshot
+                  ? `
+                    <div class="market-side yes" aria-busy="true">${renderSkeletonAria("Loading Yes price")}<div class="skeleton skeleton-line md" style="height: 18px; margin: 0 auto 6px;"></div><div class="skeleton skeleton-line sm" style="height: 22px; margin: 0 auto;"></div></div>
+                    <div class="market-side no" aria-busy="true">${renderSkeletonAria("Loading No price")}<div class="skeleton skeleton-line md" style="height: 18px; margin: 0 auto 6px;"></div><div class="skeleton skeleton-line sm" style="height: 22px; margin: 0 auto;"></div></div>
+                  `
+                  : `
+                    <button type="button" class="market-side yes ${state.marketTradeSide === "yes" ? "active" : ""}" data-market-trade-side="yes" data-market-trade="yes">
+                      <span>${orderLabel} Yes</span>
+                      <strong>${yesPriceLabel}</strong>
+                    </button>
+                    <button type="button" class="market-side no ${state.marketTradeSide === "no" ? "active" : ""}" data-market-trade-side="no" data-market-trade="no">
+                      <span>${orderLabel} No</span>
+                      <strong>${noPriceLabel}</strong>
+                    </button>
+                  `}
               </div>
             </div>
           </div>
           <p class="market-volume">
             <span>${marketStatus}</span>
-            <strong>${snapshot ? `$${Math.round(snapshot.volumeUsdc).toLocaleString()} USDC volume` : marketAddress ? "Reading Arc pool" : "Deploy Arc market to trade"}</strong>
+            <strong>${isLoadingSnapshot ? renderSkeletonAria("Loading volume") + '<span class="skeleton skeleton-line md" style="display:inline-block;width:140px;height:18px;vertical-align:middle;"></span>' : snapshot ? `$${Math.round(snapshot.volumeUsdc).toLocaleString()} USDC volume` : marketAddress ? "Reading Arc pool" : "Deploy Arc market to trade"}</strong>
           </p>
           <div class="market-resolution market-resolution-inline">
             <div class="market-resolution-inline-head">
@@ -1700,11 +1833,13 @@ const renderMarketDetail = (market: MarketPreview): void => {
               <span class="market-kicker">Market thread</span>
               <h3>${marketView.threadTopic}</h3>
             </div>
-            <span>${evidenceStatus}</span>
+            <span>${isLoadingEvidence ? "Loading..." : `${marketView.evidence.length} updates`}</span>
           </header>
           <p class="market-thread-intro">Read the developments shaping this market, newest first.</p>
           <div class="market-thread-timeline">
-            ${marketView.evidence.map((item) => `
+            ${isLoadingEvidence
+              ? renderMarketEvidenceSkeleton(3)
+              : marketView.evidence.map((item) => `
               <article class="market-thread-update">
                 <div class="market-thread-marker"></div>
                 <div>
@@ -1839,7 +1974,11 @@ const renderPortfolio = (): void => {
       <div class="portfolio-wallet-state">
         <div>
           <span>Available balance</span>
-          <strong>${state.walletAddress ? `${state.walletBalance ?? "0"} USDC` : "Sign in"}</strong>
+          <strong>${state.walletAddress
+            ? state.walletBalance === null
+              ? `<span class="skeleton wallet-balance-skeleton" aria-hidden="true"></span>${renderSkeletonAria("Loading wallet balance")}`
+              : `${state.walletBalance} USDC`
+            : "Sign in"}</strong>
           ${state.walletAddress ? `
             <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
               <small style="color: #748099; font-family: monospace; font-size: 0.78rem;">${shortenAddress(state.walletAddress)}</small>
@@ -1861,7 +2000,7 @@ const renderPortfolio = (): void => {
         <span>Finalized ${finalizedPositions.length}</span>
       </div>
       ${state.loadingPortfolioPositions
-        ? `<div class="portfolio-empty">Reading your Arc positions...</div>`
+        ? renderPortfolioSkeleton(2)
         : !state.walletAddress
           ? `<div class="portfolio-empty">Connect your wallet to see open and finalized market positions.</div>`
           : portfolioMarkets.length === 0
