@@ -4055,9 +4055,12 @@ const getCircleUserId = (email) => {
 };
 
 const callCircleApi = async (path, method, body, userToken = null) => {
-  const apiKey = process.env.CIRCLE_API_KEY;
+  let apiKey = process.env.CIRCLE_API_KEY;
   if (!apiKey) {
     throw new Error("CIRCLE_API_KEY is not configured in environment variables.");
+  }
+  if (apiKey && !apiKey.startsWith("TEST_API_KEY:") && !apiKey.startsWith("LIVE_API_KEY:")) {
+    apiKey = `TEST_API_KEY:${apiKey}`;
   }
   const headers = {
     "Content-Type": "application/json",
