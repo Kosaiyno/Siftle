@@ -9,6 +9,9 @@ export const ARC_TESTNET_EXPLORER = "https://testnet.arcscan.app";
 export const ARC_TESTNET_FAUCET = "https://faucet.circle.com/";
 export const ARC_TESTNET_RPC_URL = "https://rpc.testnet.arc.network";
 
+const apiBase = ((window as any).SIFTLE_API_BASE || "").replace(/\/$/, "");
+const apiUrl = (path: string): string => `${apiBase}${path}`;
+
 const BALANCE_OF_SELECTOR = "0x70a08231";
 const publicProvider = new JsonRpcProvider(ARC_TESTNET_RPC_URL, ARC_TESTNET_CHAIN_ID);
 
@@ -377,7 +380,7 @@ export const connectArcWallet = async (): Promise<string> => {
       hideStatus();
 
       try {
-        const res = await fetch("/api/circle/auth/otp", {
+        const res = await fetch(apiUrl("/api/circle/auth/otp"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email })
@@ -415,7 +418,7 @@ export const connectArcWallet = async (): Promise<string> => {
       hideStatus();
 
       try {
-        const res = await fetch("/api/circle/auth/verify", {
+        const res = await fetch(apiUrl("/api/circle/auth/verify"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, otp })
@@ -495,7 +498,7 @@ export const connectArcWallet = async (): Promise<string> => {
             let attempts = 0;
             const pollWallet = async () => {
               attempts++;
-              const wRes = await fetch("/api/circle/wallet", {
+              const wRes = await fetch(apiUrl("/api/circle/wallet"), {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ userToken })
@@ -620,7 +623,7 @@ const waitForCircleTx = async (txId: string): Promise<string> => {
   let attempts = 0;
   while (attempts < 60) {
     attempts++;
-    const res = await fetch(`/api/circle/tx/status?id=${txId}`);
+    const res = await fetch(apiUrl(`/api/circle/tx/status?id=${txId}`));
     if (res.ok) {
       const data = await res.json();
       if (data.state === "CONFIRMED" || data.state === "COMPLETE") {
@@ -692,7 +695,7 @@ export const executeArcMarketOrder = async (
 
     if (allowance < amount) {
       onStatus?.("Unlocking USDC (Awaiting PIN)...");
-      const appRes = await fetch("/api/circle/tx/contract-call", {
+      const appRes = await fetch(apiUrl("/api/circle/tx/contract-call"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -713,7 +716,7 @@ export const executeArcMarketOrder = async (
     }
 
     onStatus?.(`Submitting buy order (Awaiting PIN)...`);
-    const buyRes = await fetch("/api/circle/tx/contract-call", {
+    const buyRes = await fetch(apiUrl("/api/circle/tx/contract-call"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -734,7 +737,7 @@ export const executeArcMarketOrder = async (
     return txHash;
   } else {
     onStatus?.(`Submitting sell order (Awaiting PIN)...`);
-    const sellRes = await fetch("/api/circle/tx/contract-call", {
+    const sellRes = await fetch(apiUrl("/api/circle/tx/contract-call"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
