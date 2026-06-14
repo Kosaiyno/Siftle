@@ -36,9 +36,11 @@ const state: {
   marketPositions: Record<string, ArcMarketPosition>;
   marketEvidenceOverrides: Record<string, MarketEvidenceOverride>;
   checkedMarketEvidence: Record<string, boolean>;
-  loadingMarketSnapshotId: string | null;
-  loadingMarketEvidenceId: string | null;
+  loadingMarketSnapshots: Record<string, boolean>;
+  loadingMarketEvidence: Record<string, boolean>;
   loadingPortfolioPositions: boolean;
+  marketTradeStatus: string | null;
+  hasLoadedPortfolioPositions: boolean;
   walletConnecting: boolean;
   walletAddress: string | null;
   walletBalance: string | null;
@@ -67,9 +69,11 @@ const state: {
   marketPositions: {},
   marketEvidenceOverrides: {},
   checkedMarketEvidence: {},
-  loadingMarketSnapshotId: null,
-  loadingMarketEvidenceId: null,
+  loadingMarketSnapshots: {},
+  loadingMarketEvidence: {},
   loadingPortfolioPositions: false,
+  marketTradeStatus: null,
+  hasLoadedPortfolioPositions: false,
   walletConnecting: false,
   walletAddress: null,
   walletBalance: null,
@@ -596,10 +600,24 @@ const getStoryTimeLabel = (story: NewsStory): string =>
 const looksLikeBadSummary = (summary: string): boolean =>
   /(\*\*?\s*critique|attempt\s*\d|prompt says|let'?s try|tighter version|word count|violat(?:e|es)|output only|valid json|the model|the prompt)/i.test(summary);
 
-const limitSummaryWords = (summary: string, maxWords = 120): string => {
+const limitSummaryWords = (summary: string, maxWords = 140): string => {
   const words = summary.split(/\s+/).filter(Boolean);
   if (words.length <= maxWords) return summary;
-  return `${words.slice(0, maxWords).join(" ").replace(/[,:;]+$/, "")}.`;
+
+  const subWords = words.slice(0, maxWords);
+  const subText = subWords.join(" ");
+
+  const lastSentenceEnd = Math.max(
+    subText.lastIndexOf("."),
+    subText.lastIndexOf("?"),
+    subText.lastIndexOf("!")
+  );
+
+  if (lastSentenceEnd > subText.length * 0.45) {
+    return subText.slice(0, lastSentenceEnd + 1).trim();
+  }
+
+  return `${subText.replace(/[,:;.'"!\?\s]+$/, "")}...`;
 };
 
 const cleanSummaryText = (value: string): string => {
@@ -918,10 +936,9 @@ const storyToMarketEvidence = (story: NewsStory, index: number): MarketPreview["
 });
 
 const loadMarketEvidence = async (market: MarketPreview): Promise<void> => {
-  if (state.checkedMarketEvidence[market.id] || state.loadingMarketEvidenceId === market.id) return;
+  if (state.checkedMarketEvidence[market.id] || state.loadingMarketEvidence[market.id]) return;
 
-  state.loadingMarketEvidenceId = market.id;
-  if (state.activeSurface === "markets") render();
+  state.loadingMarketEvidence[market.id] = true;
   try {
     const threadResponse = await fetch(apiUrl(`/api/market-thread?id=${encodeURIComponent(market.id)}`));
     if (!threadResponse.ok) return;
@@ -942,7 +959,7 @@ const loadMarketEvidence = async (market: MarketPreview): Promise<void> => {
     console.warn(error);
   } finally {
     state.checkedMarketEvidence[market.id] = true;
-    state.loadingMarketEvidenceId = null;
+    state.loadingMarketEvidence[market.id] = false;
     if (state.activeSurface === "markets") render();
   }
 };
@@ -955,16 +972,15 @@ const formatMoney = (value: number): string =>
 
 const loadMarketSnapshot = async (market: MarketPreview): Promise<void> => {
   const marketAddress = getMarketAddress(market);
-  if (!marketAddress || state.marketSnapshots[market.id] || state.loadingMarketSnapshotId === market.id) return;
+  if (!marketAddress || state.marketSnapshots[market.id] || state.loadingMarketSnapshots[market.id]) return;
 
-  state.loadingMarketSnapshotId = market.id;
-  if (state.activeSurface === "markets") render();
+  state.loadingMarketSnapshots[market.id] = true;
   try {
     state.marketSnapshots[market.id] = await readArcMarketSnapshot(marketAddress);
   } catch (error) {
     console.warn(error);
   } finally {
-    state.loadingMarketSnapshotId = null;
+    state.loadingMarketSnapshots[market.id] = false;
     if (state.activeSurface === "markets") render();
   }
 };
@@ -973,7 +989,6 @@ const loadPortfolioPositions = async (): Promise<void> => {
   if (!state.walletAddress || state.loadingPortfolioPositions) return;
 
   state.loadingPortfolioPositions = true;
-  if (state.activeSurface === "portfolio") render();
   try {
     const entries = await Promise.all(
       marketPreviews.map(async (market) => {
@@ -992,6 +1007,7 @@ const loadPortfolioPositions = async (): Promise<void> => {
     console.warn(error);
   } finally {
     state.loadingPortfolioPositions = false;
+    state.hasLoadedPortfolioPositions = true;
     if (state.activeSurface === "portfolio") render();
   }
 };
@@ -1009,12 +1025,17 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
   }
 
   try {
-    showActionToast("Preparing Arc transaction...");
+    state.marketTradeStatus = "Preparing transaction...";
+    render();
     const txHash = await executeArcMarketOrder(
       marketAddress,
       state.marketOrderMode,
       side,
-      Math.max(0, Number(state.marketTradeAmount) || 0)
+      Math.max(0, Number(state.marketTradeAmount) || 0),
+      (status: string) => {
+        state.marketTradeStatus = status;
+        render();
+      }
     );
     delete state.marketSnapshots[market.id];
     delete state.marketPositions[market.id];
@@ -1025,6 +1046,7 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
   } catch (error) {
     showActionToast(error instanceof Error ? error.message : "Arc trade failed");
   } finally {
+    state.marketTradeStatus = null;
     renderWalletState();
     render();
   }
@@ -1796,16 +1818,24 @@ const renderMarketDetail = (market: MarketPreview): void => {
                     <div class="market-side no" aria-busy="true">${renderSkeletonAria("Loading No price")}<div class="skeleton skeleton-line md" style="height: 18px; margin: 0 auto 6px;"></div><div class="skeleton skeleton-line sm" style="height: 22px; margin: 0 auto;"></div></div>
                   `
                   : `
-                    <button type="button" class="market-side yes ${state.marketTradeSide === "yes" ? "active" : ""}" data-market-trade-side="yes" data-market-trade="yes">
-                      <span>${orderLabel} Yes</span>
+                    <button type="button" class="market-side yes ${state.marketTradeSide === "yes" ? "active" : ""}" data-market-trade-side="yes">
+                      <span>Yes</span>
                       <strong>${yesPriceLabel}</strong>
                     </button>
-                    <button type="button" class="market-side no ${state.marketTradeSide === "no" ? "active" : ""}" data-market-trade-side="no" data-market-trade="no">
-                      <span>${orderLabel} No</span>
+                    <button type="button" class="market-side no ${state.marketTradeSide === "no" ? "active" : ""}" data-market-trade-side="no">
+                      <span>No</span>
                       <strong>${noPriceLabel}</strong>
                     </button>
                   `}
               </div>
+              ${isLoadingSnapshot
+                ? `<div class="market-submit-button skeleton" style="min-height: 48px; border-radius: 14px;"></div>`
+                : state.marketTradeStatus
+                  ? `<button type="button" class="market-submit-button" style="opacity: 0.76; pointer-events: none; background: linear-gradient(180deg, #5c6c8c, #4a5975); box-shadow: none;">${state.marketTradeStatus}</button>`
+                  : state.walletAddress
+                    ? `<button type="button" class="market-submit-button" data-market-trade="${state.marketTradeSide}">Confirm ${orderLabel} ${state.marketTradeSide === "yes" ? "Yes" : "No"}</button>`
+                    : `<button type="button" class="market-submit-button" data-connect-wallet>Sign in to trade</button>`
+              }
             </div>
           </div>
           <p class="market-volume">
@@ -1955,7 +1985,7 @@ const renderPortfolio = (): void => {
   storyDetail.hidden = true;
   storyList.hidden = false;
   storyList.classList.add("markets-list");
-  if (state.walletAddress && Object.keys(state.marketPositions).length === 0 && !state.loadingPortfolioPositions) {
+  if (state.walletAddress && !state.hasLoadedPortfolioPositions && !state.loadingPortfolioPositions) {
     void loadPortfolioPositions();
   }
   const portfolioMarkets = marketPreviews.filter((market) => {
@@ -2371,6 +2401,7 @@ subscribeArcWallet((address) => {
   state.walletAddress = address;
   state.walletBalance = null;
   state.marketPositions = {};
+  state.hasLoadedPortfolioPositions = false;
   renderWalletState();
   if (address) {
     void readArcUsdcBalance(address).then((balance) => {

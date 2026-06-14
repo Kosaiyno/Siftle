@@ -638,7 +638,8 @@ export const executeArcMarketOrder = async (
   marketAddress: string,
   mode: "buy" | "sell",
   side: "yes" | "no",
-  amountUsdc: number
+  amountUsdc: number,
+  onStatus?: (status: string) => void
 ): Promise<string> => {
   if (!activeWalletAddress) throw new Error("Connect your wallet first");
   if (!marketAddress) throw new Error("This market needs an Arc contract address before trading");
@@ -650,19 +651,25 @@ export const executeArcMarketOrder = async (
     if (!mockWallet) throw new Error("Mock wallet not initialized");
 
     if (mode === "buy") {
+      onStatus?.("Checking USDC allowance...");
       const usdc = new Contract(ARC_TESTNET_USDC, ERC20_ABI, mockWallet);
       const allowance = (await usdc.allowance(activeWalletAddress, marketAddress)) as bigint;
       if (allowance < amount) {
+        onStatus?.("Unlocking USDC...");
         const approval = await usdc.approve(marketAddress, amount);
         await approval.wait();
       }
+      onStatus?.("Submitting buy order...");
       const market = new Contract(marketAddress, SIFTLE_MARKET_ABI, mockWallet);
       const tx = await market.buy(side === "yes", amount);
+      onStatus?.("Confirming trade on-chain...");
       await tx.wait();
       return tx.hash as string;
     } else {
+      onStatus?.("Submitting sell order...");
       const market = new Contract(marketAddress, SIFTLE_MARKET_ABI, mockWallet);
       const tx = await market.sell(side === "yes", amount);
+      onStatus?.("Confirming trade on-chain...");
       await tx.wait();
       return tx.hash as string;
     }
@@ -670,6 +677,7 @@ export const executeArcMarketOrder = async (
 
   // Real Circle transaction execution
   if (mode === "buy") {
+    onStatus?.("Checking USDC allowance...");
     // Check allowance
     const allowanceSelector = "0xdd62ed3e";
     const encodedOwner = activeWalletAddress.toLowerCase().replace(/^0x/, "").padStart(64, "0");
@@ -683,6 +691,7 @@ export const executeArcMarketOrder = async (
     const allowance = BigInt(allowanceHex || "0x0");
 
     if (allowance < amount) {
+      onStatus?.("Unlocking USDC (Awaiting PIN)...");
       const appRes = await fetch("/api/circle/tx/contract-call", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -699,9 +708,11 @@ export const executeArcMarketOrder = async (
 
       const challengeId = appData.challengeId;
       await runCircleChallenge(challengeId);
+      onStatus?.("Confirming USDC unlock on-chain...");
       await waitForCircleTx(appData.id || challengeId);
     }
 
+    onStatus?.(`Submitting buy order (Awaiting PIN)...`);
     const buyRes = await fetch("/api/circle/tx/contract-call", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -718,9 +729,11 @@ export const executeArcMarketOrder = async (
 
     const buyChallengeId = buyData.challengeId;
     await runCircleChallenge(buyChallengeId);
+    onStatus?.("Confirming trade on-chain...");
     const txHash = await waitForCircleTx(buyData.id || buyChallengeId);
     return txHash;
   } else {
+    onStatus?.(`Submitting sell order (Awaiting PIN)...`);
     const sellRes = await fetch("/api/circle/tx/contract-call", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -737,6 +750,7 @@ export const executeArcMarketOrder = async (
 
     const sellChallengeId = sellData.challengeId;
     await runCircleChallenge(sellChallengeId);
+    onStatus?.("Confirming trade on-chain...");
     const txHash = await waitForCircleTx(sellData.id || sellChallengeId);
     return txHash;
   }

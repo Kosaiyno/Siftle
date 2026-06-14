@@ -2461,10 +2461,24 @@ const summarizeLocallyTight = (article) =>
 const looksLikeBadSummary = (summary = "") =>
   /(\*\*?\s*critique|attempt\s*\d|prompt says|let'?s try|tighter version|word count|violat(?:e|es)|output only|valid json|the model|the prompt)/i.test(summary);
 
-const limitSummaryWords = (summary = "", maxWords = 120) => {
+const limitSummaryWords = (summary = "", maxWords = 140) => {
   const words = summary.split(/\s+/).filter(Boolean);
   if (words.length <= maxWords) return summary;
-  return `${words.slice(0, maxWords).join(" ").replace(/[,:;]+$/, "")}.`;
+
+  const subWords = words.slice(0, maxWords);
+  const subText = subWords.join(" ");
+
+  const lastSentenceEnd = Math.max(
+    subText.lastIndexOf("."),
+    subText.lastIndexOf("?"),
+    subText.lastIndexOf("!")
+  );
+
+  if (lastSentenceEnd > subText.length * 0.45) {
+    return subText.slice(0, lastSentenceEnd + 1).trim();
+  }
+
+  return `${subText.replace(/[,:;.'"!\?\s]+$/, "")}...`;
 };
 
 const cleanSummaryText = (value = "") => {
