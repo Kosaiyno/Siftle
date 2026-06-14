@@ -4059,6 +4059,7 @@ const callCircleApi = async (path, method, body, userToken = null) => {
   if (!apiKey) {
     throw new Error("CIRCLE_API_KEY is not configured in environment variables.");
   }
+  apiKey = apiKey.trim().replace(/^["']|["']$/g, "");
   if (apiKey && !apiKey.startsWith("TEST_API_KEY:") && !apiKey.startsWith("LIVE_API_KEY:")) {
     apiKey = `TEST_API_KEY:${apiKey}`;
   }
@@ -4123,6 +4124,7 @@ const server = createServer(async (request, response) => {
             port: Number(process.env.SMTP_PORT || 587),
             secure: Number(process.env.SMTP_PORT) === 465,
             auth: { user: smtpUser, pass: smtpPass },
+            family: 4, // Force IPv4 to prevent ENETUNREACH on IPv6 resolution
             connectionTimeout: 10000, // 10 seconds
             greetingTimeout: 10000,   // 10 seconds
             socketTimeout: 15000      // 15 seconds
