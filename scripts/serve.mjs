@@ -4122,15 +4122,30 @@ const server = createServer(async (request, response) => {
       let emailSent = false;
       if (smtpHost && smtpUser && smtpPass) {
         try {
+          // Pre-resolve hostname to IPv4 to avoid Render IPv6 ENETUNREACH errors
+          let resolvedHost = smtpHost;
+          try {
+            const { resolve4 } = await import("node:dns/promises");
+            const addresses = await resolve4(smtpHost);
+            if (addresses && addresses.length > 0) {
+              resolvedHost = addresses[0];
+              console.log(`SMTP: Resolved ${smtpHost} -> ${resolvedHost} (IPv4)`);
+            }
+          } catch (dnsErr) {
+            console.warn(`SMTP DNS resolve4 failed for ${smtpHost}, using hostname directly: ${dnsErr.message}`);
+          }
+
+          const smtpPort = Number(process.env.SMTP_PORT || 587);
           const transporter = nodemailer.createTransport({
-            host: smtpHost,
-            port: Number(process.env.SMTP_PORT || 587),
-            secure: Number(process.env.SMTP_PORT) === 465,
+            host: resolvedHost,
+            port: smtpPort,
+            secure: smtpPort === 465,
             auth: { user: smtpUser, pass: smtpPass },
-            family: 4, // Force IPv4 to prevent ENETUNREACH on IPv6 resolution
-            connectionTimeout: 10000, // 10 seconds
-            greetingTimeout: 10000,   // 10 seconds
-            socketTimeout: 15000      // 15 seconds
+            family: 4,
+            tls: { servername: smtpHost }, // Required for TLS when connecting via IP
+            connectionTimeout: 10000,
+            greetingTimeout: 10000,
+            socketTimeout: 15000
           });
 
           const formattedOtp = otp.slice(0, 3) + " " + otp.slice(3);
