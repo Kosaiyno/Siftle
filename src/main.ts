@@ -10,7 +10,8 @@ import {
   readArcMarketSnapshot,
   readArcUsdcBalance,
   shortenAddress,
-  subscribeArcWallet
+  subscribeArcWallet,
+  disconnectArcWallet
 } from "./arc.js";
 import type { ArcMarketPosition, ArcMarketSnapshot } from "./arc.js";
 
@@ -517,13 +518,11 @@ const renderWalletState = (): void => {
     const label = walletButton.querySelector<HTMLElement>(".wallet-button-label");
     walletButton.classList.toggle("connected", Boolean(state.walletAddress));
     walletButton.disabled = state.walletConnecting;
-    walletButton.setAttribute("aria-label", state.walletAddress ? `Wallet ${shortenAddress(state.walletAddress)}` : "Connect wallet");
-    if (label) label.textContent = state.walletConnecting ? "Connecting" : state.walletAddress ? "Wallet" : "Connect wallet";
+    walletButton.setAttribute("aria-label", state.walletAddress ? `Wallet ${shortenAddress(state.walletAddress)}` : "Sign in");
+    if (label) label.textContent = state.walletConnecting ? "Signing in..." : state.walletAddress ? "Wallet" : "Sign in";
     walletButton.title = state.walletAddress
       ? `${state.walletBalance ?? "0"} Arc Testnet USDC - ${shortenAddress(state.walletAddress)}`
-      : isWalletConnectConfigured()
-        ? "Connect wallet"
-        : "WalletConnect setup needed";
+      : "Sign in";
   }
 };
 
@@ -540,6 +539,8 @@ const connectWallet = async (): Promise<void> => {
       state.walletBalance = await readArcUsdcBalance(account);
       await loadPortfolioPositions();
       showActionToast("Connected to Arc Testnet");
+      window.location.hash = "#portfolio";
+      syncStoryFromHash();
     }
   } catch (error) {
     showActionToast(error instanceof Error ? error.message : "Wallet connection failed");
@@ -595,7 +596,7 @@ const getStoryTimeLabel = (story: NewsStory): string =>
 const looksLikeBadSummary = (summary: string): boolean =>
   /(\*\*?\s*critique|attempt\s*\d|prompt says|let'?s try|tighter version|word count|violat(?:e|es)|output only|valid json|the model|the prompt)/i.test(summary);
 
-const limitSummaryWords = (summary: string, maxWords = 62): string => {
+const limitSummaryWords = (summary: string, maxWords = 120): string => {
   const words = summary.split(/\s+/).filter(Boolean);
   if (words.length <= maxWords) return summary;
   return `${words.slice(0, maxWords).join(" ").replace(/[,:;]+$/, "")}.`;
@@ -634,7 +635,7 @@ const cleanSummaryText = (value: string): string => {
     .replace(/&quot;/g, "\"")
     .replace(/^["'{\s]+/, "")
     .replace(/["'}\s]+$/, "")
-    .replace(/^summary\s*:\s*/i, "")
+    .replace(/^summary["'\s]*:[\s"']*/i, "")
     .replace(/\s+/g, " ")
     .trim();
 
@@ -747,7 +748,7 @@ const loadStoryThread = async (story: NewsStory): Promise<void> => {
   }
 };
 
-const syncStoryFromHash = (): void => {
+function syncStoryFromHash(): void {
   const marketMatch = window.location.hash.match(/^#market-(.+)$/);
   if (window.location.hash === "#markets" || marketMatch) {
     state.activeSurface = "markets";
@@ -1380,10 +1381,12 @@ const drawShareCard = async (story: NewsStory, includeRemoteImage = true): Promi
         ? "#e8eef6"
         : story.category === "Anime"
           ? "#efe7ff"
-          : "#eee7ff";
+          : story.category === "Gaming"
+            ? "#ffebd9"
+            : "#eee7ff";
   drawRoundRect(context, 110, chipY, 118, 42, 21);
   context.fill();
-  context.fillStyle = story.category === "Sports" ? "#11a98d" : story.category === "Tech" ? "#3f5f86" : "#6f3cff";
+  context.fillStyle = story.category === "Sports" ? "#11a98d" : story.category === "Tech" ? "#3f5f86" : story.category === "Gaming" ? "#d95c14" : "#6f3cff";
   context.font = "800 22px Inter, Arial, sans-serif";
   context.fillText(story.category, 132, chipY + 28);
 
@@ -1836,10 +1839,22 @@ const renderPortfolio = (): void => {
       <div class="portfolio-wallet-state">
         <div>
           <span>Available balance</span>
-          <strong>${state.walletAddress ? `${state.walletBalance ?? "0"} USDC` : "Connect wallet"}</strong>
-          <small>${state.walletAddress ? shortenAddress(state.walletAddress) : "WalletConnect secures your market account."}</small>
+          <strong>${state.walletAddress ? `${state.walletBalance ?? "0"} USDC` : "Sign in"}</strong>
+          ${state.walletAddress ? `
+            <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
+              <small style="color: #748099; font-family: monospace; font-size: 0.78rem;">${shortenAddress(state.walletAddress)}</small>
+              <button type="button" class="copy-address-btn" data-address="${state.walletAddress}" title="Copy Address">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                Copy
+              </button>
+              <a href="https://faucet.circle.com/" target="_blank" rel="noreferrer" class="faucet-link" title="Get free testnet USDC">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                Get Faucet USDC
+              </a>
+            </div>
+          ` : `<small>Sign in to see your balance and positions.</small>`}
         </div>
-        <button type="button" data-connect-wallet ${state.walletConnecting ? "disabled" : ""}>${state.walletConnecting ? "Connecting" : state.walletAddress ? "Manage wallet" : "Connect wallet"}</button>
+        <button type="button" data-connect-wallet ${state.walletConnecting ? "disabled" : ""}>${state.walletConnecting ? "Signing in..." : state.walletAddress ? "Disconnect wallet" : "Sign in"}</button>
       </div>
       <div class="portfolio-section-tabs">
         <span>Open ${openPositions.length}</span>
@@ -1932,11 +1947,33 @@ topPortfolioButton?.addEventListener("click", () => {
   render();
 });
 
-walletButton?.addEventListener("click", () => void connectWallet());
+walletButton?.addEventListener("click", () => {
+  if (state.walletAddress) {
+    window.location.hash = "#portfolio";
+    syncStoryFromHash();
+  } else {
+    void connectWallet();
+  }
+});
 
 document.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
-  if (target.closest("[data-connect-wallet]")) void connectWallet();
+  const copyBtn = target.closest(".copy-address-btn");
+  if (copyBtn) {
+    const address = copyBtn.getAttribute("data-address");
+    if (address) {
+      void navigator.clipboard.writeText(address).then(() => {
+        showActionToast("Wallet address copied!");
+      });
+    }
+  }
+  if (target.closest("[data-connect-wallet]")) {
+    if (state.walletAddress) {
+      disconnectArcWallet();
+    } else {
+      void connectWallet();
+    }
+  }
 });
 
 bottomNavButtons.forEach((button) => {
@@ -2109,6 +2146,7 @@ storyDetail?.addEventListener("focusout", (event) => {
 });
 
 window.addEventListener("popstate", syncStoryFromHash);
+window.addEventListener("hashchange", syncStoryFromHash);
 
 menuButton?.addEventListener("click", () => {
   if (!menuPanel || !menuButton) return;
@@ -2202,5 +2240,7 @@ subscribeArcWallet((address) => {
       if (state.activeSurface === "portfolio") render();
     });
     void loadPortfolioPositions();
+  } else {
+    if (state.activeSurface === "portfolio") render();
   }
 });

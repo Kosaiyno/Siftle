@@ -1,4 +1,4 @@
-const categories = ["All", "Crypto", "Sports", "Anime", "Tech"];
+const categories = ["All", "Crypto", "Sports", "Anime", "Tech", "Gaming"];
 
 export const isDevelopmentFallbackStory = (story) => !story?.sourceUrl || /example\.com/i.test(story.sourceUrl);
 

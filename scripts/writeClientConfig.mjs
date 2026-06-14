@@ -16,6 +16,7 @@ const localEnv = existsSync(join(root, ".env"))
 const publicValue = (name) => process.env[name] || localEnv[name] || "";
 const apiBase = (publicValue("SIFTLE_API_BASE") || publicValue("PUBLIC_API_BASE_URL")).replace(/\/$/, "");
 const reownProjectId = publicValue("REOWN_PROJECT_ID") || publicValue("WALLETCONNECT_PROJECT_ID");
+const circleAppId = publicValue("CIRCLE_APP_ID");
 const arcUsdcAddress = publicValue("ARC_TESTNET_USDC_ADDRESS");
 const marketAddresses = {
   "new-glenn-2026": publicValue("SIFTLE_MARKET_NEW_GLENN_ADDRESS"),
@@ -33,6 +34,7 @@ writeFileSync(
   [
     `window.SIFTLE_API_BASE = ${JSON.stringify(apiBase)};`,
     `window.REOWN_PROJECT_ID = ${JSON.stringify(reownProjectId)};`,
+    `window.CIRCLE_APP_ID = ${JSON.stringify(circleAppId)};`,
     `window.ARC_TESTNET_USDC_ADDRESS = ${JSON.stringify(arcUsdcAddress)};`,
     `window.SIFTLE_MARKET_ADDRESSES = ${JSON.stringify(marketAddresses)};`,
     ""

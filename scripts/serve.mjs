@@ -1,7 +1,8 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
+import nodemailer from "nodemailer";
 import { createZGComputeNetworkReadOnlyBroker } from "@0gfoundation/0g-compute-ts-sdk";
 import {
   downloadShelbySnapshot,
@@ -24,7 +25,7 @@ const threadReviewTimeoutMs = Number(process.env.THREAD_REVIEW_TIMEOUT_MS ?? 900
 const appTimeZone = process.env.APP_TIME_ZONE || "Africa/Lagos";
 const allowedOrigin = process.env.ALLOWED_ORIGIN || process.env.ALLOWED_ORIGINS || "*";
 const ogUsageMode = process.env.OG_USAGE_MODE || "conserve";
-const shouldAutoSummarizeWith0G = ogUsageMode === "full";
+const shouldAutoSummarizeWith0G = false;
 const threadReviewBudgetPerRefresh = Number(process.env.THREAD_REVIEW_BUDGET_PER_REFRESH ?? 12);
 const threadPrepConcurrency = Number(process.env.THREAD_PREP_CONCURRENCY ?? 1);
 const threadReviewCandidateLimit = Number(process.env.THREAD_REVIEW_CANDIDATE_LIMIT ?? 5);
@@ -68,7 +69,7 @@ const mimeTypes = new Map([
   [".webp", "image/webp"]
 ]);
 
-const categories = ["All", "Crypto", "Sports", "Anime", "Tech"];
+const categories = ["All", "Crypto", "Sports", "Anime", "Tech", "Gaming"];
 const sourceCategories = categories.filter((category) => category !== "All");
 const archiveDir = join(root, ".siftle", "archive");
 const publishedDir = join(root, ".siftle", "published");
@@ -96,11 +97,12 @@ const getAppDate = (value = new Date()) => {
 const getTodayKey = () => getAppDate() ?? new Date().toISOString().slice(0, 10);
 
 const categoryQueries = {
-  All: "crypto football NBA anime technology company platform startup AI trending",
+  All: "crypto football NBA anime technology company platform startup AI trending GTA 6 Gaming Battlefield PlayStation Xbox Nintendo console Steam",
   Crypto: "crypto bitcoin ethereum blockchain DeFi stablecoin",
   Sports: "football soccer NBA Champions League Premier League transfers",
   Anime: "anime manga Crunchyroll trailer adaptation studio",
-  Tech: "technology company platform product launch AI startup cybersecurity cloud"
+  Tech: "technology company platform product launch AI startup cybersecurity cloud",
+  Gaming: "GTA 6 GTA VI Battlefield PlayStation Xbox Nintendo gaming console RPG steam release"
 };
 
 const categoryMap = {
@@ -149,7 +151,18 @@ const categoryMap = {
   cloud: "Tech",
   cybersecurity: "Tech",
   startup: "Tech",
-  startups: "Tech"
+  startups: "Tech",
+  gta: "Gaming",
+  battlefield: "Gaming",
+  playstation: "Gaming",
+  xbox: "Gaming",
+  nintendo: "Gaming",
+  gaming: "Gaming",
+  console: "Gaming",
+  rpg: "Gaming",
+  steam: "Gaming",
+  gamer: "Gaming",
+  "video games": "Gaming"
 };
 
 const categorySignals = {
@@ -228,6 +241,28 @@ const categorySignals = {
     "cybersecurity",
     "startup",
     "startups"
+  ],
+  Gaming: [
+    "gta",
+    "battlefield",
+    "playstation",
+    "xbox",
+    "nintendo",
+    "gaming",
+    "console",
+    "rpg",
+    "steam",
+    "gamer",
+    "video game",
+    "video games",
+    "multiplayer",
+    "ubisoft",
+    "ea sports",
+    "activision",
+    "bethesda",
+    "epic games",
+    "sony",
+    "microsoft"
   ]
 };
 
@@ -243,52 +278,77 @@ const matchesCategorySignal = (article, category) => {
   return signals.some((signal) => haystack.includes(signal));
 };
 
+const PAID_SOURCE_DOMAINS = [
+  "bloomberg.com",
+  "wsj.com",
+  "ft.com",
+  "nytimes.com",
+  "economist.com",
+  "wired.com",
+  "dlnews.com",
+  "technologyreview.com",
+  "hbr.org",
+  "medium.com",
+  "thetimes.co.uk",
+  "telegraph.co.uk",
+  "barrons.com",
+  "seekingalpha.com",
+  "theathletic.com",
+  "forbes.com",
+  "businessinsider.com",
+  "newyorker.com",
+  "adweek.com",
+  "nikkei.com"
+];
+
+const isPaidSource = (article) => {
+  const urlStr = article?.link || article?.sourceUrl || "";
+  if (!urlStr) return false;
+  try {
+    const url = new URL(urlStr);
+    const host = url.hostname.toLowerCase();
+    return PAID_SOURCE_DOMAINS.some((domain) => host === domain || host.endsWith("." + domain));
+  } catch {
+    const lowerUrl = urlStr.toLowerCase();
+    return PAID_SOURCE_DOMAINS.some((domain) => lowerUrl.includes(domain));
+  }
+};
+
 const rssFeeds = {
   Crypto: [
     "https://www.coindesk.com/arc/outboundfeeds/rss/",
     "https://cointelegraph.com/rss",
     "https://decrypt.co/feed",
-    "https://cryptoslate.com/feed/",
     "https://bitcoinmagazine.com/.rss/full/",
-    "https://www.dlnews.com/rss/",
-    "https://www.theblock.co/rss.xml",
-    "https://blockworks.com/feed",
-    "https://cryptopotato.com/feed/",
     "https://www.newsbtc.com/feed/",
-    "https://bitcoinist.com/feed/",
-    "https://www.coinspeaker.com/news/feed/"
+    "https://bitcoinist.com/feed/"
   ],
   Sports: [
-    "https://www.espn.com/espn/rss/soccer/news",
-    "https://www.espn.com/espn/rss/nba/news",
     "https://feeds.bbci.co.uk/sport/football/rss.xml",
     "https://www.theguardian.com/football/rss",
-    "https://www.uefa.com/rssfeed/news/rss.xml",
-    "https://www.skysports.com/rss/11095",
-    "https://www.nba.com/rss/nba_rss.xml"
+    "https://www.transfermarkt.co.uk/rss/news",
+    "https://www.hoopsrumors.com/feed/"
   ],
   Anime: [
-    "https://www.animenewsnetwork.com/all/rss.xml",
-    "https://www.animenewsnetwork.com/news/rss.xml",
-    "https://feeds.feedburner.com/crunchyroll/rss",
     "https://myanimelist.net/rss/news.xml",
     "https://animecorner.me/feed/",
-    "https://anitrendz.net/news/feed/",
-    "https://otakuusamagazine.com/feed/",
-    "https://randomc.net/feed/"
+    "https://www.animenewsnetwork.com/all/rss.xml"
   ],
   Tech: [
     "https://www.theverge.com/rss/index.xml",
     "https://techcrunch.com/feed/",
-    "https://www.wired.com/feed/rss",
     "https://www.engadget.com/rss.xml",
     "https://feeds.arstechnica.com/arstechnica/index",
     "https://www.zdnet.com/news/rss.xml",
     "https://www.infoq.com/feed/",
     "https://github.blog/feed/",
-    "https://venturebeat.com/feed/",
-    "https://www.technologyreview.com/feed/",
-    "https://feeds.bloomberg.com/technology/news.rss"
+    "https://venturebeat.com/feed/"
+  ],
+  Gaming: [
+    "https://www.videogameschronicle.com/category/news/feed/",
+    "https://www.gamesindustry.biz/feed/news",
+    "https://www.rockpapershotgun.com/feed",
+    "https://www.dualshockers.com/feed/video-games/"
   ]
 };
 
@@ -343,6 +403,19 @@ const mockStories = [
     readTime: "3 min read",
     postedAt: "42m",
     accent: "slate",
+    saved: false
+  },
+  {
+    id: 5,
+    headline: "Highly anticipated next-gen sandbox gameplay features detailed in leak",
+    category: "Gaming",
+    summary: "New reports outline advanced AI interactions, dynamic weather systems, and massive map scale in the upcoming open-world title.",
+    source: "VGC News",
+    sourceUrl: "https://example.com/sandbox-gameplay-leak",
+    imageUrl: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80",
+    readTime: "3 min read",
+    postedAt: "1h",
+    accent: "orange",
     saved: false
   }
 ];
@@ -925,6 +998,10 @@ const isStrictLocalThreadMatch = (story, candidate, score) => {
 
   if (story?.category === "Crypto") {
     return score >= 0.42 && (hasCryptoProductContext || (sharedPrimaryAnchors.length >= 1 && (sharedEntities.length >= 1 || sharedPhrase || headlineOverlap >= 2)));
+  }
+
+  if (story?.category === "Gaming") {
+    return score >= 0.52 && sharedEntities.length >= 1 && (sharedPhrase || headlineOverlap >= 1);
   }
 
   return score >= 0.56 && sharedEntities.length >= 1;
@@ -2173,6 +2250,11 @@ const fallbackImages = {
     "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1200&q=80",
     "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1200&q=80",
     "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80"
+  ],
+  Gaming: [
+    "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1200&q=80"
   ]
 };
 
@@ -2220,7 +2302,19 @@ const isFreshArticle = (article) => {
 
 const isArticleOnAppDate = (article, date) => {
   const articleDate = getAppDate(article.publishedAt);
-  return articleDate ? articleDate === date : true;
+  if (!articleDate) return true;
+  if (articleDate === date) return true;
+
+  try {
+    const today = new Date(date + "T00:00:00");
+    const yesterday = new Date(today.getTime() - 24 * 3600 * 1000);
+    const dayBefore = new Date(today.getTime() - 2 * 24 * 3600 * 1000);
+    const yesterdayKey = getAppDate(yesterday);
+    const dayBeforeKey = getAppDate(dayBefore);
+    return articleDate === yesterdayKey || articleDate === dayBeforeKey;
+  } catch {
+    return false;
+  }
 };
 
 const filterStoriesByAppDate = (stories = [], date) =>
@@ -2262,6 +2356,7 @@ const accentForCategory = (category) => {
   if (category === "Anime") return "violet";
   if (category === "Sports") return "blue";
   if (category === "Tech") return "slate";
+  if (category === "Gaming") return "orange";
   return "slate";
 };
 
@@ -2298,13 +2393,31 @@ const fetchRssFeed = async (url, fallbackCategory) => {
   if (!response.ok) throw new Error(`RSS ${url} returned ${response.status}`);
 
   const xml = await response.text();
-  const items = xml.match(/<item[\s\S]*?<\/item>/gi) ?? [];
+  const isAtom = xml.includes("<entry") || xml.includes("<feed");
+  const items = isAtom
+    ? (xml.match(/<entry[\s\S]*?<\/entry>/gi) ?? [])
+    : (xml.match(/<item[\s\S]*?<\/item>/gi) ?? []);
 
   return items.slice(0, Math.max(1, rssItemsPerFeed)).map((item) => {
     const headline = stripHtml(extractTag(item, "title"));
-    const summary = stripHtml(extractTag(item, "description") || extractTag(item, "content:encoded") || headline);
-    const link = stripHtml(extractTag(item, "link"));
-    const publishedAt = stripHtml(extractTag(item, "pubDate") || extractTag(item, "dc:date"));
+    const summary = isAtom
+      ? stripHtml(extractTag(item, "summary") || extractTag(item, "content") || headline)
+      : stripHtml(extractTag(item, "description") || extractTag(item, "content:encoded") || headline);
+    
+    let link = "";
+    if (isAtom) {
+      const hrefMatch = item.match(/<link[^>]+href=["']([^"']+)["']/i);
+      link = hrefMatch ? hrefMatch[1] : "";
+    } else {
+      link = stripHtml(extractTag(item, "link"));
+    }
+
+    const publishedAt = stripHtml(
+      extractTag(item, "pubDate") ||
+        extractTag(item, "dc:date") ||
+        extractTag(item, "published") ||
+        extractTag(item, "updated")
+    );
     const sourceHost = new URL(url).hostname.replace(/^www\./, "");
     const category = inferCategory({ headline, summary, category: fallbackCategory }, fallbackCategory);
 
@@ -2348,7 +2461,7 @@ const summarizeLocallyTight = (article) =>
 const looksLikeBadSummary = (summary = "") =>
   /(\*\*?\s*critique|attempt\s*\d|prompt says|let'?s try|tighter version|word count|violat(?:e|es)|output only|valid json|the model|the prompt)/i.test(summary);
 
-const limitSummaryWords = (summary = "", maxWords = 62) => {
+const limitSummaryWords = (summary = "", maxWords = 120) => {
   const words = summary.split(/\s+/).filter(Boolean);
   if (words.length <= maxWords) return summary;
   return `${words.slice(0, maxWords).join(" ").replace(/[,:;]+$/, "")}.`;
@@ -2380,7 +2493,7 @@ const cleanSummaryText = (value = "") => {
   summary = stripHtml(summary)
     .replace(/^["'{\s]+/, "")
     .replace(/["'}\s]+$/, "")
-    .replace(/^summary\s*:\s*/i, "")
+    .replace(/^summary["'\s]*:[\s"']*/i, "")
     .replace(/\s+/g, " ")
     .trim();
 
@@ -2676,6 +2789,36 @@ const recordZeroGFallback = (kind, error) => {
   else zeroGStatus.summary_fallback_count += 1;
 };
 
+const scrapeArticleText = async (url) => {
+  if (!url || /example\.com/i.test(url)) return "";
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      },
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!res.ok) return "";
+    const html = await res.text();
+    if (html.includes("Just a moment...") || html.includes("cf-challenge") || html.includes("Cloudflare")) {
+      return "";
+    }
+    const text = html
+      .replace(/<head[\s\S]*?<\/head>/gi, "")
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/<header[\s\S]*?<\/header>/gi, "")
+      .replace(/<footer[\s\S]*?<\/footer>/gi, "")
+      .replace(/<nav[\s\S]*?<\/nav>/gi, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    return text.slice(0, 8000);
+  } catch {
+    return "";
+  }
+};
+
 const summarizeWith0G = async (article, options = {}) => {
   const apiKey = process.env.ZERO_G_API_KEY || process.env.OG_COMPUTE_API_KEY;
   const model = process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "zai-org/GLM-5-FP8";
@@ -2690,7 +2833,7 @@ const summarizeWith0G = async (article, options = {}) => {
   if (!force && existsSync(cachePath)) {
     try {
       const cached = JSON.parse(readFileSync(cachePath, "utf8"));
-      if (cached.summary && cached.prompt_version === summaryPromptVersion) {
+      if (cached.summary && cached.prompt_version === summaryPromptVersion && cached.provider !== "local-fallback" && cached.provider !== "local-no-key") {
         return { summary: cleanSummaryText(cached.summary), provider: cached.provider ?? "cache", proof: cached.proof };
       }
     } catch {
@@ -2699,6 +2842,14 @@ const summarizeWith0G = async (article, options = {}) => {
   }
 
   try {
+    let articleText = article.summary || "";
+    if (article.sourceUrl && !/example\.com/i.test(article.sourceUrl)) {
+      const scraped = await scrapeArticleText(article.sourceUrl);
+      if (scraped && scraped.length > articleText.length) {
+        articleText = scraped;
+      }
+    }
+
     const service = await get0GService();
     const endpoint = get0GEndpoint(service.url);
     console.log("0G service resolved:", { provider: service.provider, endpoint });
@@ -2714,22 +2865,22 @@ const summarizeWith0G = async (article, options = {}) => {
         model,
         messages: [
           {
-                role: "system",
-                content:
-                  "You summarize news for Siftle. Return strict JSON with exactly one key: summary. Write one neutral paragraph in 35 to 65 words. Use only the supplied headline and description. Do not critique the prompt, mention attempts, explain your process, add outside facts, add predictions, or pad with generic context. If details are limited, write a shorter precise summary. Output ONLY valid JSON."
-              },
+            role: "system",
+            content:
+              "You summarize news for Siftle. Return strict JSON with exactly one key: summary. Write one detailed, rich paragraph in 70 to 120 words. Focus on the key news facts, figures, and dates. Use only the supplied headline and article text. Do not critique the prompt, explain your process, add outside facts, or pad with generic context. Output ONLY valid JSON."
+          },
           {
             role: "user",
             content: JSON.stringify({
               headline: article.headline,
-              description: article.summary,
+              articleText: articleText,
               source: article.source,
               category: article.category
             })
           }
         ],
-        temperature: 0.12,
-        max_tokens: 180
+        temperature: 0.15,
+        max_tokens: 600
       })
     });
 
@@ -2754,7 +2905,7 @@ const summarizeWith0G = async (article, options = {}) => {
     let summary = extractSummaryFromResponse(data);
 
     // Retry only when the model returns something unusably short, while staying grounded.
-    const minWords = 24;
+    const minWords = 70;
     const wordCount = summary.split(/\s+/).filter(Boolean).length;
     if (wordCount < minWords) {
       try {
@@ -2771,20 +2922,20 @@ const summarizeWith0G = async (article, options = {}) => {
               {
                 role: "system",
                 content:
-                  "You summarize news for Siftle. Return strict JSON with exactly one key: summary. Write one neutral paragraph in 35 to 65 words using only the supplied article fields. Never include critique, attempt labels, prompt commentary, markdown, or outside context. If details are limited, stay brief and precise. Output ONLY valid JSON."
+                  "You summarize news for Siftle. Return strict JSON with exactly one key: summary. Write one detailed, rich paragraph in 70 to 120 words using only the supplied article fields. Never include critique, attempt labels, prompt commentary, markdown, or outside context. If details are limited, stay brief and precise. Output ONLY valid JSON."
               },
               {
                 role: "user",
                 content: JSON.stringify({
                   headline: article.headline,
-                  description: article.summary,
+                  articleText: articleText,
                   source: article.source,
                   category: article.category
                 })
               }
             ],
             temperature: 0.08,
-            max_tokens: 180
+            max_tokens: 600
           })
         });
 
@@ -3690,6 +3841,7 @@ const generateSnapshot = async (category) => {
   const dedupedArticles = dedupeArticles(repairedArticles).filter(
     (article) =>
       isArticleOnAppDate(article, date) &&
+      !isPaidSource(article) &&
       (selectedCategory === "All" || matchesCategorySignal(article, selectedCategory)) &&
       (article.category !== "Sports" || isFootballOrNbaArticle(article)) &&
       (article.category !== "Tech" || isThreadFriendlyTechArticle(article))
@@ -3866,12 +4018,469 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
 void refreshPublishedFeeds("startup");
 setInterval(() => void refreshPublishedFeeds("scheduled"), Math.max(1, refreshIntervalMinutes) * 60 * 1000);
 
+const otpStore = new Map();
+
+const getCircleUserId = (email) => {
+  const hash = createHash("sha256").update(email.toLowerCase().trim()).digest("hex");
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
+};
+
+const callCircleApi = async (path, method, body, userToken = null) => {
+  const apiKey = process.env.CIRCLE_API_KEY;
+  if (!apiKey) {
+    throw new Error("CIRCLE_API_KEY is not configured in environment variables.");
+  }
+  const headers = {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${apiKey}`
+  };
+  if (userToken) {
+    headers["X-User-Token"] = userToken;
+  }
+  const circleApiUrl = process.env.CIRCLE_API_URL || "https://api-sandbox.circle.com";
+  const response = await fetch(`${circleApiUrl}${path}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined
+  });
+  
+  const data = await response.json();
+  if (!response.ok) {
+    const err = new Error(data.message || `Circle API error: ${response.status}`);
+    err.code = data.code;
+    throw err;
+  }
+  return data;
+};
+
 const server = createServer(async (request, response) => {
   const requestUrl = new URL(request.url ?? "/", `http://${request.headers.host}`);
 
   if (request.method === "OPTIONS") {
     response.writeHead(204, getCorsHeaders());
     response.end();
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/circle/auth/otp" && request.method === "POST") {
+    try {
+      const body = await readJsonBody(request);
+      const email = body.email;
+      if (!email || typeof email !== "string" || !email.includes("@")) {
+        sendJson(response, 400, { error: "Valid email address is required" });
+        return;
+      }
+      
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      otpStore.set(email.toLowerCase().trim(), {
+        otp,
+        expiresAt: Date.now() + 10 * 60 * 1000
+      });
+
+      // Send email via SMTP if configured
+      const smtpHost = process.env.SMTP_HOST;
+      const smtpUser = process.env.SMTP_USER;
+      const smtpPass = process.env.SMTP_PASS;
+      const smtpFrom = process.env.SMTP_FROM || "Siftle Auth <no-reply@siftle.xyz>";
+
+      let emailSent = false;
+      if (smtpHost && smtpUser && smtpPass) {
+        try {
+          const transporter = nodemailer.createTransport({
+            host: smtpHost,
+            port: Number(process.env.SMTP_PORT || 587),
+            secure: Number(process.env.SMTP_PORT) === 465,
+            auth: { user: smtpUser, pass: smtpPass }
+          });
+
+          const formattedOtp = otp.slice(0, 3) + " " + otp.slice(3);
+          const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Siftle Verification Code</title>
+              <style>
+                body {
+                  margin: 0;
+                  padding: 0;
+                  background-color: #0b0f19;
+                  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                  color: #f1f5f9;
+                }
+                .email-container {
+                  max-width: 480px;
+                  margin: 30px auto;
+                  background-color: #111827;
+                  border: 1px solid #1f2937;
+                  border-radius: 12px;
+                  overflow: hidden;
+                  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+                }
+                .header {
+                  padding: 32px 24px 24px;
+                  text-align: center;
+                  border-bottom: 1px solid #1f2937;
+                  background: linear-gradient(135deg, #1e1b4b 0%, #111827 100%);
+                }
+                .brand-name {
+                  font-size: 24px;
+                  font-weight: 800;
+                  color: #ffffff;
+                  letter-spacing: 2px;
+                }
+                .content {
+                  padding: 36px 24px;
+                  text-align: center;
+                }
+                .title {
+                  font-size: 20px;
+                  font-weight: 600;
+                  margin-bottom: 12px;
+                  color: #ffffff;
+                }
+                .subtitle {
+                  font-size: 14px;
+                  color: #94a3b8;
+                  margin-bottom: 28px;
+                  line-height: 1.5;
+                }
+                .code-container {
+                  background-color: rgba(99, 102, 241, 0.1);
+                  border: 1px solid rgba(99, 102, 241, 0.25);
+                  border-radius: 8px;
+                  padding: 18px 28px;
+                  display: inline-block;
+                  margin-bottom: 24px;
+                }
+                .code {
+                  font-family: 'Courier New', Courier, monospace;
+                  font-size: 36px;
+                  font-weight: 700;
+                  letter-spacing: 4px;
+                  color: #a5b4fc;
+                }
+                .expiry {
+                  font-size: 12px;
+                  color: #f87171;
+                  font-weight: 500;
+                  margin-bottom: 12px;
+                }
+                .footer {
+                  padding: 24px;
+                  background-color: #0d121f;
+                  border-top: 1px solid #1f2937;
+                  text-align: center;
+                  font-size: 12px;
+                  color: #64748b;
+                  line-height: 1.6;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="email-container" style="max-width: 480px; margin: 30px auto; background-color: #111827; border: 1px solid #1f2937; border-radius: 12px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                <div class="header" style="padding: 32px 24px 24px; text-align: center; border-bottom: 1px solid #1f2937; background: linear-gradient(135deg, #1e1b4b 0%, #111827 100%);">
+                  <div class="brand-name" style="font-size: 24px; font-weight: 800; color: #ffffff; letter-spacing: 2px;">SIFTLE</div>
+                </div>
+                <div class="content" style="padding: 36px 24px; text-align: center; color: #f1f5f9;">
+                  <div class="title" style="font-size: 20px; font-weight: 600; margin-bottom: 12px; color: #ffffff;">Verify Your Email</div>
+                  <p class="subtitle" style="font-size: 14px; color: #94a3b8; margin-bottom: 28px; line-height: 1.5; max-width: 380px; margin-left: auto; margin-right: auto;">Please enter the verification code below to authorize your session and sign in to Siftle.</p>
+                  
+                  <div class="code-container" style="background-color: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 8px; padding: 18px 28px; display: inline-block; margin-bottom: 24px;">
+                    <span class="code" style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 700; letter-spacing: 4px; color: #a5b4fc;">${formattedOtp}</span>
+                  </div>
+                  
+                  <div class="expiry" style="font-size: 12px; color: #f87171; font-weight: 500;">Expires in 10 minutes</div>
+                </div>
+                <div class="footer" style="padding: 24px; background-color: #0d121f; border-top: 1px solid #1f2937; text-align: center; font-size: 11px; color: #64748b; line-height: 1.6;">
+                  <p style="margin: 0 0 8px 0;">This code was requested for a sign-in attempt on Siftle. If you did not request this code, you can safely ignore this email.</p>
+                  <p style="margin: 0;">&copy; 2026 Siftle. All rights reserved.</p>
+                </div>
+              </div>
+            </body>
+            </html>
+          `;
+
+          const randomId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+          const customMessageId = `<${randomId}@gmail.com>`;
+
+          await transporter.sendMail({
+            messageId: customMessageId,
+            from: `Siftle <${smtpUser}>`,
+            to: email,
+            replyTo: smtpUser,
+            subject: `Siftle Security Code: ${otp}`,
+            text: `Verify Your Email\n\nPlease enter the verification code below to authorize your session and sign in to Siftle.\n\nVerification Code: ${formattedOtp}\n\nThis code will expire in 10 minutes.\n\nThis code was requested for a sign-in attempt on Siftle. If you did not request this code, you can safely ignore this email.`,
+            html: htmlContent,
+            headers: {
+              "X-Priority": "1",
+              "X-MSMail-Priority": "High",
+              "Importance": "high",
+              "X-Mailer": "Siftle Mailer",
+              "X-Auto-Response-Suppress": "All",
+              "Feedback-ID": "siftle:otp"
+            }
+          });
+          emailSent = true;
+          console.log(`OTP sent via SMTP to ${email}`);
+        } catch (mailErr) {
+          console.warn(`Failed to send SMTP email: ${mailErr.message}`);
+        }
+      }
+
+      if (!emailSent) {
+        console.log(`\n==========================================\n[SMTP NOT CONFIG] OTP for ${email}: ${otp}\n==========================================\n`);
+      }
+
+      const isMock = !process.env.CIRCLE_API_KEY;
+      if (isMock) {
+        sendJson(response, 200, { mock: true, message: emailSent ? "OTP sent to your email" : "OTP logged to terminal console (mock mode)" });
+        return;
+      }
+
+      // Real Circle Auth
+      try {
+        const userId = `siftle_user_${getCircleUserId(email)}`;
+        // Register user
+        try {
+          await callCircleApi("/v1/w3s/users", "POST", { userId });
+        } catch (err) {
+          console.log(`User registration attempt for ${userId}: ${err.message}`);
+        }
+
+        sendJson(response, 200, { mock: false, message: "OTP sent" });
+      } catch (err) {
+        console.error("Circle user registration error:", err);
+        sendJson(response, 500, { error: `Failed to initiate Circle registration: ${err.message}` });
+      }
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/circle/auth/verify" && request.method === "POST") {
+    try {
+      const body = await readJsonBody(request);
+      const email = body.email;
+      const otp = body.otp;
+
+      if (!email || !otp) {
+        sendJson(response, 400, { error: "Email and OTP code are required" });
+        return;
+      }
+
+      const cleanEmail = email.toLowerCase().trim();
+      const stored = otpStore.get(cleanEmail);
+      if (!stored || stored.otp !== otp || Date.now() > stored.expiresAt) {
+        sendJson(response, 400, { error: "Invalid or expired verification code" });
+        return;
+      }
+
+      // Valid OTP, consume it
+      otpStore.delete(cleanEmail);
+
+      const isMock = !process.env.CIRCLE_API_KEY;
+      if (isMock) {
+        const userToken = `mock-token-${cleanEmail}`;
+        const encryptionKey = "mock-encryption-key";
+        const walletAddress = "0x12793cA4f495f5255C423128b1ED9Cd71B08023D";
+        sendJson(response, 200, {
+          mock: true,
+          userToken,
+          encryptionKey,
+          walletAddress,
+          initialized: true
+        });
+        return;
+      }
+
+      // Real Circle Auth
+      try {
+        const userId = `siftle_user_${getCircleUserId(cleanEmail)}`;
+        // 1. Get user session token
+        const tokenRes = await callCircleApi("/v1/w3s/users/token", "POST", { userId });
+        const userToken = tokenRes.data?.userToken || tokenRes.userToken;
+        const encryptionKey = tokenRes.data?.encryptionKey || tokenRes.encryptionKey;
+
+        if (!userToken || !encryptionKey) {
+          throw new Error("Failed to retrieve user token or encryption key from Circle");
+        }
+
+        // 2. List wallets to check if ARC-TESTNET wallet already exists
+        const walletsRes = await callCircleApi("/v1/w3s/wallets", "GET", null, userToken);
+        const wallets = walletsRes.data?.wallets || walletsRes.wallets || [];
+        const arcWallet = wallets.find(w => w.blockchain === "ARC-TESTNET");
+
+        if (arcWallet) {
+          sendJson(response, 200, {
+            mock: false,
+            userToken,
+            encryptionKey,
+            walletId: arcWallet.id,
+            walletAddress: arcWallet.address,
+            initialized: true
+          });
+          return;
+        }
+
+        // 3. No ARC-TESTNET wallet found. Initialize user/wallet.
+        const idempotencyKey = randomUUID();
+        try {
+          const initRes = await callCircleApi("/v1/w3s/user/initialize", "POST", {
+            idempotencyKey,
+            blockchains: ["ARC-TESTNET"],
+            accountType: "EOA"
+          }, userToken);
+          const challengeId = initRes.data?.challengeId || initRes.challengeId;
+          sendJson(response, 200, {
+            mock: false,
+            userToken,
+            encryptionKey,
+            challengeId,
+            initialized: false
+          });
+        } catch (err) {
+          if (err.code === 155106) {
+            const walletIdempotencyKey = randomUUID();
+            const walletRes = await callCircleApi("/v1/w3s/wallets", "POST", {
+              idempotencyKey: walletIdempotencyKey,
+              blockchains: ["ARC-TESTNET"],
+              accountType: "EOA"
+            }, userToken);
+            const challengeId = walletRes.data?.challengeId || walletRes.challengeId;
+            sendJson(response, 200, {
+              mock: false,
+              userToken,
+              encryptionKey,
+              challengeId,
+              initialized: false
+            });
+          } else {
+            throw err;
+          }
+        }
+      } catch (err) {
+        console.error("Circle verify error:", err);
+        sendJson(response, 500, { error: `Failed to complete verification: ${err.message}` });
+      }
+      return;
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/circle/tx/contract-call" && request.method === "POST") {
+    try {
+      const body = await readJsonBody(request);
+      const { userToken, contractAddress, abiFunctionSignature, abiParameters, walletId } = body;
+
+      if (!userToken || !contractAddress || !abiFunctionSignature || !abiParameters) {
+        sendJson(response, 400, { error: "Missing required transaction parameters" });
+        return;
+      }
+
+      const isMock = !process.env.CIRCLE_API_KEY;
+      if (isMock) {
+        sendJson(response, 200, { mock: true });
+        return;
+      }
+
+      // Real Circle transaction signing challenge
+      const idempotencyKey = randomUUID();
+      try {
+        const txRes = await callCircleApi("/v1/w3s/user/transactions/contractExecution", "POST", {
+          idempotencyKey,
+          walletId,
+          contractAddress,
+          abiFunctionSignature,
+          abiParameters,
+          feeLevel: "MEDIUM"
+        }, userToken);
+        const challengeId = txRes.data?.challengeId || txRes.challengeId;
+        const txId = txRes.data?.id || txRes.id;
+        sendJson(response, 200, { mock: false, challengeId, id: txId });
+      } catch (err) {
+        console.error("Circle contractExecution challenge error:", err);
+        sendJson(response, 500, { error: `Failed to create transaction challenge: ${err.message}` });
+      }
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/circle/tx/status" && request.method === "GET") {
+    try {
+      const id = requestUrl.searchParams.get("id");
+      if (!id) {
+        sendJson(response, 400, { error: "Transaction ID is required" });
+        return;
+      }
+
+      const isMock = !process.env.CIRCLE_API_KEY;
+      if (isMock) {
+        sendJson(response, 200, {
+          mock: true,
+          state: "CONFIRMED",
+          txHash: "0x" + createHash("sha256").update(id).digest("hex")
+        });
+        return;
+      }
+
+      try {
+        const txRes = await callCircleApi(`/v1/w3s/transactions/${id}`, "GET");
+        const tx = txRes.data?.transaction || txRes.transaction || txRes.data || {};
+        sendJson(response, 200, {
+          mock: false,
+          state: tx.state || tx.status,
+          txHash: tx.txHash
+        });
+      } catch (err) {
+        console.error("Circle get transaction status error:", err);
+        sendJson(response, 500, { error: `Failed to fetch transaction status: ${err.message}` });
+      }
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/circle/wallet" && request.method === "POST") {
+    try {
+      const body = await readJsonBody(request);
+      const { userToken } = body;
+      if (!userToken) {
+        sendJson(response, 400, { error: "User token is required" });
+        return;
+      }
+
+      const isMock = !process.env.CIRCLE_API_KEY;
+      if (isMock) {
+        sendJson(response, 200, { walletAddress: "0x12793cA4f495f5255C423128b1ED9Cd71B08023D" });
+        return;
+      }
+
+      try {
+        const walletsRes = await callCircleApi("/v1/w3s/wallets", "GET", null, userToken);
+        const wallets = walletsRes.data?.wallets || walletsRes.wallets || [];
+        const arcWallet = wallets.find(w => w.blockchain === "ARC-TESTNET");
+        if (arcWallet) {
+          sendJson(response, 200, {
+            walletId: arcWallet.id,
+            walletAddress: arcWallet.address
+          });
+        } else {
+          sendJson(response, 404, { error: "Wallet not found yet" });
+        }
+      } catch (err) {
+        sendJson(response, 500, { error: err.message });
+      }
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
     return;
   }
 

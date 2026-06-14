@@ -1,20 +1,15 @@
-import { createAppKit } from "@reown/appkit";
-import { EthersAdapter } from "@reown/appkit-adapter-ethers";
-import { defineChain } from "@reown/appkit/networks";
-import { BrowserProvider, Contract, JsonRpcProvider, formatUnits, parseUnits } from "ethers";
-import type { Eip1193Provider } from "ethers";
+import { W3SSdk } from "@circle-fin/w3s-pw-web-sdk";
+import { Contract, JsonRpcProvider, formatUnits, parseUnits, Wallet } from "ethers";
 
 export const ARC_TESTNET_CHAIN_ID = 5042002;
-const ARC_TESTNET_CHAIN_ID_HEX = "0x4cef52";
 export const ARC_TESTNET_USDC =
-  (window as Window & { ARC_TESTNET_USDC_ADDRESS?: string }).ARC_TESTNET_USDC_ADDRESS ||
+  (window as any).ARC_TESTNET_USDC_ADDRESS ||
   "0x3600000000000000000000000000000000000000";
 export const ARC_TESTNET_EXPLORER = "https://testnet.arcscan.app";
 export const ARC_TESTNET_FAUCET = "https://faucet.circle.com/";
 export const ARC_TESTNET_RPC_URL = "https://rpc.testnet.arc.network";
 
 const BALANCE_OF_SELECTOR = "0x70a08231";
-const projectId = (window as Window & { REOWN_PROJECT_ID?: string }).REOWN_PROJECT_ID || "";
 const publicProvider = new JsonRpcProvider(ARC_TESTNET_RPC_URL, ARC_TESTNET_CHAIN_ID);
 
 const ERC20_ABI = [
@@ -48,54 +43,6 @@ export interface ArcMarketPosition {
   noSharesUsdc: number;
 }
 
-interface InjectedWalletProvider extends Eip1193Provider {
-  isRabby?: boolean;
-  isMetaMask?: boolean;
-  selectedAddress?: string;
-  on?: (event: string, callback: (...args: unknown[]) => void) => void;
-  removeListener?: (event: string, callback: (...args: unknown[]) => void) => void;
-}
-
-export const arcTestnet = defineChain({
-  id: ARC_TESTNET_CHAIN_ID,
-  caipNetworkId: `eip155:${ARC_TESTNET_CHAIN_ID}`,
-  chainNamespace: "eip155",
-  name: "Arc Testnet",
-  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
-  rpcUrls: {
-    default: { http: [ARC_TESTNET_RPC_URL] }
-  },
-  blockExplorers: {
-    default: { name: "Arcscan", url: ARC_TESTNET_EXPLORER }
-  },
-  testnet: true
-});
-
-const appKit = projectId
-  ? createAppKit({
-      adapters: [new EthersAdapter()],
-      networks: [arcTestnet],
-      defaultNetwork: arcTestnet,
-      projectId,
-      metadata: {
-        name: "Siftle",
-        description: "News threads powering transparent prediction markets",
-        url: window.location.origin,
-        icons: [`${window.location.origin}/assets/Siftle_logo-removebg-preview.png`]
-      },
-      features: {
-        analytics: false,
-        email: false,
-        socials: false
-      },
-      enableInjected: true,
-      enableEIP6963: true,
-      enableCoinbase: true,
-      enableBaseAccount: true,
-      enableReconnect: false
-    })
-  : null;
-
 const requestRpc = async <T>(method: string, params: unknown[]): Promise<T> => {
   const response = await fetch(ARC_TESTNET_RPC_URL, {
     method: "POST",
@@ -110,165 +57,506 @@ const requestRpc = async <T>(method: string, params: unknown[]): Promise<T> => {
   return payload.result;
 };
 
-export const isWalletConnectConfigured = (): boolean => Boolean(appKit);
+// Wallet connection state
+let mockWallet: Wallet | null = null;
+let activeUserToken: string | null = null;
+let activeEncryptionKey: string | null = null;
+let activeWalletAddress: string | null = null;
+let activeWalletId: string | null = null;
+let activeEmail: string | null = null;
+let isMockSession = false;
 
-let walletConnectPromise: Promise<string> | null = null;
-let injectedWalletProvider: InjectedWalletProvider | null = null;
-let injectedWalletAddress: string | null = null;
+const walletListeners = new Set<(address: string | null) => void>();
 
-const getInjectedWalletProvider = (): InjectedWalletProvider | null => {
-  const ethereum = window.ethereum as (InjectedWalletProvider & { providers?: InjectedWalletProvider[] }) | undefined;
-  if (!ethereum) return null;
-  const providers = ethereum.providers;
-  return providers?.find((provider) => provider.isRabby) || providers?.find((provider) => provider.isMetaMask) || ethereum;
-};
-
-const getInjectedAccounts = async (provider: InjectedWalletProvider): Promise<string[]> => {
-  const accounts = await provider.request({ method: "eth_accounts" });
-  return Array.isArray(accounts) ? accounts.map(String) : [];
-};
-
-const switchInjectedWalletToArc = async (provider: InjectedWalletProvider): Promise<void> => {
-  try {
-    await provider.request({
-      method: "wallet_switchEthereumChain",
-      params: [{ chainId: ARC_TESTNET_CHAIN_ID_HEX }]
-    });
-  } catch (error) {
-    const code = (error as { code?: number | string }).code;
-    if (code !== 4902 && code !== "4902") throw error;
-    await provider.request({
-      method: "wallet_addEthereumChain",
-      params: [{
-        chainId: ARC_TESTNET_CHAIN_ID_HEX,
-        chainName: "Arc Testnet",
-        nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
-        rpcUrls: [ARC_TESTNET_RPC_URL],
-        blockExplorerUrls: [ARC_TESTNET_EXPLORER]
-      }]
-    });
-  }
-};
-
-const connectInjectedArcWallet = async (): Promise<string | null> => {
-  const provider = getInjectedWalletProvider();
-  if (!provider) return null;
-  if (walletConnectPromise) return walletConnectPromise;
-
-  walletConnectPromise = (async () => {
-    const accounts = await provider.request({ method: "eth_requestAccounts" });
-    const account = Array.isArray(accounts) ? String(accounts[0] || "") : "";
-    if (!account) throw new Error("Wallet connection declined");
-    await switchInjectedWalletToArc(provider);
-    injectedWalletProvider = provider;
-    injectedWalletAddress = account;
-    return account;
-  })().finally(() => {
-    window.setTimeout(() => {
-      walletConnectPromise = null;
-    }, 1500);
-  });
-
-  return walletConnectPromise;
-};
-
-const ensureAppKitArcNetwork = async (): Promise<void> => {
-  if (!appKit) return;
-  try {
-    await appKit.switchNetwork(arcTestnet, { throwOnFailure: true });
-  } catch (error) {
-    throw new Error(error instanceof Error
-      ? `Add or switch to Arc Testnet in your wallet: ${error.message}`
-      : "Add or switch to Arc Testnet in your wallet");
-  }
-};
-
-const connectAppKitArcWallet = async (): Promise<string> => {
-  if (!appKit) throw new Error("Install Rabby, MetaMask, or add REOWN_PROJECT_ID to enable WalletConnect");
-  const connectedAddress = appKit.getAddress("eip155");
-  if (connectedAddress) {
-    await ensureAppKitArcNetwork();
-    return connectedAddress;
-  }
-
-  if (walletConnectPromise) return walletConnectPromise;
-
-  walletConnectPromise = (async () => {
-    await appKit.close().catch(() => undefined);
-    await appKit.open({ view: "Connect", namespace: "eip155" });
-    const account = appKit.getAddress("eip155") || await waitForWalletAddress();
-    await ensureAppKitArcNetwork();
-    return account;
-  })().finally(() => {
-    window.setTimeout(() => {
-      walletConnectPromise = null;
-    }, 1200);
-  });
-
-  return walletConnectPromise;
-};
-
-const waitForWalletAddress = async (): Promise<string> => {
-  const immediateAddress = appKit?.getAddress("eip155");
-  if (immediateAddress) return immediateAddress;
-
-  return new Promise((resolve, reject) => {
-    if (!appKit) {
-      reject(new Error("Add REOWN_PROJECT_ID to enable WalletConnect"));
-      return;
+const triggerWalletListeners = (address: string | null) => {
+  walletListeners.forEach((listener) => {
+    try {
+      listener(address);
+    } catch (err) {
+      console.error("Wallet listener failed:", err);
     }
-
-    const timeout = window.setTimeout(() => {
-      unsubscribe();
-      reject(new Error("Wallet connection timed out. Open your wallet and approve the request."));
-    }, 60000);
-
-    const unsubscribe = appKit.subscribeAccount((account) => {
-      if (!account.address) return;
-      window.clearTimeout(timeout);
-      unsubscribe();
-      resolve(account.address);
-    }, "eip155");
   });
+};
+
+// Circle Web SDK
+let circleSdk: W3SSdk | null = null;
+
+const getCircleSdk = (): W3SSdk => {
+  if (!circleSdk) {
+    const appId = (window as any).CIRCLE_APP_ID || "";
+    circleSdk = new W3SSdk({
+      appSettings: { appId }
+    });
+    // Set device ID to initialize session
+    circleSdk.getDeviceId();
+  }
+  return circleSdk;
+};
+
+// Load session from localStorage on startup
+const loadSession = () => {
+  activeEmail = localStorage.getItem("siftle_circle_email");
+  activeUserToken = localStorage.getItem("siftle_circle_user_token");
+  activeEncryptionKey = localStorage.getItem("siftle_circle_encryption_key");
+  activeWalletAddress = localStorage.getItem("siftle_circle_wallet_address");
+  activeWalletId = localStorage.getItem("siftle_circle_wallet_id");
+  isMockSession = localStorage.getItem("siftle_circle_is_mock") === "true";
+
+  if (isMockSession && activeEmail) {
+    let storedKey = localStorage.getItem(`siftle_mock_key_${activeEmail}`);
+    if (!storedKey) {
+      const randomWallet = Wallet.createRandom();
+      storedKey = randomWallet.privateKey;
+      localStorage.setItem(`siftle_mock_key_${activeEmail}`, storedKey);
+    }
+    mockWallet = new Wallet(storedKey, publicProvider);
+    activeWalletAddress = mockWallet.address;
+  }
+};
+
+loadSession();
+
+const injectStyles = () => {
+  if (document.getElementById("circle-auth-styles")) return;
+  const style = document.createElement("style");
+  style.id = "circle-auth-styles";
+  style.textContent = `
+    .circle-auth-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(8, 8, 12, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 20px;
+      animation: circleFadeIn 0.3s ease-out;
+    }
+    .circle-auth-card {
+      position: relative;
+      width: 100%;
+      max-width: 440px;
+      background: rgba(20, 20, 28, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 24px;
+      padding: 40px 32px;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+      font-family: 'Inter', -apple-system, sans-serif;
+      color: #cbd5e1;
+      text-align: center;
+      backdrop-filter: blur(20px);
+    }
+    .circle-auth-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 28px;
+      cursor: pointer;
+      line-height: 1;
+      transition: color 0.2s;
+    }
+    .circle-auth-close:hover {
+      color: #f8fafc;
+    }
+    .circle-auth-logo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .circle-auth-logo img {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 12px;
+    }
+    .circle-auth-logo h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: #f8fafc;
+      margin: 0;
+    }
+    .circle-auth-subtitle {
+      font-size: 14px;
+      color: #94a3b8;
+      margin: 0 0 32px 0;
+      line-height: 1.5;
+    }
+    .circle-auth-step {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .circle-auth-field {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      width: 100%;
+    }
+    .circle-auth-field label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+    }
+    .circle-auth-field input {
+      width: 100%;
+      height: 48px;
+      padding: 0 16px;
+      border-radius: 12px;
+      background: rgba(10, 10, 15, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #f8fafc;
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      box-sizing: border-box;
+    }
+    .circle-auth-field input:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+    }
+    .circle-auth-btn {
+      width: 100%;
+      height: 48px;
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      border: none;
+      border-radius: 12px;
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .circle-auth-btn:hover {
+      opacity: 0.95;
+    }
+    .circle-auth-btn:active {
+      transform: scale(0.98);
+    }
+    .circle-auth-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .circle-auth-back {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: underline;
+      margin-top: 8px;
+      transition: color 0.2s;
+    }
+    .circle-auth-back:hover {
+      color: #f8fafc;
+    }
+    .circle-auth-info {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #94a3b8;
+      margin: 0 0 8px 0;
+    }
+    .circle-auth-status {
+      margin-top: 20px;
+      font-size: 13px;
+      line-height: 1.5;
+      padding: 10px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+    @keyframes circleFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  `;
+  document.head.appendChild(style);
 };
 
 export const connectArcWallet = async (): Promise<string> => {
-  if (appKit) return connectAppKitArcWallet();
-
-  try {
-    const injectedAccount = await connectInjectedArcWallet();
-    if (injectedAccount) return injectedAccount;
-  } catch (error) {
-    console.warn("Injected wallet connection failed", error);
-    walletConnectPromise = null;
+  if (activeWalletAddress) {
+    return activeWalletAddress;
   }
 
-  throw new Error("Install Rabby, MetaMask, or add REOWN_PROJECT_ID to enable WalletConnect");
+  injectStyles();
+
+  return new Promise((resolve, reject) => {
+    // Create modern glassmorphic modal
+    const overlay = document.createElement("div");
+    overlay.className = "circle-auth-overlay";
+    overlay.innerHTML = `
+      <div class="circle-auth-card">
+        <button class="circle-auth-close" id="circleAuthClose" type="button">&times;</button>
+        <div class="circle-auth-logo">
+          <img src="./assets/Siftle_logo-removebg-preview.png" alt="Siftle logo" />
+          <h2>Sign In to Siftle</h2>
+        </div>
+        <p class="circle-auth-subtitle">Verify your email to manage predictions and trade</p>
+        
+        <div id="circleAuthStepEmail" class="circle-auth-step">
+          <div class="circle-auth-field">
+            <label for="circleAuthEmail">Email Address</label>
+            <input type="email" id="circleAuthEmail" placeholder="name@domain.com" required />
+          </div>
+          <button id="circleAuthSendBtn" class="circle-auth-btn" type="button">Send Verification Code</button>
+        </div>
+
+        <div id="circleAuthStepOtp" class="circle-auth-step" style="display: none;">
+          <div class="circle-auth-field">
+            <label for="circleAuthOtp">6-Digit Verification Code</label>
+            <input type="text" id="circleAuthOtp" placeholder="123456" maxlength="6" />
+          </div>
+          <button id="circleAuthVerifyBtn" class="circle-auth-btn" type="button">Verify & Sign In</button>
+          <p class="circle-auth-spam-note" style="font-size: 11px; color: #a5b4fc; margin: 12px 0; text-align: center; line-height: 1.4; opacity: 0.85;">
+            * If you don't receive the email, please check your <strong>Spam</strong> or <strong>Junk</strong> folder.
+          </p>
+          <button id="circleAuthBackBtn" class="circle-auth-back" type="button">Back</button>
+        </div>
+
+        <div id="circleAuthStepPin" class="circle-auth-step" style="display: none;">
+          <p class="circle-auth-info">First time signing in? You will need to set up a secure wallet PIN to authorize trades.</p>
+          <button id="circleAuthPinBtn" class="circle-auth-btn" type="button">Set Up Wallet PIN</button>
+        </div>
+
+        <div id="circleAuthStatus" class="circle-auth-status" style="display: none;"></div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const emailInput = overlay.querySelector("#circleAuthEmail") as HTMLInputElement;
+    const otpInput = overlay.querySelector("#circleAuthOtp") as HTMLInputElement;
+    const sendBtn = overlay.querySelector("#circleAuthSendBtn") as HTMLButtonElement;
+    const verifyBtn = overlay.querySelector("#circleAuthVerifyBtn") as HTMLButtonElement;
+    const backBtn = overlay.querySelector("#circleAuthBackBtn") as HTMLButtonElement;
+    const pinBtn = overlay.querySelector("#circleAuthPinBtn") as HTMLButtonElement;
+    const closeBtn = overlay.querySelector("#circleAuthClose") as HTMLButtonElement;
+    const statusDiv = overlay.querySelector("#circleAuthStatus") as HTMLDivElement;
+
+    const stepEmail = overlay.querySelector("#circleAuthStepEmail") as HTMLDivElement;
+    const stepOtp = overlay.querySelector("#circleAuthStepOtp") as HTMLDivElement;
+    const stepPin = overlay.querySelector("#circleAuthStepPin") as HTMLDivElement;
+
+    let email = "";
+    let userToken = "";
+    let encryptionKey = "";
+    let challengeId = "";
+
+    const showStatus = (msg: string, isError = false) => {
+      statusDiv.textContent = msg;
+      statusDiv.style.display = "block";
+      statusDiv.style.color = isError ? "#ff4a4a" : "#cbd5e1";
+    };
+
+    const hideStatus = () => {
+      statusDiv.style.display = "none";
+    };
+
+    closeBtn.addEventListener("click", () => {
+      overlay.remove();
+      reject(new Error("Login cancelled by user"));
+    });
+
+    sendBtn.addEventListener("click", async () => {
+      email = emailInput.value.trim();
+      if (!email || !email.includes("@")) {
+        showStatus("Please enter a valid email address.", true);
+        return;
+      }
+
+      sendBtn.disabled = true;
+      sendBtn.textContent = "Sending...";
+      hideStatus();
+
+      try {
+        const res = await fetch("/api/circle/auth/otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to send code");
+
+        stepEmail.style.display = "none";
+        stepOtp.style.display = "block";
+        showStatus("Verification code sent to your email.");
+      } catch (err: any) {
+        showStatus(err.message, true);
+        sendBtn.disabled = false;
+        sendBtn.textContent = "Send Verification Code";
+      }
+    });
+
+    backBtn.addEventListener("click", () => {
+      stepOtp.style.display = "none";
+      stepEmail.style.display = "block";
+      sendBtn.disabled = false;
+      sendBtn.textContent = "Send Verification Code";
+      hideStatus();
+    });
+
+    verifyBtn.addEventListener("click", async () => {
+      const otp = otpInput.value.trim();
+      if (otp.length !== 6 || !/^\d+$/.test(otp)) {
+        showStatus("Please enter a 6-digit number.", true);
+        return;
+      }
+
+      verifyBtn.disabled = true;
+      verifyBtn.textContent = "Verifying...";
+      hideStatus();
+
+      try {
+        const res = await fetch("/api/circle/auth/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, otp })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to verify code");
+
+        userToken = data.userToken;
+        encryptionKey = data.encryptionKey;
+        isMockSession = Boolean(data.mock);
+
+        if (isMockSession) {
+          localStorage.setItem("siftle_circle_email", email);
+          localStorage.setItem("siftle_circle_user_token", userToken);
+          localStorage.setItem("siftle_circle_encryption_key", encryptionKey);
+          localStorage.setItem("siftle_circle_is_mock", "true");
+
+          let storedKey = localStorage.getItem(`siftle_mock_key_${email}`);
+          if (!storedKey) {
+            const randomWallet = Wallet.createRandom();
+            storedKey = randomWallet.privateKey;
+            localStorage.setItem(`siftle_mock_key_${email}`, storedKey);
+          }
+          mockWallet = new Wallet(storedKey, publicProvider);
+          activeWalletAddress = mockWallet.address;
+          localStorage.setItem("siftle_circle_wallet_address", activeWalletAddress!);
+
+          overlay.remove();
+          triggerWalletListeners(activeWalletAddress);
+          resolve(activeWalletAddress!);
+          return;
+        }
+
+        // Real Circle Auth
+        localStorage.setItem("siftle_circle_email", email);
+        localStorage.setItem("siftle_circle_user_token", userToken);
+        localStorage.setItem("siftle_circle_encryption_key", encryptionKey);
+        localStorage.setItem("siftle_circle_is_mock", "false");
+
+        if (data.initialized) {
+          activeWalletAddress = data.walletAddress;
+          activeWalletId = data.walletId;
+          localStorage.setItem("siftle_circle_wallet_address", activeWalletAddress!);
+          localStorage.setItem("siftle_circle_wallet_id", activeWalletId!);
+
+          overlay.remove();
+          triggerWalletListeners(activeWalletAddress);
+          resolve(activeWalletAddress!);
+        } else {
+          challengeId = data.challengeId;
+          stepOtp.style.display = "none";
+          stepPin.style.display = "block";
+        }
+      } catch (err: any) {
+        showStatus(err.message, true);
+        verifyBtn.disabled = false;
+        verifyBtn.textContent = "Verify & Sign In";
+      }
+    });
+
+    pinBtn.addEventListener("click", () => {
+      pinBtn.disabled = true;
+      pinBtn.textContent = "Opening PIN screen...";
+      hideStatus();
+
+      const sdk = getCircleSdk();
+      sdk.setAuthentication({ userToken, encryptionKey });
+
+      sdk.execute(challengeId, async (error) => {
+        if (error) {
+          showStatus(`PIN setup failed: ${error.message}`, true);
+          pinBtn.disabled = false;
+          pinBtn.textContent = "Set Up Wallet PIN";
+        } else {
+          showStatus("PIN setup complete! Activating wallet...");
+          try {
+            let attempts = 0;
+            const pollWallet = async () => {
+              attempts++;
+              const wRes = await fetch("/api/circle/wallet", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userToken })
+              });
+              if (wRes.ok) {
+                const wData = await wRes.json();
+                activeWalletAddress = wData.walletAddress;
+                activeWalletId = wData.walletId;
+                localStorage.setItem("siftle_circle_wallet_address", activeWalletAddress!);
+                localStorage.setItem("siftle_circle_wallet_id", activeWalletId!);
+
+                overlay.remove();
+                triggerWalletListeners(activeWalletAddress);
+                resolve(activeWalletAddress!);
+              } else if (attempts < 10) {
+                setTimeout(pollWallet, 2000);
+              } else {
+                throw new Error("Timed out waiting for wallet activation");
+              }
+            };
+            await pollWallet();
+          } catch (pollErr: any) {
+            showStatus(pollErr.message, true);
+            pinBtn.disabled = false;
+            pinBtn.textContent = "Set Up Wallet PIN";
+          }
+        }
+      });
+    });
+  });
 };
 
-export const getConnectedArcWallet = (): string | null =>
-  appKit?.getAddress("eip155") || injectedWalletAddress || injectedWalletProvider?.selectedAddress || null;
+export const getConnectedArcWallet = (): string | null => {
+  return activeWalletAddress;
+};
 
 export const subscribeArcWallet = (callback: (address: string | null) => void): (() => void) => {
-  if (appKit) return appKit.subscribeAccount((account) => callback(account.address || null), "eip155");
+  walletListeners.add(callback);
+  callback(activeWalletAddress);
+  return () => {
+    walletListeners.delete(callback);
+  };
+};
 
-  const provider = getInjectedWalletProvider();
-  if (provider?.on) {
-    const accountsChanged = (accounts: unknown): void => {
-      const nextAccounts = Array.isArray(accounts) ? accounts.map(String) : [];
-      injectedWalletAddress = nextAccounts[0] || null;
-      injectedWalletProvider = injectedWalletAddress ? provider : null;
-      callback(nextAccounts[0] || null);
-    };
-    provider.on("accountsChanged", accountsChanged);
-    void getInjectedAccounts(provider).then((accounts) => {
-      injectedWalletAddress = accounts[0] || null;
-      if (injectedWalletAddress) injectedWalletProvider = provider;
-      callback(injectedWalletAddress);
-    }).catch(() => undefined);
-    return () => provider.removeListener?.("accountsChanged", accountsChanged);
-  }
-  return () => undefined;
+export const disconnectArcWallet = () => {
+  activeEmail = null;
+  activeUserToken = null;
+  activeEncryptionKey = null;
+  activeWalletAddress = null;
+  activeWalletId = null;
+  isMockSession = false;
+  mockWallet = null;
+
+  localStorage.removeItem("siftle_circle_email");
+  localStorage.removeItem("siftle_circle_user_token");
+  localStorage.removeItem("siftle_circle_encryption_key");
+  localStorage.removeItem("siftle_circle_wallet_address");
+  localStorage.removeItem("siftle_circle_wallet_id");
+  localStorage.removeItem("siftle_circle_is_mock");
+
+  triggerWalletListeners(null);
 };
 
 export const readArcUsdcBalance = async (account: string): Promise<string> => {
@@ -280,34 +568,7 @@ export const readArcUsdcBalance = async (account: string): Promise<string> => {
   return (Number(BigInt(result || "0x0")) / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 2 });
 };
 
-const getSigner = async () => {
-  const appKitAccount = appKit?.getAddress("eip155");
-  if (appKitAccount && appKit) {
-    await ensureAppKitArcNetwork();
-    const walletProvider = appKit.getWalletProvider();
-    if (!walletProvider) throw new Error("Wallet provider unavailable");
-    const provider = new BrowserProvider(walletProvider as Eip1193Provider, ARC_TESTNET_CHAIN_ID);
-    return { signer: await provider.getSigner(), account: appKitAccount };
-  }
-
-  if (injectedWalletProvider) {
-    const accounts = await getInjectedAccounts(injectedWalletProvider);
-    const account = accounts[0] || (await connectArcWallet());
-    injectedWalletAddress = account;
-    await switchInjectedWalletToArc(injectedWalletProvider);
-    const provider = new BrowserProvider(injectedWalletProvider, ARC_TESTNET_CHAIN_ID);
-    return { signer: await provider.getSigner(), account };
-  }
-
-  const account = appKit?.getAddress("eip155") || (await connectArcWallet());
-  if (!account) throw new Error("Connect your wallet first");
-  if (!appKit) throw new Error("Install Rabby, MetaMask, or add REOWN_PROJECT_ID to enable WalletConnect");
-  await ensureAppKitArcNetwork();
-  const walletProvider = appKit.getWalletProvider();
-  if (!walletProvider) throw new Error("Wallet provider unavailable");
-  const provider = new BrowserProvider(walletProvider as Eip1193Provider, ARC_TESTNET_CHAIN_ID);
-  return { signer: await provider.getSigner(), account };
-};
+export const isWalletConnectConfigured = (): boolean => true;
 
 export const readArcMarketSnapshot = async (marketAddress: string): Promise<ArcMarketSnapshot> => {
   const market = new Contract(marketAddress, SIFTLE_MARKET_ABI, publicProvider);
@@ -342,34 +603,143 @@ export const readArcMarketPosition = async (marketAddress: string, account: stri
   };
 };
 
+const runCircleChallenge = (challengeId: string): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const sdk = getCircleSdk();
+    sdk.execute(challengeId, (error) => {
+      if (error) {
+        reject(new Error(error.message || "Circle transaction signing failed"));
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+const waitForCircleTx = async (txId: string): Promise<string> => {
+  let attempts = 0;
+  while (attempts < 60) {
+    attempts++;
+    const res = await fetch(`/api/circle/tx/status?id=${txId}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.state === "CONFIRMED" || data.state === "COMPLETE") {
+        if (data.txHash) return data.txHash;
+      } else if (data.state === "FAILED") {
+        throw new Error("Transaction execution failed on-chain");
+      }
+    }
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  throw new Error("Timed out waiting for transaction confirmation on-chain");
+};
+
 export const executeArcMarketOrder = async (
   marketAddress: string,
   mode: "buy" | "sell",
   side: "yes" | "no",
   amountUsdc: number
 ): Promise<string> => {
+  if (!activeWalletAddress) throw new Error("Connect your wallet first");
   if (!marketAddress) throw new Error("This market needs an Arc contract address before trading");
   if (!Number.isFinite(amountUsdc) || amountUsdc <= 0) throw new Error("Enter an amount first");
 
-  const { signer, account } = await getSigner();
   const amount = parseUnits(amountUsdc.toFixed(6), 6);
-  const market = new Contract(marketAddress, SIFTLE_MARKET_ABI, signer);
 
-  if (mode === "buy") {
-    const usdc = new Contract(ARC_TESTNET_USDC, ERC20_ABI, signer);
-    const allowance = (await usdc.allowance(account, marketAddress)) as bigint;
-    if (allowance < amount) {
-      const approval = await usdc.approve(marketAddress, amount);
-      await approval.wait();
+  if (isMockSession) {
+    if (!mockWallet) throw new Error("Mock wallet not initialized");
+
+    if (mode === "buy") {
+      const usdc = new Contract(ARC_TESTNET_USDC, ERC20_ABI, mockWallet);
+      const allowance = (await usdc.allowance(activeWalletAddress, marketAddress)) as bigint;
+      if (allowance < amount) {
+        const approval = await usdc.approve(marketAddress, amount);
+        await approval.wait();
+      }
+      const market = new Contract(marketAddress, SIFTLE_MARKET_ABI, mockWallet);
+      const tx = await market.buy(side === "yes", amount);
+      await tx.wait();
+      return tx.hash as string;
+    } else {
+      const market = new Contract(marketAddress, SIFTLE_MARKET_ABI, mockWallet);
+      const tx = await market.sell(side === "yes", amount);
+      await tx.wait();
+      return tx.hash as string;
     }
-    const tx = await market.buy(side === "yes", amount);
-    await tx.wait();
-    return tx.hash as string;
   }
 
-  const tx = await market.sell(side === "yes", amount);
-  await tx.wait();
-  return tx.hash as string;
+  // Real Circle transaction execution
+  if (mode === "buy") {
+    // Check allowance
+    const allowanceSelector = "0xdd62ed3e";
+    const encodedOwner = activeWalletAddress.toLowerCase().replace(/^0x/, "").padStart(64, "0");
+    const encodedSpender = marketAddress.toLowerCase().replace(/^0x/, "").padStart(64, "0");
+    const allowanceData = `${allowanceSelector}${encodedOwner}${encodedSpender}`;
+
+    const allowanceHex = await requestRpc<string>("eth_call", [
+      { to: ARC_TESTNET_USDC, data: allowanceData },
+      "latest"
+    ]);
+    const allowance = BigInt(allowanceHex || "0x0");
+
+    if (allowance < amount) {
+      const appRes = await fetch("/api/circle/tx/contract-call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userToken: activeUserToken,
+          contractAddress: ARC_TESTNET_USDC,
+          abiFunctionSignature: "approve(address,uint256)",
+          abiParameters: [marketAddress, amount.toString()],
+          walletId: activeWalletId
+        })
+      });
+      const appData = await appRes.json();
+      if (!appRes.ok) throw new Error(appData.error || "Failed to create approval challenge");
+
+      const challengeId = appData.challengeId;
+      await runCircleChallenge(challengeId);
+      await waitForCircleTx(appData.id || challengeId);
+    }
+
+    const buyRes = await fetch("/api/circle/tx/contract-call", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userToken: activeUserToken,
+        contractAddress: marketAddress,
+        abiFunctionSignature: "buy(bool,uint256)",
+        abiParameters: [side === "yes", amount.toString()],
+        walletId: activeWalletId
+      })
+    });
+    const buyData = await buyRes.json();
+    if (!buyRes.ok) throw new Error(buyData.error || "Failed to create buy challenge");
+
+    const buyChallengeId = buyData.challengeId;
+    await runCircleChallenge(buyChallengeId);
+    const txHash = await waitForCircleTx(buyData.id || buyChallengeId);
+    return txHash;
+  } else {
+    const sellRes = await fetch("/api/circle/tx/contract-call", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userToken: activeUserToken,
+        contractAddress: marketAddress,
+        abiFunctionSignature: "sell(bool,uint256)",
+        abiParameters: [side === "yes", amount.toString()],
+        walletId: activeWalletId
+      })
+    });
+    const sellData = await sellRes.json();
+    if (!sellRes.ok) throw new Error(sellData.error || "Failed to create sell challenge");
+
+    const sellChallengeId = sellData.challengeId;
+    await runCircleChallenge(sellChallengeId);
+    const txHash = await waitForCircleTx(sellData.id || sellChallengeId);
+    return txHash;
+  }
 };
 
 export const shortenAddress = (account: string): string => `${account.slice(0, 6)}...${account.slice(-4)}`;

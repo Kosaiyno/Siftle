@@ -1,6 +1,6 @@
 import type { Category, NewsStory } from "./types.js";
 
-export const categories: Category[] = ["All", "Crypto", "Sports", "Anime", "Tech"];
+export const categories: Category[] = ["All", "Crypto", "Sports", "Anime", "Tech", "Gaming"];
 
 export const mockStories: NewsStory[] = [
   {
@@ -105,6 +105,19 @@ export const mockStories: NewsStory[] = [
     readTime: "3 min read",
     postedAt: "42m",
     accent: "slate",
+    saved: false
+  },
+  {
+    id: 9,
+    headline: "Highly anticipated next-gen sandbox gameplay features detailed in leak",
+    category: "Gaming",
+    summary: "New reports outline advanced AI interactions, dynamic weather systems, and massive map scale in the upcoming open-world title.",
+    source: "VGC News",
+    sourceUrl: "https://example.com/sandbox-gameplay-leak",
+    imageUrl: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80",
+    readTime: "3 min read",
+    postedAt: "1h",
+    accent: "orange",
     saved: false
   }
 ];

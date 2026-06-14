@@ -1,0 +1,227 @@
+[
+  {
+    "url": "https://www.coindesk.com/arc/outboundfeeds/rss/",
+    "category": "Crypto",
+    "status": "OK",
+    "itemsCount": 25,
+    "last24hCount": 10,
+    "newestAgeHours": 16.2,
+    "newestTitle": "Crypto’s next billion-dollar hacker may move at superhuman speed"
+  },
+  {
+    "url": "https://cointelegraph.com/rss",
+    "category": "Crypto",
+    "status": "OK",
+    "itemsCount": 30,
+    "last24hCount": 6,
+    "newestAgeHours": 4.7,
+    "newestTitle": "Here’s what happened in crypto today"
+  },
+  {
+    "url": "https://decrypt.co/feed",
+    "category": "Crypto",
+    "status": "OK",
+    "itemsCount": 36,
+    "last24hCount": 3,
+    "newestAgeHours": 14.8,
+    "newestTitle": "US Government Orders Anthropic to Pull Claude Fable, Mythos AI Models"
+  },
+  {
+    "url": "https://bitcoinmagazine.com/.rss/full/",
+    "category": "Crypto",
+    "status": "OK",
+    "itemsCount": 10,
+    "last24hCount": 0,
+    "newestAgeHours": 38.2,
+    "newestTitle": "Standard Chartered Calls Crypto Bottom as Bitcoin Price Recovers From $59,000 Low"
+  },
+  {
+    "url": "https://www.newsbtc.com/feed/",
+    "category": "Crypto",
+    "status": "OK",
+    "itemsCount": 10,
+    "last24hCount": 8,
+    "newestAgeHours": 0.7,
+    "newestTitle": "Coinbase Quantum Report Warns Millions Of Bitcoin Could Face Future Security Risks"
+  },
+  {
+    "url": "https://bitcoinist.com/feed/",
+    "category": "Crypto",
+    "status": "OK",
+    "itemsCount": 8,
+    "last24hCount": 8,
+    "newestAgeHours": 0.2,
+    "newestTitle": "Ripple Launches XRPL AI Starter Kit For XRP And RLUSD Agent Payments"
+  },
+  {
+    "url": "https://feeds.bbci.co.uk/sport/football/rss.xml",
+    "category": "Sports",
+    "status": "OK",
+    "itemsCount": 81,
+    "last24hCount": 35,
+    "newestAgeHours": 1.2,
+    "newestTitle": "Fifa to pay Somali referee Artan full World Cup fee"
+  },
+  {
+    "url": "https://www.theguardian.com/football/rss",
+    "category": "Sports",
+    "status": "OK",
+    "itemsCount": 62,
+    "last24hCount": 14,
+    "newestAgeHours": 0.4,
+    "newestTitle": "World Cup 2026: Scotland react to first victory in 36 years as Australia beat Turkey – live"
+  },
+  {
+    "url": "https://www.transfermarkt.co.uk/rss/news",
+    "category": "Sports",
+    "status": "OK",
+    "itemsCount": 10,
+    "last24hCount": 6,
+    "newestAgeHours": 3.2,
+    "newestTitle": "The 30 most valuable World Cup stars not playing for their country of birth"
+  },
+  {
+    "url": "https://www.hoopsrumors.com/feed/",
+    "category": "Sports",
+    "status": "OK",
+    "itemsCount": 15,
+    "last24hCount": 14,
+    "newestAgeHours": 6.6,
+    "newestTitle": "Knicks Win First Championship Since 1973; Brunson Named MVP"
+  },
+  {
+    "url": "https://myanimelist.net/rss/news.xml",
+    "category": "Anime",
+    "status": "OK",
+    "itemsCount": 20,
+    "last24hCount": 4,
+    "newestAgeHours": 0.6,
+    "newestTitle": "&#039;Oni no Hanayome&#039; Unveils Additional Staff, Theme Songs, First Promo"
+  },
+  {
+    "url": "https://animecorner.me/feed/",
+    "category": "Anime",
+    "status": "OK",
+    "itemsCount": 25,
+    "last24hCount": 5,
+    "newestAgeHours": 7,
+    "newestTitle": "Aoteru Makes His Move in NIPPON SANGOKU Episode 11 Preview"
+  },
+  {
+    "url": "https://www.animenewsnetwork.com/all/rss.xml",
+    "category": "Anime",
+    "status": "OK",
+    "itemsCount": 178,
+    "last24hCount": 19,
+    "newestAgeHours": 1.2,
+    "newestTitle": "The Ogre's Bride Anime's New Video Unveils Theme Songs, More Staff, July 4 Debut"
+  },
+  {
+    "url": "https://www.theverge.com/rss/index.xml",
+    "category": "Tech",
+    "status": "OK",
+    "itemsCount": 10,
+    "last24hCount": 10,
+    "newestAgeHours": 12.6,
+    "newestTitle": "Amazon security research reportedly led to the White House’s Anthropic Fable ban"
+  },
+  {
+    "url": "https://techcrunch.com/feed/",
+    "category": "Tech",
+    "status": "OK",
+    "itemsCount": 20,
+    "last24hCount": 7,
+    "newestAgeHours": 7.2,
+    "newestTitle": "As Anthropic suspends access to new models, India debates its AI future"
+  },
+  {
+    "url": "https://www.engadget.com/rss.xml",
+    "category": "Tech",
+    "status": "OK",
+    "itemsCount": 20,
+    "last24hCount": 9,
+    "newestAgeHours": 15.7,
+    "newestTitle": "Apple Watch alternatives that will last for 7 days on a charge"
+  },
+  {
+    "url": "https://feeds.arstechnica.com/arstechnica/index",
+    "category": "Tech",
+    "status": "OK",
+    "itemsCount": 20,
+    "last24hCount": 2,
+    "newestAgeHours": 16.9,
+    "newestTitle": "Review: Disclosure Day is big on action, light on ideas"
+  },
+  {
+    "url": "https://www.zdnet.com/news/rss.xml",
+    "category": "Tech",
+    "status": "OK",
+    "itemsCount": 20,
+    "last24hCount": 5,
+    "newestAgeHours": 0.2,
+    "newestTitle": "I found the most effortless way to clean your Android phone storage - and it's free to use"
+  },
+  {
+    "url": "https://www.infoq.com/feed/",
+    "category": "Tech",
+    "status": "OK",
+    "itemsCount": 15,
+    "last24hCount": 2,
+    "newestAgeHours": 5,
+    "newestTitle": "AWS Introduces Durable Storage Option for ElastiCache for Valkey"
+  },
+  {
+    "url": "https://github.blog/feed/",
+    "category": "Tech",
+    "status": "OK",
+    "itemsCount": 10,
+    "last24hCount": 0,
+    "newestAgeHours": 35.8,
+    "newestTitle": "How we made GitHub Copilot CLI more selective about delegation"
+  },
+  {
+    "url": "https://venturebeat.com/feed/",
+    "category": "Tech",
+    "status": "OK",
+    "itemsCount": 7,
+    "last24hCount": 1,
+    "newestAgeHours": 21.8,
+    "newestTitle": "Anthropic blocks all public access to Claude Fable 5, Mythos 5 following US government order — what enterprises should do"
+  },
+  {
+    "url": "https://www.videogameschronicle.com/category/news/feed/",
+    "category": "Gaming",
+    "status": "OK",
+    "itemsCount": 10,
+    "last24hCount": 4,
+    "newestAgeHours": 18.8,
+    "newestTitle": "First Play: Watch us play NBA The Run, a new online take on NBA Jam and NBA Street"
+  },
+  {
+    "url": "https://www.gamesindustry.biz/feed/news",
+    "category": "Gaming",
+    "status": "OK",
+    "itemsCount": 100,
+    "last24hCount": 0,
+    "newestAgeHours": 42.7,
+    "newestTitle": "The GamesIndustry.biz Summer Party returns Wednesday July 15"
+  },
+  {
+    "url": "https://www.rockpapershotgun.com/feed",
+    "category": "Gaming",
+    "status": "OK",
+    "itemsCount": 100,
+    "last24hCount": 7,
+    "newestAgeHours": 1.2,
+    "newestTitle": "The Sunday Papers"
+  },
+  {
+    "url": "https://www.dualshockers.com/feed/video-games/",
+    "category": "Gaming",
+    "status": "OK",
+    "itemsCount": 10,
+    "last24hCount": 10,
+    "newestAgeHours": 5.8,
+    "newestTitle": "Complete Guide & Walkthrough for Mina the Hollower"
+  }
+]

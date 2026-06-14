@@ -8,6 +8,7 @@
   --blue: #4452ff;
   --violet: #7a3cff;
   --teal: #20c8ad;
+  --orange: #ff7b3c;
   --paper: #ffffff;
   --soft: #f8faff;
 }
@@ -140,7 +141,7 @@ body {
   font-size: 1.8rem;
 }
 
-.portfolio-wallet-state button {
+.portfolio-wallet-state button:not(.copy-address-btn) {
   min-height: 42px;
   padding: 0 16px;
   border: 0;
@@ -883,6 +884,10 @@ body.detail-mode .site-header {
 
 .story-icon.blue {
   background: linear-gradient(135deg, #3f49ff, #6e38ff);
+}
+
+.story-icon.orange {
+  background: linear-gradient(135deg, #ff7b3c, #ff4c3c);
 }
 
 .story-icon.teal {
@@ -5373,4 +5378,61 @@ h4 {
   .market-thread-timeline { flex: 0 0 auto !important; min-height: 0 !important; padding-bottom: 20px !important; }
   .market-thread-update { padding-bottom: 18px !important; }
 
+}
+
+/* --- Custom Portfolio Wallet Buttons (Copy & Faucet) --- */
+.copy-address-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  min-height: 28px;
+  border: 1px solid #e9d5ff;
+  border-radius: 8px;
+  color: #6d28d9;
+  background: #f3e8ff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.copy-address-btn svg {
+  flex-shrink: 0;
+  color: #6d28d9;
+}
+
+.copy-address-btn:hover {
+  background: #e9d5ff;
+  color: #5b21b6;
+  border-color: #d8b4fe;
+  box-shadow: 0 2px 4px rgba(124, 58, 237, 0.08);
+}
+
+.faucet-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  min-height: 28px;
+  border: 1px solid rgba(49, 87, 255, 0.25);
+  border-radius: 8px;
+  color: #3157ff;
+  background: rgba(49, 87, 255, 0.05);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.faucet-link svg {
+  flex-shrink: 0;
+  color: #3157ff;
+}
+
+.faucet-link:hover {
+  background: rgba(49, 87, 255, 0.12);
+  border-color: rgba(49, 87, 255, 0.45);
+  box-shadow: 0 2px 6px rgba(49, 87, 255, 0.08);
+  transform: translateY(-0.5px);
 }

@@ -1,4 +1,4 @@
-export type Category = "All" | "Crypto" | "Sports" | "Anime" | "Tech";
+export type Category = "All" | "Crypto" | "Sports" | "Anime" | "Tech" | "Gaming";
 
 export interface NewsStory {
   id: number;
@@ -11,7 +11,7 @@ export interface NewsStory {
   publishedAt?: string;
   readTime: string;
   postedAt: string;
-  accent: "blue" | "teal" | "violet" | "slate";
+  accent: "blue" | "teal" | "violet" | "slate" | "orange";
   saved: boolean;
   thread?: {
     count: number;
