@@ -12,7 +12,9 @@ import {
   getShelbyBlobName,
   isShelbyArchiveConfigured,
   listShelbyArchiveFiles,
-  uploadShelbySnapshot
+  uploadShelbySnapshot,
+  backupAnalyticsToShelby,
+  restoreAnalyticsFromShelby
 } from "./shelbyArchive.mjs";
 import { analyzeFeedSnapshot, isDevelopmentFallbackStory } from "./feedQuality.mjs";
 import { marketThreadRules, storyMatchesMarketThreadRule } from "./marketThreadRules.mjs";
@@ -4079,6 +4081,17 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
     publishStatus.last_finished_at = new Date().toISOString();
     publishStatus.last_error = failureCount > 0 ? `${failureCount} categories failed; previous published feeds kept where available` : null;
     console.log("Scheduled feeds published at", publishStatus.last_finished_at);
+
+    if (isShelbyArchiveConfigured()) {
+      try {
+        console.log("[ANALYTICS BACKUP] Backing up analytics cache to Shelby during scheduled publish...");
+        const data = loadAnalytics();
+        await backupAnalyticsToShelby(data);
+      } catch (backupErr) {
+        console.warn("[ANALYTICS BACKUP] Failed to backup analytics to Shelby during scheduled publish:", backupErr.message);
+      }
+    }
+
     return { skipped: false, status: publishStatus };
   } catch (err) {
     publishStatus.last_error = err.message;
@@ -4089,8 +4102,43 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
   }
 };
 
+// Graceful shutdown handlers to backup analytics
+const handleShutdown = async (signal) => {
+  console.log(`[SHUTDOWN] Received ${signal}. Saving final analytics backup to Shelby...`);
+  if (isShelbyArchiveConfigured()) {
+    try {
+      const data = loadAnalytics();
+      await backupAnalyticsToShelby(data);
+      console.log("[SHUTDOWN] Analytics backup completed successfully.");
+    } catch (err) {
+      console.error("[SHUTDOWN] Failed to backup analytics on shutdown:", err);
+    }
+  }
+  process.exit(0);
+};
+process.on("SIGTERM", () => void handleShutdown("SIGTERM"));
+process.on("SIGINT", () => void handleShutdown("SIGINT"));
+
 // Kick off initial refresh and schedule periodic refreshes
-void refreshPublishedFeeds("startup");
+if (isShelbyArchiveConfigured()) {
+  console.log("Attempting to restore analytics cache from Shelby on boot...");
+  restoreAnalyticsFromShelby()
+    .then((data) => {
+      if (data) {
+        saveAnalytics(data);
+        console.log("[ANALYTICS] Restored successfully from Shelby backup.");
+      } else {
+        console.log("[ANALYTICS] No backup found on Shelby. Starting fresh.");
+      }
+      void refreshPublishedFeeds("startup");
+    })
+    .catch((err) => {
+      console.error("[ANALYTICS] Failed to restore from Shelby on boot:", err);
+      void refreshPublishedFeeds("startup");
+    });
+} else {
+  void refreshPublishedFeeds("startup");
+}
 setInterval(() => void refreshPublishedFeeds("scheduled"), Math.max(1, refreshIntervalMinutes) * 60 * 1000);
 
 const otpStore = new Map();

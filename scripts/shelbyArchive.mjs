@@ -120,7 +120,10 @@ export const uploadShelbySnapshot = async (snapshot) => {
     });
 
     await client.coordination.aptos.waitForTransaction({
-      transactionHash: pendingRegisterBlobTransaction.hash
+      transactionHash: pendingRegisterBlobTransaction.hash,
+      options: {
+        timeoutSecs: 90
+      }
     });
   }
 
@@ -220,4 +223,72 @@ export const listShelbyArchiveFiles = async () => {
       };
     })
     .filter(Boolean);
+};
+
+export const backupAnalyticsToShelby = async (analyticsData) => {
+  const { client, signer } = getShelbyClient();
+  const prefix = (process.env.SHELBY_ARCHIVE_PREFIX || "siftle/feeds").replace(/^\/+|\/+$/g, "");
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const blobName = `${prefix}/analytics/backup-${timestamp}.json`;
+  const blobData = textEncoder.encode(JSON.stringify(analyticsData, null, 2));
+
+  const provider = await client.getProvider();
+  const blobCommitments = await generateCommitments(provider, blobData);
+  
+  const { transaction: pendingRegisterBlobTransaction } = await client.coordination.registerBlob({
+    account: signer,
+    blobName: blobName,
+    blobMerkleRoot: blobCommitments.blob_merkle_root,
+    size: blobData.length,
+    expirationMicros: getExpirationMicros(),
+    config: provider.config
+  });
+
+  await client.coordination.aptos.waitForTransaction({
+    transactionHash: pendingRegisterBlobTransaction.hash,
+    options: { timeoutSecs: 90 }
+  });
+
+  await client.rpc.putBlob({
+    account: signer.accountAddress,
+    blobName: blobName,
+    blobData: blobData
+  });
+
+  return blobName;
+};
+
+export const restoreAnalyticsFromShelby = async () => {
+  const { client, signer } = getShelbyClient();
+  const prefix = (process.env.SHELBY_ARCHIVE_PREFIX || "siftle/feeds").replace(/^\/+|\/+$/g, "");
+  const account = process.env.SHELBY_ACCOUNT_ADDRESS || signer.accountAddress;
+  
+  const limit = 100;
+  const blobs = [];
+  for (let offset = 0; offset < 2000; offset += limit) {
+    const page = await client.coordination.getAccountBlobs({
+      account,
+      pagination: { limit, offset }
+    });
+    blobs.push(...page);
+    if (page.length < limit) break;
+  }
+
+  const backupPrefix = `${prefix}/analytics/backup-`;
+  const backups = blobs
+    .filter((blob) => !blob.isDeleted && blob.blobNameSuffix?.startsWith(backupPrefix))
+    .sort((a, b) => b.blobNameSuffix.localeCompare(a.blobNameSuffix));
+
+  if (backups.length === 0) {
+    return null;
+  }
+
+  const latestBackupName = backups[0].blobNameSuffix;
+  const blob = await client.download({
+    account,
+    blobName: latestBackupName
+  });
+
+  const content = await readStreamToText(blob.readable);
+  return JSON.parse(content);
 };
