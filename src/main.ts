@@ -574,6 +574,48 @@ const showActionToast = (message: string): void => {
   }, 1700);
 };
 
+const showSuccessModal = (mode: "buy" | "sell", amount: string | number, outcome: string, marketTitle: string): void => {
+  const modalContainer = document.createElement("div");
+  modalContainer.className = "success-modal-overlay";
+  
+  modalContainer.innerHTML = `
+    <div class="success-modal-card">
+      <div class="success-modal-close-btn" aria-label="Close modal">&times;</div>
+      <div class="success-modal-icon-container">
+        <svg class="success-modal-checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+          <circle class="success-modal-checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+          <path class="success-modal-checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+        </svg>
+      </div>
+      <h3 class="success-modal-title">Transaction Confirmed</h3>
+      <p class="success-modal-body">
+        You have successfully <strong>${mode === "buy" ? "bought" : "sold"}</strong> <strong>${amount} USDC</strong> worth of <strong>${outcome}</strong> shares in:
+      </p>
+      <div class="success-modal-market-title">${marketTitle}</div>
+      <button class="success-modal-action-btn" type="button">Awesome</button>
+    </div>
+  `;
+
+  document.body.appendChild(modalContainer);
+
+  setTimeout(() => {
+    modalContainer.classList.add("show");
+  }, 10);
+
+  const closeModal = () => {
+    modalContainer.classList.remove("show");
+    setTimeout(() => {
+      modalContainer.remove();
+    }, 300);
+  };
+
+  modalContainer.querySelector(".success-modal-close-btn")?.addEventListener("click", closeModal);
+  modalContainer.querySelector(".success-modal-action-btn")?.addEventListener("click", closeModal);
+  modalContainer.addEventListener("click", (e) => {
+    if (e.target === modalContainer) closeModal();
+  });
+};
+
 const resetFeedScroll = (): void => {
   state.feedScrollY = 0;
   window.scrollTo({ top: 0, behavior: "auto" });
@@ -1043,6 +1085,12 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
     if (state.walletAddress) state.walletBalance = await readArcUsdcBalance(state.walletAddress);
     await loadPortfolioPositions();
     showActionToast(`Trade confirmed ${txHash.slice(0, 8)}...`);
+    showSuccessModal(
+      state.marketOrderMode,
+      state.marketTradeAmount,
+      side.toUpperCase(),
+      market.question
+    );
   } catch (error) {
     showActionToast(error instanceof Error ? error.message : "Arc trade failed");
   } finally {

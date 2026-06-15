@@ -1,5 +1,5 @@
 import { Account, Ed25519PrivateKey, Network } from "@aptos-labs/ts-sdk";
-import { ShelbyNodeClient } from "@shelby-protocol/sdk/node";
+import { ShelbyNodeClient, generateCommitments } from "@shelby-protocol/sdk/node";
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
@@ -100,11 +100,35 @@ export const uploadShelbySnapshot = async (snapshot) => {
   const blobName = getShelbyBlobName(snapshot.date, snapshot.category, snapshot.generated_at);
   const blobData = textEncoder.encode(JSON.stringify(snapshot, null, 2));
 
-  await client.upload({
-    signer,
-    blobData,
-    blobName,
-    expirationMicros: getExpirationMicros()
+  // Check if blob is already registered on-chain
+  const existingBlobMetadata = await client.coordination.getBlobMetadata({
+    account: signer.accountAddress,
+    name: blobName
+  });
+
+  if (!existingBlobMetadata) {
+    const provider = await client.getProvider();
+    const blobCommitments = await generateCommitments(provider, blobData);
+    
+    const { transaction: pendingRegisterBlobTransaction } = await client.coordination.registerBlob({
+      account: signer,
+      blobName: blobName,
+      blobMerkleRoot: blobCommitments.blob_merkle_root,
+      size: blobData.length,
+      expirationMicros: getExpirationMicros(),
+      config: provider.config
+    });
+
+    await client.coordination.aptos.waitForTransaction({
+      transactionHash: pendingRegisterBlobTransaction.hash
+    });
+  }
+
+  // Use rpc.putBlob directly to ensure a fresh, non-resumable upload and avoid 400 Bad Request resume errors
+  await client.rpc.putBlob({
+    account: signer.accountAddress,
+    blobName: blobName,
+    blobData: blobData
   });
 
   return {

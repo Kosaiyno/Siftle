@@ -20,7 +20,7 @@ import { isWithinThreadHistoryWindow } from "./threadWindow.mjs";
 
 const root = resolve(process.cwd());
 const port = Number(process.env.PORT ?? 5173);
-const maxArticleAgeHours = Number(process.env.MAX_ARTICLE_AGE_HOURS ?? 36);
+const maxArticleAgeHours = Number(process.env.MAX_ARTICLE_AGE_HOURS ?? 48);
 const rssItemsPerFeed = Number(process.env.RSS_ITEMS_PER_FEED ?? 30);
 const summaryConcurrency = Number(process.env.SUMMARY_CONCURRENCY ?? 2);
 const summaryTimeoutMs = Number(process.env.SUMMARY_TIMEOUT_MS ?? 45000);
@@ -1913,41 +1913,15 @@ const writeJsonFile = (filePath, payload) => {
   renameSync(tempPath, filePath);
 };
 
-const readLocalArchiveSnapshot = (date, category) => {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date ?? "")) {
-    throw new Error("Invalid archive date");
-  }
-
-  const selectedCategory = normalizeCategory(category);
-  const filePath = join(archiveDir, archiveFilename(date, selectedCategory));
-  if (!existsSync(filePath)) {
-    const allPath = join(archiveDir, archiveFilename(date, "All"));
-    if (selectedCategory !== "All" && existsSync(allPath)) {
-      const allSnapshot = JSON.parse(readFileSync(allPath, "utf8"));
-      return {
-        ...allSnapshot,
-        category: selectedCategory,
-        top_stories: markArchiveStories((allSnapshot.top_stories ?? []).filter((story) => story.category === selectedCategory), date),
-        archive: {
-          provider: "local-dev",
-          restored_from: allPath,
-          filtered_from: "All"
-        }
-      };
-    }
-
+const readPublishedSnapshot = (category) => {
+  const cached = publishedSnapshots.get(category);
+  if (cached) return cached;
+  if (isShelbyArchiveConfigured()) {
     return null;
   }
-
-  const snapshot = JSON.parse(readFileSync(filePath, "utf8"));
-  return {
-    ...snapshot,
-    top_stories: markArchiveStories(snapshot.top_stories ?? [], date),
-    archive: {
-      provider: "local-dev",
-      restored_from: filePath
-    }
-  };
+  const filePath = getLatestSnapshotPath(category);
+  if (!existsSync(filePath)) return null;
+  return normalizeSnapshotSummaries(JSON.parse(readFileSync(filePath, "utf8")));
 };
 
 const readArchiveSnapshot = async (date, category) => {
@@ -2545,17 +2519,19 @@ const zeroGServicePromises = new Map();
 
 const get0GServiceFor = async ({ providerAddress, envEndpoint, label = "0G compute" } = {}) => {
   const rpcUrl = process.env.OG_RPC_URL || "https://evmrpc.0g.ai";
-  const cacheKey = `${label}:${providerAddress ?? ""}:${envEndpoint ?? ""}`;
+  const trimmedProvider = providerAddress ? String(providerAddress).trim() : undefined;
+  const trimmedEndpoint = envEndpoint ? String(envEndpoint).trim() : undefined;
+  const cacheKey = `${label}:${trimmedProvider ?? ""}:${trimmedEndpoint ?? ""}`;
 
   // If an explicit endpoint is provided via env, prefer it and skip broker discovery.
-  if (envEndpoint) {
+  if (trimmedEndpoint) {
     if (!zeroGServicePromises.has(cacheKey)) {
-      zeroGServicePromises.set(cacheKey, Promise.resolve({ url: String(envEndpoint).replace(/\/$/, ""), provider: providerAddress ?? "env-endpoint" }));
+      zeroGServicePromises.set(cacheKey, Promise.resolve({ url: String(trimmedEndpoint).replace(/\/$/, ""), provider: trimmedProvider ?? "env-endpoint" }));
     }
     return zeroGServicePromises.get(cacheKey);
   }
 
-  if (!providerAddress) {
+  if (!trimmedProvider) {
     throw new Error(`Missing ${label} provider`);
   }
 
@@ -2567,7 +2543,7 @@ const get0GServiceFor = async ({ providerAddress, envEndpoint, label = "0G compu
     zeroGServicePromises.set(cacheKey, zeroGBrokerPromise.then(async (broker) => {
       const services = await broker.inference.listServiceWithDetail(0, 50, true);
       const service = services.find(
-        (entry) => entry.provider?.toLowerCase() === providerAddress.toLowerCase()
+        (entry) => entry.provider?.toLowerCase() === trimmedProvider.toLowerCase()
       );
 
       if (!service?.url) {
@@ -2584,14 +2560,18 @@ const get0GServiceFor = async ({ providerAddress, envEndpoint, label = "0G compu
 const get0GService = async () => {
   const providerAddress = process.env.OG_COMPUTE_PROVIDER;
   const envEndpoint = process.env.OG_COMPUTE_ENDPOINT || process.env.ZERO_G_ENDPOINT || process.env.OG_COMPUTE_URL || process.env.ZERO_G_URL;
-  return get0GServiceFor({ providerAddress, envEndpoint, label: "0G compute" });
+  return get0GServiceFor({
+    providerAddress: providerAddress ? String(providerAddress).trim() : undefined,
+    envEndpoint: envEndpoint ? String(envEndpoint).trim() : undefined,
+    label: "0G compute"
+  });
 };
 
-const getThread0GConfig = () => ({
-  apiKey: process.env.THREAD_ZERO_G_API_KEY || process.env.THREAD_OG_COMPUTE_API_KEY || process.env.ZERO_G_API_KEY || process.env.OG_COMPUTE_API_KEY,
-  model: process.env.THREAD_ZERO_G_MODEL || process.env.THREAD_OG_COMPUTE_MODEL || process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "zai-org/GLM-5-FP8",
-  providerAddress: process.env.THREAD_OG_COMPUTE_PROVIDER || process.env.OG_COMPUTE_PROVIDER,
-  envEndpoint:
+const getThread0GConfig = () => {
+  const apiKey = process.env.THREAD_ZERO_G_API_KEY || process.env.THREAD_OG_COMPUTE_API_KEY || process.env.ZERO_G_API_KEY || process.env.OG_COMPUTE_API_KEY;
+  const model = process.env.THREAD_ZERO_G_MODEL || process.env.THREAD_OG_COMPUTE_MODEL || process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "zai-org/GLM-5-FP8";
+  const providerAddress = process.env.THREAD_OG_COMPUTE_PROVIDER || process.env.OG_COMPUTE_PROVIDER;
+  const envEndpoint =
     process.env.THREAD_OG_COMPUTE_ENDPOINT ||
     process.env.THREAD_ZERO_G_ENDPOINT ||
     process.env.THREAD_OG_COMPUTE_URL ||
@@ -2599,8 +2579,15 @@ const getThread0GConfig = () => ({
     process.env.OG_COMPUTE_ENDPOINT ||
     process.env.ZERO_G_ENDPOINT ||
     process.env.OG_COMPUTE_URL ||
-    process.env.ZERO_G_URL
-});
+    process.env.ZERO_G_URL;
+
+  return {
+    apiKey: apiKey ? String(apiKey).trim() : undefined,
+    model: model ? String(model).trim() : "zai-org/GLM-5-FP8",
+    providerAddress: providerAddress ? String(providerAddress).trim() : undefined,
+    envEndpoint: envEndpoint ? String(envEndpoint).trim() : undefined
+  };
+};
 
 const getThread0GService = async () => {
   const { providerAddress, envEndpoint } = getThread0GConfig();
@@ -3568,14 +3555,10 @@ const buildAllSnapshotFromCategories = async () => {
 };
 
 const archiveSnapshot = async (snapshot) => {
-  mkdirSync(archiveDir, { recursive: true });
-
-  const filename = archiveFilename(snapshot.date, snapshot.category);
-  const localPath = join(archiveDir, filename);
   const snapshotWithStorage = {
     ...snapshot,
     storage: {
-      local_path: localPath,
+      local_path: null,
       shelby_configured: isShelbyArchiveConfigured(),
       shelby_rpc_url: process.env.SHELBY_RPC_URL ?? null,
       shelby_archive_prefix: process.env.SHELBY_ARCHIVE_PREFIX ?? "siftle/feeds",
@@ -3584,32 +3567,26 @@ const archiveSnapshot = async (snapshot) => {
     }
   };
 
-  writeJsonFile(localPath, snapshotWithStorage);
-
   if (isShelbyArchiveConfigured()) {
     try {
       const shelbyArchive = await uploadShelbySnapshot(snapshotWithStorage);
-      writeJsonFile(
-        localPath,
-        {
-          ...snapshotWithStorage,
-          storage: {
-            ...snapshotWithStorage.storage,
-            shelby_upload: shelbyArchive
-          },
-          archive: shelbyArchive
-        }
-      );
       return shelbyArchive;
     } catch (error) {
       console.warn("Shelby archive upload fallback:", error.message);
       return {
         provider: "local-dev",
-        path: localPath,
+        path: null,
         shelby_error: error.message
       };
     }
   }
+
+  // Fallback to local filesystem storage only if Shelby is not configured:
+  mkdirSync(archiveDir, { recursive: true });
+  const filename = archiveFilename(snapshot.date, snapshot.category);
+  const localPath = join(archiveDir, filename);
+  snapshotWithStorage.storage.local_path = localPath;
+  writeJsonFile(localPath, snapshotWithStorage);
 
   if (!process.env.SHELBY_UPLOAD_URL) {
     return {
@@ -3731,8 +3708,13 @@ const getRecoverablePublishedSnapshot = async (category) => {
 };
 
 const writePublishedSnapshot = (snapshot) => {
-  mkdirSync(publishedDir, { recursive: true });
-  writeJsonFile(getLatestSnapshotPath(snapshot.category), sanitizeSnapshotForCategory(snapshot));
+  const sanitized = sanitizeSnapshotForCategory(snapshot);
+  publishedSnapshots.set(snapshot.category, sanitized);
+
+  if (!isShelbyArchiveConfigured()) {
+    mkdirSync(publishedDir, { recursive: true });
+    writeJsonFile(getLatestSnapshotPath(snapshot.category), sanitized);
+  }
 };
 
 const persistPreparedThreadLocally = (story, thread) => {
@@ -3917,7 +3899,7 @@ const publishSnapshot = async (snapshot) => {
     archive = { provider: "local-dev", error: error.message };
   }
 
-  if (process.env.REQUIRE_SHELBY_UPLOAD === "true" && isShelbyArchiveConfigured() && archive.provider !== "shelby") {
+  if (isShelbyArchiveConfigured() && archive.provider !== "shelby") {
     throw new Error(archive.shelby_error || archive.error || "Shelby archive upload did not complete");
   }
 
@@ -3986,6 +3968,30 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
   resetThreadReviewBudget();
 
   try {
+    if (reason === "startup" && isShelbyArchiveConfigured()) {
+      console.log("Pre-populating publishedSnapshots cache from Shelby archive...");
+      try {
+        const files = await listShelbyArchiveFiles();
+        for (const category of categories) {
+          const catFiles = files.filter(f => f.categorySlug.toLowerCase() === category.toLowerCase());
+          if (catFiles.length > 0) {
+            catFiles.sort((a, b) => {
+              if (a.date !== b.date) return b.date.localeCompare(a.date);
+              const aTime = a.generated_at ? new Date(a.generated_at).getTime() : 0;
+              const bTime = b.generated_at ? new Date(b.generated_at).getTime() : 0;
+              return bTime - aTime;
+            });
+            const latest = catFiles[0];
+            console.log(`Downloading latest snapshot from Shelby for category ${category}: ${latest.blob_name} (${latest.date})`);
+            const { snapshot } = await downloadShelbySnapshot(latest.date, category);
+            publishedSnapshots.set(category, snapshot);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to pre-populate cache from Shelby on startup:", err.message);
+      }
+    }
+
     console.log(`Publishing feeds every ${refreshIntervalMinutes} minutes (${reason})...`);
     let failureCount = 0;
 
