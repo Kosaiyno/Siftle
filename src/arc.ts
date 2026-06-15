@@ -89,7 +89,7 @@ let circleSdk: W3SSdk | null = null;
 
 const getCircleSdk = (): W3SSdk => {
   if (!circleSdk) {
-    const appId = (window as any).CIRCLE_APP_ID || "";
+    const appId = (window as any).CIRCLE_APP_ID || "b32650461103ab45fd76f36439ad5744:1380068ffcafecdeccf9220d654a7c62";
     circleSdk = new W3SSdk({
       appSettings: { appId }
     });
