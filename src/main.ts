@@ -26,6 +26,14 @@ declare global {
 const apiBase = (window.SIFTLE_API_BASE || "").replace(/\/$/, "");
 const apiUrl = (path: string): string => `${apiBase}${path}`;
 
+function trackEvent(event: string) {
+  fetch(apiUrl("/api/analytics"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event })
+  }).catch((err) => console.error("Failed to track event:", err));
+}
+
 const state: {
   activeSurface: "feed" | "markets" | "portfolio";
   selectedMarketId: string | null;
@@ -2493,5 +2501,27 @@ subscribeArcWallet((address) => {
     void loadPortfolioPositions();
   } else {
     if (state.activeSurface === "portfolio") render();
+  }
+});
+
+// Analytics tracking setup
+trackEvent("app_open");
+
+document.addEventListener("click", (event) => {
+  const target = event.target as HTMLElement;
+  const closestAnchor = target.closest("a, button");
+  if (closestAnchor) {
+    const className = closestAnchor.className || "";
+    const href = (closestAnchor as HTMLAnchorElement).href || "";
+    if (
+      className.includes("source-button") ||
+      className.includes("source-btn") ||
+      className.includes("source-link") ||
+      closestAnchor.textContent?.trim() === "Open source"
+    ) {
+      if (!className.includes("disabled") && !href.includes("example.com")) {
+        trackEvent("open_source");
+      }
+    }
   }
 });

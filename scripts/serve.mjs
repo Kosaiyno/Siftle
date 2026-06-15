@@ -4138,12 +4138,605 @@ const callCircleApi = async (path, method, body, userToken = null) => {
   return data;
 };
 
+const ANALYTICS_FILE = join(root, ".siftle", "analytics.json");
+
+function loadAnalytics() {
+  try {
+    if (existsSync(ANALYTICS_FILE)) {
+      const content = readFileSync(ANALYTICS_FILE, "utf8");
+      return JSON.parse(content);
+    }
+  } catch (err) {
+    console.error("Failed to load analytics:", err);
+  }
+  return {
+    totals: { app_open: 0, view_summary: 0, open_source: 0, sign_up: 0 },
+    daily: {},
+    emails: []
+  };
+}
+
+function saveAnalytics(data) {
+  try {
+    const dir = join(root, ".siftle");
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
+    writeFileSync(ANALYTICS_FILE, JSON.stringify(data, null, 2), "utf8");
+  } catch (err) {
+    console.error("Failed to save analytics:", err);
+  }
+}
+
+function trackAnalyticsEvent(event, email = null) {
+  const data = loadAnalytics();
+  
+  if (!data.totals) data.totals = { app_open: 0, view_summary: 0, open_source: 0, sign_up: 0 };
+  if (!data.daily) data.daily = {};
+  if (!data.emails) data.emails = [];
+  
+  if (event === "sign_up") {
+    if (email) {
+      const cleanEmail = email.toLowerCase().trim();
+      if (data.emails.includes(cleanEmail)) {
+        return; // Already signed up
+      }
+      data.emails.push(cleanEmail);
+    }
+  }
+
+  data.totals[event] = (data.totals[event] || 0) + 1;
+
+  const dateKey = getTodayKey();
+  if (!data.daily[dateKey]) {
+    data.daily[dateKey] = { app_open: 0, view_summary: 0, open_source: 0, sign_up: 0 };
+  }
+  data.daily[dateKey][event] = (data.daily[dateKey][event] || 0) + 1;
+
+  saveAnalytics(data);
+}
+
+function getAnalyticsHtml() {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Siftle Analytics Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090b11;
+      --card-bg: rgba(255, 255, 255, 0.03);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --primary: #4f46e5;
+      --primary-glow: rgba(79, 70, 229, 0.15);
+      --teal: #0d9488;
+      --teal-glow: rgba(13, 148, 136, 0.15);
+      --violet: #7c3aed;
+      --violet-glow: rgba(124, 58, 237, 0.15);
+      --pink: #db2777;
+      --pink-glow: rgba(219, 39, 119, 0.15);
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(79, 70, 229, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(13, 148, 136, 0.08) 0%, transparent 40%),
+        linear-gradient(135deg, #07090e 0%, #0d111d 100%);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding: 2rem 1.5rem;
+    }
+
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.75rem;
+      font-weight: 700;
+      background: linear-gradient(to right, #818cf8, #2dd4bf);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .btn-refresh {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(8px);
+    }
+
+    .btn-refresh:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .btn-back {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .btn-back:hover {
+      color: var(--text);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      background: rgba(45, 212, 191, 0.1);
+      border: 1px solid rgba(45, 212, 191, 0.2);
+      color: #2dd4bf;
+      padding: 0.25rem 0.625rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      background-color: #2dd4bf;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(45, 212, 191, 0.7); }
+      70% { box-shadow: 0 0 0 6px rgba(45, 212, 191, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(45, 212, 191, 0); }
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--accent);
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.5), 0 0 20px 0 var(--accent-glow);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .card.opens { --accent: var(--primary); --accent-glow: var(--primary-glow); }
+    .card.summaries { --accent: var(--teal); --accent-glow: var(--teal-glow); }
+    .card.clicks { --accent: var(--violet); --accent-glow: var(--violet-glow); }
+    .card.signups { --accent: var(--pink); --accent-glow: var(--pink-glow); }
+
+    .card-label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .card-value {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2.25rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .card-footer {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    .ratios-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .ratio-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .ratio-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .ratio-title {
+      font-weight: 600;
+      color: var(--text);
+      font-size: 1rem;
+    }
+
+    .ratio-value {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #2dd4bf;
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(to right, #4f46e5, #2dd4bf);
+      border-radius: 9999px;
+      width: 0%;
+      transition: width 1s ease-out;
+    }
+
+    .ratio-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .table-container {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      overflow-x: auto;
+    }
+
+    .table-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th {
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    td {
+      padding: 1rem;
+      font-size: 0.9rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.01);
+    }
+
+    .loading-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 4rem 0;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .spinner {
+      border: 3px solid rgba(255, 255, 255, 0.05);
+      border-top: 3px solid #4f46e5;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+      margin-right: 0.75rem;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+    <header>
+      <div class="brand">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #2dd4bf; background: rgba(45, 212, 191, 0.1); padding: 6px; border-radius: 10px; border: 1px solid rgba(45, 212, 191, 0.2);"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+        <h1>Siftle Analytics</h1>
+        <span class="status-badge">
+          <span class="status-dot"></span>
+          Live
+        </span>
+      </div>
+      <div class="header-actions">
+        <a href="/" class="btn-back">← Back to App</a>
+        <button class="btn-refresh" id="refreshBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          Refresh
+        </button>
+      </div>
+    </header>
+
+    <div class="stats-grid">
+      <div class="card opens">
+        <span class="card-label">App Opens</span>
+        <span class="card-value" id="valOpens">-</span>
+        <span class="card-footer">Total page views loaded</span>
+      </div>
+      <div class="card summaries">
+        <span class="card-label">AI Summaries</span>
+        <span class="card-value" id="valSummaries">-</span>
+        <span class="card-footer">Summaries generated/viewed</span>
+      </div>
+      <div class="card clicks">
+        <span class="card-label">Source Clicks</span>
+        <span class="card-value" id="valClicks">-</span>
+        <span class="card-footer">Clicks to original articles</span>
+      </div>
+      <div class="card signups">
+        <span class="card-label">USDC Signups</span>
+        <span class="card-value" id="valSignups">-</span>
+        <span class="card-footer">Circle wallets initialized</span>
+      </div>
+    </div>
+
+    <div class="ratios-grid">
+      <div class="ratio-card">
+        <div class="ratio-header">
+          <span class="ratio-title">USDC Signup Rate</span>
+          <span class="ratio-value" id="ratioSignup">-</span>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="barSignup"></div>
+        </div>
+        <span class="ratio-desc">Percentage of page views that start or complete a wallet onboarding.</span>
+      </div>
+      <div class="ratio-card">
+        <div class="ratio-header">
+          <span class="ratio-title">AI Summary Rate</span>
+          <span class="ratio-value" id="ratioSummary">-</span>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="barSummary"></div>
+        </div>
+        <span class="ratio-desc">Percentage of page views where users engage with the AI summary helper.</span>
+      </div>
+      <div class="ratio-card">
+        <div class="ratio-header">
+          <span class="ratio-title">Source Click CTR</span>
+          <span class="ratio-value" id="ratioClick">-</span>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="barClick"></div>
+        </div>
+        <span class="ratio-desc">Click-through rate of users opening the original publisher sources.</span>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <div class="table-title">Daily Breakdown</div>
+      <div id="loadingBreakdown" class="loading-container">
+        <div class="spinner"></div>
+        Loading metrics...
+      </div>
+      <table id="breakdownTable" style="display: none;">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>App Opens</th>
+            <th>AI Summaries</th>
+            <th>Source Clicks</th>
+            <th>Signups</th>
+          </tr>
+        </thead>
+        <tbody id="breakdownBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    async function loadData() {
+      const loading = document.getElementById('loadingBreakdown');
+      const table = document.getElementById('breakdownTable');
+      
+      try {
+        const res = await fetch('/api/analytics/report');
+        if (!res.ok) throw new Error('API request failed');
+        const data = await res.json();
+        
+        const totals = data.totals || { app_open: 0, view_summary: 0, open_source: 0, sign_up: 0 };
+        
+        document.getElementById('valOpens').textContent = (totals.app_open || 0).toLocaleString();
+        document.getElementById('valSummaries').textContent = (totals.view_summary || 0).toLocaleString();
+        document.getElementById('valClicks').textContent = (totals.open_source || 0).toLocaleString();
+        document.getElementById('valSignups').textContent = (totals.sign_up || 0).toLocaleString();
+        
+        const opens = totals.app_open || 1;
+        const signupRate = ((totals.sign_up || 0) / opens) * 100;
+        const summaryRate = ((totals.view_summary || 0) / opens) * 100;
+        const clickRate = ((totals.open_source || 0) / opens) * 100;
+        
+        document.getElementById('ratioSignup').textContent = signupRate.toFixed(1) + '%';
+        document.getElementById('ratioSummary').textContent = summaryRate.toFixed(1) + '%';
+        document.getElementById('ratioClick').textContent = clickRate.toFixed(1) + '%';
+        
+        document.getElementById('barSignup').style.width = Math.min(signupRate, 100) + '%';
+        document.getElementById('barSummary').style.width = Math.min(summaryRate, 100) + '%';
+        document.getElementById('barClick').style.width = Math.min(clickRate, 100) + '%';
+        
+        const tbody = document.getElementById('breakdownBody');
+        tbody.innerHTML = '';
+        
+        const daily = data.daily || {};
+        const sortedDates = Object.keys(daily).sort((a, b) => b.localeCompare(a));
+        
+        if (sortedDates.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">No entries logged yet.</td></tr>';
+        } else {
+          sortedDates.forEach(date => {
+            const row = daily[date];
+            const tr = document.createElement('tr');
+            tr.innerHTML = \`
+              <td><strong>\${date}</strong></td>
+              <td>\${(row.app_open || 0).toLocaleString()}</td>
+              <td>\${(row.view_summary || 0).toLocaleString()}</td>
+              <td>\${(row.open_source || 0).toLocaleString()}</td>
+              <td>\${(row.sign_up || 0).toLocaleString()}</td>
+            \`;
+            tbody.appendChild(tr);
+          });
+        }
+        
+        loading.style.display = 'none';
+        table.style.display = 'table';
+      } catch (err) {
+        console.error(err);
+        loading.textContent = 'Failed to load analytics data: ' + err.message;
+        loading.style.color = '#ef4444';
+      }
+    }
+    
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+      document.getElementById('loadingBreakdown').style.display = 'flex';
+      document.getElementById('breakdownTable').style.display = 'none';
+      loadData();
+    });
+    
+    loadData();
+  </script>
+</body>
+</html>`;
+}
+
 const server = createServer(async (request, response) => {
   const requestUrl = new URL(request.url ?? "/", `http://${request.headers.host}`);
 
   if (request.method === "OPTIONS") {
     response.writeHead(204, getCorsHeaders());
     response.end();
+    return;
+  }
+
+  if (requestUrl.pathname === "/analytics" && request.method === "GET") {
+    response.writeHead(200, {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+      ...getCorsHeaders()
+    });
+    response.end(getAnalyticsHtml());
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/analytics/report" && request.method === "GET") {
+    sendJson(response, 200, loadAnalytics());
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/analytics" && request.method === "POST") {
+    try {
+      const body = await readJsonBody(request);
+      if (body && body.event) {
+        trackAnalyticsEvent(body.event);
+        sendJson(response, 200, { success: true });
+      } else {
+        sendJson(response, 400, { error: "Event name is required" });
+      }
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
     return;
   }
 
@@ -4453,6 +5046,11 @@ const server = createServer(async (request, response) => {
         const userToken = `mock-token-${cleanEmail}`;
         const encryptionKey = "mock-encryption-key";
         const walletAddress = "0x12793cA4f495f5255C423128b1ED9Cd71B08023D";
+        try {
+          trackAnalyticsEvent("sign_up", cleanEmail);
+        } catch (err) {
+          console.error("Failed to track mock sign_up event:", err);
+        }
         sendJson(response, 200, {
           mock: true,
           userToken,
@@ -4493,6 +5091,11 @@ const server = createServer(async (request, response) => {
         }
 
         // 3. No ARC-TESTNET wallet found. Initialize user/wallet.
+        try {
+          trackAnalyticsEvent("sign_up", cleanEmail);
+        } catch (err) {
+          console.error("Failed to track real sign_up event:", err);
+        }
         const idempotencyKey = randomUUID();
         try {
           const initRes = await callCircleApi("/v1/w3s/user/initialize", "POST", {
@@ -4839,6 +5442,11 @@ const server = createServer(async (request, response) => {
         const result = await summarizeWith0G(article, { force });
         if (result?.provider !== "local-fallback" && result?.provider !== "local-no-key") {
           await persistSummaryToPublishedFeeds(article, result);
+        }
+        try {
+          trackAnalyticsEvent("view_summary");
+        } catch (err) {
+          console.error("Failed to track view_summary event:", err);
         }
         return result;
       })
