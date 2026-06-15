@@ -23,7 +23,7 @@ const port = Number(process.env.PORT ?? 5173);
 const maxArticleAgeHours = Number(process.env.MAX_ARTICLE_AGE_HOURS ?? 48);
 const rssItemsPerFeed = Number(process.env.RSS_ITEMS_PER_FEED ?? 30);
 const summaryConcurrency = Number(process.env.SUMMARY_CONCURRENCY ?? 2);
-const summaryTimeoutMs = Number(process.env.SUMMARY_TIMEOUT_MS ?? 45000);
+const summaryTimeoutMs = Number(process.env.SUMMARY_TIMEOUT_MS ?? 90000);
 const threadReviewTimeoutMs = Number(process.env.THREAD_REVIEW_TIMEOUT_MS ?? 90000);
 const appTimeZone = process.env.APP_TIME_ZONE || "Africa/Lagos";
 const allowedOrigin = process.env.ALLOWED_ORIGIN || process.env.ALLOWED_ORIGINS || "*";
@@ -3851,9 +3851,11 @@ const persistSummaryToPublishedFeeds = async (article, result) => {
     const updated = updateSnapshotStorySummary(snapshot, article, result);
     if (!updated) continue;
 
+    const freshTime = new Date().toISOString();
     const localPublished = {
       ...updated,
-      published_at: new Date().toISOString(),
+      generated_at: freshTime,
+      published_at: freshTime,
       status: "published"
     };
     writePublishedSnapshot(localPublished);
@@ -3923,9 +3925,13 @@ const generateSnapshot = async (category) => {
 };
 
 const publishSnapshot = async (snapshot) => {
+  const snapshotWithTime = {
+    ...snapshot,
+    generated_at: new Date().toISOString()
+  };
   let archive;
   try {
-    archive = await archiveSnapshot(snapshot);
+    archive = await archiveSnapshot(snapshotWithTime);
   } catch (error) {
     archive = { provider: "local-dev", error: error.message };
   }
@@ -3935,7 +3941,7 @@ const publishSnapshot = async (snapshot) => {
   }
 
   const publishedSnapshot = {
-    ...normalizeSnapshotSummaries(snapshot),
+    ...normalizeSnapshotSummaries(snapshotWithTime),
     archive,
     published_at: new Date().toISOString(),
     status: "published"
