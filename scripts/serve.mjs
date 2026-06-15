@@ -4073,8 +4073,7 @@ const callCircleApi = async (path, method, body, userToken = null) => {
   if (userToken) {
     headers["X-User-Token"] = userToken;
   }
-  const defaultApiUrl = apiKey.startsWith("LIVE_API_KEY:") ? "https://api.circle.com" : "https://api-sandbox.circle.com";
-  const circleApiUrl = process.env.CIRCLE_API_URL || defaultApiUrl;
+  const circleApiUrl = process.env.CIRCLE_API_URL || "https://api.circle.com";
   const url = `${circleApiUrl}${path}`;
   console.log(`[Circle API] ${method} ${url}`);
   const response = await fetch(url, {
@@ -4119,174 +4118,205 @@ const server = createServer(async (request, response) => {
         expiresAt: Date.now() + 10 * 60 * 1000
       });
 
-      // Send email via SMTP if configured
-      const smtpHost = process.env.SMTP_HOST;
-      const smtpUser = process.env.SMTP_USER;
-      const smtpPass = process.env.SMTP_PASS;
-      const smtpFrom = process.env.SMTP_FROM || "Siftle Auth <no-reply@siftle.xyz>";
+      const formattedOtp = otp.slice(0, 3) + " " + otp.slice(3);
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Siftle Verification Code</title>
+          <style>
+            body {
+              margin: 0;
+              padding: 0;
+              background-color: #0b0f19;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              color: #f1f5f9;
+            }
+            .email-container {
+              max-width: 480px;
+              margin: 30px auto;
+              background-color: #111827;
+              border: 1px solid #1f2937;
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+            }
+            .header {
+              padding: 32px 24px 24px;
+              text-align: center;
+              border-bottom: 1px solid #1f2937;
+              background: linear-gradient(135deg, #1e1b4b 0%, #111827 100%);
+            }
+            .brand-name {
+              font-size: 24px;
+              font-weight: 800;
+              color: #ffffff;
+              letter-spacing: 2px;
+            }
+            .content {
+              padding: 36px 24px;
+              text-align: center;
+            }
+            .title {
+              font-size: 20px;
+              font-weight: 600;
+              margin-bottom: 12px;
+              color: #ffffff;
+            }
+            .subtitle {
+              font-size: 14px;
+              color: #94a3b8;
+              margin-bottom: 28px;
+              line-height: 1.5;
+            }
+            .code-container {
+              background-color: rgba(99, 102, 241, 0.1);
+              border: 1px solid rgba(99, 102, 241, 0.25);
+              border-radius: 8px;
+              padding: 18px 28px;
+              display: inline-block;
+              margin-bottom: 24px;
+            }
+            .code {
+              font-family: 'Courier New', Courier, monospace;
+              font-size: 36px;
+              font-weight: 700;
+              letter-spacing: 4px;
+              color: #a5b4fc;
+            }
+            .expiry {
+              font-size: 12px;
+              color: #f87171;
+              font-weight: 500;
+              margin-bottom: 12px;
+            }
+            .footer {
+              padding: 24px;
+              background-color: #0d121f;
+              border-top: 1px solid #1f2937;
+              text-align: center;
+              font-size: 12px;
+              color: #64748b;
+              line-height: 1.6;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="email-container" style="max-width: 480px; margin: 30px auto; background-color: #111827; border: 1px solid #1f2937; border-radius: 12px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            <div class="header" style="padding: 32px 24px 24px; text-align: center; border-bottom: 1px solid #1f2937; background: linear-gradient(135deg, #1e1b4b 0%, #111827 100%);">
+              <div class="brand-name" style="font-size: 24px; font-weight: 800; color: #ffffff; letter-spacing: 2px;">SIFTLE</div>
+            </div>
+            <div class="content" style="padding: 36px 24px; text-align: center; color: #f1f5f9;">
+              <div class="title" style="font-size: 20px; font-weight: 600; margin-bottom: 12px; color: #ffffff;">Verify Your Email</div>
+              <p class="subtitle" style="font-size: 14px; color: #94a3b8; margin-bottom: 28px; line-height: 1.5; max-width: 380px; margin-left: auto; margin-right: auto;">Please enter the verification code below to authorize your session and sign in to Siftle.</p>
+              
+              <div class="code-container" style="background-color: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 8px; padding: 18px 28px; display: inline-block; margin-bottom: 24px;">
+                <span class="code" style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 700; letter-spacing: 4px; color: #a5b4fc;">${formattedOtp}</span>
+              </div>
+              
+              <div class="expiry" style="font-size: 12px; color: #f87171; font-weight: 500;">Expires in 10 minutes</div>
+            </div>
+            <div class="footer" style="padding: 24px; background-color: #0d121f; border-top: 1px solid #1f2937; text-align: center; font-size: 11px; color: #64748b; line-height: 1.6;">
+              <p style="margin: 0 0 8px 0;">This code was requested for a sign-in attempt on Siftle. If you did not request this code, you can safely ignore this email.</p>
+              <p style="margin: 0;">&copy; 2026 Siftle. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
 
       let emailSent = false;
-      if (smtpHost && smtpUser && smtpPass) {
+
+      // 1. Try Resend API (HTTP, port 443 - not blocked by Render)
+      const resendApiKey = process.env.RESEND_API_KEY;
+      if (resendApiKey) {
         try {
-          // Pre-resolve hostname to IPv4 to avoid Render IPv6 ENETUNREACH errors
-          let resolvedHost = smtpHost;
-          try {
-            const { resolve4 } = await import("node:dns/promises");
-            const addresses = await resolve4(smtpHost);
-            if (addresses && addresses.length > 0) {
-              resolvedHost = addresses[0];
-              console.log(`SMTP: Resolved ${smtpHost} -> ${resolvedHost} (IPv4)`);
-            }
-          } catch (dnsErr) {
-            console.warn(`SMTP DNS resolve4 failed for ${smtpHost}, using hostname directly: ${dnsErr.message}`);
-          }
-
-          const smtpPort = Number(process.env.SMTP_PORT || 587);
-          const transporter = nodemailer.createTransport({
-            host: resolvedHost,
-            port: smtpPort,
-            secure: smtpPort === 465,
-            auth: { user: smtpUser, pass: smtpPass },
-            family: 4,
-            tls: { servername: smtpHost }, // Required for TLS when connecting via IP
-            connectionTimeout: 10000,
-            greetingTimeout: 10000,
-            socketTimeout: 15000
-          });
-
-          const formattedOtp = otp.slice(0, 3) + " " + otp.slice(3);
-          const htmlContent = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>Siftle Verification Code</title>
-              <style>
-                body {
-                  margin: 0;
-                  padding: 0;
-                  background-color: #0b0f19;
-                  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                  color: #f1f5f9;
-                }
-                .email-container {
-                  max-width: 480px;
-                  margin: 30px auto;
-                  background-color: #111827;
-                  border: 1px solid #1f2937;
-                  border-radius: 12px;
-                  overflow: hidden;
-                  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
-                }
-                .header {
-                  padding: 32px 24px 24px;
-                  text-align: center;
-                  border-bottom: 1px solid #1f2937;
-                  background: linear-gradient(135deg, #1e1b4b 0%, #111827 100%);
-                }
-                .brand-name {
-                  font-size: 24px;
-                  font-weight: 800;
-                  color: #ffffff;
-                  letter-spacing: 2px;
-                }
-                .content {
-                  padding: 36px 24px;
-                  text-align: center;
-                }
-                .title {
-                  font-size: 20px;
-                  font-weight: 600;
-                  margin-bottom: 12px;
-                  color: #ffffff;
-                }
-                .subtitle {
-                  font-size: 14px;
-                  color: #94a3b8;
-                  margin-bottom: 28px;
-                  line-height: 1.5;
-                }
-                .code-container {
-                  background-color: rgba(99, 102, 241, 0.1);
-                  border: 1px solid rgba(99, 102, 241, 0.25);
-                  border-radius: 8px;
-                  padding: 18px 28px;
-                  display: inline-block;
-                  margin-bottom: 24px;
-                }
-                .code {
-                  font-family: 'Courier New', Courier, monospace;
-                  font-size: 36px;
-                  font-weight: 700;
-                  letter-spacing: 4px;
-                  color: #a5b4fc;
-                }
-                .expiry {
-                  font-size: 12px;
-                  color: #f87171;
-                  font-weight: 500;
-                  margin-bottom: 12px;
-                }
-                .footer {
-                  padding: 24px;
-                  background-color: #0d121f;
-                  border-top: 1px solid #1f2937;
-                  text-align: center;
-                  font-size: 12px;
-                  color: #64748b;
-                  line-height: 1.6;
-                }
-              </style>
-            </head>
-            <body>
-              <div class="email-container" style="max-width: 480px; margin: 30px auto; background-color: #111827; border: 1px solid #1f2937; border-radius: 12px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                <div class="header" style="padding: 32px 24px 24px; text-align: center; border-bottom: 1px solid #1f2937; background: linear-gradient(135deg, #1e1b4b 0%, #111827 100%);">
-                  <div class="brand-name" style="font-size: 24px; font-weight: 800; color: #ffffff; letter-spacing: 2px;">SIFTLE</div>
-                </div>
-                <div class="content" style="padding: 36px 24px; text-align: center; color: #f1f5f9;">
-                  <div class="title" style="font-size: 20px; font-weight: 600; margin-bottom: 12px; color: #ffffff;">Verify Your Email</div>
-                  <p class="subtitle" style="font-size: 14px; color: #94a3b8; margin-bottom: 28px; line-height: 1.5; max-width: 380px; margin-left: auto; margin-right: auto;">Please enter the verification code below to authorize your session and sign in to Siftle.</p>
-                  
-                  <div class="code-container" style="background-color: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 8px; padding: 18px 28px; display: inline-block; margin-bottom: 24px;">
-                    <span class="code" style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 700; letter-spacing: 4px; color: #a5b4fc;">${formattedOtp}</span>
-                  </div>
-                  
-                  <div class="expiry" style="font-size: 12px; color: #f87171; font-weight: 500;">Expires in 10 minutes</div>
-                </div>
-                <div class="footer" style="padding: 24px; background-color: #0d121f; border-top: 1px solid #1f2937; text-align: center; font-size: 11px; color: #64748b; line-height: 1.6;">
-                  <p style="margin: 0 0 8px 0;">This code was requested for a sign-in attempt on Siftle. If you did not request this code, you can safely ignore this email.</p>
-                  <p style="margin: 0;">&copy; 2026 Siftle. All rights reserved.</p>
-                </div>
-              </div>
-            </body>
-            </html>
-          `;
-
-          const randomId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-          const customMessageId = `<${randomId}@gmail.com>`;
-
-          await transporter.sendMail({
-            messageId: customMessageId,
-            from: `Siftle <${smtpUser}>`,
-            to: email,
-            replyTo: smtpUser,
-            subject: `Siftle Security Code: ${otp}`,
-            text: `Verify Your Email\n\nPlease enter the verification code below to authorize your session and sign in to Siftle.\n\nVerification Code: ${formattedOtp}\n\nThis code will expire in 10 minutes.\n\nThis code was requested for a sign-in attempt on Siftle. If you did not request this code, you can safely ignore this email.`,
-            html: htmlContent,
+          const resendFrom = process.env.RESEND_FROM || "Siftle <onboarding@resend.dev>";
+          const res = await fetch("https://api.resend.com/emails", {
+            method: "POST",
             headers: {
-              "X-Priority": "1",
-              "X-MSMail-Priority": "High",
-              "Importance": "high",
-              "X-Mailer": "Siftle Mailer",
-              "X-Auto-Response-Suppress": "All",
-              "Feedback-ID": "siftle:otp"
-            }
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${resendApiKey.trim().replace(/^["']|["']$/g, "")}`
+            },
+            body: JSON.stringify({
+              from: resendFrom,
+              to: [email],
+              subject: `Siftle Security Code: ${otp}`,
+              html: htmlContent
+            })
           });
-          emailSent = true;
-          console.log(`OTP sent via SMTP to ${email}`);
-        } catch (mailErr) {
-          console.warn(`Failed to send SMTP email: ${mailErr.message}`);
+          const resText = await res.text();
+          if (res.ok) {
+            emailSent = true;
+            console.log(`OTP sent via Resend API to ${email}`);
+          } else {
+            console.warn(`Resend API send failed: ${res.status} -> ${resText}`);
+          }
+        } catch (resendErr) {
+          console.warn(`Failed to send email via Resend API: ${resendErr.message}`);
+        }
+      }
+
+      // 2. Fall back to SMTP if Resend is not configured or failed
+      if (!emailSent) {
+        const smtpHost = process.env.SMTP_HOST;
+        const smtpUser = process.env.SMTP_USER;
+        const smtpPass = process.env.SMTP_PASS;
+        if (smtpHost && smtpUser && smtpPass) {
+          try {
+            // Pre-resolve hostname to IPv4 to avoid Render IPv6 ENETUNREACH errors
+            let resolvedHost = smtpHost;
+            try {
+              const { resolve4 } = await import("node:dns/promises");
+              const addresses = await resolve4(smtpHost);
+              if (addresses && addresses.length > 0) {
+                resolvedHost = addresses[0];
+                console.log(`SMTP: Resolved ${smtpHost} -> ${resolvedHost} (IPv4)`);
+              }
+            } catch (dnsErr) {
+              console.warn(`SMTP DNS resolve4 failed for ${smtpHost}, using hostname directly: ${dnsErr.message}`);
+            }
+
+            const smtpPort = Number(process.env.SMTP_PORT || 587);
+            const transporter = nodemailer.createTransport({
+              host: resolvedHost,
+              port: smtpPort,
+              secure: smtpPort === 465,
+              auth: { user: smtpUser, pass: smtpPass },
+              family: 4,
+              tls: { servername: smtpHost }, // Required for TLS when connecting via IP
+              connectionTimeout: 10000,
+              greetingTimeout: 10000,
+              socketTimeout: 15000
+            });
+
+            const randomId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            const customMessageId = `<${randomId}@gmail.com>`;
+
+            await transporter.sendMail({
+              messageId: customMessageId,
+              from: `Siftle <${smtpUser}>`,
+              to: email,
+              replyTo: smtpUser,
+              subject: `Siftle Security Code: ${otp}`,
+              text: `Verify Your Email\n\nPlease enter the verification code below to authorize your session and sign in to Siftle.\n\nVerification Code: ${formattedOtp}\n\nThis code will expire in 10 minutes.\n\nThis code was requested for a sign-in attempt on Siftle. If you did not request this code, you can safely ignore this email.`,
+              html: htmlContent,
+              headers: {
+                "X-Priority": "1",
+                "X-MSMail-Priority": "High",
+                "Importance": "high",
+                "X-Mailer": "Siftle Mailer",
+                "X-Auto-Response-Suppress": "All",
+                "Feedback-ID": "siftle:otp"
+              }
+            });
+            emailSent = true;
+            console.log(`OTP sent via SMTP to ${email}`);
+          } catch (mailErr) {
+            console.warn(`Failed to send SMTP email: ${mailErr.message}`);
+          }
         }
       }
 
