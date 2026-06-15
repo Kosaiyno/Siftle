@@ -1514,6 +1514,39 @@ const canvasToBlob = (canvas: HTMLCanvasElement): Promise<Blob> =>
     }
   });
 
+const decodeHtmlEntities = (text: string): string => {
+  if (!text) return "";
+  return text
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#39;/g, "'")
+    .replace(/&#34;/g, '"')
+    .replace(/&#38;/g, '&')
+    .replace(/&#60;/g, '<')
+    .replace(/&#62;/g, '>')
+    .replace(/&#8216;/g, "'")
+    .replace(/&#8217;/g, "'")
+    .replace(/&#8220;/g, '"')
+    .replace(/&#8221;/g, '"')
+    .replace(/&#8211;/g, '–')
+    .replace(/&#8212;/g, '—')
+    .replace(/&#8230;/g, '...')
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(Number(dec)));
+};
+
+const getProxyImageUrl = (url: string): string => {
+  if (!url) return "";
+  if (url.startsWith("data:") || url.startsWith("./") || url.startsWith("/") || url.includes(window.location.host)) {
+    return url;
+  }
+  const apiBase = ((window as any).SIFTLE_API_BASE || "").replace(/\/$/, "");
+  return `${apiBase}/api/proxy-image?url=${encodeURIComponent(url)}`;
+};
+
 const drawShareCard = async (story: NewsStory, includeRemoteImage = true): Promise<HTMLCanvasElement> => {
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
@@ -1542,11 +1575,11 @@ const drawShareCard = async (story: NewsStory, includeRemoteImage = true): Promi
 
   context.fillStyle = "#6b748c";
   context.font = "700 24px Inter, Arial, sans-serif";
-  context.fillText(`${story.source} - ${story.postedAt} ago`, 110, 140);
+  context.fillText(`${decodeHtmlEntities(story.source)} - ${story.postedAt} ago`, 110, 140);
 
   const imageY = 195;
   if (includeRemoteImage) {
-    const storyImage = await loadCanvasImage(story.imageUrl).catch(() => null);
+    const storyImage = await loadCanvasImage(getProxyImageUrl(story.imageUrl)).catch(() => null);
     if (storyImage) {
       drawCoverImage(context, storyImage, 110, imageY, 860, 520, 28);
     } else {
@@ -1579,7 +1612,7 @@ const drawShareCard = async (story: NewsStory, includeRemoteImage = true): Promi
 
   context.fillStyle = "#07142f";
   context.font = "680 44px Space Grotesk, Inter, Arial, sans-serif";
-  drawWrappedText(context, story.headline, 110, 888, 860, 54, 4);
+  drawWrappedText(context, decodeHtmlEntities(story.headline), 110, 888, 860, 54, 4);
 
   return canvas;
 };

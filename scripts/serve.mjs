@@ -4141,6 +4141,38 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (requestUrl.pathname === "/api/proxy-image" && request.method === "GET") {
+    const targetUrl = requestUrl.searchParams.get("url");
+    if (!targetUrl) {
+      response.writeHead(400, { "Content-Type": "text/plain", ...getCorsHeaders() });
+      response.end("Missing url parameter");
+      return;
+    }
+    
+    try {
+      const imgRes = await fetch(targetUrl);
+      if (!imgRes.ok) {
+        response.writeHead(imgRes.status, { "Content-Type": "text/plain", ...getCorsHeaders() });
+        response.end("Failed to fetch image");
+        return;
+      }
+      
+      const contentType = imgRes.headers.get("Content-Type") || "image/jpeg";
+      const arrayBuffer = await imgRes.arrayBuffer();
+      
+      response.writeHead(200, {
+        "Content-Type": contentType,
+        "Cache-Control": "public, max-age=86400",
+        ...getCorsHeaders()
+      });
+      response.end(Buffer.from(arrayBuffer));
+    } catch (error) {
+      response.writeHead(500, { "Content-Type": "text/plain", ...getCorsHeaders() });
+      response.end(`Error proxying image: ${error.message}`);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/circle/auth/otp" && request.method === "POST") {
     try {
       const body = await readJsonBody(request);
