@@ -2512,16 +2512,17 @@ document.addEventListener("click", (event) => {
   const closestAnchor = target.closest("a, button");
   if (closestAnchor) {
     const className = closestAnchor.className || "";
-    const href = (closestAnchor as HTMLAnchorElement).href || "";
+    const classStr = typeof className === "string" ? className : (closestAnchor.getAttribute("class") || "");
+    const href = closestAnchor.getAttribute("href") || "";
     if (
-      className.includes("source-button") ||
-      className.includes("source-btn") ||
-      className.includes("source-link") ||
+      classStr.includes("source-button") ||
+      classStr.includes("source-btn") ||
+      classStr.includes("source-link") ||
       closestAnchor.textContent?.trim() === "Open source"
     ) {
-      if (!className.includes("disabled") && !href.includes("example.com")) {
+      if (!classStr.includes("disabled") && href !== "#" && href !== "") {
         trackEvent("open_source");
       }
     }
   }
-});
+}, true);
