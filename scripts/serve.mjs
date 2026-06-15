@@ -4073,7 +4073,8 @@ const callCircleApi = async (path, method, body, userToken = null) => {
   if (userToken) {
     headers["X-User-Token"] = userToken;
   }
-  const circleApiUrl = process.env.CIRCLE_API_URL || "https://api.circle.com";
+  const defaultApiUrl = apiKey.startsWith("LIVE_API_KEY:") ? "https://api.circle.com" : "https://api-sandbox.circle.com";
+  const circleApiUrl = process.env.CIRCLE_API_URL || defaultApiUrl;
   const url = `${circleApiUrl}${path}`;
   console.log(`[Circle API] ${method} ${url}`);
   const response = await fetch(url, {
