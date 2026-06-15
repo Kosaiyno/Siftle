@@ -1913,15 +1913,41 @@ const writeJsonFile = (filePath, payload) => {
   renameSync(tempPath, filePath);
 };
 
-const readPublishedSnapshot = (category) => {
-  const cached = publishedSnapshots.get(category);
-  if (cached) return cached;
-  if (isShelbyArchiveConfigured()) {
+const readLocalArchiveSnapshot = (date, category) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date ?? "")) {
+    throw new Error("Invalid archive date");
+  }
+
+  const selectedCategory = normalizeCategory(category);
+  const filePath = join(archiveDir, archiveFilename(date, selectedCategory));
+  if (!existsSync(filePath)) {
+    const allPath = join(archiveDir, archiveFilename(date, "All"));
+    if (selectedCategory !== "All" && existsSync(allPath)) {
+      const allSnapshot = JSON.parse(readFileSync(allPath, "utf8"));
+      return {
+        ...allSnapshot,
+        category: selectedCategory,
+        top_stories: markArchiveStories((allSnapshot.top_stories ?? []).filter((story) => story.category === selectedCategory), date),
+        archive: {
+          provider: "local-dev",
+          restored_from: allPath,
+          filtered_from: "All"
+        }
+      };
+    }
+
     return null;
   }
-  const filePath = getLatestSnapshotPath(category);
-  if (!existsSync(filePath)) return null;
-  return normalizeSnapshotSummaries(JSON.parse(readFileSync(filePath, "utf8")));
+
+  const snapshot = JSON.parse(readFileSync(filePath, "utf8"));
+  return {
+    ...snapshot,
+    top_stories: markArchiveStories(snapshot.top_stories ?? [], date),
+    archive: {
+      provider: "local-dev",
+      restored_from: filePath
+    }
+  };
 };
 
 const readArchiveSnapshot = async (date, category) => {
@@ -3630,6 +3656,11 @@ const normalizeSnapshotSummaries = (snapshot) => {
 };
 
 const readPublishedSnapshot = (category) => {
+  const cached = publishedSnapshots.get(category);
+  if (cached) return cached;
+  if (isShelbyArchiveConfigured()) {
+    return null;
+  }
   const filePath = getLatestSnapshotPath(category);
   if (!existsSync(filePath)) return null;
   return normalizeSnapshotSummaries(JSON.parse(readFileSync(filePath, "utf8")));
