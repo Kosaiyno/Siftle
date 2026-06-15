@@ -4507,6 +4507,7 @@ const server = createServer(async (request, response) => {
   if (requestUrl.pathname === "/api/circle/tx/status" && request.method === "GET") {
     try {
       const id = requestUrl.searchParams.get("id");
+      const userToken = requestUrl.searchParams.get("userToken");
       if (!id) {
         sendJson(response, 400, { error: "Transaction ID is required" });
         return;
@@ -4523,13 +4524,52 @@ const server = createServer(async (request, response) => {
       }
 
       try {
-        const txRes = await callCircleApi(`/v1/w3s/transactions/${id}`, "GET");
-        const tx = txRes.data?.transaction || txRes.transaction || txRes.data || {};
-        sendJson(response, 200, {
-          mock: false,
-          state: tx.state || tx.status,
-          txHash: tx.txHash
-        });
+        try {
+          const txRes = await callCircleApi(`/v1/w3s/transactions/${id}`, "GET");
+          const tx = txRes.data?.transaction || txRes.transaction || txRes.data || {};
+          sendJson(response, 200, {
+            mock: false,
+            state: tx.state || tx.status,
+            txHash: tx.txHash
+          });
+          return;
+        } catch (txErr) {
+          if (txErr.code === 156003 && userToken) {
+            console.log(`Transaction ${id} not found. Attempting challenge query...`);
+            const challengeRes = await callCircleApi(`/v1/w3s/user/challenges/${id}`, "GET", null, userToken);
+            const challenge = challengeRes.data?.challenge || challengeRes.challenge || challengeRes.data || {};
+            
+            const status = challenge.status;
+            if (status === "COMPLETE") {
+              const correlationId = challenge.correlationIds?.[0];
+              if (correlationId) {
+                console.log(`Challenge complete! Fetching transaction for correlationId: ${correlationId}`);
+                const correlationTxRes = await callCircleApi(`/v1/w3s/transactions/${correlationId}`, "GET");
+                const tx = correlationTxRes.data?.transaction || correlationTxRes.transaction || correlationTxRes.data || {};
+                sendJson(response, 200, {
+                  mock: false,
+                  state: tx.state || tx.status,
+                  txHash: tx.txHash
+                });
+                return;
+              }
+            } else if (status === "PENDING" || status === "IN_PROGRESS") {
+              sendJson(response, 200, {
+                mock: false,
+                state: status
+              });
+              return;
+            } else {
+              sendJson(response, 200, {
+                mock: false,
+                state: "FAILED",
+                error: challenge.errorMessage || "Challenge execution failed"
+              });
+              return;
+            }
+          }
+          throw txErr;
+        }
       } catch (err) {
         console.error("Circle get transaction status error:", err);
         sendJson(response, 500, { error: `Failed to fetch transaction status: ${err.message}` });

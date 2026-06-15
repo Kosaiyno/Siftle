@@ -633,13 +633,13 @@ const waitForCircleTx = async (txId: string): Promise<string> => {
   let attempts = 0;
   while (attempts < 60) {
     attempts++;
-    const res = await fetch(apiUrl(`/api/circle/tx/status?id=${txId}`));
+    const res = await fetch(apiUrl(`/api/circle/tx/status?id=${txId}&userToken=${activeUserToken || ""}`));
     if (res.ok) {
       const data = await res.json();
       if (data.state === "CONFIRMED" || data.state === "COMPLETE") {
         if (data.txHash) return data.txHash;
       } else if (data.state === "FAILED") {
-        throw new Error("Transaction execution failed on-chain");
+        throw new Error(data.error || "Transaction execution failed on-chain");
       }
     }
     await new Promise(r => setTimeout(r, 2000));
