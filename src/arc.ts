@@ -438,6 +438,8 @@ export const connectArcWallet = async (): Promise<string> => {
           localStorage.setItem("siftle_circle_user_token", userToken);
           localStorage.setItem("siftle_circle_encryption_key", encryptionKey);
           localStorage.setItem("siftle_circle_is_mock", "true");
+          activeUserToken = userToken;
+          activeEncryptionKey = encryptionKey;
 
           let storedKey = localStorage.getItem(`siftle_mock_key_${email}`);
           if (!storedKey) {
@@ -460,6 +462,8 @@ export const connectArcWallet = async (): Promise<string> => {
         localStorage.setItem("siftle_circle_user_token", userToken);
         localStorage.setItem("siftle_circle_encryption_key", encryptionKey);
         localStorage.setItem("siftle_circle_is_mock", "false");
+        activeUserToken = userToken;
+        activeEncryptionKey = encryptionKey;
 
         if (data.initialized) {
           activeWalletAddress = data.walletAddress;
@@ -612,6 +616,9 @@ export const readArcMarketPosition = async (marketAddress: string, account: stri
 const runCircleChallenge = (challengeId: string): Promise<void> => {
   return new Promise((resolve, reject) => {
     const sdk = getCircleSdk();
+    if (activeUserToken && activeEncryptionKey) {
+      sdk.setAuthentication({ userToken: activeUserToken, encryptionKey: activeEncryptionKey });
+    }
     sdk.execute(challengeId, (error) => {
       if (error) {
         reject(new Error(error.message || "Circle transaction signing failed"));
