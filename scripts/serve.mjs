@@ -2511,7 +2511,7 @@ const summarizeLocally = (article) => {
   return base.length > 220 ? `${base.slice(0, 217).trim()}...` : base;
 };
 
-const summaryPromptVersion = "briefing-v1";
+const summaryPromptVersion = "briefing-v2";
 
 const summarizeLocallyTight = (article) =>
   stripHtml(article?.summary || article?.headline || "")
@@ -2957,7 +2957,7 @@ const summarizeWith0G = async (article, options = {}) => {
           {
             role: "system",
             content:
-              "You are Siftle's AI Briefing assistant. Return strict JSON with exactly one key: summary. The value must be a highly structured, unique AI Briefing formatted EXACTLY like this (using standard bold HTML tags and line breaks): **THE LEDE:** [One punchy, bolded sentence summarizing the main event/breakthrough] <br/><br/> **THE DETAILS:** <br/> • [Bullet point detailing key facts, stats, or figures] <br/> • [Second bullet point with critical context or timeline] <br/><br/> **THE SO WHAT:** [A short sentence detailing the impact or implication]. Rules: Stay strictly grounded in the text. No outside facts. Keep it concise (70 to 140 words total). Output ONLY valid JSON."
+              "You are Siftle's AI Briefing assistant. Return strict JSON with exactly one key: summary. The value must be a highly structured, unique AI Briefing formatted EXACTLY like this (using standard bold HTML tags and line breaks): **WHAT HAPPENED:** [1-2 sentences summarizing the core event] <br/><br/> **KEY POINTS:** <br/> • [First bullet point detailing a key fact, stat, or figure] <br/> • [Second bullet point with critical details] <br/> • [Third bullet point with critical details] <br/> • [Fourth bullet point, if applicable] <br/><br/> **TAKEAWAY:** [1 sentence summarizing the final takeaway or outlook]. Rules: Stay strictly grounded in the text. No outside facts. Keep it concise (70 to 140 words total). Output ONLY valid JSON."
           },
           {
             role: "user",
@@ -3012,7 +3012,7 @@ const summarizeWith0G = async (article, options = {}) => {
               {
                 role: "system",
                 content:
-                  "You are Siftle's AI Briefing assistant. Return strict JSON with exactly one key: summary. The value must be a highly structured, unique AI Briefing formatted EXACTLY like this (using standard bold HTML tags and line breaks): **THE LEDE:** [One punchy, bolded sentence summarizing the main event/breakthrough] <br/><br/> **THE DETAILS:** <br/> • [Bullet point detailing key facts, stats, or figures] <br/> • [Second bullet point with critical context or timeline] <br/><br/> **THE SO WHAT:** [A short sentence detailing the impact or implication]. Rules: Stay strictly grounded in the text. No outside facts. Keep it concise (70 to 140 words total). Output ONLY valid JSON."
+                  "You are Siftle's AI Briefing assistant. Return strict JSON with exactly one key: summary. The value must be a highly structured, unique AI Briefing formatted EXACTLY like this (using standard bold HTML tags and line breaks): **WHAT HAPPENED:** [1-2 sentences summarizing the core event] <br/><br/> **KEY POINTS:** <br/> • [First bullet point detailing a key fact, stat, or figure] <br/> • [Second bullet point with critical details] <br/> • [Third bullet point with critical details] <br/> • [Fourth bullet point, if applicable] <br/><br/> **TAKEAWAY:** [1 sentence summarizing the final takeaway or outlook]. Rules: Stay strictly grounded in the text. No outside facts. Keep it concise (70 to 140 words total). Output ONLY valid JSON."
               },
               {
                 role: "user",
