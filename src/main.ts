@@ -714,6 +714,50 @@ const cleanSummaryText = (value: string): string => {
 const safeStorySummary = (story: NewsStory, preferred?: string): string =>
   cleanSummaryText(preferred || "") || cleanSummaryText(story.summary) || story.headline;
 
+const formatAIBriefing = (text: string): string => {
+  const parts = text.split(/(?:\*\*|__)?(WHAT HAPPENED|KEY POINTS|TAKEAWAY)\s*:?\s*(?:\*\*|__)?\s*:?\s*/i);
+  if (parts.length <= 1) {
+    return `<p class="briefing-text">${text}</p>`;
+  }
+
+  let html = '';
+  if (parts[0].trim()) {
+    html += `<p class="briefing-intro">${parts[0].trim()}</p>`;
+  }
+
+  for (let i = 1; i < parts.length; i += 2) {
+    const header = parts[i].trim().toUpperCase();
+    const content = parts[i + 1] ? parts[i + 1].trim() : '';
+    if (!content) continue;
+
+    let bodyHtml = '';
+    if (header === 'KEY POINTS') {
+      const bullets = content
+        .split(/(?:•|\*|-)\s+/)
+        .map(b => b.trim())
+        .filter(Boolean);
+
+      if (bullets.length > 0) {
+        bodyHtml = `<ul class="briefing-list">${bullets.map(b => `<li>${b}</li>`).join('')}</ul>`;
+      } else {
+        bodyHtml = `<p class="briefing-text">${content}</p>`;
+      }
+    } else {
+      bodyHtml = `<p class="briefing-text">${content}</p>`;
+    }
+
+    const headerSlug = header.toLowerCase().replace(/\s+/g, '-');
+    html += `
+      <div class="briefing-section ${headerSlug}-section">
+        <h4 class="briefing-title">${header}</h4>
+        ${bodyHtml}
+      </div>
+    `;
+  }
+
+  return html;
+};
+
 const loadStorySummary = async (story: NewsStory): Promise<void> => {
   if (state.aiSummaries[story.sourceUrl] || state.loadingSummaryUrl === story.sourceUrl) return;
 
@@ -1800,7 +1844,7 @@ const renderDetail = (): void => {
         <img class="detail-image" src="${story.imageUrl}" alt="" />
         <section class="detail-summary ${story.category}">
           <strong>AI briefing</strong>
-          ${isLoadingSummary ? renderSummarySkeleton() : `<p>${summary}</p>`}
+          ${isLoadingSummary ? renderSummarySkeleton() : formatAIBriefing(summary)}
         </section>
         <a class="source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>
       </article>

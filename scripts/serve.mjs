@@ -369,7 +369,12 @@ const rssFeeds = {
     "https://decrypt.co/feed",
     "https://bitcoinmagazine.com/.rss/full/",
     "https://www.newsbtc.com/feed/",
-    "https://bitcoinist.com/feed/"
+    "https://bitcoinist.com/feed/",
+    "https://airdropalert.com/feed/rssfeed",
+    "https://bankless.com/feed",
+    "https://thedefiant.io/feed/",
+    "https://medium.com/feed/@slowmist",
+    "https://blog.trailofbits.com/feed/"
   ],
   Sports: [
     "https://feeds.bbci.co.uk/sport/football/rss.xml",
@@ -1246,7 +1251,7 @@ const selectThreadReviewCandidates = (story, scoredCandidates) => {
     else sameDay.push(item);
   }
 
-  if (priorDay.length === 0) return [];
+  if (priorDay.length === 0 && sameDay.length === 0) return [];
 
   const priorDayGroups = new Map();
   for (const item of priorDay) {
@@ -1267,7 +1272,9 @@ const selectThreadReviewCandidates = (story, scoredCandidates) => {
     }
   }
 
-  const sameDayLimit = Math.max(0, Math.min(threadReviewSameDayCandidateLimit, limit));
+  const sameDayLimit = priorDay.length === 0
+    ? limit
+    : Math.max(0, Math.min(threadReviewSameDayCandidateLimit, limit));
   const selectedSameDay = sameDay.slice(0, Math.min(sameDayLimit, Math.max(0, limit - selectedPriorDay.length)));
 
   return [...selectedPriorDay, ...selectedSameDay].slice(0, limit);
@@ -1437,7 +1444,7 @@ const reviewThreadWith0G = async (story, scoredCandidates) => {
                 "Some candidates include existing_thread_context from a previously 0G-reviewed timeline. Approve that candidate when the current article clearly continues the same root catalyst; Siftle will preserve the verified older timeline automatically.",
                 "Reject duplicate_coverage: another outlet reporting substantially the same facts without a new development, even when the actor and event match.",
                 "Same-day articles may only be approved as material_follow_up when they add a clearly new event, decision, result, response, consequence, or milestone.",
-                "A valid displayed thread must include at least one approved article from an earlier calendar day than the current article.",
+                "A valid displayed thread can include approved articles from the same day or earlier calendar days.",
                 "Keep the JSON concise. Do not output entries for rejected candidates; summarize rejections in reject_reason.",
                 "Reject articles that are merely in the same category, about the same broad sport/coin/company/team/person/series, or share generic terms.",
                 "For sports, same World Cup/league/coach/team is not enough without the same move/event/player/match.",
@@ -1475,7 +1482,7 @@ const reviewThreadWith0G = async (story, scoredCandidates) => {
                 reject_reason: "brief note if few or no candidates are same story"
               },
               approval_rule:
-                "Approve only relationship prior_development or material_follow_up, confidence at least 0.80, specific shared_actor and shared_event, evidence from both articles, and a clear explanation that it is not broad or duplicate coverage. The final approved set must include at least one article from an earlier calendar day. Reject same-day duplicate reports. Create thread_topic only after deciding which candidates are approved."
+                "Approve only relationship prior_development or material_follow_up, confidence at least 0.80, specific shared_actor and shared_event, evidence from both articles, and a clear explanation that it is not broad or duplicate coverage. The final approved set can include articles from the same day or earlier calendar days. Reject same-day duplicate reports that add no new facts. Create thread_topic only after deciding which candidates are approved."
             })
           }
         ],
@@ -1502,12 +1509,7 @@ const reviewThreadWith0G = async (story, scoredCandidates) => {
         .filter((id) => Number.isInteger(id) && id >= 0 && id < candidates.length)
     );
     const approvedItems = candidates.filter((_, index) => approvedIds.has(index));
-    const currentDate = storyDateKey(story, getTodayKey());
-    const hasPriorDayDevelopment = approvedItems.some((item) => {
-      const candidateDate = storyDateKey(item);
-      return Boolean(currentDate && candidateDate && candidateDate < currentDate);
-    });
-    const items = hasPriorDayDevelopment ? expandApprovedThreadItems(story, approvedItems) : [];
+    const items = expandApprovedThreadItems(story, approvedItems);
     const evidence = approvals
       .filter((item) => approvedIds.has(Number(item.id)))
       .map((item) => ({
@@ -1679,7 +1681,7 @@ const prepareSnapshotThreads = async (snapshot) => {
 
   const preparedWorkItems = await runWithConcurrency(workItems, threadPrepConcurrency, async (workItem) => {
     const { story, index, scoredCandidates, opportunity } = workItem;
-    if (opportunity.distinctPriorDays < 1) {
+    if (scoredCandidates.length < 1) {
       const { thread: _thread, ...storyWithoutThread } = story;
       return { index, story: storyWithoutThread, thread: null };
     }
@@ -4058,10 +4060,22 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
               const bTime = b.generated_at ? new Date(b.generated_at).getTime() : 0;
               return bTime - aTime;
             });
-            const latest = catFiles[0];
-            console.log(`Downloading latest snapshot from Shelby for category ${category}: ${latest.blob_name} (${latest.date})`);
-            const { snapshot } = await downloadShelbySnapshot(latest.date, category);
-            publishedSnapshots.set(category, snapshot);
+
+            let downloaded = false;
+            for (const fileInfo of catFiles) {
+              try {
+                console.log(`Downloading snapshot from Shelby for category ${category}: ${fileInfo.blob_name} (${fileInfo.date})`);
+                const { snapshot } = await downloadShelbySnapshot(fileInfo.date, category);
+                publishedSnapshots.set(category, snapshot);
+                downloaded = true;
+                break;
+              } catch (downloadErr) {
+                console.warn(`Failed to download snapshot ${fileInfo.blob_name}: ${downloadErr.message}. Trying previous...`);
+              }
+            }
+            if (!downloaded) {
+              console.warn(`No valid snapshots could be downloaded for category ${category}.`);
+            }
           }
         }
       } catch (err) {
