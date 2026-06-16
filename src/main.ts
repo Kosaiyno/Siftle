@@ -1159,7 +1159,7 @@ const renderStoryListSkeleton = (count = 4): string =>
 
 const renderSummarySkeleton = (): string => `
   <div class="detail-summary-skeleton" aria-hidden="true">
-    ${renderSkeletonAria("Loading AI summary")}
+    ${renderSkeletonAria("Loading AI briefing")}
     <div class="skeleton skeleton-line lg"></div>
     <div class="skeleton skeleton-line xl"></div>
     <div class="skeleton skeleton-line md"></div>
@@ -1287,7 +1287,7 @@ const renderStories = (): void => {
           <div class="story-copy desktop-only">
             <span class="category-chip ${story.category}">${story.category}</span>
             <h2>${story.headline}</h2>
-            <p>Tap to read the AI summary.</p>
+            <p>Tap to read the AI briefing.</p>
           </div>
 
           <div class="card-action-row desktop-only">
@@ -1324,7 +1324,7 @@ const renderStories = (): void => {
               ${/example\\.com/i.test(story.sourceUrl)
                 ? `<a class="mobile-action-btn source-btn disabled" href="#" onclick="event.preventDefault(); event.stopPropagation(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
                 : `<a class="mobile-action-btn source-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Open source</a>`}
-              <button class="mobile-action-btn summary-btn" type="button">AI summary</button>
+              <button class="mobile-action-btn summary-btn" type="button">AI briefing</button>
             </div>
           </div>
 
@@ -1374,7 +1374,7 @@ const renderStories = (): void => {
           <div class="story-copy desktop-only">
             <span class="category-chip ${story.category}">${story.category}</span>
             <h2>${story.headline}</h2>
-            <p>Tap to read the AI summary.</p>
+            <p>Tap to read the AI briefing.</p>
           </div>
 
           <div class="card-action-row desktop-only">
@@ -1411,7 +1411,7 @@ const renderStories = (): void => {
               ${/example\\.com/i.test(story.sourceUrl)
                 ? `<a class="mobile-action-btn source-btn disabled" href="#" onclick="event.preventDefault(); event.stopPropagation(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
                 : `<a class="mobile-action-btn source-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Open source</a>`}
-              <button class="mobile-action-btn summary-btn" type="button">AI summary</button>
+              <button class="mobile-action-btn summary-btn" type="button">AI briefing</button>
             </div>
           </div>
 
@@ -1799,7 +1799,7 @@ const renderDetail = (): void => {
         <h2>${story.headline}</h2>
         <img class="detail-image" src="${story.imageUrl}" alt="" />
         <section class="detail-summary ${story.category}">
-          <strong>AI summary</strong>
+          <strong>AI briefing</strong>
           ${isLoadingSummary ? renderSummarySkeleton() : `<p>${summary}</p>`}
         </section>
         <a class="source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>

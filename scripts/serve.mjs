@@ -2511,7 +2511,7 @@ const summarizeLocally = (article) => {
   return base.length > 220 ? `${base.slice(0, 217).trim()}...` : base;
 };
 
-const summaryPromptVersion = "grounded-v3";
+const summaryPromptVersion = "briefing-v1";
 
 const summarizeLocallyTight = (article) =>
   stripHtml(article?.summary || article?.headline || "")
@@ -2957,7 +2957,7 @@ const summarizeWith0G = async (article, options = {}) => {
           {
             role: "system",
             content:
-              "You summarize news for Siftle. Return strict JSON with exactly one key: summary. Write one detailed, rich paragraph in 70 to 120 words. Focus on the key news facts, figures, and dates. Use only the supplied headline and article text. Do not critique the prompt, explain your process, add outside facts, or pad with generic context. Output ONLY valid JSON."
+              "You are Siftle's AI Briefing assistant. Return strict JSON with exactly one key: summary. The value must be a highly structured, unique AI Briefing formatted EXACTLY like this (using standard bold HTML tags and line breaks): **THE LEDE:** [One punchy, bolded sentence summarizing the main event/breakthrough] <br/><br/> **THE DETAILS:** <br/> • [Bullet point detailing key facts, stats, or figures] <br/> • [Second bullet point with critical context or timeline] <br/><br/> **THE SO WHAT:** [A short sentence detailing the impact or implication]. Rules: Stay strictly grounded in the text. No outside facts. Keep it concise (70 to 140 words total). Output ONLY valid JSON."
           },
           {
             role: "user",
@@ -3012,7 +3012,7 @@ const summarizeWith0G = async (article, options = {}) => {
               {
                 role: "system",
                 content:
-                  "You summarize news for Siftle. Return strict JSON with exactly one key: summary. Write one detailed, rich paragraph in 70 to 120 words using only the supplied article fields. Never include critique, attempt labels, prompt commentary, markdown, or outside context. If details are limited, stay brief and precise. Output ONLY valid JSON."
+                  "You are Siftle's AI Briefing assistant. Return strict JSON with exactly one key: summary. The value must be a highly structured, unique AI Briefing formatted EXACTLY like this (using standard bold HTML tags and line breaks): **THE LEDE:** [One punchy, bolded sentence summarizing the main event/breakthrough] <br/><br/> **THE DETAILS:** <br/> • [Bullet point detailing key facts, stats, or figures] <br/> • [Second bullet point with critical context or timeline] <br/><br/> **THE SO WHAT:** [A short sentence detailing the impact or implication]. Rules: Stay strictly grounded in the text. No outside facts. Keep it concise (70 to 140 words total). Output ONLY valid JSON."
               },
               {
                 role: "user",
@@ -4672,13 +4672,13 @@ function getAnalyticsHtml() {
       </div>
       <div class="ratio-card">
         <div class="ratio-header">
-          <span class="ratio-title">AI Summary Rate</span>
+          <span class="ratio-title">AI Briefing Rate</span>
           <span class="ratio-value" id="ratioSummary">-</span>
         </div>
         <div class="progress-bar-container">
           <div class="progress-bar" id="barSummary"></div>
         </div>
-        <span class="ratio-desc">Percentage of page views where users engage with the AI summary helper.</span>
+        <span class="ratio-desc">Percentage of page views where users engage with the AI briefing helper.</span>
       </div>
       <div class="ratio-card">
         <div class="ratio-header">

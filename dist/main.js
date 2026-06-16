@@ -252,7 +252,7 @@ var kk=Object.create;var Il=Object.defineProperty;var Pk=Object.getOwnPropertyDe
   </article>
 `,ez=(r=4)=>`${On("Loading stories")}${Array.from({length:r},ZW).join("")}`,tz=()=>`
   <div class="detail-summary-skeleton" aria-hidden="true">
-    ${On("Loading AI summary")}
+    ${On("Loading AI briefing")}
     <div class="skeleton skeleton-line lg"></div>
     <div class="skeleton skeleton-line xl"></div>
     <div class="skeleton skeleton-line md"></div>
@@ -354,7 +354,7 @@ var kk=Object.create;var Il=Object.defineProperty;var Pk=Object.getOwnPropertyDe
           <div class="story-copy desktop-only">
             <span class="category-chip ${t.category}">${t.category}</span>
             <h2>${t.headline}</h2>
-            <p>Tap to read the AI summary.</p>
+            <p>Tap to read the AI briefing.</p>
           </div>
 
           <div class="card-action-row desktop-only">
@@ -387,7 +387,7 @@ var kk=Object.create;var Il=Object.defineProperty;var Pk=Object.getOwnPropertyDe
             <div class="mobile-card-actions">
               ${tk(t)}
               ${/example\\.com/i.test(t.sourceUrl)?`<a class="mobile-action-btn source-btn disabled" href="#" onclick="event.preventDefault(); event.stopPropagation(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`:`<a class="mobile-action-btn source-btn" href="${t.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Open source</a>`}
-              <button class="mobile-action-btn summary-btn" type="button">AI summary</button>
+              <button class="mobile-action-btn summary-btn" type="button">AI briefing</button>
             </div>
           </div>
 
@@ -426,7 +426,7 @@ var kk=Object.create;var Il=Object.defineProperty;var Pk=Object.getOwnPropertyDe
           <div class="story-copy desktop-only">
             <span class="category-chip ${e.category}">${e.category}</span>
             <h2>${e.headline}</h2>
-            <p>Tap to read the AI summary.</p>
+            <p>Tap to read the AI briefing.</p>
           </div>
 
           <div class="card-action-row desktop-only">
@@ -459,7 +459,7 @@ var kk=Object.create;var Il=Object.defineProperty;var Pk=Object.getOwnPropertyDe
             <div class="mobile-card-actions">
               ${tk(e)}
               ${/example\\.com/i.test(e.sourceUrl)?`<a class="mobile-action-btn source-btn disabled" href="#" onclick="event.preventDefault(); event.stopPropagation(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`:`<a class="mobile-action-btn source-btn" href="${e.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Open source</a>`}
-              <button class="mobile-action-btn summary-btn" type="button">AI summary</button>
+              <button class="mobile-action-btn summary-btn" type="button">AI briefing</button>
             </div>
           </div>
 
@@ -520,7 +520,7 @@ var kk=Object.create;var Il=Object.defineProperty;var Pk=Object.getOwnPropertyDe
         <h2>${r.headline}</h2>
         <img class="detail-image" src="${r.imageUrl}" alt="" />
         <section class="detail-summary ${r.category}">
-          <strong>AI summary</strong>
+          <strong>AI briefing</strong>
           ${t?tz():`<p>${e}</p>`}
         </section>
         <a class="source-button" href="${r.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>
