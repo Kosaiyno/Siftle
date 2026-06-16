@@ -167,7 +167,12 @@ const categoryMap = {
   rpg: "Gaming",
   steam: "Gaming",
   gamer: "Gaming",
-  "video games": "Gaming"
+  "video games": "Gaming",
+  "light novel": "Anime",
+  webtoon: "Anime",
+  adaptation: "Anime",
+  airdrop: "Crypto",
+  tge: "Crypto"
 };
 
 const categorySignals = {
@@ -197,7 +202,12 @@ const categorySignals = {
     "dao",
     "xrp",
     "memecoin",
-    "meme coin"
+    "meme coin",
+    "airdrop",
+    "tge",
+    "listing",
+    "hack",
+    "exploit"
   ],
   Sports: [
     "football",
@@ -217,9 +227,29 @@ const categorySignals = {
     "chelsea",
     "liverpool",
     "madrid",
-    "barcelona"
+    "barcelona",
+    "rumor",
+    "rumour",
+    "signing",
+    "trade",
+    "injury",
+    "sidelined"
   ],
-  Anime: ["anime", "manga", "manhwa", "crunchyroll", "anilist", "myanimelist", "studio", "voice actor"],
+  Anime: [
+    "anime",
+    "manga",
+    "manhwa",
+    "crunchyroll",
+    "anilist",
+    "myanimelist",
+    "studio",
+    "voice actor",
+    "light novel",
+    "adaptation",
+    "webtoon",
+    "release date",
+    "premiere"
+  ],
   Tech: [
     "technology",
     "software",
@@ -245,7 +275,13 @@ const categorySignals = {
     "artificial intelligence",
     "cybersecurity",
     "startup",
-    "startups"
+    "startups",
+    "model",
+    "llm",
+    "framework",
+    "open source",
+    "gpu",
+    "keynote"
   ],
   Gaming: [
     "gta",
@@ -267,7 +303,14 @@ const categorySignals = {
     "bethesda",
     "epic games",
     "sony",
-    "microsoft"
+    "microsoft",
+    "pc gamer",
+    "review",
+    "preview",
+    "dlc",
+    "expansion",
+    "metacritic",
+    "trailer"
   ]
 };
 
@@ -337,7 +380,8 @@ const rssFeeds = {
   Anime: [
     "https://myanimelist.net/rss/news.xml",
     "https://animecorner.me/feed/",
-    "https://www.animenewsnetwork.com/all/rss.xml"
+    "https://www.animenewsnetwork.com/all/rss.xml",
+    "https://honeysanime.com/feed/"
   ],
   Tech: [
     "https://www.theverge.com/rss/index.xml",
@@ -345,15 +389,14 @@ const rssFeeds = {
     "https://www.engadget.com/rss.xml",
     "https://feeds.arstechnica.com/arstechnica/index",
     "https://www.zdnet.com/news/rss.xml",
-    "https://www.infoq.com/feed/",
-    "https://github.blog/feed/",
-    "https://venturebeat.com/feed/"
+    "https://github.blog/feed/"
   ],
   Gaming: [
     "https://www.videogameschronicle.com/category/news/feed/",
     "https://www.gamesindustry.biz/feed/news",
     "https://www.rockpapershotgun.com/feed",
-    "https://www.dualshockers.com/feed/video-games/"
+    "https://www.dualshockers.com/feed/video-games/",
+    "https://www.pcgamer.com/rss/"
   ]
 };
 
@@ -3895,12 +3938,7 @@ const generateSnapshot = async (category) => {
       (article.category !== "Sports" || isFootballOrNbaArticle(article)) &&
       (article.category !== "Tech" || isThreadFriendlyTechArticle(article))
   );
-  const articles =
-    selectedCategory === "Anime"
-      ? balanceArticlesBySource(dedupedArticles, 8)
-      : selectedCategory === "Tech"
-        ? balanceArticlesBySource(dedupedArticles, 6)
-        : dedupedArticles;
+  const articles = dedupedArticles;
   const stories = articles.length > 0
     ? await buildStories(articles)
     : allowMockFeeds
