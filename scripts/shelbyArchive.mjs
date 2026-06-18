@@ -36,8 +36,11 @@ export const getShelbyBlobName = (date, category, generatedAt) => {
 };
 
 const getExpirationMicros = () => {
-  const retentionDays = Number(process.env.SHELBY_RETENTION_DAYS || 365);
-  const durationMs = Math.max(1, retentionDays) * 24 * 60 * 60 * 1000;
+  // Shelbynet enforces a 48-hour maximum blob expiration limit.
+  // We cap the expiration to 47 hours to avoid timezone/clock skew rejections on-chain.
+  const maxDurationMs = 47 * 60 * 60 * 1000;
+  const retentionDays = Number(process.env.SHELBY_RETENTION_DAYS || 2);
+  const durationMs = Math.min(maxDurationMs, Math.max(1, retentionDays) * 24 * 60 * 60 * 1000);
   return (Date.now() + durationMs) * 1000;
 };
 
@@ -142,7 +145,7 @@ export const uploadShelbySnapshot = async (snapshot) => {
   };
 };
 
-const downloadShelbyBlob = async (blobName) => {
+export const downloadShelbyBlob = async (blobName) => {
   const { client, signer } = getShelbyClient();
   const blob = await client.download({
     account: process.env.SHELBY_ACCOUNT_ADDRESS || signer.accountAddress,
@@ -219,7 +222,8 @@ export const listShelbyArchiveFiles = async () => {
             : null,
         storage: "shelby",
         blob_name: blob.blobNameSuffix,
-        size: blob.size
+        size: blob.size,
+        expirationMicros: blob.expirationMicros ? Number(blob.expirationMicros) : null
       };
     })
     .filter(Boolean);
@@ -292,3 +296,31 @@ export const restoreAnalyticsFromShelby = async () => {
   const content = await readStreamToText(blob.readable);
   return JSON.parse(content);
 };
+
+export const extendShelbyBlobExpiration = async (blobName, newExpirationMicros) => {
+  const { client, signer } = getShelbyClient();
+  const SHELBY_DEPLOYER = "0x85fdb9a176ab8ef1d9d9c1b60d60b3924f0800ac1de1cc2085fb0b8bb4988e6a";
+
+  const transaction = await client.coordination.aptos.transaction.build.simple({
+    data: {
+      function: `${SHELBY_DEPLOYER}::blob_metadata::increase_expiration_time`,
+      functionArguments: [blobName, newExpirationMicros]
+    },
+    sender: signer.accountAddress
+  });
+
+  const pendingTx = await client.coordination.aptos.signAndSubmitTransaction({
+    signer,
+    transaction
+  });
+
+  await client.coordination.aptos.waitForTransaction({
+    transactionHash: pendingTx.hash,
+    options: {
+      timeoutSecs: 90
+    }
+  });
+
+  return pendingTx.hash;
+};
+

@@ -3,10 +3,16 @@ import { createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, ren
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { setDefaultResultOrder } from "node:dns";
+import { fileURLToPath } from "node:url";
 
 setDefaultResultOrder("ipv4first");
 import nodemailer from "nodemailer";
 import { createZGComputeNetworkReadOnlyBroker } from "@0gfoundation/0g-compute-ts-sdk";
+
+const isMain = process.argv[1] && (
+  process.argv[1] === fileURLToPath(import.meta.url) ||
+  process.argv[1].endsWith("serve.mjs")
+);
 import {
   downloadShelbySnapshot,
   getShelbyBlobName,
@@ -14,7 +20,9 @@ import {
   listShelbyArchiveFiles,
   uploadShelbySnapshot,
   backupAnalyticsToShelby,
-  restoreAnalyticsFromShelby
+  restoreAnalyticsFromShelby,
+  downloadShelbyBlob,
+  extendShelbyBlobExpiration
 } from "./shelbyArchive.mjs";
 import { analyzeFeedSnapshot, isDevelopmentFallbackStory } from "./feedQuality.mjs";
 import { marketThreadRules, storyMatchesMarketThreadRule } from "./marketThreadRules.mjs";
@@ -1137,7 +1145,22 @@ const sortStoriesByPublishedAtDesc = (stories) =>
     return (Number.isNaN(secondTime) ? 0 : secondTime) - (Number.isNaN(firstTime) ? 0 : firstTime);
   });
 
-const getHistoricalThreadCandidates = (story) => {
+export const isCandidatePrior = (candidate, story) => {
+  const candidateTime = new Date(candidate.publishedAt || 0).getTime();
+  const currentTime = new Date(story.publishedAt || 0).getTime();
+  const candidateValid = !Number.isNaN(candidateTime);
+  const currentValid = !Number.isNaN(currentTime);
+
+  if (candidateValid && currentValid) {
+    if (candidateTime < currentTime) return true;
+    if (candidateTime > currentTime) return false;
+  }
+  const candUrl = normalizeStoryUrl(candidate.sourceUrl) || "";
+  const storyUrl = normalizeStoryUrl(story.sourceUrl) || "";
+  return candUrl < storyUrl;
+};
+
+export const getHistoricalThreadCandidates = (story, currentStories = []) => {
   const currentDate = storyDateKey(story, getTodayKey());
   const currentTime = new Date(story?.publishedAt || 0).getTime();
   const hasCurrentTime = !Number.isNaN(currentTime);
@@ -1171,13 +1194,7 @@ const getHistoricalThreadCandidates = (story) => {
       if (hasCurrentTime && !Number.isNaN(candidateTime) && !isWithinThreadHistoryWindow(story.publishedAt, candidate.publishedAt, threadHistoryWindowHours)) {
         continue;
       }
-      if (
-        currentDate &&
-        candidateDate === currentDate &&
-        !Number.isNaN(currentTime) &&
-        !Number.isNaN(candidateTime) &&
-        candidateTime >= currentTime
-      ) {
+      if (currentDate && candidateDate === currentDate && !isCandidatePrior(candidate, story)) {
         continue;
       }
 
@@ -1189,6 +1206,10 @@ const getHistoricalThreadCandidates = (story) => {
       });
     }
   };
+
+  if (currentStories && currentStories.length > 0) {
+    addSnapshotStories({ top_stories: currentStories }, currentDate);
+  }
 
   if (existsSync(archiveDir)) {
     for (const filename of readdirSync(archiveDir).filter((file) => file.endsWith(".json"))) {
@@ -1226,10 +1247,10 @@ const getHistoricalThreadCandidates = (story) => {
   return candidates;
 };
 
-const getScoredThreadCandidates = (story) => {
+export const getScoredThreadCandidates = (story, currentStories = []) => {
   if (!isThreadableStory(story)) return [];
 
-  return getHistoricalThreadCandidates(story)
+  return getHistoricalThreadCandidates(story, currentStories)
     .filter(isThreadableStory)
     .map((candidate) => ({ story: candidate, score: scoreThreadMatch(story, candidate) }))
     .filter((item) => item.score >= 0.2)
@@ -1358,8 +1379,8 @@ const normalizeValidThread = (thread, seedStory = thread?.current) => {
   };
 };
 
-const getLocalThreadForStory = (story) => {
-  const related = getScoredThreadCandidates(story).map((item) => item.story);
+const getLocalThreadForStory = (story, currentStories = []) => {
+  const related = getScoredThreadCandidates(story, currentStories).map((item) => item.story);
 
   const items = sortStoriesByPublishedAtDesc(related).slice(0, 12);
   return {
@@ -1596,9 +1617,9 @@ const getThreadOpportunity = (story, scoredCandidates) => {
   };
 };
 
-const getThreadPreviewForStory = (story) => {
-  const scoredCandidates = getScoredThreadCandidates(story);
-  if (scoredCandidates.length < 1) return getLocalThreadForStory(story);
+const getThreadPreviewForStory = (story, currentStories = []) => {
+  const scoredCandidates = getScoredThreadCandidates(story, currentStories);
+  if (scoredCandidates.length < 1) return getLocalThreadForStory(story, currentStories);
 
   const candidates = scoredCandidates.slice(0, 14).map((item) => item.story);
   const cachePath = getThreadReviewCachePath(story, candidates);
@@ -1629,7 +1650,7 @@ const getThreadPreviewForStory = (story) => {
 const annotateStoriesWithThreads = (stories = []) => {
   const annotated = [];
   for (const story of stories) {
-    const thread = getThreadPreviewForStory(story);
+    const thread = getThreadPreviewForStory(story, stories);
     if (thread.count < 1) {
       const { thread: _thread, ...storyWithoutThread } = story;
       annotated.push(storyWithoutThread);
@@ -1671,7 +1692,7 @@ const prepareSnapshotThreads = async (snapshot) => {
 
   const workItems = snapshot.top_stories
     .map((story, index) => {
-      const scoredCandidates = getScoredThreadCandidates(story);
+      const scoredCandidates = getScoredThreadCandidates(story, snapshot.top_stories);
       return { story, index, scoredCandidates, opportunity: getThreadOpportunity(story, scoredCandidates) };
     })
     .sort((first, second) => {
@@ -3640,26 +3661,34 @@ const archiveSnapshot = async (snapshot) => {
     }
   };
 
+  // Always write to local filesystem storage as a cache/backup:
+  let localPath = null;
+  try {
+    mkdirSync(archiveDir, { recursive: true });
+    const filename = archiveFilename(snapshot.date, snapshot.category);
+    localPath = join(archiveDir, filename);
+    snapshotWithStorage.storage.local_path = localPath;
+    writeJsonFile(localPath, snapshotWithStorage);
+  } catch (err) {
+    console.warn("Failed to save archive snapshot locally:", err.message);
+  }
+
   if (isShelbyArchiveConfigured()) {
     try {
       const shelbyArchive = await uploadShelbySnapshot(snapshotWithStorage);
-      return shelbyArchive;
+      return {
+        ...shelbyArchive,
+        path: localPath
+      };
     } catch (error) {
       console.warn("Shelby archive upload fallback:", error.message);
       return {
         provider: "local-dev",
-        path: null,
+        path: localPath,
         shelby_error: error.message
       };
     }
   }
-
-  // Fallback to local filesystem storage only if Shelby is not configured:
-  mkdirSync(archiveDir, { recursive: true });
-  const filename = archiveFilename(snapshot.date, snapshot.category);
-  const localPath = join(archiveDir, filename);
-  snapshotWithStorage.storage.local_path = localPath;
-  writeJsonFile(localPath, snapshotWithStorage);
 
   if (!process.env.SHELBY_UPLOAD_URL) {
     return {
@@ -3705,12 +3734,14 @@ const normalizeSnapshotSummaries = (snapshot) => {
 const readPublishedSnapshot = (category) => {
   const cached = publishedSnapshots.get(category);
   if (cached) return cached;
-  if (isShelbyArchiveConfigured()) {
-    return null;
-  }
   const filePath = getLatestSnapshotPath(category);
   if (!existsSync(filePath)) return null;
-  return normalizeSnapshotSummaries(JSON.parse(readFileSync(filePath, "utf8")));
+  try {
+    return normalizeSnapshotSummaries(JSON.parse(readFileSync(filePath, "utf8")));
+  } catch (err) {
+    console.warn("Failed to read latest snapshot locally:", err.message);
+    return null;
+  }
 };
 
 const getFeedHealthSnapshot = () => {
@@ -3776,6 +3807,13 @@ const getRecoverablePublishedSnapshot = async (category) => {
         status: "published"
       };
       writePublishedSnapshot(publishedSnapshot);
+      try {
+        mkdirSync(archiveDir, { recursive: true });
+        const filename = archiveFilename(publishedSnapshot.date, publishedSnapshot.category);
+        writeJsonFile(join(archiveDir, filename), publishedSnapshot);
+      } catch (archiveErr) {
+        console.warn("Failed to save recovered snapshot to local archive:", archiveErr.message);
+      }
       return publishedSnapshot;
     }
   } catch {
@@ -3789,9 +3827,11 @@ const writePublishedSnapshot = (snapshot) => {
   const sanitized = sanitizeSnapshotForCategory(snapshot);
   publishedSnapshots.set(snapshot.category, sanitized);
 
-  if (!isShelbyArchiveConfigured()) {
+  try {
     mkdirSync(publishedDir, { recursive: true });
     writeJsonFile(getLatestSnapshotPath(snapshot.category), sanitized);
+  } catch (err) {
+    console.warn("Failed to write latest snapshot locally:", err.message);
   }
 };
 
@@ -4036,6 +4076,45 @@ const publishStatus = {
   categories: {}
 };
 
+export const extendShelbyBlobsIfNeeded = async (overrides = {}) => {
+  const isConfigured = overrides.isShelbyArchiveConfigured ?? isShelbyArchiveConfigured;
+  const listFiles = overrides.listShelbyArchiveFiles ?? listShelbyArchiveFiles;
+  const extendBlob = overrides.extendShelbyBlobExpiration ?? extendShelbyBlobExpiration;
+
+  if (!isConfigured()) {
+    return;
+  }
+
+  console.log("[SHELBY RENEWAL] Scanning Shelby blobs for lease extension...");
+  try {
+    const blobs = await listFiles();
+    const nowMicros = Date.now() * 1000;
+    // We only extend blobs expiring in less than 36 hours.
+    const thresholdMicros = 36 * 60 * 60 * 1000 * 1000;
+
+    const expiringBlobs = blobs.filter((blob) => {
+      if (!blob.blob_name || !blob.expirationMicros) return false;
+      const timeLeft = blob.expirationMicros - nowMicros;
+      return timeLeft > 0 && timeLeft < thresholdMicros;
+    });
+
+    console.log(`[SHELBY RENEWAL] Found ${expiringBlobs.length} blobs requiring extension.`);
+
+    for (const blob of expiringBlobs) {
+      try {
+        const newExpirationMicros = (Date.now() + 47 * 60 * 60 * 1000) * 1000;
+        console.log(`[SHELBY RENEWAL] Extending lease for blob: ${blob.blob_name}`);
+        const txHash = await extendBlob(blob.blob_name, newExpirationMicros);
+        console.log(`[SHELBY RENEWAL] Successfully extended lease for blob ${blob.blob_name}. Tx hash: ${txHash}`);
+      } catch (err) {
+        console.error(`[SHELBY RENEWAL] Failed to extend lease for blob ${blob.blob_name}:`, err.message);
+      }
+    }
+  } catch (err) {
+    console.error("[SHELBY RENEWAL] Failed to scan and extend Shelby blobs:", err.message);
+  }
+};
+
 const refreshPublishedFeeds = async (reason = "scheduled") => {
   if (publishStatus.is_running) {
     return { skipped: true, reason: "publish already running" };
@@ -4065,8 +4144,15 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
             for (const fileInfo of catFiles) {
               try {
                 console.log(`Downloading snapshot from Shelby for category ${category}: ${fileInfo.blob_name} (${fileInfo.date})`);
-                const { snapshot } = await downloadShelbySnapshot(fileInfo.date, category);
-                publishedSnapshots.set(category, snapshot);
+                const { snapshot } = await downloadShelbyBlob(fileInfo.blob_name);
+                writePublishedSnapshot(snapshot);
+                try {
+                  mkdirSync(archiveDir, { recursive: true });
+                  const filename = archiveFilename(snapshot.date, snapshot.category);
+                  writeJsonFile(join(archiveDir, filename), snapshot);
+                } catch (archiveErr) {
+                  console.warn("Failed to save startup snapshot to local archive:", archiveErr.message);
+                }
                 downloaded = true;
                 break;
               } catch (downloadErr) {
@@ -4142,6 +4228,9 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
       } catch (backupErr) {
         console.warn("[ANALYTICS BACKUP] Failed to backup analytics to Shelby during scheduled publish:", backupErr.message);
       }
+      
+      // Extend expiration lease of expiring Shelby blobs to bypass the 48-hour limit
+      await extendShelbyBlobsIfNeeded();
     }
 
     return { skipped: false, status: publishStatus };
@@ -4172,26 +4261,28 @@ process.on("SIGTERM", () => void handleShutdown("SIGTERM"));
 process.on("SIGINT", () => void handleShutdown("SIGINT"));
 
 // Kick off initial refresh and schedule periodic refreshes
-if (isShelbyArchiveConfigured()) {
-  console.log("Attempting to restore analytics cache from Shelby on boot...");
-  restoreAnalyticsFromShelby()
-    .then((data) => {
-      if (data) {
-        saveAnalytics(data);
-        console.log("[ANALYTICS] Restored successfully from Shelby backup.");
-      } else {
-        console.log("[ANALYTICS] No backup found on Shelby. Starting fresh.");
-      }
-      void refreshPublishedFeeds("startup");
-    })
-    .catch((err) => {
-      console.error("[ANALYTICS] Failed to restore from Shelby on boot:", err);
-      void refreshPublishedFeeds("startup");
-    });
-} else {
-  void refreshPublishedFeeds("startup");
+if (isMain) {
+  if (isShelbyArchiveConfigured()) {
+    console.log("Attempting to restore analytics cache from Shelby on boot...");
+    restoreAnalyticsFromShelby()
+      .then((data) => {
+        if (data) {
+          saveAnalytics(data);
+          console.log("[ANALYTICS] Restored successfully from Shelby backup.");
+        } else {
+          console.log("[ANALYTICS] No backup found on Shelby. Starting fresh.");
+        }
+        void refreshPublishedFeeds("startup");
+      })
+      .catch((err) => {
+        console.error("[ANALYTICS] Failed to restore from Shelby on boot:", err);
+        void refreshPublishedFeeds("startup");
+      });
+  } else {
+    void refreshPublishedFeeds("startup");
+  }
+  setInterval(() => void refreshPublishedFeeds("scheduled"), Math.max(1, refreshIntervalMinutes) * 60 * 1000);
 }
-setInterval(() => void refreshPublishedFeeds("scheduled"), Math.max(1, refreshIntervalMinutes) * 60 * 1000);
 
 const otpStore = new Map();
 
@@ -5588,15 +5679,17 @@ const server = createServer(async (request, response) => {
   createReadStream(filePath).pipe(response);
 });
 
-server.listen(port, () => {
-  console.log(`Siftle frontend running at http://localhost:${port}`);
-  
-  // Diagnostic Circle config check
-  const key = process.env.CIRCLE_API_KEY;
-  if (key) {
-    const clean = key.trim().replace(/^["']|["']$/g, "");
-    console.log(`[CIRCLE CONFIG CHECK] Key length: ${clean.length}, starts with: ${clean.substring(0, 20)}..., ends with: ...${clean.substring(clean.length - 8)}`);
-  } else {
-    console.log(`[CIRCLE CONFIG CHECK] CIRCLE_API_KEY is missing!`);
-  }
-});
+if (isMain) {
+  server.listen(port, () => {
+    console.log(`Siftle frontend running at http://localhost:${port}`);
+    
+    // Diagnostic Circle config check
+    const key = process.env.CIRCLE_API_KEY;
+    if (key) {
+      const clean = key.trim().replace(/^["']|["']$/g, "");
+      console.log(`[CIRCLE CONFIG CHECK] Key length: ${clean.length}, starts with: ${clean.substring(0, 20)}..., ends with: ...${clean.substring(clean.length - 8)}`);
+    } else {
+      console.log(`[CIRCLE CONFIG CHECK] CIRCLE_API_KEY is missing!`);
+    }
+  });
+}
