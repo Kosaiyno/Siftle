@@ -2662,22 +2662,19 @@ const get0GService = async () => {
 };
 
 const getThread0GConfig = () => {
-  const apiKey = process.env.THREAD_ZERO_G_API_KEY || process.env.THREAD_OG_COMPUTE_API_KEY || process.env.ZERO_G_API_KEY || process.env.OG_COMPUTE_API_KEY;
-  const model = process.env.THREAD_ZERO_G_MODEL || process.env.THREAD_OG_COMPUTE_MODEL || process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "zai-org/GLM-5-FP8";
-  const providerAddress = process.env.THREAD_OG_COMPUTE_PROVIDER || process.env.OG_COMPUTE_PROVIDER;
+  // Disable AI threading by default unless thread-specific API key overrides are explicitly provided
+  const apiKey = process.env.THREAD_ZERO_G_API_KEY || process.env.THREAD_OG_COMPUTE_API_KEY;
+  const model = process.env.THREAD_ZERO_G_MODEL || process.env.THREAD_OG_COMPUTE_MODEL || "deepseek-v4-flash";
+  const providerAddress = process.env.THREAD_OG_COMPUTE_PROVIDER;
   const envEndpoint =
     process.env.THREAD_OG_COMPUTE_ENDPOINT ||
     process.env.THREAD_ZERO_G_ENDPOINT ||
     process.env.THREAD_OG_COMPUTE_URL ||
-    process.env.THREAD_ZERO_G_URL ||
-    process.env.OG_COMPUTE_ENDPOINT ||
-    process.env.ZERO_G_ENDPOINT ||
-    process.env.OG_COMPUTE_URL ||
-    process.env.ZERO_G_URL;
+    process.env.THREAD_ZERO_G_URL;
 
   return {
     apiKey: apiKey ? String(apiKey).trim() : undefined,
-    model: model ? String(model).trim() : "zai-org/GLM-5-FP8",
+    model: model ? String(model).trim() : "deepseek-v4-flash",
     providerAddress: providerAddress ? String(providerAddress).trim() : undefined,
     envEndpoint: envEndpoint ? String(envEndpoint).trim() : undefined
   };
