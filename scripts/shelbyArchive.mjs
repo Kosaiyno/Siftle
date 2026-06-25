@@ -100,7 +100,7 @@ const readStreamToText = async (readable) => {
 
 export const uploadShelbySnapshot = async (snapshot) => {
   const { client, signer } = getShelbyClient();
-  const blobName = getShelbyBlobName(snapshot.date, snapshot.category, snapshot.generated_at);
+  const blobName = getShelbyBlobName(snapshot.date, snapshot.category);
   const blobData = textEncoder.encode(JSON.stringify(snapshot, null, 2));
 
   // Check if blob is already registered on-chain
@@ -232,26 +232,32 @@ export const listShelbyArchiveFiles = async () => {
 export const backupAnalyticsToShelby = async (analyticsData) => {
   const { client, signer } = getShelbyClient();
   const prefix = (process.env.SHELBY_ARCHIVE_PREFIX || "siftle/feeds").replace(/^\/+|\/+$/g, "");
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const blobName = `${prefix}/analytics/backup-${timestamp}.json`;
+  const blobName = `${prefix}/analytics/backup-latest.json`;
   const blobData = textEncoder.encode(JSON.stringify(analyticsData, null, 2));
 
-  const provider = await client.getProvider();
-  const blobCommitments = await generateCommitments(provider, blobData);
-  
-  const { transaction: pendingRegisterBlobTransaction } = await client.coordination.registerBlob({
-    account: signer,
-    blobName: blobName,
-    blobMerkleRoot: blobCommitments.blob_merkle_root,
-    size: blobData.length,
-    expirationMicros: getExpirationMicros(),
-    config: provider.config
+  const existingBlobMetadata = await client.coordination.getBlobMetadata({
+    account: signer.accountAddress,
+    name: blobName
   });
 
-  await client.coordination.aptos.waitForTransaction({
-    transactionHash: pendingRegisterBlobTransaction.hash,
-    options: { timeoutSecs: 90 }
-  });
+  if (!existingBlobMetadata) {
+    const provider = await client.getProvider();
+    const blobCommitments = await generateCommitments(provider, blobData);
+    
+    const { transaction: pendingRegisterBlobTransaction } = await client.coordination.registerBlob({
+      account: signer,
+      blobName: blobName,
+      blobMerkleRoot: blobCommitments.blob_merkle_root,
+      size: blobData.length,
+      expirationMicros: getExpirationMicros(),
+      config: provider.config
+    });
+
+    await client.coordination.aptos.waitForTransaction({
+      transactionHash: pendingRegisterBlobTransaction.hash,
+      options: { timeoutSecs: 90 }
+    });
+  }
 
   await client.rpc.putBlob({
     account: signer.accountAddress,
@@ -266,35 +272,20 @@ export const restoreAnalyticsFromShelby = async () => {
   const { client, signer } = getShelbyClient();
   const prefix = (process.env.SHELBY_ARCHIVE_PREFIX || "siftle/feeds").replace(/^\/+|\/+$/g, "");
   const account = process.env.SHELBY_ACCOUNT_ADDRESS || signer.accountAddress;
-  
-  const limit = 100;
-  const blobs = [];
-  for (let offset = 0; offset < 2000; offset += limit) {
-    const page = await client.coordination.getAccountBlobs({
+  const blobName = `${prefix}/analytics/backup-latest.json`;
+
+  try {
+    const blob = await client.download({
       account,
-      pagination: { limit, offset }
+      blobName
     });
-    blobs.push(...page);
-    if (page.length < limit) break;
-  }
 
-  const backupPrefix = `${prefix}/analytics/backup-`;
-  const backups = blobs
-    .filter((blob) => !blob.isDeleted && blob.blobNameSuffix?.startsWith(backupPrefix))
-    .sort((a, b) => b.blobNameSuffix.localeCompare(a.blobNameSuffix));
-
-  if (backups.length === 0) {
+    const content = await readStreamToText(blob.readable);
+    return JSON.parse(content);
+  } catch (err) {
+    console.warn("[ANALYTICS RESTORE] Failed to restore from consolidated latest backup:", err.message);
     return null;
   }
-
-  const latestBackupName = backups[0].blobNameSuffix;
-  const blob = await client.download({
-    account,
-    blobName: latestBackupName
-  });
-
-  const content = await readStreamToText(blob.readable);
-  return JSON.parse(content);
 };
 
 export const extendShelbyBlobExpiration = async (blobName, newExpirationMicros) => {
