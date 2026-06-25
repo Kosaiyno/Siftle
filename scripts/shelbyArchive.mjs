@@ -109,26 +109,35 @@ export const uploadShelbySnapshot = async (snapshot) => {
     name: blobName
   });
 
-  if (!existingBlobMetadata) {
-    const provider = await client.getProvider();
-    const blobCommitments = await generateCommitments(provider, blobData);
-    
-    const { transaction: pendingRegisterBlobTransaction } = await client.coordination.registerBlob({
-      account: signer,
-      blobName: blobName,
-      blobMerkleRoot: blobCommitments.blob_merkle_root,
-      size: blobData.length,
-      expirationMicros: getExpirationMicros(),
-      config: provider.config
-    });
-
-    await client.coordination.aptos.waitForTransaction({
-      transactionHash: pendingRegisterBlobTransaction.hash,
-      options: {
-        timeoutSecs: 90
-      }
-    });
+  if (existingBlobMetadata) {
+    console.log(`[SHELBY ARCHIVE] Blob ${blobName} is already archived on-chain. Skipping upload to prevent overwrite conflict.`);
+    return {
+      provider: "shelby",
+      blob_name: blobName,
+      account: signer.accountAddress.toString(),
+      rpc_url: process.env.SHELBY_RPC_URL,
+      skipped: true
+    };
   }
+
+  const provider = await client.getProvider();
+  const blobCommitments = await generateCommitments(provider, blobData);
+  
+  const { transaction: pendingRegisterBlobTransaction } = await client.coordination.registerBlob({
+    account: signer,
+    blobName: blobName,
+    blobMerkleRoot: blobCommitments.blob_merkle_root,
+    size: blobData.length,
+    expirationMicros: getExpirationMicros(),
+    config: provider.config
+  });
+
+  await client.coordination.aptos.waitForTransaction({
+    transactionHash: pendingRegisterBlobTransaction.hash,
+    options: {
+      timeoutSecs: 90
+    }
+  });
 
   // Use rpc.putBlob directly to ensure a fresh, non-resumable upload and avoid 400 Bad Request resume errors
   await client.rpc.putBlob({
@@ -229,10 +238,19 @@ export const listShelbyArchiveFiles = async () => {
     .filter(Boolean);
 };
 
+const getTodayDateString = () => {
+  const date = new Date();
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
 export const backupAnalyticsToShelby = async (analyticsData) => {
   const { client, signer } = getShelbyClient();
   const prefix = (process.env.SHELBY_ARCHIVE_PREFIX || "siftle/feeds").replace(/^\/+|\/+$/g, "");
-  const blobName = `${prefix}/analytics/backup-latest.json`;
+  const today = getTodayDateString();
+  const blobName = `${prefix}/analytics/backup-${today}.json`;
   const blobData = textEncoder.encode(JSON.stringify(analyticsData, null, 2));
 
   const existingBlobMetadata = await client.coordination.getBlobMetadata({
@@ -240,24 +258,27 @@ export const backupAnalyticsToShelby = async (analyticsData) => {
     name: blobName
   });
 
-  if (!existingBlobMetadata) {
-    const provider = await client.getProvider();
-    const blobCommitments = await generateCommitments(provider, blobData);
-    
-    const { transaction: pendingRegisterBlobTransaction } = await client.coordination.registerBlob({
-      account: signer,
-      blobName: blobName,
-      blobMerkleRoot: blobCommitments.blob_merkle_root,
-      size: blobData.length,
-      expirationMicros: getExpirationMicros(),
-      config: provider.config
-    });
-
-    await client.coordination.aptos.waitForTransaction({
-      transactionHash: pendingRegisterBlobTransaction.hash,
-      options: { timeoutSecs: 90 }
-    });
+  if (existingBlobMetadata) {
+    console.log(`[ANALYTICS BACKUP] Analytics backup for ${today} already exists on-chain. Skipping upload to conserve gas.`);
+    return blobName;
   }
+
+  const provider = await client.getProvider();
+  const blobCommitments = await generateCommitments(provider, blobData);
+  
+  const { transaction: pendingRegisterBlobTransaction } = await client.coordination.registerBlob({
+    account: signer,
+    blobName: blobName,
+    blobMerkleRoot: blobCommitments.blob_merkle_root,
+    size: blobData.length,
+    expirationMicros: getExpirationMicros(),
+    config: provider.config
+  });
+
+  await client.coordination.aptos.waitForTransaction({
+    transactionHash: pendingRegisterBlobTransaction.hash,
+    options: { timeoutSecs: 90 }
+  });
 
   await client.rpc.putBlob({
     account: signer.accountAddress,
@@ -272,16 +293,39 @@ export const restoreAnalyticsFromShelby = async () => {
   const { client, signer } = getShelbyClient();
   const prefix = (process.env.SHELBY_ARCHIVE_PREFIX || "siftle/feeds").replace(/^\/+|\/+$/g, "");
   const account = process.env.SHELBY_ACCOUNT_ADDRESS || signer.accountAddress;
-  const blobName = `${prefix}/analytics/backup-latest.json`;
 
   try {
-    const blob = await client.download({
-      account,
-      blobName
-    });
+    const blobs = [];
+    const limit = 200;
 
-    const content = await readStreamToText(blob.readable);
-    return JSON.parse(content);
+    for (let offset = 0; offset < 5000; offset += limit) {
+      const page = await client.coordination.getAccountBlobs({
+        account,
+        pagination: { limit, offset }
+      });
+
+      blobs.push(...page);
+      if (page.length < limit) break;
+    }
+
+    const backupBlobs = blobs
+      .filter((blob) => !blob.isDeleted && blob.blobNameSuffix?.includes("analytics/backup-"))
+      .sort((a, b) => b.blobNameSuffix.localeCompare(a.blobNameSuffix));
+
+    if (backupBlobs.length > 0) {
+      const blobName = backupBlobs[0].blobNameSuffix;
+      console.log(`[ANALYTICS RESTORE] Restoring from latest backup blob: ${blobName}`);
+      const blob = await client.download({
+        account,
+        blobName
+      });
+
+      const content = await readStreamToText(blob.readable);
+      return JSON.parse(content);
+    }
+    
+    console.log("[ANALYTICS RESTORE] No daily backup found on Shelby.");
+    return null;
   } catch (err) {
     console.warn("[ANALYTICS RESTORE] Failed to restore from consolidated latest backup:", err.message);
     return null;
