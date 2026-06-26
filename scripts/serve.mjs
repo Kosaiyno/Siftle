@@ -5543,6 +5543,21 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (requestUrl.pathname === "/api/markets" && request.method === "GET") {
+    try {
+      const filePath = join(root, "data", "active_markets.json");
+      if (existsSync(filePath)) {
+        const content = readFileSync(filePath, "utf8");
+        sendJson(response, 200, JSON.parse(content));
+      } else {
+        sendJson(response, 200, []);
+      }
+    } catch (error) {
+      sendJson(response, 500, { error: error.message });
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/market-thread" && request.method === "GET") {
     try {
       const marketId = requestUrl.searchParams.get("id") ?? "";

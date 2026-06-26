@@ -35,7 +35,7 @@ function trackEvent(event: string) {
 }
 
 const state: {
-  activeSurface: "feed" | "markets" | "portfolio";
+  activeSurface: "feed" | "markets" | "portfolio" | "leaderboard";
   selectedMarketId: string | null;
   marketOrderMode: "buy" | "sell";
   marketTradeSide: "yes" | "no";
@@ -67,8 +67,9 @@ const state: {
   feedScrollY: number;
   hasLoadedFeed: boolean;
   showSaved: boolean;
+  tradeDrawerOpen: boolean;
 } = {
-  activeSurface: "feed",
+  activeSurface: "markets",
   selectedMarketId: null,
   marketOrderMode: "buy",
   marketTradeSide: "yes",
@@ -98,9 +99,9 @@ const state: {
   activeThread: null,
   loadingThreadUrl: null,
   feedScrollY: 0,
-  hasLoadedFeed: false
-  ,
-  showSaved: false
+  hasLoadedFeed: false,
+  showSaved: false,
+  tradeDrawerOpen: false
 };
 
 interface MarketPreview {
@@ -134,344 +135,18 @@ interface MarketEvidenceOverride {
   evidence: MarketPreview["evidence"];
 }
 
-const marketPreviews: MarketPreview[] = [
-  {
-    id: "new-glenn-2026",
-    category: "Tech",
-    question: "Will Blue Origin launch New Glenn again before December 31, 2026?",
-    probability: 68,
-    closes: "December 31, 2026",
-    resolution: "Resolves Yes when a New Glenn vehicle lifts off on an orbital launch attempt before the deadline.",
-    threadTopic: "Blue Origin New Glenn Launchpad Probe",
-    threadStoryId: 9001,
-    updates: 4,
-    movement: 7,
-    volume: "$184K",
-    traders: "1,284",
-    liquidity: "$61K",
-    evidence: [
-      {
-        date: "Latest",
-        source: "TechCrunch",
-        headline: "Blue Origin plans to launch New Glenn again this year after explosion",
-        summary: "CEO Dave Limp said damage to the company's launchpad in Florida was not as bad as expected.",
-        impact: "+7%",
-        direction: "up",
-        sourceUrl: "https://techcrunch.com/2026/06/02/blue-origin-plans-to-launch-new-glenn-again-this-year-after-explosion/"
-      },
-      {
-        date: "Jun 2",
-        source: "Engadget",
-        headline: "Blue Origin CEO says New Glenn will fly again before the year ends",
-        summary: "Dave Limp provided an update on the investigation into the New Glenn launchpad explosion.",
-        impact: "+11%",
-        direction: "up",
-        sourceUrl: "https://www.engadget.com/2185458/blue-origin-new-glenn-launchpad-explosion-repair-update/"
-      },
-      {
-        date: "May 29",
-        source: "Ars Technica",
-        headline: "How long will it take to rebuild Blue Origin's launch pad? We asked some SpaceX vets.",
-        summary: "Former SpaceX engineers assess the work required to rebuild Blue Origin's damaged launch pad.",
-        impact: "-8%",
-        direction: "down",
-        sourceUrl: "https://arstechnica.com/space/2026/06/how-long-will-it-take-to-rebuild-blue-origins-launch-pad-we-asked-some-spacex-vets/"
-      }
-    ]
-  },
-  {
-    id: "strategy-bitcoin-sale",
-    category: "Crypto",
-    question: "Will Strategy report another Bitcoin sale before July 1, 2026?",
-    probability: 42,
-    closes: "July 1, 2026",
-    resolution: "Resolves Yes if Strategy publicly reports selling Bitcoin before the deadline.",
-    threadTopic: "Strategy Bitcoin Sale And Market Resolution",
-    threadStoryId: 9002,
-    updates: 9,
-    movement: -6,
-    volume: "$427K",
-    traders: "3,106",
-    liquidity: "$138K",
-    evidence: [
-      {
-        date: "Latest",
-        source: "Cointelegraph",
-        headline: "Polymarket users cry foul after Strategy sale market resolves to no",
-        summary: "A Polymarket contract on whether Strategy sold Bitcoin by May 31 resolved to no after traders disputed how the sale should count.",
-        impact: "-6%",
-        direction: "down",
-        sourceUrl: "https://cointelegraph.com/news/polymarket-dispute-strategys-bitcoin-sale-resolves-no"
-      },
-      {
-        date: "Jun 2",
-        source: "CoinDesk",
-        headline: "Strategy sold bitcoin in late May, and told the market in June. Here's how Polymarket bettors are fighting over when it counts.",
-        summary: "A $79 million market hinges on whether a sale disclosed June 1 can count toward a deadline that passed May 31.",
-        impact: "+9%",
-        direction: "up",
-        sourceUrl: "https://www.coindesk.com/markets/2026/06/02/strategy-sold-bitcoin-in-late-may-and-told-the-market-in-june-here-s-how-polymarket-bettors-are-fighting-over-when-it-counts"
-      },
-      {
-        date: "Jun 1",
-        source: "The Block",
-        headline: "Strategy bitcoin sale timing throws wrench into $20 million Polymarket pool",
-        summary: "A Polymarket pool asking whether Strategy would sell any of its bitcoin before May 31 drew more than $20 million in volume.",
-        impact: "Opened",
-        direction: "flat",
-        sourceUrl: "https://www.theblock.co/post/403213/strategy-bitcoin-sale-timing-throws-wrench-20-million-polymarket-pool"
-      },
-      {
-        date: "Jun 2",
-        source: "Cointelegraph",
-        headline: "Strategy's Bitcoin sale causes clash for $80M in Polymarket bets",
-        summary: "A clash erupted over the timing and disclosure of Strategy's recent Bitcoin sale, with more than $80 million traded on the disputed outcome.",
-        impact: "+5%",
-        direction: "up",
-        sourceUrl: "https://cointelegraph.com/news/strategys-bitcoin-sale-causes-clash-on-80m-in-polymarket-bets"
-      },
-      {
-        date: "Jun 2",
-        source: "The Block",
-        headline: "Bitcoin slides toward $70,000 as Strategy's BTC sale and geopolitical risks weigh on crypto",
-        summary: "Analysts said the sale was relatively small but sent a bearish signal to the broader market.",
-        impact: "+3%",
-        direction: "up",
-        sourceUrl: "https://www.theblock.co/post/403286/bitcoin-slides-geopolitical-risks-strategy-btc-sale"
-      },
-      {
-        date: "Jun 2",
-        source: "CoinDesk",
-        headline: "Tom Lee calls Strategy's bitcoin sale classic bottom behavior",
-        summary: "Tom Lee said minor sales from key holders and institutional outflows are typical market-bottom behavior.",
-        impact: "-7%",
-        direction: "down",
-        sourceUrl: "https://www.coindesk.com/markets/2026/06/02/tom-lee-dismisses-bitcoin-fears-over-michael-saylor-first-bitcoin-sale-and-etf-outflows"
-      },
-      {
-        date: "Jun 2",
-        source: "The Block",
-        headline: "Polymarket faces backlash over disputed Strategy bitcoin sale market",
-        summary: "Polymarket faced continued backlash from traders who bet Yes on whether Strategy would sell bitcoin by May 31.",
-        impact: "+4%",
-        direction: "up",
-        sourceUrl: "https://www.theblock.co/post/403312/polymarket-faces-backlash-strategy-bitcoin-sale"
-      },
-      {
-        date: "Jun 3",
-        source: "Decrypt",
-        headline: "Strategy Wanted to 'Inoculate' the Bitcoin Market - Has Its BTC Sale Backfired?",
-        summary: "Experts are divided over whether the sale exposed a structural crack in Strategy's Bitcoin flywheel.",
-        impact: "-2%",
-        direction: "down",
-        sourceUrl: "https://decrypt.co/369904/strategy-wanted-to-inoculate-the-bitcoin-market-has-its-btc-sale-backfired"
-      },
-      {
-        date: "Jun 1",
-        source: "CoinDesk",
-        headline: "It's not 2022 anymore: What Strategy's first bitcoin sale can and can't tell us about this one",
-        summary: "Strategy has evolved into a more complex bitcoin-finance machine since it last sold BTC three and a half years ago.",
-        impact: "Opened",
-        direction: "flat",
-        sourceUrl: "https://www.coindesk.com/markets/2026/06/01/strategy-s-second-bitcoin-sale-revives-memories-of-2022"
-      }
-    ]
-  },
-  {
-    id: "nba-finals",
-    category: "Sports",
-    question: "Will the San Antonio Spurs win the 2026 NBA Finals?",
-    probability: 37,
-    closes: "At the conclusion of the 2026 NBA Finals",
-    resolution: "Resolves Yes if the San Antonio Spurs are declared 2026 NBA champions.",
-    threadTopic: "Spurs 2026 NBA Finals Run",
-    threadStoryId: 9003,
-    updates: 5,
-    movement: -4,
-    volume: "$296K",
-    traders: "2,418",
-    liquidity: "$94K",
-    evidence: [
-      {
-        date: "Latest",
-        source: "ESPN",
-        headline: "Wemby vows revival after Spurs 'let that one go'",
-        summary: "Victor Wembanyama accepted responsibility for the Game 1 loss but said he was not worried about the Spurs as the series unfolds.",
-        impact: "-4%",
-        direction: "down",
-        sourceUrl: "https://www.espn.com/nba/story/_/id/48963130/wembanyama-confident-spurs-bounce-back-game-1-loss"
-      },
-      {
-        date: "Jun 3",
-        source: "ESPN",
-        headline: "Knicks stay hot, steal Game 1 behind Brunson's 30",
-        summary: "Jalen Brunson scored 13 of his 30 points in the fourth quarter as New York erased a 14-point deficit.",
-        impact: "-12%",
-        direction: "down",
-        sourceUrl: "https://www.espn.com/nba/story/_/id/48962034/brunson-keys-late-surge-knicks-steal-game-1-san-antonio"
-      },
-      {
-        date: "Jun 1",
-        source: "NBA",
-        headline: "Experts' picks for Knicks-Spurs, Finals MVP",
-        summary: "ESPN experts make their picks for the NBA Finals winner and Finals MVP.",
-        impact: "Opened",
-        direction: "flat",
-        sourceUrl: "https://www.espn.com/nba/story/_/id/48939418/nba-finals-2026-experts-picks-knicks-spurs-finals-mvp-brunson-wembanyama"
-      },
-      {
-        date: "May 30",
-        source: "ESPN",
-        headline: "NBA Finals: Victor Wembanyama, Spurs have already made history",
-        summary: "The Spurs and their generational big man enter the NBA Finals having already made history.",
-        impact: "+14%",
-        direction: "up",
-        sourceUrl: "https://www.espn.com/nba/story/_/id/48949784/how-victor-wembanyama-san-antonio-spurs-already-made-history-new-york-knicks-nba-finals"
-      },
-      {
-        date: "May 27",
-        source: "NBA",
-        headline: "Top reactions to Spurs reaching NBA Finals",
-        summary: "The sports world reacts to the San Antonio Spurs reaching the NBA Finals.",
-        impact: "+9%",
-        direction: "up",
-        sourceUrl: "https://www.espn.com/nba/story/_/id/48910495/nba-playoffs-western-conference-finals-san-antonio-spurs-oklahoma-city-thunder-game-7-social-reaction"
-      }
-    ]
-  },
-  {
-    id: "england-world-cup-opener",
-    category: "Sports",
-    question: "Will England win their opening 2026 World Cup match?",
-    probability: 54,
-    closes: "At the final whistle of England's opening 2026 World Cup match",
-    resolution: "Resolves Yes if England's first 2026 FIFA World Cup match ends with England winning in regulation or after extra time if extra time is officially part of that match result. A draw, loss, cancellation without a played opener, or unresolved result resolves No.",
-    threadTopic: "England World Cup Opener Prep",
-    threadStoryId: 9004,
-    updates: 5,
-    movement: 2,
-    volume: "$0",
-    traders: "0",
-    liquidity: "$0",
-    evidence: [
-      {
-        date: "Latest",
-        source: "BBC Sport",
-        headline: "This was a training game - England & Tuchel now need to get serious",
-        summary: "England have one more game to prepare for their World Cup campaign, and the performance sharpened questions around Tuchel's setup.",
-        impact: "Opened",
-        direction: "flat",
-        sourceUrl: "https://www.bbc.com/sport/football/articles/c3ryd490rz7o?at_medium=RSS&at_campaign=rss"
-      },
-      {
-        date: "Jun 7",
-        source: "ESPN",
-        headline: "England win over New Zealand provides reminder of Harry Kane",
-        summary: "England's victory underlined how central Harry Kane remains to their World Cup hopes.",
-        impact: "Opened",
-        direction: "flat",
-        sourceUrl: "https://www.espn.com/soccer/story/_/id/48986657/england-win-new-zealand-reminder-harry-kane-importance"
-      },
-      {
-        date: "Jun 5",
-        source: "The Guardian",
-        headline: "Tuchel confident sharp Kane is in perfect form to lead England at World Cup",
-        summary: "Thomas Tuchel said Kane is in top shape as England finish their World Cup preparations.",
-        impact: "Opened",
-        direction: "flat",
-        sourceUrl: "https://www.theguardian.com/football/2026/jun/05/tuchel-confident-sharp-kane-is-in-perfect-form-to-lead-england-at-world-cup"
-      }
-    ]
-  },
-  {
-    id: "neymar-world-cup-opener",
-    category: "Sports",
-    question: "Will Neymar play in Brazil's opening 2026 World Cup match?",
-    probability: 46,
-    closes: "At the final whistle of Brazil's opening 2026 World Cup match",
-    resolution: "Resolves Yes if Neymar officially appears on the pitch for Brazil in its opening 2026 FIFA World Cup match. Being named in the squad or on the bench without playing resolves No.",
-    threadTopic: "Neymar Brazil World Cup Fitness Watch",
-    threadStoryId: 9005,
-    updates: 5,
-    movement: -5,
-    volume: "$0",
-    traders: "0",
-    liquidity: "$0",
-    evidence: [
-      {
-        date: "Latest",
-        source: "ESPN",
-        headline: "Brazil's Ancelotti: Neymar to have MRI Monday",
-        summary: "Neymar is set for an MRI as Brazil monitors his calf injury before the World Cup.",
-        impact: "Opened",
-        direction: "flat",
-        sourceUrl: "https://www.espn.com/soccer/story/_/id/48975653/brazil-coach-ancelotti-confirms-neymar-mri-monday"
-      },
-      {
-        date: "Jun 4",
-        source: "ESPN",
-        headline: "Neymar to miss Brazil's final pre-WC friendly",
-        summary: "Neymar will miss Brazil's final friendly against Egypt while recovering from the calf issue.",
-        impact: "Opened",
-        direction: "flat",
-        sourceUrl: "https://www.espn.com/soccer/story/_/id/48965996/neymar-miss-brazil-final-pre-world-cup-friendly-vs-egypt"
-      },
-      {
-        date: "May 31",
-        source: "ESPN",
-        headline: "Ancelotti: No regrets selecting injured Neymar",
-        summary: "Carlo Ancelotti said he had no plans to replace Neymar in Brazil's World Cup squad.",
-        impact: "Opened",
-        direction: "flat",
-        sourceUrl: "https://www.espn.com/soccer/story/_/id/48922562/brazil-carlo-ancelotti-neymar-injury-2026-world-cup"
-      }
-    ]
-  },
-  {
-    id: "iran-world-cup-visas",
-    category: "Sports",
-    question: "Will Iran's World Cup visa dispute be resolved before their opening match?",
-    probability: 39,
-    closes: "At kickoff of Iran's opening 2026 World Cup match",
-    resolution: "Resolves Yes if credible reporting confirms Iran's players and key team officials have the required tournament travel visas before kickoff of Iran's opening match. Any reported unresolved denial or travel block for key team officials at kickoff resolves No.",
-    threadTopic: "Iran World Cup Visa Dispute",
-    threadStoryId: 9006,
-    updates: 5,
-    movement: -8,
-    volume: "$0",
-    traders: "0",
-    liquidity: "$0",
-    evidence: [
-      {
-        date: "Latest",
-        source: "ESPN",
-        headline: "Iran says U.S. denied visas to key WC officials",
-        summary: "Iran accused the United States of denying visas to key managerial and administrative members of its World Cup team.",
-        impact: "Opened",
-        direction: "flat",
-        sourceUrl: "https://www.espn.com/soccer/story/_/id/48984862/iran-usa-world-cup-visas-officials-2026"
-      },
-      {
-        date: "Jun 6",
-        source: "ESPN",
-        headline: "Iran players receive U.S. visas for World Cup",
-        summary: "A U.S. official confirmed Iran's World Cup players received visas to enter and compete in the United States.",
-        impact: "Opened",
-        direction: "flat",
-        sourceUrl: "https://www.espn.com/soccer/story/_/id/48977850/iran-players-receive-us-visas-2026-world-cup"
-      },
-      {
-        date: "Jun 5",
-        source: "The Guardian",
-        headline: "Iran's World Cup players receive visas to enter US, White House official says",
-        summary: "Iran's players reportedly received U.S. visas, though the team had already shifted its training base.",
-        impact: "Opened",
-        direction: "flat",
-        sourceUrl: "https://www.theguardian.com/football/2026/jun/05/iran-world-cup-visas-united-states"
-      }
-    ]
+let marketPreviews: MarketPreview[] = [];
+
+const loadMarkets = async (): Promise<void> => {
+  try {
+    const res = await fetch(apiUrl("/api/markets"));
+    if (res.ok) {
+      marketPreviews = await res.json();
+    }
+  } catch (err) {
+    console.error("Failed to load markets:", err);
   }
-];
+};
 
 const SAVED_KEY = "siftle.savedUrls";
 let savedUrls = new Set<string>();
@@ -879,6 +554,14 @@ function syncStoryFromHash(): void {
     render();
     return;
   }
+  if (window.location.hash === "#leaderboard") {
+    state.activeSurface = "leaderboard";
+    state.selectedMarketId = null;
+    state.selectedStoryId = null;
+    state.selectedThreadUrl = null;
+    render();
+    return;
+  }
 
   state.activeSurface = "feed";
   const storyMatch = window.location.hash.match(/^#story-(\d+)$/);
@@ -895,7 +578,7 @@ function syncStoryFromHash(): void {
   if (!story && !threadStory && wasInDetail) {
     requestAnimationFrame(() => window.scrollTo({ top: state.feedScrollY, behavior: "auto" }));
   }
-};
+}
 
 const setArchiveStatus = (message: string): void => {
   if (archiveStatus) archiveStatus.textContent = message;
@@ -1891,6 +1574,19 @@ const renderMarketCard = (market: MarketPreview): string => {
   `;
 };
 
+const generateWhatsAppShareText = (market: MarketPreview): string => {
+  const marketView = getMarketView(market);
+  const snapshot = state.marketSnapshots[market.id];
+  const yesPrice = snapshot?.yesPriceCents ?? market.probability;
+  const noPrice = 100 - yesPrice;
+  const latestUpdate = marketView.evidence[0];
+  const latestTitle = latestUpdate ? latestUpdate.headline : "No updates yet";
+  
+  const currentUrl = `${window.location.origin}${window.location.pathname}#market-${market.id}`;
+  
+  return `🚨 *Siftle Market Alert* 🚨\n\n*Market:* ${market.question}\n🟢 *Yes:* ${yesPrice}¢ | 🔴 *No:* ${noPrice}¢\n\n*Latest Development:* "${latestTitle}"\n\nTrade and discuss here: ${currentUrl}`;
+};
+
 const renderMarketDetail = (market: MarketPreview): void => {
   if (!storyList || !storyDetail) return;
   const marketView = getMarketView(market);
@@ -1907,117 +1603,155 @@ const renderMarketDetail = (market: MarketPreview): void => {
   const projectedPayout = activePrice > 0 ? amount / (activePrice / 100) : 0;
   const orderLabel = state.marketOrderMode === "buy" ? "Buy" : "Sell";
   const marketStatus = marketAddress ? "Arc testnet live" : "Contract not deployed";
+
   storyList.hidden = true;
   storyDetail.hidden = false;
   storyDetail.classList.add("fullscreen");
   document.body.classList.add("detail-mode");
+
   void loadMarketSnapshot(market);
   void loadMarketEvidence(market);
+
   storyDetail.innerHTML = `
     <div class="detail-container market-detail-container">
-      <button class="back-button" type="button" data-back-markets>Back to markets</button>
-      <article class="market-detail-card market-story-surface">
-        <div class="market-decision-surface">
+      <div class="detail-header-row">
+        <button class="back-button" type="button" data-back-markets aria-label="Go back to markets">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Back to markets
+        </button>
+        
+        <button class="share-whatsapp-btn" type="button" id="shareWhatsAppBtn" aria-label="Share to WhatsApp">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984a9.96 9.96 0 0 0 1.335 4.963L2 22l5.233-1.371a9.994 9.994 0 0 0 4.779 1.22c5.507 0 9.99-4.478 9.99-9.985A9.996 9.996 0 0 0 12.012 2zm5.782 14.155c-.249.703-1.442 1.3-1.966 1.385-.472.078-1.091.147-3.149-.705-2.631-1.09-4.301-3.771-4.432-3.947-.13-.177-1.066-1.417-1.066-2.703 0-1.287.674-1.92.915-2.176.241-.256.529-.32.707-.32.177 0 .355.001.507.009.157.008.368-.06.576.44.214.516.732 1.785.795 1.916.063.13.104.282.019.452-.085.17-.128.277-.255.426-.127.15-.268.334-.383.45-.13.13-.266.27-.115.529.15.258.669 1.103 1.433 1.784.983.876 1.808 1.146 2.062 1.252.254.107.402.09.553-.085.15-.177.644-.75.817-.98.173-.23.346-.192.576-.107.23.085 1.464.69 1.719.817.255.127.424.192.487.3.063.107.063.619-.186 1.322z"/></svg>
+          <span>Share WhatsApp</span>
+        </button>
+      </div>
+
+      <article class="market-detail-card">
+        <div class="market-detail-main">
           <div class="market-detail-topline">
             <span class="category-chip ${market.category}">${market.category}</span>
-            <span class="market-detail-updates">${isLoadingEvidence ? "Loading evidence" : `${marketView.evidence.length} evidence updates`}</span>
+            <span class="market-status-pill">${marketStatus}</span>
           </div>
           <h2>${market.question}</h2>
-          <div class="market-decision-row">
-            <div class="market-trade-panel">
-              <div class="market-order-mode" aria-label="Order type">
-                <button type="button" class="${state.marketOrderMode === "buy" ? "active" : ""}" data-market-order-mode="buy">Buy</button>
-                <button type="button" class="${state.marketOrderMode === "sell" ? "active" : ""}" data-market-order-mode="sell">Sell</button>
-              </div>
-              <div class="market-order-ticket">
-                <div class="market-amount-panel">
-                  <label for="marketAmountInput">Amount</label>
-                  <div class="market-amount-input">
-                    <div class="market-amount-entry">
-                      <span>$</span>
-                      <input id="marketAmountInput" type="number" min="0" step="1" inputmode="decimal" value="${amount}" data-market-amount />
-                    </div>
-                    <div class="market-inline-payout">
-                      <span>${state.marketOrderMode === "buy" ? "Projected payout" : "Estimated proceeds"}</span>
-                      <strong>$${formatMoney(projectedPayout)}</strong>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="market-action-grid" aria-label="${orderLabel} shares">
-                ${isLoadingSnapshot
-                  ? `
-                    <div class="market-side yes" aria-busy="true">${renderSkeletonAria("Loading Yes price")}<div class="skeleton skeleton-line md" style="height: 18px; margin: 0 auto 6px;"></div><div class="skeleton skeleton-line sm" style="height: 22px; margin: 0 auto;"></div></div>
-                    <div class="market-side no" aria-busy="true">${renderSkeletonAria("Loading No price")}<div class="skeleton skeleton-line md" style="height: 18px; margin: 0 auto 6px;"></div><div class="skeleton skeleton-line sm" style="height: 22px; margin: 0 auto;"></div></div>
-                  `
-                  : `
-                    <button type="button" class="market-side yes ${state.marketTradeSide === "yes" ? "active" : ""}" data-market-trade-side="yes">
-                      <span>Yes</span>
-                      <strong>${yesPriceLabel}</strong>
-                    </button>
-                    <button type="button" class="market-side no ${state.marketTradeSide === "no" ? "active" : ""}" data-market-trade-side="no">
-                      <span>No</span>
-                      <strong>${noPriceLabel}</strong>
-                    </button>
-                  `}
-              </div>
-              ${isLoadingSnapshot
-                ? `<div class="market-submit-button skeleton" style="min-height: 48px; border-radius: 14px;"></div>`
-                : state.marketTradeStatus
-                  ? `<button type="button" class="market-submit-button" style="opacity: 0.76; pointer-events: none; background: linear-gradient(180deg, #5c6c8c, #4a5975); box-shadow: none;">${state.marketTradeStatus}</button>`
-                  : state.walletAddress
-                    ? `<button type="button" class="market-submit-button" data-market-trade="${state.marketTradeSide}">Confirm ${orderLabel} ${state.marketTradeSide === "yes" ? "Yes" : "No"}</button>`
-                    : `<button type="button" class="market-submit-button" data-connect-wallet>Sign in to trade</button>`
-              }
+          
+          <div class="market-stats-row">
+            <div class="market-stat">
+              <span>Closes</span>
+              <strong>${market.closes}</strong>
+            </div>
+            <div class="market-stat">
+              <span>Volume</span>
+              <strong>${snapshot ? `$${Math.round(snapshot.volumeUsdc).toLocaleString()}` : market.volume}</strong>
+            </div>
+            <div class="market-stat">
+              <span>Traders</span>
+              <strong>${market.traders}</strong>
             </div>
           </div>
-          <p class="market-volume">
-            <span>${marketStatus}</span>
-            <strong>${isLoadingSnapshot ? renderSkeletonAria("Loading volume") + '<span class="skeleton skeleton-line md" style="display:inline-block;width:140px;height:18px;vertical-align:middle;"></span>' : snapshot ? `$${Math.round(snapshot.volumeUsdc).toLocaleString()} USDC volume` : marketAddress ? "Reading Arc pool" : "Deploy Arc market to trade"}</strong>
-          </p>
-          <div class="market-resolution market-resolution-inline">
-            <div class="market-resolution-inline-head">
-              <strong>Resolution rules</strong>
-              <span>Closes: ${market.closes}</span>
+
+          <div class="market-resolution-panel">
+            <h3>Resolution Rules</h3>
+            <p>${market.resolution}</p>
+          </div>
+
+          <section class="market-evidence-thread">
+            <header>
+              <h3>Timeline & Evidence</h3>
+              <span>${isLoadingEvidence ? "Loading..." : `${marketView.evidence.length} updates`}</span>
+            </header>
+            <p class="market-thread-intro">Track how this topic is developing, newest first.</p>
+            <div class="market-thread-timeline">
+              ${isLoadingEvidence
+                ? renderMarketEvidenceSkeleton(3)
+                : marketView.evidence.map((item) => `
+                <article class="market-thread-update">
+                  <div class="market-thread-marker"></div>
+                  <div class="market-thread-update-content">
+                    <div class="market-thread-update-meta">
+                      <span>${item.date} · ${item.source}</span>
+                    </div>
+                    <h4>${item.headline}</h4>
+                    <p>${item.summary}</p>
+                    ${/example\\.com/i.test(item.sourceUrl) ? "" : `<a class="market-thread-source-link" href="${item.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
+                  </div>
+                </article>
+              `).join("")}
             </div>
-            <div class="market-resolution-rule">
-              <strong>Yes if</strong>
-              <p>${market.resolution.replace(/^Resolves Yes if\s*/i, "").replace(/\.$/, "")}.</p>
+          </section>
+        </div>
+      </article>
+
+      <div class="sticky-trade-bar">
+        <div class="sticky-trade-info">
+          <span>Yes <strong>${yesPriceLabel}</strong></span>
+          <span>No <strong>${noPriceLabel}</strong></span>
+        </div>
+        <button class="sticky-trade-btn" type="button" id="openTradeDrawerBtn">
+          Trade Market
+        </button>
+      </div>
+
+      <div class="trade-drawer-backdrop ${state.tradeDrawerOpen ? "open" : ""}" id="tradeDrawerBackdrop"></div>
+      <div class="trade-drawer ${state.tradeDrawerOpen ? "open" : ""}" id="tradeDrawer">
+        <div class="trade-drawer-header">
+          <h3>Place Trade</h3>
+          <button class="close-drawer-btn" type="button" id="closeTradeDrawerBtn" aria-label="Close trade panel">&times;</button>
+        </div>
+        <div class="trade-drawer-body">
+          <div class="market-order-mode">
+            <button type="button" class="${state.marketOrderMode === "buy" ? "active" : ""}" data-market-order-mode="buy">Buy</button>
+            <button type="button" class="${state.marketOrderMode === "sell" ? "active" : ""}" data-market-order-mode="sell">Sell</button>
+          </div>
+
+          <div class="market-action-grid">
+            ${isLoadingSnapshot
+              ? `
+                <div class="market-side yes" aria-busy="true"><div class="skeleton skeleton-line md" style="height: 18px; margin: 0 auto 6px;"></div></div>
+                <div class="market-side no" aria-busy="true"><div class="skeleton skeleton-line md" style="height: 18px; margin: 0 auto 6px;"></div></div>
+              `
+              : `
+                <button type="button" class="market-side yes ${state.marketTradeSide === "yes" ? "active" : ""}" data-market-trade-side="yes">
+                  <span>Yes</span>
+                  <strong>${yesPriceLabel}</strong>
+                </button>
+                <button type="button" class="market-side no ${state.marketTradeSide === "no" ? "active" : ""}" data-market-trade-side="no">
+                  <span>No</span>
+                  <strong>${noPriceLabel}</strong>
+                </button>
+              `}
+          </div>
+
+          <div class="market-amount-panel">
+            <label for="marketAmountInput">Trade Amount</label>
+            <div class="market-amount-input-row">
+              <span>$</span>
+              <input id="marketAmountInput" type="number" min="1" step="1" inputmode="decimal" value="${amount}" data-market-amount />
+              <span>USDC</span>
             </div>
-            <div class="market-resolution-rule">
-              <strong>Source</strong>
-              <p>Official announcements and verified reporting decide the outcome.</p>
-            </div>
+          </div>
+
+          <div class="market-inline-payout">
+            <span>${state.marketOrderMode === "buy" ? "Projected payout" : "Estimated proceeds"}</span>
+            <strong>$${formatMoney(projectedPayout)}</strong>
+          </div>
+
+          <div class="drawer-action-container">
+            ${isLoadingSnapshot
+              ? `<div class="market-submit-button skeleton" style="min-height: 48px; border-radius: 12px;"></div>`
+              : state.marketTradeStatus
+                ? `<button type="button" class="market-submit-button disabled" style="opacity: 0.8; pointer-events: none;">${state.marketTradeStatus}</button>`
+                : state.walletAddress
+                  ? `<button type="button" class="market-submit-button" data-market-trade="${state.marketTradeSide}">Confirm ${orderLabel} ${state.marketTradeSide === "yes" ? "Yes" : "No"}</button>`
+                  : `<button type="button" class="market-submit-button" data-connect-wallet>Sign in to trade</button>`
+            }
+          </div>
+          
+          <div class="drawer-wallet-info">
+            <span>Wallet Balance:</span>
+            <strong>${state.walletAddress ? `${state.walletBalance ?? "0"} USDC` : "Not connected"}</strong>
           </div>
         </div>
-        <section class="market-evidence-thread">
-          <header>
-            <div>
-              <span class="market-kicker">Market thread</span>
-              <h3>${marketView.threadTopic}</h3>
-            </div>
-            <span>${isLoadingEvidence ? "Loading..." : `${marketView.evidence.length} updates`}</span>
-          </header>
-          <p class="market-thread-intro">Read the developments shaping this market, newest first.</p>
-          <div class="market-thread-timeline">
-            ${isLoadingEvidence
-              ? renderMarketEvidenceSkeleton(3)
-              : marketView.evidence.map((item) => `
-              <article class="market-thread-update">
-                <div class="market-thread-marker"></div>
-                <div>
-                  <div class="market-thread-update-meta">
-                    <span>${item.date} · ${item.source}</span>
-                  </div>
-                  <h4>${item.headline}</h4>
-                  <p>${item.summary}</p>
-                  <a class="market-thread-source-link" href="${item.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>
-                </div>
-              </article>
-            `).join("")}
-          </div>
-        </section>
-      </article>
+      </div>
     </div>
   `;
 };
@@ -2056,6 +1790,85 @@ const renderMarkets = (): void => {
       ${marketPreviews.map(renderMarketCard).join("")}
     </section>
   `;
+};
+
+const renderLeaderboard = (): void => {
+  if (!storyList || !storyDetail) return;
+  briefHero?.toggleAttribute("hidden", true);
+  archiveControls?.toggleAttribute("hidden", true);
+  categoryTabs?.toggleAttribute("hidden", true);
+  topMarketsButton?.classList.remove("active");
+  topNewsButton?.classList.remove("active");
+  topPortfolioButton?.classList.remove("active");
+  document.body.classList.remove("detail-mode");
+  storyDetail.hidden = true;
+  storyList.hidden = false;
+  storyList.classList.add("markets-list");
+
+  // Mock leaderboard users based on weekly ROI percentage
+  const leaderboardUsers = [
+    { rank: 1, username: "@alpha_trader", roi: "+245.8%", profit: "$24,580 USDC", category: "Gaming" },
+    { rank: 2, username: "@madridista_14", roi: "+189.2%", profit: "$18,920 USDC", category: "Sports" },
+    { rank: 3, username: "@onepiece_theory", roi: "+143.5%", profit: "$14,350 USDC", category: "Anime" },
+    { rank: 4, username: state.walletAddress ? `${shortenAddress(state.walletAddress)} (You)` : "@anonymous_trader", roi: "+24.5%", profit: "$245 USDC", category: "Mixed" },
+    { rank: 5, username: "@gta6_hype", roi: "+12.1%", profit: "$1,210 USDC", category: "Gaming" }
+  ];
+
+  storyList.innerHTML = `
+    <section class="leaderboard-surface">
+      <header class="leaderboard-header">
+        <span>Siftle Arena</span>
+        <h1>ROI Leaderboard</h1>
+        <p>Compete with other nerds. The higher your trading ROI from news updates, the higher you climb.</p>
+      </header>
+
+      <div class="leaderboard-faucet-box">
+        <div class="faucet-box-details">
+          <h3>Claim Test USDC</h3>
+          <p>Get $100 USDC to trade prediction markets and test your theories.</p>
+        </div>
+        <button id="faucetClaimButton" class="faucet-claim-btn" type="button">Claim Faucet</button>
+      </div>
+
+      <div class="leaderboard-list" role="list">
+        ${leaderboardUsers.map(user => `
+          <div class="leaderboard-row ${user.username.includes('(You)') ? 'user-highlight' : ''}" role="listitem">
+            <div class="leaderboard-row-left">
+              <span class="leaderboard-rank rank-${user.rank}">${user.rank}</span>
+              <span class="leaderboard-username">${user.username}</span>
+            </div>
+            <div class="leaderboard-row-right">
+              <span class="leaderboard-roi">${user.roi} ROI</span>
+              <span class="leaderboard-profit">${user.profit}</span>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </section>
+  `;
+
+  // Attach event listener for faucet claim button
+  const faucetClaimButton = document.getElementById("faucetClaimButton");
+  faucetClaimButton?.addEventListener("click", async () => {
+    if (!state.walletAddress) {
+      showActionToast("Please sign in first!");
+      return;
+    }
+    
+    // Check if mock session
+    if (localStorage.getItem("siftle_circle_is_mock") === "true") {
+      const currentBalance = parseFloat(localStorage.getItem(`siftle_mock_balance_${state.walletAddress}`) || "1000.00");
+      const newBalance = currentBalance + 100.0;
+      localStorage.setItem(`siftle_mock_balance_${state.walletAddress}`, newBalance.toFixed(2));
+      state.walletBalance = newBalance.toFixed(2);
+      showActionToast("Claimed $100 USDC mock credits!");
+      renderWalletState();
+      renderLeaderboard();
+    } else {
+      showActionToast("Opening Circle Faucet...");
+      window.open(ARC_TESTNET_FAUCET, "_blank");
+    }
+  });
 };
 
 const showFeedSurface = (): void => {
@@ -2196,6 +2009,10 @@ const render = (): void => {
     renderPortfolio();
     return;
   }
+  if (state.activeSurface === "leaderboard") {
+    renderLeaderboard();
+    return;
+  }
 
   showFeedSurface();
   renderCategories();
@@ -2292,6 +2109,9 @@ bottomNavButtons.forEach((button) => {
     } else if (target === "portfolio") {
       state.activeSurface = "portfolio";
       window.history.pushState({}, "", "#portfolio");
+    } else if (target === "leaderboard") {
+      state.activeSurface = "leaderboard";
+      window.history.pushState({}, "", "#leaderboard");
     } else {
       state.activeSurface = "feed";
       window.history.pushState({}, "", window.location.pathname);
@@ -2393,8 +2213,34 @@ storyDetail?.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
   if (target.closest("[data-back-markets]")) {
     state.selectedMarketId = null;
+    state.tradeDrawerOpen = false;
     window.history.pushState({}, "", "#markets");
     render();
+    return;
+  }
+  if (target.closest("#openTradeDrawerBtn")) {
+    state.tradeDrawerOpen = true;
+    const drawer = storyDetail.querySelector("#tradeDrawer");
+    const backdrop = storyDetail.querySelector("#tradeDrawerBackdrop");
+    drawer?.classList.add("open");
+    backdrop?.classList.add("open");
+    return;
+  }
+  if (target.closest("#closeTradeDrawerBtn") || target.closest("#tradeDrawerBackdrop")) {
+    state.tradeDrawerOpen = false;
+    const drawer = storyDetail.querySelector("#tradeDrawer");
+    const backdrop = storyDetail.querySelector("#tradeDrawerBackdrop");
+    drawer?.classList.remove("open");
+    backdrop?.classList.remove("open");
+    return;
+  }
+  if (target.closest("#shareWhatsAppBtn")) {
+    const market = marketPreviews.find((item) => item.id === state.selectedMarketId);
+    if (market) {
+      const text = generateWhatsAppShareText(market);
+      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+      window.open(url, "_blank");
+    }
     return;
   }
   const tradeButton = target.closest<HTMLButtonElement>("[data-market-trade]");
@@ -2496,10 +2342,12 @@ document.addEventListener("click", (event) => {
   }
 });
 
-render();
-renderWalletState();
-void loadArchiveIndex();
-void loadFeed();
+void loadMarkets().then(() => {
+  render();
+  renderWalletState();
+  void loadArchiveIndex();
+  void loadFeed();
+});
 
 // Mobile archive card: toggle the archive controls via class (safe for desktop)
 const mobileArchiveCardEl = document.querySelector<HTMLButtonElement>("#mobileArchiveCard");

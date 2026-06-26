@@ -570,6 +570,15 @@ export const disconnectArcWallet = () => {
 };
 
 export const readArcUsdcBalance = async (account: string): Promise<string> => {
+  if (isMockSession) {
+    const key = `siftle_mock_balance_${account.toLowerCase()}`;
+    const stored = localStorage.getItem(key);
+    if (stored !== null) {
+      return parseFloat(stored).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    localStorage.setItem(key, "1000.00");
+    return "1,000.00";
+  }
   const encodedAccount = account.toLowerCase().replace(/^0x/, "").padStart(64, "0");
   const result = await requestRpc<string>("eth_call", [
     { to: ARC_TESTNET_USDC, data: `${BALANCE_OF_SELECTOR}${encodedAccount}` },
@@ -602,6 +611,16 @@ export const readArcMarketSnapshot = async (marketAddress: string): Promise<ArcM
 };
 
 export const readArcMarketPosition = async (marketAddress: string, account: string): Promise<ArcMarketPosition> => {
+  if (isMockSession) {
+    const key = `siftle_mock_pos_${marketAddress.toLowerCase()}_${account.toLowerCase()}`;
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {}
+    }
+    return { yesSharesUsdc: 0, noSharesUsdc: 0 };
+  }
   const market = new Contract(marketAddress, SIFTLE_MARKET_ABI, publicProvider);
   const [yesShares, noShares] = await Promise.all([
     market.yesShares(account) as Promise<bigint>,
@@ -663,28 +682,73 @@ export const executeArcMarketOrder = async (
   if (isMockSession) {
     if (!mockWallet) throw new Error("Mock wallet not initialized");
 
-    if (mode === "buy") {
-      onStatus?.("Checking USDC allowance...");
-      const usdc = new Contract(ARC_TESTNET_USDC, ERC20_ABI, mockWallet);
-      const allowance = (await usdc.allowance(activeWalletAddress, marketAddress)) as bigint;
-      if (allowance < amount) {
-        onStatus?.("Unlocking USDC...");
-        const approval = await usdc.approve(marketAddress, amount);
-        await approval.wait();
+    try {
+      if (mode === "buy") {
+        onStatus?.("Checking USDC allowance...");
+        const usdc = new Contract(ARC_TESTNET_USDC, ERC20_ABI, mockWallet);
+        const allowance = (await usdc.allowance(activeWalletAddress, marketAddress)) as bigint;
+        if (allowance < amount) {
+          onStatus?.("Unlocking USDC...");
+          const approval = await usdc.approve(marketAddress, amount);
+          await approval.wait();
+        }
+        onStatus?.("Submitting buy order...");
+        const market = new Contract(marketAddress, SIFTLE_MARKET_ABI, mockWallet);
+        const tx = await market.buy(side === "yes", amount);
+        onStatus?.("Confirming trade on-chain...");
+        await tx.wait();
+        return tx.hash as string;
+      } else {
+        onStatus?.("Submitting sell order...");
+        const market = new Contract(marketAddress, SIFTLE_MARKET_ABI, mockWallet);
+        const tx = await market.sell(side === "yes", amount);
+        onStatus?.("Confirming trade on-chain...");
+        await tx.wait();
+        return tx.hash as string;
       }
-      onStatus?.("Submitting buy order...");
-      const market = new Contract(marketAddress, SIFTLE_MARKET_ABI, mockWallet);
-      const tx = await market.buy(side === "yes", amount);
-      onStatus?.("Confirming trade on-chain...");
-      await tx.wait();
-      return tx.hash as string;
-    } else {
-      onStatus?.("Submitting sell order...");
-      const market = new Contract(marketAddress, SIFTLE_MARKET_ABI, mockWallet);
-      const tx = await market.sell(side === "yes", amount);
-      onStatus?.("Confirming trade on-chain...");
-      await tx.wait();
-      return tx.hash as string;
+    } catch (err) {
+      console.warn("On-chain mock transaction failed, falling back to local simulation:", err);
+      onStatus?.("Processing mock trade...");
+      await new Promise((r) => setTimeout(r, 1000));
+
+      const balanceKey = `siftle_mock_balance_${activeWalletAddress.toLowerCase()}`;
+      const currentBalance = parseFloat(localStorage.getItem(balanceKey) || "1000.00");
+      let newBalance = currentBalance;
+      if (mode === "buy") {
+        if (currentBalance < amountUsdc) {
+          throw new Error("Insufficient USDC mock balance");
+        }
+        newBalance = currentBalance - amountUsdc;
+      } else {
+        newBalance = currentBalance + amountUsdc;
+      }
+      localStorage.setItem(balanceKey, newBalance.toFixed(2));
+
+      const posKey = `siftle_mock_pos_${marketAddress.toLowerCase()}_${activeWalletAddress.toLowerCase()}`;
+      let position: ArcMarketPosition = { yesSharesUsdc: 0, noSharesUsdc: 0 };
+      const storedPos = localStorage.getItem(posKey);
+      if (storedPos) {
+        try {
+          position = JSON.parse(storedPos);
+        } catch {}
+      }
+
+      if (mode === "buy") {
+        if (side === "yes") {
+          position.yesSharesUsdc += amountUsdc;
+        } else {
+          position.noSharesUsdc += amountUsdc;
+        }
+      } else {
+        if (side === "yes") {
+          position.yesSharesUsdc = Math.max(0, position.yesSharesUsdc - amountUsdc);
+        } else {
+          position.noSharesUsdc = Math.max(0, position.noSharesUsdc - amountUsdc);
+        }
+      }
+      localStorage.setItem(posKey, JSON.stringify(position));
+
+      return "0xmocktxhash" + Math.random().toString(16).slice(2);
     }
   }
 

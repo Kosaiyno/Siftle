@@ -1,0 +1,38 @@
+[
+  {
+    "id": "gta6-delay-2026",
+    "category": "Gaming",
+    "question": "Will GTA 6 official release date be delayed past December 31, 2026?",
+    "probability": 54,
+    "closes": "December 31, 2026",
+    "resolution": "Resolves Yes if Rockstar Games officially announces that GTA 6 will release in 2027 or later.",
+    "threadTopic": "GTA 6 Release Timing and Studio Status",
+    "volume": "$125K",
+    "traders": "840",
+    "liquidity": "$38K"
+  },
+  {
+    "id": "transfer-davies-realmadrid",
+    "category": "Sports",
+    "question": "Will Real Madrid officially sign Alphonso Davies in the Summer Transfer Window?",
+    "probability": 72,
+    "closes": "September 1, 2026",
+    "resolution": "Resolves Yes if Real Madrid officially announces the transfer/signing of Alphonso Davies.",
+    "threadTopic": "Alphonso Davies Real Madrid Transfer Talks",
+    "volume": "$240K",
+    "traders": "1,450",
+    "liquidity": "$78K"
+  },
+  {
+    "id": "manga-onepiece-1200",
+    "category": "Anime",
+    "question": "Will Manga Chapter 1200 reveal the identity of the final Ancient Weapon?",
+    "probability": 40,
+    "closes": "At official release of Chapter 1200",
+    "resolution": "Resolves Yes if official English translated Chapter 1200 confirms the identity.",
+    "threadTopic": "One Piece Manga Chapter Spoilers",
+    "volume": "$64K",
+    "traders": "920",
+    "liquidity": "$22K"
+  }
+]

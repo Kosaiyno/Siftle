@@ -1,58 +1,32 @@
 export const marketThreadRules = {
-  "new-glenn-2026": {
-    category: "Tech",
-    topic: "Blue Origin New Glenn Launchpad Probe",
-    includeAll: ["blue origin", "new glenn"],
-    includeAny: ["launch", "launchpad", "explosion", "probe", "fly", "again", "vehicle"],
-    reject: ["spacex", "starship", "falcon"]
-  },
-  "strategy-bitcoin-sale": {
-    category: "Crypto",
-    topic: "Strategy Bitcoin Sale Fallout",
+  "gta6-delay-2026": {
+    category: "Gaming",
+    topic: "GTA 6 Release Timing and Studio Status",
     includeAnySets: [
-      ["microstrategy", "mstr", "michael saylor", "saylor", "strategy's", "strategy report", "strategy reports", "strategy sale", "strategy sold", "strategy bitcoin"],
-      ["bitcoin", "btc"],
-      ["sale", "sell", "selling", "sold", "sells", "buy", "buying", "bought", "add more dots", "underwater", "unrealized", "loss", "losses", "holdings", "treasury", "mstr", "polymarket"]
+      ["gta 6", "gta vi", "grand theft auto 6", "grand theft auto vi", "rockstar", "take-two", "take two"],
+      ["delay", "delayed", "postponed", "release", "schedule", "2027", "launch", "timing"]
     ],
-    reject: ["hive", "kraken", "bitcoin holdings via lending", "coinbase", "moneygram", "tether", "visa", "bitcoin price"]
+    reject: ["gta 5", "gta v", "online update", "rp server", "fivem", "subscription"]
   },
-  "nba-finals": {
+  "transfer-davies-realmadrid": {
     category: "Sports",
-    topic: "Spurs 2026 NBA Finals Run",
+    topic: "Alphonso Davies Real Madrid Transfer Talks",
     includeAnySets: [
-      ["san antonio", "wembanyama", "nba spurs", "spurs"],
-      ["nba", "finals", "game", "knicks", "western conference"]
+      ["davies", "alphonso davies"],
+      ["real madrid", "madrid", "bayern", "munich", "bundesliga", "laliga"],
+      ["transfer", "sign", "deal", "contract", "agree", "fee", "terms", "personal terms", "rumor", "rumours", "talks"]
     ],
-    reject: ["tottenham", "liverpool", "arsenal", "premier league", "football", "soccer", "levy", "usmnt", "wedding"]
+    reject: ["tottenham", "liverpool", "arsenal", "premier league", "manchester united", "chelsea", "barcelona", "cricket", "basketball"]
   },
-  "england-world-cup-opener": {
-    category: "Sports",
-    topic: "England World Cup Opener Prep",
+  "manga-onepiece-1200": {
+    category: "Anime",
+    topic: "One Piece Manga Chapter Spoilers",
     includeAnySets: [
-      ["england", "tuchel", "harry kane", "kane", "bellingham"],
-      ["world cup", "opener", "warm-up", "warmup", "new zealand", "florida", "tampa", "squad", "heat"]
+      ["one piece", "oda"],
+      ["chapter", "ch.", "leak", "leaks", "spoiler", "spoilers", "scanlation", "scanlations"],
+      ["ancient weapon", "uranus", "pluton", "poseidon", "imu", "gorosei", "joy boy", "joyboy", "luffy", "shanks", "final saga", "egghead", "elbaf"]
     ],
-    reject: ["women's world cup", "women", "qualifier", "cricket", "ghana", "wales", "netherlands", "dutch"]
-  },
-  "neymar-world-cup-opener": {
-    category: "Sports",
-    topic: "Neymar Brazil World Cup Fitness Watch",
-    includeAnySets: [
-      ["neymar"],
-      ["brazil", "ancelotti", "cbf"],
-      ["world cup", "opener", "calf", "injury", "mri", "training", "fit", "minutes"]
-    ],
-    reject: ["romario", "lille", "davide ancelotti", "manchester united"]
-  },
-  "iran-world-cup-visas": {
-    category: "Sports",
-    topic: "Iran World Cup Visa Dispute",
-    includeAnySets: [
-      ["iran", "team melli"],
-      ["world cup", "wcup"],
-      ["visa", "visas", "u.s.", "us ", "united states", "mexico", "officials"]
-    ],
-    reject: ["switzerland", "embolo", "australia", "socceroos"]
+    reject: ["naruto", "boruto", "jujutsu kaisen", "jjk", "my hero academia", "demon slayer", "bleach", "dbz", "dragon ball"]
   }
 };
 

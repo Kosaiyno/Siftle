@@ -4,125 +4,68 @@ import { marketThreadRules, storyMatchesMarketThreadRule } from "./marketThreadR
 
 const story = (category, headline, summary = "") => ({ category, headline, summary, sourceUrl: "https://source.test/story" });
 
-test("NBA market accepts San Antonio Spurs NBA context", () => {
+test("GTA 6 market accepts GTA 6 delay context", () => {
   assert.equal(
     storyMatchesMarketThreadRule(
-      story("Sports", "Wembanyama expects Spurs response after Game 1 loss", "San Antonio remains confident in the NBA Finals."),
-      marketThreadRules["nba-finals"]
+      story("Gaming", "Rockstar reportedly considering GTA 6 delay to 2027", "Internal sources claim Grand Theft Auto VI might miss its late 2026 window."),
+      marketThreadRules["gta6-delay-2026"]
     ),
     true
   );
 });
 
-test("NBA market rejects Tottenham Spurs football context", () => {
+test("GTA 6 market rejects GTA 5 or RP context", () => {
   assert.equal(
     storyMatchesMarketThreadRule(
-      story("Sports", "Spurs sign Andy Robertson on free transfer", "Tottenham bring in the Liverpool defender for Premier League campaign."),
-      marketThreadRules["nba-finals"]
+      story("Gaming", "GTA 5 online update brings new RP server tools", "Rockstar releases a new subscription package for GTA V Online players."),
+      marketThreadRules["gta6-delay-2026"]
     ),
     false
   );
 });
 
-test("Strategy market accepts MicroStrategy bitcoin sale context", () => {
+test("Davies transfer market accepts Real Madrid negotiation context", () => {
   assert.equal(
     storyMatchesMarketThreadRule(
-      story("Crypto", "Strategy sale dispute reaches a final market resolution", "Traders debate whether MicroStrategy sold BTC from its treasury."),
-      marketThreadRules["strategy-bitcoin-sale"]
+      story("Sports", "Real Madrid agree personal terms with Alphonso Davies", "The Bayern Munich left-back is close to signing a summer transfer contract."),
+      marketThreadRules["transfer-davies-realmadrid"]
     ),
     true
   );
 });
 
-test("Strategy market accepts Saylor buy and underwater pressure context", () => {
+test("Davies transfer market rejects Premier League/Arsenal context", () => {
   assert.equal(
     storyMatchesMarketThreadRule(
-      story(
-        "Crypto",
-        "Michael Saylor hints at fresh bitcoin buy with add more dots post as Strategy sits $11.7 billion underwater",
-        "Strategy remains under pressure after its recent Bitcoin sale while Saylor signals another BTC purchase."
-      ),
-      marketThreadRules["strategy-bitcoin-sale"]
-    ),
-    true
-  );
-});
-
-test("Strategy market rejects unrelated bitcoin treasury companies", () => {
-  assert.equal(
-    storyMatchesMarketThreadRule(
-      story("Crypto", "HIVE Bitcoin holdings drop by 331 BTC", "The miner reported revenue and bitcoin holdings changes."),
-      marketThreadRules["strategy-bitcoin-sale"]
+      story("Sports", "Arsenal sign left-back from Premier League rival", "The Gunners agree a record fee with Manchester United for a new contract."),
+      marketThreadRules["transfer-davies-realmadrid"]
     ),
     false
   );
 });
 
-test("Strategy market rejects generic bitcoin price strategy stories", () => {
+test("One Piece Manga market accepts Chapter 1200 leaks", () => {
   assert.equal(
     storyMatchesMarketThreadRule(
-      story("Crypto", "Bitcoin Price Plunges To $59K", "Traders are watching support levels and adjusting their market strategy after liquidations."),
-      marketThreadRules["strategy-bitcoin-sale"]
+      story("Anime", "One Piece Chapter 1200 spoilers reveal Ancient Weapon details", "Oda reveals key details about Uranus and Imu in the latest scanlations."),
+      marketThreadRules["manga-onepiece-1200"]
+    ),
+    true
+  );
+});
+
+test("One Piece Manga market rejects Jujutsu Kaisen spoilers", () => {
+  assert.equal(
+    storyMatchesMarketThreadRule(
+      story("Anime", "Jujutsu Kaisen chapter leak shocks fans", "JJK spoilers and scanlations show final battle details."),
+      marketThreadRules["manga-onepiece-1200"]
     ),
     false
-  );
-});
-
-test("New Glenn market accepts Blue Origin launchpad context", () => {
-  assert.equal(
-    storyMatchesMarketThreadRule(
-      story("Tech", "Blue Origin plans to launch New Glenn again this year", "The company is investigating launchpad explosion damage."),
-      marketThreadRules["new-glenn-2026"]
-    ),
-    true
-  );
-});
-
-test("England World Cup market accepts England opener prep", () => {
-  assert.equal(
-    storyMatchesMarketThreadRule(
-      story("Sports", "England win over New Zealand provides reminder of Harry Kane", "England's victory proved Kane is pivotal to their World Cup hopes."),
-      marketThreadRules["england-world-cup-opener"]
-    ),
-    true
-  );
-});
-
-test("England World Cup market rejects women's qualifier context", () => {
-  assert.equal(
-    storyMatchesMarketThreadRule(
-      story("Sports", "Bonmati in Spain squad for crucial England qualifier", "Spain face England in a Women's World Cup qualifier."),
-      marketThreadRules["england-world-cup-opener"]
-    ),
-    false
-  );
-});
-
-test("Neymar market accepts Brazil injury context", () => {
-  assert.equal(
-    storyMatchesMarketThreadRule(
-      story("Sports", "Brazil's Ancelotti: Neymar to have MRI Monday", "Neymar is racing to be fit for the World Cup after a calf injury."),
-      marketThreadRules["neymar-world-cup-opener"]
-    ),
-    true
-  );
-});
-
-test("Iran visa market accepts World Cup visa dispute context", () => {
-  assert.equal(
-    storyMatchesMarketThreadRule(
-      story("Sports", "Iran says U.S. denied visas to key WC officials", "Iran accused the United States of refusing visas before the World Cup."),
-      marketThreadRules["iran-world-cup-visas"]
-    ),
-    true
   );
 });
 
 test("market rules expose stable thread topics", () => {
-  assert.equal(marketThreadRules["nba-finals"].topic, "Spurs 2026 NBA Finals Run");
-  assert.equal(marketThreadRules["strategy-bitcoin-sale"].topic, "Strategy Bitcoin Sale Fallout");
-  assert.equal(marketThreadRules["new-glenn-2026"].topic, "Blue Origin New Glenn Launchpad Probe");
-  assert.equal(marketThreadRules["england-world-cup-opener"].topic, "England World Cup Opener Prep");
-  assert.equal(marketThreadRules["neymar-world-cup-opener"].topic, "Neymar Brazil World Cup Fitness Watch");
-  assert.equal(marketThreadRules["iran-world-cup-visas"].topic, "Iran World Cup Visa Dispute");
+  assert.equal(marketThreadRules["gta6-delay-2026"].topic, "GTA 6 Release Timing and Studio Status");
+  assert.equal(marketThreadRules["transfer-davies-realmadrid"].topic, "Alphonso Davies Real Madrid Transfer Talks");
+  assert.equal(marketThreadRules["manga-onepiece-1200"].topic, "One Piece Manga Chapter Spoilers");
 });
