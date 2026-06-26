@@ -1,13 +1,4 @@
 export const marketThreadRules = {
-  "gta6-delay-2026": {
-    category: "Gaming",
-    topic: "GTA 6 Release Timing and Studio Status",
-    includeAnySets: [
-      ["gta 6", "gta vi", "grand theft auto 6", "grand theft auto vi", "rockstar", "take-two", "take two"],
-      ["delay", "delayed", "postponed", "release", "schedule", "2027", "launch", "timing"]
-    ],
-    reject: ["gta 5", "gta v", "online update", "rp server", "fivem", "subscription"]
-  },
   "transfer-davies-realmadrid": {
     category: "Sports",
     topic: "Alphonso Davies Real Madrid Transfer Talks",
@@ -18,6 +9,53 @@ export const marketThreadRules = {
     ],
     reject: ["tottenham", "liverpool", "arsenal", "premier league", "manchester united", "chelsea", "barcelona", "cricket", "basketball"]
   },
+  "transfer-tonali-spurs": {
+    category: "Sports",
+    topic: "Sandro Tonali Tottenham Transfer Link",
+    includeAnySets: [
+      ["tonali", "sandro tonali"],
+      ["tottenham", "spurs", "newcastle", "arsenal"],
+      ["transfer", "sign", "deal", "contract", "agree", "fee", "terms", "rumor", "rumours", "talks", "move"]
+    ],
+    reject: ["chelsea", "liverpool", "manchester united", "barcelona", "real madrid", "bayern", "cricket", "basketball"]
+  },
+  "transfer-guimaraes-arsenal": {
+    category: "Sports",
+    topic: "Bruno Guimarães Arsenal Transfer Link",
+    includeAnySets: [
+      ["guimaraes", "bruno guimarães", "bruno guimaraes"],
+      ["arsenal", "gunners", "newcastle"],
+      ["transfer", "sign", "deal", "contract", "agree", "fee", "terms", "rumor", "rumours", "talks", "move", "offer"]
+    ],
+    reject: ["tottenham", "chelsea", "liverpool", "manchester united", "barcelona", "real madrid", "bayern", "cricket", "basketball"]
+  },
+  "wc-mbappe-haaland-goals": {
+    category: "Sports",
+    topic: "Mbappé vs Haaland World Cup Clash",
+    includeAnySets: [
+      ["mbappe", "kylian mbappe", "haaland", "erling haaland"],
+      ["france", "norway", "boston", "friday", "score", "goal", "goals", "head-to-head", "head to head"]
+    ],
+    reject: []
+  },
+  "wc-england-panama-spread": {
+    category: "Sports",
+    topic: "England vs Panama Match Details",
+    includeAnySets: [
+      ["england", "panama"],
+      ["saturday", "scouting", "opponent", "opponents", "training", "injury", "win", "defeat", "match", "game", "tuchel", "rice", "james"]
+    ],
+    reject: []
+  },
+  "wc-scotland-qualification": {
+    category: "Sports",
+    topic: "Scotland World Cup Status",
+    includeAnySets: [
+      ["scotland", "tartan army", "steve clarke"],
+      ["qualification", "qualify", "hope", "hopes", "fate", "purgatory", "last 32", "brazil", "clarke"]
+    ],
+    reject: []
+  },
   "manga-onepiece-1200": {
     category: "Anime",
     topic: "One Piece Manga Chapter Spoilers",
@@ -27,6 +65,15 @@ export const marketThreadRules = {
       ["ancient weapon", "uranus", "pluton", "poseidon", "imu", "gorosei", "joy boy", "joyboy", "luffy", "shanks", "final saga", "egghead", "elbaf"]
     ],
     reject: ["naruto", "boruto", "jujutsu kaisen", "jjk", "my hero academia", "demon slayer", "bleach", "dbz", "dragon ball"]
+  },
+  "wc-messi-ronaldo-16": {
+    category: "Sports",
+    topic: "Messi and Ronaldo World Cup Knockout",
+    includeAnySets: [
+      ["messi", "ronaldo", "argentina", "portugal"],
+      ["knockout", "round of 32", "round of 16", "world cup", "eliminated", "eliminate", "qualify", "advances", "advance", "match", "game", "last 32", "tournament"]
+    ],
+    reject: ["cricket", "basketball", "baseball", "tennis"]
   }
 };
 

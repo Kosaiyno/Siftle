@@ -302,7 +302,7 @@ export const connectArcWallet = async (): Promise<string> => {
       <div class="circle-auth-card">
         <button class="circle-auth-close" id="circleAuthClose" type="button">&times;</button>
         <div class="circle-auth-logo">
-          <img src="./assets/Siftle_logo-removebg-preview.png" alt="Siftle logo" />
+          <img src="./assets/siftle logo.png" alt="Siftle logo" />
           <h2>Sign In to Siftle</h2>
         </div>
         <p class="circle-auth-subtitle">Verify your email to manage predictions and trade</p>

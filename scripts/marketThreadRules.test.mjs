@@ -4,21 +4,21 @@ import { marketThreadRules, storyMatchesMarketThreadRule } from "./marketThreadR
 
 const story = (category, headline, summary = "") => ({ category, headline, summary, sourceUrl: "https://source.test/story" });
 
-test("GTA 6 market accepts GTA 6 delay context", () => {
+test("Tonali transfer market accepts Tottenham negotiation context", () => {
   assert.equal(
     storyMatchesMarketThreadRule(
-      story("Gaming", "Rockstar reportedly considering GTA 6 delay to 2027", "Internal sources claim Grand Theft Auto VI might miss its late 2026 window."),
-      marketThreadRules["gta6-delay-2026"]
+      story("Sports", "Tottenham leading Arsenal in Sandro Tonali race", "Spurs explore summer transfer move for Newcastle midfielder Tonali."),
+      marketThreadRules["transfer-tonali-spurs"]
     ),
     true
   );
 });
 
-test("GTA 6 market rejects GTA 5 or RP context", () => {
+test("Tonali transfer market rejects other clubs/sports", () => {
   assert.equal(
     storyMatchesMarketThreadRule(
-      story("Gaming", "GTA 5 online update brings new RP server tools", "Rockstar releases a new subscription package for GTA V Online players."),
-      marketThreadRules["gta6-delay-2026"]
+      story("Sports", "Liverpool sign midfielder from Bayern Munich", "The Anfield club agree terms with Bundesliga giants."),
+      marketThreadRules["transfer-tonali-spurs"]
     ),
     false
   );
@@ -65,7 +65,28 @@ test("One Piece Manga market rejects Jujutsu Kaisen spoilers", () => {
 });
 
 test("market rules expose stable thread topics", () => {
-  assert.equal(marketThreadRules["gta6-delay-2026"].topic, "GTA 6 Release Timing and Studio Status");
+  assert.equal(marketThreadRules["transfer-tonali-spurs"].topic, "Sandro Tonali Tottenham Transfer Link");
   assert.equal(marketThreadRules["transfer-davies-realmadrid"].topic, "Alphonso Davies Real Madrid Transfer Talks");
   assert.equal(marketThreadRules["manga-onepiece-1200"].topic, "One Piece Manga Chapter Spoilers");
+  assert.equal(marketThreadRules["wc-messi-ronaldo-16"].topic, "Messi and Ronaldo World Cup Knockout");
+});
+
+test("Messi and Ronaldo knockout market matches World Cup tournament stories", () => {
+  assert.equal(
+    storyMatchesMarketThreadRule(
+      story("Sports", "Messi and Ronaldo face knockout stage tests", "Argentina and Portugal prepare for crucial World Cup round of 32 matches next week."),
+      marketThreadRules["wc-messi-ronaldo-16"]
+    ),
+    true
+  );
+});
+
+test("Messi and Ronaldo knockout market rejects unrelated sports stories", () => {
+  assert.equal(
+    storyMatchesMarketThreadRule(
+      story("Sports", "Cricket World Cup finals highlights", "India wins the cricket tournament after a thriller game."),
+      marketThreadRules["wc-messi-ronaldo-16"]
+    ),
+    false
+  );
 });

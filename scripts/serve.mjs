@@ -1668,13 +1668,37 @@ const annotateStoriesWithThreads = (stories = []) => {
   return annotated;
 };
 
-const annotateSnapshotThreads = (snapshot) =>
-  enableFeedThreadPreviews && snapshot?.top_stories
+const prioritizeMarketStories = (stories) => {
+  const marketStories = [];
+  const otherStories = [];
+  const rules = Object.values(marketThreadRules);
+
+  for (const story of stories) {
+    const matchesAnyRule = rules.some((rule) => storyMatchesMarketThreadRule(story, rule));
+    if (matchesAnyRule) {
+      marketStories.push(story);
+    } else {
+      otherStories.push(story);
+    }
+  }
+
+  return [...marketStories, ...otherStories];
+};
+
+const annotateSnapshotThreads = (snapshot) => {
+  if (!snapshot?.top_stories) return snapshot;
+
+  const prioritizedStories = prioritizeMarketStories(snapshot.top_stories);
+  return enableFeedThreadPreviews
     ? {
         ...snapshot,
-        top_stories: annotateStoriesWithThreads(snapshot.top_stories)
+        top_stories: annotateStoriesWithThreads(prioritizedStories)
       }
-    : snapshot;
+    : {
+        ...snapshot,
+        top_stories: prioritizedStories
+      };
+};
 
 const stripPreparedThreadPayload = (thread) =>
   thread
@@ -3099,6 +3123,105 @@ const summarizeWith0G = async (article, options = {}) => {
   }
 };
 
+const getActiveMarketQueriesStr = (category) => {
+  const filePath = join(root, "data", "active_markets.json");
+  if (!existsSync(filePath)) return "";
+  try {
+    const markets = JSON.parse(readFileSync(filePath, "utf8"));
+    const categoryMarkets = category === "All" 
+      ? markets 
+      : markets.filter(m => m.category === category);
+    
+    const phrases = categoryMarkets.map(m => {
+      if (m.id === "transfer-davies-realmadrid") return `"Alphonso Davies" "Real Madrid"`;
+      if (m.id === "transfer-tonali-spurs") return `"Sandro Tonali" "Tottenham"`;
+      if (m.id === "transfer-guimaraes-arsenal") return `"Bruno Guimarães" "Arsenal"`;
+      if (m.id === "wc-mbappe-haaland-goals") return `"Mbappé" "Haaland"`;
+      if (m.id === "wc-england-panama-spread") return `"England" "Panama"`;
+      if (m.id === "wc-scotland-qualification") return `"Scotland" "World Cup"`;
+      if (m.id === "manga-onepiece-1200") return `"One Piece" "Manga"`;
+      if (m.id === "wc-messi-ronaldo-16") return `"Messi" "Ronaldo"`;
+      return m.threadTopic;
+    });
+
+    if (phrases.length === 0) return "";
+    return phrases.join(" OR ");
+  } catch (e) {
+    console.error("Failed to read active markets for queries:", e);
+    return "";
+  }
+};
+
+const fetchNewsDataWithCustomQuery = async (query, category) => {
+  if (!process.env.NEWSDATA_API_KEY) return [];
+
+  const params = new URLSearchParams({
+    apikey: process.env.NEWSDATA_API_KEY,
+    language: "en",
+    size: "15",
+    q: query
+  });
+
+  try {
+    const response = await fetch(`https://newsdata.io/api/1/latest?${params}`, {
+      signal: AbortSignal.timeout(15000)
+    });
+    if (!response.ok) {
+      console.warn(`NewsData custom query returned ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json();
+    return (data.results ?? []).map((item) => ({
+      headline: item.title,
+      summary: item.description || item.content || item.title,
+      source: item.source_name || "NewsData",
+      sourceUrl: item.link,
+      imageUrl: item.image_url || getFallbackImage(inferCategory({ ...item, headline: item.title, summary: item.description }, category)),
+      publishedAt: item.pubDate,
+      category: inferCategory({ ...item, headline: item.title, summary: item.description }, category)
+    }));
+  } catch (err) {
+    console.warn("NewsData custom query failed:", err.message);
+    return [];
+  }
+};
+
+const fetchGuardianWithCustomQuery = async (query, category) => {
+  if (!process.env.GUARDIAN_API_KEY) return [];
+
+  const params = new URLSearchParams({
+    "api-key": process.env.GUARDIAN_API_KEY,
+    q: query,
+    "show-fields": "trailText,thumbnail",
+    "page-size": "15"
+  });
+
+  try {
+    const response = await fetch(`https://content.guardianapis.com/search?${params}`, {
+      signal: AbortSignal.timeout(15000)
+    });
+    if (!response.ok) {
+      console.warn(`Guardian custom query returned ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json();
+    return (data.response?.results ?? []).map((item) => ({
+      headline: item.webTitle,
+      summary: stripHtml(item.fields?.trailText || item.webTitle),
+      source: "The Guardian",
+      sourceUrl: item.webUrl,
+      imageUrl: item.fields?.thumbnail || getFallbackImage(inferCategory({ headline: item.webTitle, summary: item.fields?.trailText, category: item.sectionName }, category)),
+      publishedAt: item.webPublicationDate,
+      category: inferCategory({ headline: item.webTitle, summary: item.fields?.trailText, category: item.sectionName }, category)
+    }));
+  } catch (err) {
+    console.warn("Guardian custom query failed:", err.message);
+    return [];
+  }
+};
+
 const fetchNewsData = async (category) => {
   if (!process.env.NEWSDATA_API_KEY) return [];
 
@@ -3259,18 +3382,131 @@ const isFootballOrNbaArticle = (article) => {
     "juventus"
   ];
   const soccerSpecificSignals = footballSignals.filter((signal) => signal !== "football");
-  const nbaSignals = ["nba", "lakers", "warriors", "celtics", "knicks", "mavericks", "nuggets", "timberwolves", "thunder", "spurs", "76ers"];
   const hasFootballPath = sourceUrl.includes("/football/") || sourceUrl.includes("/soccer/") || sourceKey.includes("football");
-  const hasNbaPath = sourceUrl.includes("/nba/") || sourceKey.includes("nba.com");
   const hasClubOrLeagueContext =
     hasFootballPath || soccerSpecificSignals.filter((signal) => !["world cup", "fifa"].includes(signal)).some(hasTerm);
   const isClearlySoccer = hasFootballPath || soccerSpecificSignals.some(hasTerm);
-  const isNba = hasNbaPath || nbaSignals.some(hasTerm);
   const isFootball = isClearlySoccer || hasTerm("football");
 
-  if (!isFootball && !isNba) return false;
+  if (!isFootball) return false;
   if (blockedSports.some((signal) => text.includes(signal))) {
-    return hasClubOrLeagueContext || hasNbaPath;
+    return hasClubOrLeagueContext;
+  }
+
+  return true;
+};
+
+const isPredictionMarketFriendly = (article) => {
+  const headline = article.headline.toLowerCase();
+  const text = `${article.headline} ${article.summary || ""}`.toLowerCase();
+  
+  // Headline-only patterns (to avoid false positives from quotes in summaries)
+  const blockedHeadlinePatterns = [
+    /\byour\b/i,
+    /\bi can'?t\b/i,
+    /\bi cannot\b/i,
+    /^how (?:does|are|is|can|to|do|will|should)\b.*?\?/i,
+    /^why (?:are|is|do|does|did|will|should)\b.*?\?/i,
+    /^has (?:var|world cup|football|soccer|champions league|league)\b.*?\?/i
+  ];
+
+  if (blockedHeadlinePatterns.some((pattern) => pattern.test(headline))) {
+    return false;
+  }
+
+  // Exclude listicles, tutorials, reviews, guides, personal blogs, and low-predictability content
+  const blockedPatterns = [
+    /\bhow to\b/i,
+    /\btutorials?\b/i,
+    /\bguides?\b/i,
+    /\bdeals?\b/i,
+    /\bpromo codes?\b/i,
+    /\bcoupons?\b/i,
+    /\breviews?\b/i,
+    /\balternatives?\b/i,
+    /\bopinion\b/i,
+    /\bi built\b/i,
+    /\bi tried\b/i,
+    /\bi set\b/i,
+    /\bi'?ve seen\b/i,
+    /\bmy setup\b/i,
+    /\bwhy every\b/i,
+    /\bshould you\b/i,
+    /\b(best|top)\s+\d+\b/i,
+    /\bpodcast\b/i,
+    /\bquiz\b/i,
+    /\bwallchart\b/i,
+    /\bsales?\b/i,
+    /\bdiscounts?\b/i,
+    /\bwhere to (find|get|buy|go|unlock|farm)\b/i,
+    /\bmy (favour?ite|setup|experience|opinion|thoughts|first|wading|view|playthrough|hands-on)\b/i,
+    /\bi'?ve\b/i,
+    /\bi'm\b/i,
+    /\bi (played|tried|tested|built|setup|went|don'?t|think|feel|like|want|love|hate|wish|hope|dare|spotted)\b/i,
+    /\bwe (should|need|want|love|hate|wish|hope|all be)\b/i,
+    /\bwe're\b/i,
+    /\beditorial\b/i,
+    /\bthoughts on\b/i,
+    /(?:^|\b)\d+\s+.*?\b(best|top|worst|favorite|favourite|coolest|cozy|classic|essential|hidden|amazing|scariest|upcoming|greatest|most|reasons|ways|things|bosses|games|characters|secrets)\b/i,
+    
+    // Additional filters for explainers, nostalgia, fluff, columns, and community content
+    /\bexplained\b/i,
+    /\bexplainer\b/i,
+    /\bwhat we know\b/i,
+    /\bwhat to expect\b/i,
+    /\bwill you (buy|play|get|hold)\b/i,
+    /\bhere'?s (how|why|what)\b/i,
+    /\bhands-on\b/i,
+    /\bimpressions\b/i,
+    /\bworth it\b/i,
+    /\bwalkthroughs?\b/i,
+    /\bmodder\b/i,
+    /\bspeedrunner\b/i,
+    /\beaster eggs?\b/i,
+    /\blore\b/i,
+    /\bcosplay\b/i,
+    /\bcolumns?\b/i,
+    /\bdiaries\b/i,
+    /\bdiary\b/i,
+    /\bround-?ups?\b/i,
+    /\bglitches?\b/i,
+    /\bfree-to-play\b/i,
+    /\bfree to play\b/i,
+    /\bplay the demo\b/i,
+    /\bmini-reviews?\b/i,
+    /\bindie spotlight\b/i,
+    /\bcombines? the horror of\b/i,
+    /\bdown with tactical rocks\b/i,
+    /\bexplains why\b/i,
+    /\bhilariously\b/i,
+    /\bdev'?s obsession\b/i,
+    /\bdevs? (reportedly )?pitched\b/i,
+    /\bpitched the idea\b/i,
+    /\bcancelled game\b/i,
+    /\bcanceled game\b/i,
+    /\bwe could have\b/i,
+    /\bwhat could have been\b/i,
+    /\bif .*? had gone differently\b/i,
+    /\btry not to\b/i,
+    /\bplay as a\b/i,
+    /\bplay as\b/i,
+    /\b(?:players|fans|gamers) (?:end|discover|find|reveal|spot|celebrate|react|share|show|claim|demand|want|complain|criticise|criticize|notice|point)\b/i,
+    /\bthe heck\b/i,
+    /\bto ask us\b/i,
+    /\bpro tools\b/i,
+    /\bcareer profile\b/i,
+    /\bfind jobs\b/i,
+    /\brecommend (?:these|this)\b/i,
+    /\btransitioning as a\b/i,
+    /\bevaluating performance\b/i,
+    /\bpick your\b/i,
+    /\bexplains how\b/i,
+    /\bcompare to other\b/i,
+    /\bbest position\b/i
+  ];
+
+  if (blockedPatterns.some((pattern) => pattern.test(text))) {
+    return false;
   }
 
   return true;
@@ -3540,7 +3776,7 @@ const sanitizeSnapshotForCategory = (snapshot) => {
             (story.category !== "Sports" || isFootballOrNbaArticle(story))
         : () => true;
 
-  const categoryStories = snapshot.top_stories.filter(storyFilter);
+  const categoryStories = snapshot.top_stories.filter((story) => isPredictionMarketFriendly(story) && storyFilter(story));
   const filteredStories = categoryStories.some((story) => !isDevelopmentFallbackStory(story))
     ? categoryStories.filter((story) => !isDevelopmentFallbackStory(story))
     : categoryStories;
@@ -3962,10 +4198,13 @@ const persistSummaryToPublishedFeeds = async (article, result) => {
 const generateSnapshot = async (category) => {
   const selectedCategory = categories.includes(category) ? category : "All";
   const date = getTodayKey();
+  const marketQuery = getActiveMarketQueriesStr(selectedCategory);
   const results = await Promise.allSettled([
     fetchNicheRss(selectedCategory),
     fetchNewsData(selectedCategory),
-    fetchGuardian(selectedCategory)
+    fetchGuardian(selectedCategory),
+    marketQuery ? fetchNewsDataWithCustomQuery(marketQuery, selectedCategory) : Promise.resolve([]),
+    marketQuery ? fetchGuardianWithCustomQuery(marketQuery, selectedCategory) : Promise.resolve([])
   ]);
   const rawArticles = results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
   const repairedArticles = await repairTruncatedArticleTitles(rawArticles);
@@ -3973,6 +4212,7 @@ const generateSnapshot = async (category) => {
     (article) =>
       isArticleOnAppDate(article, date) &&
       !isPaidSource(article) &&
+      isPredictionMarketFriendly(article) &&
       (selectedCategory === "All" || matchesCategorySignal(article, selectedCategory)) &&
       (article.category !== "Sports" || isFootballOrNbaArticle(article)) &&
       (article.category !== "Tech" || isThreadFriendlyTechArticle(article))
@@ -4037,12 +4277,15 @@ const getPublishedFeed = async (category) => {
   if (selectedCategory === "All") {
     const currentAll = readPublishedSnapshot("All");
     if (currentAll?.date === getTodayKey() && hasRealStories(currentAll)) {
-      return annotateSnapshotThreads(currentAll);
+      const sanitized = sanitizeSnapshotForCategory(currentAll);
+      if (sanitized.top_stories.length !== currentAll.top_stories.length) writePublishedSnapshot(sanitized);
+      return annotateSnapshotThreads(sanitized);
     }
 
     const composed = await buildAllSnapshotFromCategories();
+    const sanitized = sanitizeSnapshotForCategory(composed);
     writePublishedSnapshot({
-      ...composed,
+      ...sanitized,
       archive: {
         provider: "composed",
         composed_from_categories: sourceCategories
@@ -4050,7 +4293,7 @@ const getPublishedFeed = async (category) => {
       published_at: new Date().toISOString(),
       status: "published"
     });
-    return annotateSnapshotThreads(readPublishedSnapshot("All"));
+    return annotateSnapshotThreads(sanitized);
   }
 
   const snapshot = await getRecoverablePublishedSnapshot(selectedCategory);
@@ -4060,7 +4303,9 @@ const getPublishedFeed = async (category) => {
     return annotateSnapshotThreads(sanitized);
   }
 
-  return annotateSnapshotThreads(await generateAndPublishFeed(selectedCategory));
+  const fresh = await generateAndPublishFeed(selectedCategory);
+  const sanitized = sanitizeSnapshotForCategory(fresh);
+  return annotateSnapshotThreads(sanitized);
 };
 
 const refreshIntervalMinutes = Number(process.env.REFRESH_INTERVAL_MINUTES ?? 60);

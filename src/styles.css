@@ -5167,12 +5167,21 @@ h1 {
 /* Polished header utilities. */
 .site-header .archive-pill {
   overflow: hidden;
-  color: #53627e;
-  background: linear-gradient(180deg, #ffffff, #f2f6ff);
-  box-shadow:
-    inset 0 1px 0 #fff,
-    0 3px 0 rgba(174, 188, 216, 0.38),
-    0 10px 22px rgba(24, 36, 78, 0.08);
+  color: #3157ff;
+  border: 1px solid rgba(49, 87, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: none;
+  transition: transform 120ms ease, background-color 120ms ease;
+}
+
+.site-header .archive-pill:hover {
+  background: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
+}
+
+.site-header .archive-pill:active {
+  transform: translateY(1px);
 }
 
 .calendar-symbol {
@@ -5182,7 +5191,7 @@ h1 {
   height: 25px;
   border-radius: 8px;
   color: #3157ff;
-  background: rgba(49, 87, 255, 0.09);
+  background: transparent;
 }
 
 .calendar-symbol svg {
@@ -5200,35 +5209,27 @@ h1 {
   min-width: 132px;
   min-height: 42px;
   padding: 0 15px;
-  border: 1px solid #294de8;
-  border-radius: 13px;
-  color: #fff;
-  background: linear-gradient(180deg, #4367ff 0%, #3157ff 72%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 4px 0 #2544c8,
-    0 12px 24px rgba(49, 87, 255, 0.2);
+  border: 1px solid rgba(49, 87, 255, 0.2);
+  border-radius: 12px;
+  color: #3157ff;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: none;
   font-size: 0.76rem;
   font-weight: 850;
   white-space: nowrap;
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  transition: transform 120ms ease, background-color 120ms ease;
 }
 
 .site-header .wallet-button:hover {
-  color: #fff;
+  color: #3157ff;
+  background: rgba(255, 255, 255, 0.95);
   transform: translateY(-1px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.42),
-    0 5px 0 #2544c8,
-    0 14px 28px rgba(49, 87, 255, 0.24);
+  box-shadow: none;
 }
 
 .site-header .wallet-button:active {
-  transform: translateY(3px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 1px 0 #2544c8,
-    0 6px 14px rgba(49, 87, 255, 0.16);
+  transform: translateY(1px);
+  box-shadow: none;
 }
 
 .site-header .wallet-button svg {
@@ -5242,12 +5243,10 @@ h1 {
 }
 
 .site-header .wallet-button.connected {
-  border-color: #079d82;
-  background: linear-gradient(180deg, #19c5a7, #0bad91);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.38),
-    0 4px 0 #07846e,
-    0 12px 24px rgba(11, 173, 145, 0.2);
+  border-color: rgba(49, 87, 255, 0.4);
+  background: rgba(255, 255, 255, 0.9);
+  color: #3157ff;
+  box-shadow: none;
 }
 
 .site-header .wallet-button .wallet-status-dot {
@@ -6876,3 +6875,941 @@ body.detail-mode .mobile-bottom-nav {
   font-size: 0.75rem;
   color: var(--market-text-muted);
 }
+
+/* ==========================================================================
+   GLOBAL BRAND REDESIGN & TYPOGRAPHY overrides
+   ========================================================================== */
+
+/* Unify font globally to prediction market font Space Grotesk */
+*, *::before, *::after, html, body, button, input, select, textarea, span, p, h1, h2, h3, h4, h5, h6, strong, small, a, div, section, header, nav, article {
+  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+/* Clear white canvas behind app when dragging/bouncing on iOS */
+html, body, .app-shell, main {
+  background: #111827 !important;
+  background-color: #111827 !important;
+  color: #FFFFFF !important;
+  overscroll-behavior: none;
+}
+
+/* Premium developer style slate grid background instead of light grid */
+body::before {
+  content: "" !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px) !important;
+  background-size: 38px 38px !important;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 1), transparent 85%) !important;
+  opacity: 1 !important;
+  display: block !important;
+}
+
+/* Site Header design refresh (no white/light gradients) */
+.site-header {
+  background: #111827 !important;
+  box-shadow: none !important;
+  border-bottom: 1px solid #1E293B !important;
+  margin-bottom: 20px !important;
+  padding: 14px 20px !important;
+}
+
+@media (max-width: 640px) {
+  .site-header {
+    background: #111827 !important;
+    border-bottom: 1px solid #1E293B !important;
+    margin: 0 !important;
+    padding: 12px 16px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+}
+
+/* Brand logo and text style - clean, minimal */
+.site-header .brand-lockup span {
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  font-size: 1.25rem !important;
+  letter-spacing: -0.02em !important;
+}
+
+.site-header .brand-lockup img {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  filter: none !important;
+  width: 32px !important;
+  height: 32px !important;
+}
+
+/* Calendar Archive Pill Overrides - Premium Dark Slate with Electric Blue Accent */
+.site-header .archive-pill {
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  color: #3B82F6 !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  width: 34px !important;
+  height: 34px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.site-header .archive-pill:hover {
+  background: #334155 !important;
+  border-color: #3B82F6 !important;
+}
+
+.calendar-symbol {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: inherit !important;
+  padding: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  border-radius: 0 !important;
+}
+
+.calendar-symbol svg {
+  color: inherit !important;
+  width: 15px !important;
+  height: 15px !important;
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 1.8 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+}
+
+.calendar-symbol svg path {
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 1.8 !important;
+}
+
+/* Wallet Button - Premium Dark Slate with Electric Blue Accent */
+.site-header .wallet-button {
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  color: #FFFFFF !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  font-weight: 700 !important;
+  font-size: 0.78rem !important;
+  padding: 0 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  min-height: 34px !important;
+  height: 34px !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+  transform: none !important;
+  width: auto !important;
+  min-width: 90px !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+}
+
+.site-header .wallet-button svg {
+  width: 15px !important;
+  height: 15px !important;
+  stroke: #3B82F6 !important;
+  fill: none !important;
+}
+
+.site-header .wallet-button:hover {
+  background: #334155 !important;
+  border-color: #3B82F6 !important;
+  color: #FFFFFF !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.site-header .wallet-button:active {
+  transform: scale(0.96) !important;
+}
+
+.site-header .wallet-button.connected {
+  background: rgba(59, 130, 246, 0.1) !important;
+  border-color: rgba(59, 130, 246, 0.4) !important;
+  color: #3B82F6 !important;
+}
+
+.site-header .wallet-button.connected:hover {
+  background: rgba(59, 130, 246, 0.18) !important;
+  border-color: #3B82F6 !important;
+}
+
+.site-header .wallet-button.connected .wallet-button-label {
+  color: #FFFFFF !important;
+}
+
+.site-header .wallet-button .wallet-status-dot {
+  background-color: #10B981 !important;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6) !important;
+}
+
+/* Ensure mobile header components keep proper sizes and display */
+@media (max-width: 640px) {
+  .site-header .wallet-button {
+    display: inline-flex !important;
+    width: auto !important;
+    min-width: auto !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    padding: 0 10px !important;
+    border-radius: 8px !important;
+  }
+}
+
+/* Faucet Button Override to match premium theme */
+.arc-faucet-button {
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  color: #3B82F6 !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  font-weight: 700 !important;
+  font-size: 0.78rem !important;
+  padding: 0 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 34px !important;
+  height: 34px !important;
+  transition: all 0.2s ease !important;
+  text-decoration: none !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+}
+
+.arc-faucet-button:hover {
+  background: #334155 !important;
+  border-color: #3B82F6 !important;
+  color: #FFFFFF !important;
+}
+
+/* Category Tabs & Pills overrides (De-clustered with margin & gaps) */
+.category-tabs {
+  background: #111827 !important;
+  border-bottom: 1px solid #1E293B !important;
+  box-shadow: none !important;
+  padding: 12px 18px !important;
+  gap: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  overflow-x: auto !important;
+  flex-wrap: nowrap !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.category-tab {
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  color: #94A3B8 !important;
+  border-radius: 20px !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+  margin-right: 12px !important;
+  padding: 0 20px !important;
+  height: 38px !important;
+  line-height: 38px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  flex-shrink: 0 !important;
+}
+
+.category-tab.active {
+  background: #3B82F6 !important;
+  color: #FFFFFF !important;
+  border-color: #3B82F6 !important;
+  box-shadow: none !important;
+}
+
+.category-tab.active::after {
+  display: none !important;
+}
+
+.category-tab:hover:not(.active) {
+  background: rgba(59, 130, 246, 0.08) !important;
+  color: #FFFFFF !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+/* News Feed Cards & Copy overrides (All Dark slate + electric blue) */
+.story-card {
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  box-shadow: none !important;
+  color: #FFFFFF !important;
+  border-radius: 16px !important;
+}
+
+.story-card:hover, .story-card:active {
+  background: #1E293B !important;
+  border-color: #3B82F6 !important;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15) !important;
+}
+
+.story-copy h2, .detail-card h2, .mobile-card-text h2 {
+  color: #FFFFFF !important;
+}
+
+.story-copy p, .detail-card p, .mobile-card-text p {
+  color: #94A3B8 !important;
+}
+
+.story-image-frame, .mobile-card-image {
+  background: #111827 !important;
+  box-shadow: none !important;
+  border: 1px solid #334155 !important;
+}
+
+/* Bookmark & Share Icons Box on Mobile (Remove white overlays) */
+.mobile-icons {
+  border: 1px solid #334155 !important;
+  background: #1E293B !important;
+  box-shadow: none !important;
+}
+
+.mobile-bookmark-btn,
+.mobile-export-icon,
+.mobile-icons button {
+  background: transparent !important;
+  color: #3B82F6 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.mobile-bookmark-btn[aria-pressed="true"] {
+  color: #FFFFFF !important;
+  background: #3B82F6 !important;
+}
+
+/* Action button overrides (Source, AI briefing, Threads) */
+.mobile-action-btn, .card-source-button, .summary-btn, .source-btn {
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  color: #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+.mobile-action-btn.summary-btn, .summary-btn {
+  background: #3B82F6 !important;
+  border-color: #3B82F6 !important;
+  color: #FFFFFF !important;
+}
+
+.mobile-action-btn.summary-btn:hover, .summary-btn:hover {
+  background: #2563EB !important;
+}
+
+.mobile-action-btn.source-btn, .source-btn {
+  color: #94A3B8 !important;
+  border-color: #334155 !important;
+}
+
+.mobile-action-btn.thread-btn, .thread-btn {
+  color: #3B82F6 !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+  background: rgba(59, 130, 246, 0.05) !important;
+}
+
+/* Portfolio Page overrides (Remove all white/grey box panels) */
+.portfolio-surface h1 {
+  color: #FFFFFF !important;
+}
+
+.portfolio-surface header p {
+  color: #94A3B8 !important;
+}
+
+.portfolio-wallet-state {
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  box-shadow: none !important;
+}
+
+.portfolio-wallet-state strong {
+  color: #FFFFFF !important;
+}
+
+.portfolio-wallet-state small {
+  color: #94A3B8 !important;
+}
+
+.portfolio-wallet-state button:not(.copy-address-btn) {
+  background: #3B82F6 !important;
+  color: #FFFFFF !important;
+}
+
+.portfolio-section-tabs span {
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  color: #94A3B8 !important;
+}
+
+.portfolio-position-section > h2 {
+  color: #FFFFFF !important;
+}
+
+.portfolio-position-card,
+.portfolio-empty {
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  box-shadow: none !important;
+  color: #94A3B8 !important;
+}
+
+.portfolio-position-card h2 {
+  color: #FFFFFF !important;
+}
+
+.portfolio-position-stats {
+  border-color: #334155 !important;
+}
+
+.portfolio-position-stats div {
+  border-right-color: #334155 !important;
+}
+
+.portfolio-position-stats strong {
+  color: #FFFFFF !important;
+}
+
+.portfolio-position-stats span {
+  color: #94A3B8 !important;
+}
+
+/* Copy Address & Get Faucet USDC overrides */
+.copy-address-btn {
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  color: #3B82F6 !important;
+}
+
+.copy-address-btn svg {
+  color: #3B82F6 !important;
+}
+
+.copy-address-btn:hover {
+  background: rgba(59, 130, 246, 0.1) !important;
+  border-color: #3B82F6 !important;
+}
+
+.faucet-link {
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  color: #3B82F6 !important;
+}
+
+.faucet-link svg {
+  color: #3B82F6 !important;
+}
+
+.faucet-link:hover {
+  background: rgba(59, 130, 246, 0.1) !important;
+  border-color: #3B82F6 !important;
+}
+
+/* Archive Selectors & Statuses overrides */
+.archive-controls {
+  background: #111827 !important;
+  color: #FFFFFF !important;
+}
+
+.archive-controls select {
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  color: #FFFFFF !important;
+}
+
+.mobile-archive-card {
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  box-shadow: none !important;
+}
+
+.mobile-archive-card:hover {
+  border-color: #3B82F6 !important;
+}
+
+.mobile-archive-icon {
+  background: rgba(59, 130, 246, 0.12) !important;
+  color: #3B82F6 !important;
+}
+
+.mobile-archive-text strong {
+  color: #FFFFFF !important;
+}
+
+.mobile-archive-text span {
+  color: #94A3B8 !important;
+}
+
+.mobile-archive-chevron {
+  color: #3B82F6 !important;
+}
+
+/* News Details Fullscreen overlays */
+.story-detail.fullscreen {
+  background: #111827 !important;
+}
+
+.story-detail.fullscreen .detail-card {
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  box-shadow: none !important;
+  border-radius: 16px !important;
+}
+
+.detail-summary {
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  color: #FFFFFF !important;
+}
+
+.source-button {
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  color: #FFFFFF !important;
+}
+
+/* Bottom Navigation active button override (Remove white gradient box) */
+.mobile-bottom-nav button.active {
+  background: rgba(59, 130, 246, 0.08) !important;
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+  color: #3B82F6 !important;
+  box-shadow: none !important;
+  border-radius: 10px !important;
+}
+
+/* YES/NO active state trading buttons & status pills (Zero green/red) */
+.market-status-pill {
+  color: #60A5FA !important;
+  background: rgba(96, 165, 250, 0.12) !important;
+}
+
+.market-side.yes.active {
+  background: rgba(59, 130, 246, 0.12) !important;
+  border-color: #3B82F6 !important;
+  color: #3B82F6 !important;
+}
+
+.market-side.yes.active strong {
+  color: #3B82F6 !important;
+}
+
+.market-side.no.active {
+  background: rgba(148, 163, 184, 0.12) !important;
+  border-color: #94A3B8 !important;
+  color: #94A3B8 !important;
+}
+
+.market-side.no.active strong {
+  color: #94A3B8 !important;
+}
+
+.market-inline-payout strong {
+  color: #3B82F6 !important;
+}
+
+/* Leaderboard Overrides (Zero violet/purple) */
+.leaderboard-faucet-box {
+  background: rgba(59, 130, 246, 0.08) !important;
+  border: 1px solid rgba(59, 130, 246, 0.25) !important;
+}
+
+.leaderboard-row.user-highlight {
+  background: rgba(59, 130, 246, 0.12) !important;
+  border-left: 3px solid #3B82F6 !important;
+}
+
+.leaderboard-roi {
+  color: #3B82F6 !important;
+}
+
+.market-card-updates {
+  color: #3B82F6 !important;
+  background: rgba(59, 130, 246, 0.12) !important;
+}
+
+.market-card:hover {
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15) !important;
+}
+
+/* Detail & Fullscreen Overrides (Fixing white background and light cards) */
+.story-detail,
+.story-detail.fullscreen,
+.detail-container,
+.market-detail-container {
+  background: #111827 !important;
+  color: #FFFFFF !important;
+}
+
+.detail-card,
+.market-detail-card,
+.thread-card {
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  color: #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+.detail-card h2,
+.market-detail-card h2,
+.thread-card h2,
+.detail-container h2,
+.market-detail-container h2,
+.detail-container h3,
+.market-detail-container h3 {
+  color: #FFFFFF !important;
+}
+
+.detail-topline,
+.detail-topline span,
+.market-detail-topline span,
+.market-thread-intro,
+.market-resolution-panel p,
+.detail-card p,
+.market-detail-card p {
+  color: #94A3B8 !important;
+}
+
+.back-button,
+.detail-header-row .back-button {
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  color: #FFFFFF !important;
+  box-shadow: none !important;
+  min-height: 34px !important;
+  height: 34px !important;
+  padding: 0 12px !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.back-button:hover,
+.detail-header-row .back-button:hover {
+  background: #334155 !important;
+  border-color: #3B82F6 !important;
+}
+
+.back-button svg,
+.detail-header-row .back-button svg {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 4px 0 0 !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+
+.detail-summary,
+.market-resolution-panel {
+  background: #111827 !important;
+  border: 1px solid #334155 !important;
+  color: #FFFFFF !important;
+}
+
+.market-stats-row {
+  background: #111827 !important;
+  border: 1px solid #334155 !important;
+}
+
+.market-stat span {
+  color: #94A3B8 !important;
+}
+
+.market-stat strong {
+  color: #FFFFFF !important;
+}
+
+.market-thread-timeline {
+  padding-left: 36px !important;
+  gap: 28px !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.market-thread-timeline::before {
+  left: 17px !important;
+  background: #334155 !important;
+}
+
+.market-thread-marker {
+  border: 3px solid #1E293B !important;
+  box-shadow: none !important;
+  background: #3B82F6 !important;
+  width: 12px !important;
+  height: 12px !important;
+  left: -24px !important;
+  top: 24px !important;
+}
+
+.market-thread-update-content {
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  box-shadow: none !important;
+  padding: 20px 24px !important;
+  border-radius: 16px !important;
+}
+
+.market-thread-update-content h4 {
+  color: #FFFFFF !important;
+  margin: 6px 0 10px 0 !important;
+  line-height: 1.4 !important;
+}
+
+.market-thread-update-content p {
+  color: #94A3B8 !important;
+  margin: 0 0 16px 0 !important;
+  line-height: 1.55 !important;
+}
+
+.market-thread-update-meta {
+  margin-bottom: 10px !important;
+}
+
+.market-thread-update-meta span {
+  color: #64748B !important;
+}
+
+.market-thread-source-link {
+  color: #3B82F6 !important;
+}
+
+/* Specific Timeline Backgrounds and Update Card Fixes */
+.market-evidence-thread {
+  background: transparent !important;
+  border-top: 1px solid #334155 !important;
+  padding: 28px 0 0 0 !important;
+}
+
+.thread-item-body {
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  color: #FFFFFF !important;
+  box-shadow: none !important;
+  padding: 20px 24px !important;
+  border-radius: 16px !important;
+}
+
+.thread-item-body h3 {
+  color: #FFFFFF !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+  margin: 8px 0 10px 0 !important;
+  line-height: 1.4 !important;
+}
+
+.thread-item-body p {
+  color: #94A3B8 !important;
+  margin: 0 0 16px 0 !important;
+  line-height: 1.55 !important;
+}
+
+.thread-meta {
+  margin-bottom: 10px !important;
+}
+
+.thread-meta span {
+  color: #64748B !important;
+}
+
+.thread-source-link {
+  color: #3B82F6 !important;
+}
+
+.thread-dot {
+  border: 6px solid #1E293B !important;
+  background: #3B82F6 !important;
+  box-shadow: none !important;
+}
+
+.thread-timeline::before {
+  background: #334155 !important;
+}
+
+/* Detail Header Row & Share WhatsApp Button Sleek Redesign */
+.detail-header-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 20px !important;
+  gap: 16px !important;
+  width: 100% !important;
+  flex-wrap: nowrap !important;
+}
+
+.detail-header-row .back-button,
+.detail-header-row .share-whatsapp-btn {
+  margin: 0 !important;
+}
+
+.share-whatsapp-btn {
+  background: #25D366 !important;
+  border: none !important;
+  border-radius: 8px !important;
+  color: #FFFFFF !important;
+  padding: 0 12px !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  min-height: 34px !important;
+  height: 34px !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+}
+
+.share-whatsapp-btn svg {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 16px !important;
+  height: 16px !important;
+}
+
+/* Timeframe Chip Badge styling */
+.timeframe-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  font-size: 0.65rem !important;
+  font-weight: 700 !important;
+  padding: 2px 6px !important;
+  border-radius: 6px !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border: 1px solid transparent !important;
+}
+.timeframe-chip.Daily {
+  color: #10B981 !important;
+  background: rgba(16, 185, 129, 0.08) !important;
+  border-color: rgba(16, 185, 129, 0.15) !important;
+}
+.timeframe-chip.Weekly {
+  color: #F59E0B !important;
+  background: rgba(245, 158, 11, 0.08) !important;
+  border-color: rgba(245, 158, 11, 0.15) !important;
+}
+.timeframe-chip.Sagas {
+  color: #8B5CF6 !important;
+  background: rgba(139, 92, 246, 0.08) !important;
+  border-color: rgba(139, 92, 246, 0.15) !important;
+}
+
+/* Timeframe Selector Tabs */
+.market-timeframe-tabs {
+  display: flex !important;
+  gap: 8px !important;
+  margin-bottom: 28px !important;
+  padding: 4px !important;
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  border-radius: 12px !important;
+  width: fit-content !important;
+}
+.timeframe-tab-btn {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 6px 12px !important;
+  border-radius: 8px !important;
+  border: none !important;
+  background: transparent !important;
+  color: #94A3B8 !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.timeframe-tab-btn:hover {
+  color: #FFFFFF !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+.timeframe-tab-btn.active {
+  color: #FFFFFF !important;
+  background: #3B82F6 !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2) !important;
+}
+.timeframe-tab-count {
+  font-size: 0.75rem !important;
+  opacity: 0.85 !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  padding: 1px 6px !important;
+  border-radius: 9999px !important;
+  color: #FFFFFF !important;
+}
+.timeframe-tab-btn.active .timeframe-tab-count {
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Timeframe Grouped Section Headers */
+.market-timeframe-section {
+  margin-top: 12px !important;
+  margin-bottom: 40px !important;
+}
+.timeframe-section-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-end !important;
+  border-bottom: 1px solid #334155 !important;
+  padding-bottom: 12px !important;
+  margin-bottom: 20px !important;
+}
+.timeframe-section-header-left {
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 12px !important;
+  flex-wrap: wrap !important;
+}
+.timeframe-section-header h2 {
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 1.35rem !important;
+  font-weight: 750 !important;
+  color: #FFFFFF !important;
+  margin: 0 !important;
+}
+.timeframe-section-subtitle {
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 0.82rem !important;
+  color: #94A3B8 !important;
+}
+.timeframe-section-count-badge {
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  color: #3B82F6 !important;
+  background: rgba(59, 130, 246, 0.08) !important;
+  border: 1px solid rgba(59, 130, 246, 0.15) !important;
+  padding: 2px 10px !important;
+  border-radius: 12px !important;
+}
+

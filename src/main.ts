@@ -68,6 +68,7 @@ const state: {
   hasLoadedFeed: boolean;
   showSaved: boolean;
   tradeDrawerOpen: boolean;
+  activeMarketTimeframe: "All" | "Daily" | "Weekly" | "Sagas";
 } = {
   activeSurface: "markets",
   selectedMarketId: null,
@@ -101,12 +102,14 @@ const state: {
   feedScrollY: 0,
   hasLoadedFeed: false,
   showSaved: false,
-  tradeDrawerOpen: false
+  tradeDrawerOpen: false,
+  activeMarketTimeframe: "All"
 };
 
 interface MarketPreview {
   id: string;
   category: Exclude<Category, "All">;
+  timeframe: "Daily" | "Weekly" | "Sagas";
   question: string;
   probability: number;
   marketAddress?: string;
@@ -119,6 +122,7 @@ interface MarketPreview {
   volume: string;
   traders: string;
   liquidity: string;
+  imageUrl?: string;
   evidence: {
     date: string;
     source: string;
@@ -133,6 +137,7 @@ interface MarketPreview {
 interface MarketEvidenceOverride {
   threadTopic: string;
   evidence: MarketPreview["evidence"];
+  imageUrl?: string;
 }
 
 let marketPreviews: MarketPreview[] = [];
@@ -507,7 +512,7 @@ const closeStory = (): void => {
   state.selectedThreadUrl = null;
   state.activeThread = null;
   state.loadingThreadUrl = null;
-  window.history.pushState({}, "", window.location.pathname);
+  window.history.pushState({}, "", "#feed");
   render();
   requestAnimationFrame(() => window.scrollTo({ top: state.feedScrollY, behavior: "auto" }));
 };
@@ -526,7 +531,7 @@ const loadStoryThread = async (story: NewsStory): Promise<void> => {
     state.activeThread = null;
     delete story.thread;
     state.selectedThreadUrl = null;
-    window.history.replaceState({}, "", window.location.pathname);
+    window.history.replaceState({}, "", "#feed");
     showActionToast("That timeline no longer has a verified past update");
     if (menuStatus) menuStatus.textContent = "Thread unavailable";
   } finally {
@@ -677,7 +682,9 @@ const loadArchiveIndex = async (): Promise<void> => {
 };
 
 const getCategoryLabel = (category: Category): string =>
-  category === "All" ? "For you" : category;
+  category === "All" ? "For you" : (category === "Sports" ? "Football" : category);
+
+const displayCategory = (cat: string): string => cat === "Sports" ? "Football" : cat;
 
 const renderCategories = (): void => {
   if (!categoryTabs) return;
@@ -740,10 +747,14 @@ const loadMarketEvidence = async (market: MarketPreview): Promise<void> => {
       .filter((story, index, items) => items.findIndex((item) => item.sourceUrl === story.sourceUrl) === index)
       .map(storyToMarketEvidence);
 
+    const latestStory = threadStories[0];
+    const newsImageUrl = latestStory?.imageUrl;
+
     if (evidence.length >= 2) {
       state.marketEvidenceOverrides[market.id] = {
         threadTopic: thread.topic || market.threadTopic,
-        evidence
+        evidence,
+        imageUrl: newsImageUrl || market.imageUrl
       };
     }
   } catch (error) {
@@ -815,6 +826,10 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
     return;
   }
 
+  const initialSnapshot = state.marketSnapshots[market.id];
+  const yesPrice = initialSnapshot?.yesPriceCents ?? market.probability;
+  const noPrice = initialSnapshot?.noPriceCents ?? (100 - market.probability);
+
   try {
     state.marketTradeStatus = "Preparing transaction...";
     render();
@@ -833,6 +848,28 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
     state.walletAddress = getConnectedArcWallet();
     if (state.walletAddress) state.walletBalance = await readArcUsdcBalance(state.walletAddress);
     await loadPortfolioPositions();
+
+    if (state.marketOrderMode === "sell" && market.timeframe === "Daily" && state.walletAddress) {
+      let inProfit = false;
+      if (side === "yes" && yesPrice > market.probability) {
+        inProfit = true;
+      } else if (side === "no" && noPrice > (100 - market.probability)) {
+        inProfit = true;
+      }
+      if (inProfit) {
+        try {
+          const key = `siftle_closed_profits_${state.walletAddress.toLowerCase()}`;
+          const currentList = JSON.parse(localStorage.getItem(key) || "[]") as string[];
+          if (!currentList.includes(market.id)) {
+            currentList.push(market.id);
+            localStorage.setItem(key, JSON.stringify(currentList));
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+
     showActionToast(`Trade confirmed ${txHash.slice(0, 8)}...`);
     showSuccessModal(
       state.marketOrderMode,
@@ -1026,7 +1063,7 @@ const renderStories = (): void => {
           </div>
 
           <div class="story-copy desktop-only">
-            <span class="category-chip ${story.category}">${story.category}</span>
+            <span class="category-chip ${story.category}">${displayCategory(story.category)}</span>
             <h2>${story.headline}</h2>
             <p>Tap to read the AI briefing.</p>
           </div>
@@ -1043,7 +1080,7 @@ const renderStories = (): void => {
             <div class="mobile-card-body">
               <div class="mobile-card-text">
                 <div class="mobile-card-topline">
-                  <span class="category-chip ${story.category}">${story.category}</span>
+                  <span class="category-chip ${story.category}">${displayCategory(story.category)}</span>
                   <div class="mobile-icons">
                     <button class="mobile-bookmark-btn" type="button" data-bookmark-url="${story.sourceUrl}" aria-pressed="${story.saved ? "true" : "false"}" aria-label="Save story">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
@@ -1113,7 +1150,7 @@ const renderStories = (): void => {
           </div>
 
           <div class="story-copy desktop-only">
-            <span class="category-chip ${story.category}">${story.category}</span>
+            <span class="category-chip ${story.category}">${displayCategory(story.category)}</span>
             <h2>${story.headline}</h2>
             <p>Tap to read the AI briefing.</p>
           </div>
@@ -1130,7 +1167,7 @@ const renderStories = (): void => {
             <div class="mobile-card-body">
               <div class="mobile-card-text">
                 <div class="mobile-card-topline">
-                  <span class="category-chip ${story.category}">${story.category}</span>
+                  <span class="category-chip ${story.category}">${displayCategory(story.category)}</span>
                   <div class="mobile-icons">
                     <button class="mobile-bookmark-btn" type="button" data-bookmark-url="${story.sourceUrl}" aria-pressed="${story.saved ? "true" : "false"}" aria-label="Save story">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
@@ -1313,7 +1350,7 @@ const drawShareCard = async (story: NewsStory, includeRemoteImage = true): Promi
   context.fill();
   context.shadowColor = "transparent";
 
-  const logo = await loadCanvasImage("./assets/Siftle_logo-removebg-preview.png").catch(() => null);
+  const logo = await loadCanvasImage("./assets/siftle logo.png").catch(() => null);
   if (logo) {
     context.drawImage(logo, 784, 106, 54, 54);
   }
@@ -1357,7 +1394,7 @@ const drawShareCard = async (story: NewsStory, includeRemoteImage = true): Promi
   context.fill();
   context.fillStyle = story.category === "Sports" ? "#11a98d" : story.category === "Tech" ? "#3f5f86" : story.category === "Gaming" ? "#d95c14" : "#6f3cff";
   context.font = "800 22px Inter, Arial, sans-serif";
-  context.fillText(story.category, 132, chipY + 28);
+  context.fillText(displayCategory(story.category), 132, chipY + 28);
 
   context.fillStyle = "#07142f";
   context.font = "680 44px Space Grotesk, Inter, Arial, sans-serif";
@@ -1437,7 +1474,7 @@ const renderThreadTimelineItem = (story: NewsStory, label: string): string => `
     <div class="thread-dot" aria-hidden="true"></div>
     <div class="thread-item-body">
       <div class="thread-meta">
-        <span class="category-chip ${story.category}">${story.category}</span>
+        <span class="category-chip ${story.category}">${displayCategory(story.category)}</span>
         <span>${label} - ${story.source}</span>
       </div>
       <h3>${story.headline}</h3>
@@ -1488,7 +1525,7 @@ const renderThreadView = (): void => {
       </button>
       <article class="detail-card thread-card">
         <div class="detail-topline">
-          <span class="category-chip ${seedStory.category}">${seedStory.category}</span>
+          <span class="category-chip ${seedStory.category}">${displayCategory(seedStory.category)}</span>
           <span>${formatThreadCount(thread?.items?.length ?? 0)}</span>
         </div>
         <h2>${thread?.topic || seedStory.thread?.topic || seedStory.headline}</h2>
@@ -1534,7 +1571,7 @@ const renderDetail = (): void => {
       </button>
       <article class="detail-card">
         <div class="detail-topline">
-          <span class="category-chip ${story.category}">${story.category}</span>
+          <span class="category-chip ${story.category}">${displayCategory(story.category)}</span>
           <span>${story.source} - ${getStoryTimeLabel(story)} - ${story.readTime}</span>
         </div>
         <h2>${story.headline}</h2>
@@ -1550,15 +1587,12 @@ const renderDetail = (): void => {
 };
 
 const renderMarketCard = (market: MarketPreview): string => {
+  const isCheckingEvidence = !state.checkedMarketEvidence[market.id];
   const snapshot = state.marketSnapshots[market.id];
   const marketAddress = getMarketAddress(market);
   const isLoadingSnapshot = Boolean(marketAddress && !snapshot);
-  const yesPrice = snapshot?.yesPriceCents;
-  const probabilityLabel = yesPrice === undefined ? "--" : `${yesPrice}%`;
-  const shareLabel =
-    yesPrice === undefined ? (marketAddress ? "Loading Arc pools" : "Arc setup required") : `Yes ${yesPrice}¢ · No ${100 - yesPrice}¢`;
 
-  if (isLoadingSnapshot) {
+  if (isCheckingEvidence || isLoadingSnapshot) {
     return `
       <div class="market-card skeleton-market-card" aria-busy="true">
         ${renderMarketCardSkeletonInner()}
@@ -1567,13 +1601,31 @@ const renderMarketCard = (market: MarketPreview): string => {
     `;
   }
 
+  const yesPrice = snapshot?.yesPriceCents;
+  const probabilityLabel = yesPrice === undefined ? "--" : `${yesPrice}%`;
+  const shareLabel =
+    yesPrice === undefined ? (marketAddress ? "Loading Arc pools" : "Arc setup required") : `Yes ${yesPrice}¢ · No ${100 - yesPrice}¢`;
+  const view = getMarketView(market);
+
   return `
     <button class="market-card" type="button" data-market-id="${market.id}">
       <div class="market-card-topline">
-        <span class="category-chip ${market.category}">${market.category}</span>
-        <span class="market-card-updates">${getMarketView(market).evidence.length} updates</span>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <span class="category-chip ${market.category}">${displayCategory(market.category)}</span>
+          <span class="timeframe-chip ${market.timeframe}">${market.timeframe === "Sagas" ? "Sagas" : market.timeframe}</span>
+        </div>
+        <span class="market-card-updates">${view.evidence.length} updates</span>
       </div>
-      <h2>${market.question}</h2>
+      <div class="market-card-body" style="display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; width: 100%; text-align: left; margin: 4px 0;">
+        <div class="market-card-text" style="flex: 1; min-width: 0;">
+          <h2>${market.question}</h2>
+        </div>
+        ${view.imageUrl ? `
+        <div class="market-card-image-frame" style="width: 72px; height: 72px; min-width: 72px; border-radius: 12px; overflow: hidden; border: 1px solid var(--market-border); flex-shrink: 0;">
+          <img src="${view.imageUrl}" alt="" style="width: 100%; height: 100%; object-fit: cover;" />
+        </div>
+        ` : ""}
+      </div>
       <div class="market-probability-row">
         <strong>${probabilityLabel}</strong>
         <span>${marketAddress ? "market probability" : "pending deployment"}</span>
@@ -1581,7 +1633,7 @@ const renderMarketCard = (market: MarketPreview): string => {
       </div>
       <div class="market-meter" aria-hidden="true"><span style="width: ${yesPrice ?? 0}%"></span></div>
       <div class="market-card-footer">
-        <span>${getMarketView(market).evidence.length} thread updates</span>
+        <span>${view.evidence.length} thread updates</span>
         <span>${snapshot ? `$${Math.round(snapshot.volumeUsdc).toLocaleString()} volume` : `Closes ${market.closes}`}</span>
       </div>
     </button>
@@ -1643,10 +1695,15 @@ const renderMarketDetail = (market: MarketPreview): void => {
       <article class="market-detail-card">
         <div class="market-detail-main">
           <div class="market-detail-topline">
-            <span class="category-chip ${market.category}">${market.category}</span>
+            <span class="category-chip ${market.category}">${displayCategory(market.category)}</span>
             <span class="market-status-pill">${marketStatus}</span>
           </div>
           <h2>${market.question}</h2>
+          ${marketView.imageUrl ? `
+          <div class="market-detail-hero-image" style="width: 100%; height: 160px; border-radius: 14px; overflow: hidden; margin: 12px 0; border: 1px solid var(--market-border);">
+            <img src="${marketView.imageUrl}" alt="" style="width: 100%; height: 100%; object-fit: cover;" />
+          </div>
+          ` : ""}
           
           <div class="market-stats-row">
             <div class="market-stat">
@@ -1792,17 +1849,89 @@ const renderMarkets = (): void => {
   storyDetail.classList.remove("fullscreen");
   storyList.hidden = false;
   storyList.classList.add("markets-list");
+
+  const visibleMarkets = marketPreviews.filter((market) => {
+    if (!state.checkedMarketEvidence[market.id]) return true;
+    return getMarketView(market).evidence.length > 0;
+  });
+
+  const timeframes: ("All" | "Daily" | "Weekly" | "Sagas")[] = ["All", "Daily", "Weekly", "Sagas"];
+  const timeframeTabsHtml = `
+    <nav class="market-timeframe-tabs" aria-label="Timeframe navigation">
+      ${timeframes.map((tf) => {
+        const isActive = state.activeMarketTimeframe === tf;
+        const count = tf === "All" 
+          ? visibleMarkets.length 
+          : visibleMarkets.filter(m => m.timeframe === tf).length;
+        const label = tf === "Sagas" ? "Sagas" : tf;
+        return `
+          <button class="timeframe-tab-btn ${isActive ? 'active' : ''}" type="button" data-timeframe="${tf}">
+            <span>${label}</span>
+            <span class="timeframe-tab-count">${count}</span>
+          </button>
+        `;
+      }).join("")}
+    </nav>
+  `;
+
+  let marketsGridHtml = "";
+  
+  const renderTimeframeSection = (title: string, subtitle: string, markets: MarketPreview[]) => {
+    if (markets.length === 0) return "";
+    return `
+      <div class="market-timeframe-section">
+        <div class="timeframe-section-header">
+          <div class="timeframe-section-header-left">
+            <h2>${title}</h2>
+            <span class="timeframe-section-subtitle">${subtitle}</span>
+          </div>
+          <span class="timeframe-section-count-badge">${markets.length} ${markets.length === 1 ? 'market' : 'markets'}</span>
+        </div>
+        <section class="markets-grid" aria-label="${title} prediction markets">
+          ${markets.map(renderMarketCard).join("")}
+        </section>
+      </div>
+    `;
+  };
+
+  if (state.activeMarketTimeframe === "All") {
+    const dailyMarkets = visibleMarkets.filter(m => m.timeframe === "Daily");
+    const weeklyMarkets = visibleMarkets.filter(m => m.timeframe === "Weekly");
+    const sagasMarkets = visibleMarkets.filter(m => m.timeframe === "Sagas");
+    
+    marketsGridHtml = `
+      ${renderTimeframeSection("Daily", "Ends in a day or two", dailyMarkets)}
+      ${renderTimeframeSection("Weekly", "Ends in a week", weeklyMarkets)}
+      ${renderTimeframeSection("Sagas (Long-term)", "Narratives & futures", sagasMarkets)}
+    `;
+  } else {
+    const filteredMarkets = visibleMarkets.filter(m => m.timeframe === state.activeMarketTimeframe);
+    let title = state.activeMarketTimeframe as string;
+    let subtitle = "";
+    if (state.activeMarketTimeframe === "Daily") subtitle = "Ends in a day or two";
+    else if (state.activeMarketTimeframe === "Weekly") subtitle = "Ends in a week";
+    else if (state.activeMarketTimeframe === "Sagas") {
+      title = "Sagas (Long-term)";
+      subtitle = "Narratives & futures";
+    }
+    
+    marketsGridHtml = `
+      ${renderTimeframeSection(title, subtitle, filteredMarkets)}
+    `;
+  }
+
   storyList.innerHTML = `
     <header class="markets-header">
       <div>
         <h1>Markets</h1>
-        <p>Predict what happens next, with the full story already attached.</p>
+        <p>Predict real-world outcomes with full news evidence. Trade contracts, climb the global ROI leaderboard, compete with other top analysts, and earn exclusive trading badges.</p>
       </div>
       <a class="arc-faucet-button" href="${ARC_TESTNET_FAUCET}" target="_blank" rel="noreferrer">Get testnet USDC</a>
     </header>
-    <section class="markets-grid" aria-label="Prediction markets">
-      ${marketPreviews.map(renderMarketCard).join("")}
-    </section>
+    ${timeframeTabsHtml}
+    <div class="markets-container">
+      ${marketsGridHtml || `<p class="no-markets-message" style="color: var(--market-text-muted); text-align: center; padding: 48px 0; font-family: 'Space Grotesk', sans-serif;">No active markets available in this timeframe.</p>`}
+    </div>
   `;
 };
 
@@ -1819,27 +1948,90 @@ const renderLeaderboard = (): void => {
   storyList.hidden = false;
   storyList.classList.add("markets-list");
 
-  // Mock leaderboard users based on weekly ROI percentage
-  const leaderboardUsers = [
-    { rank: 1, username: "@alpha_trader", roi: "+245.8%", profit: "$24,580 USDC", category: "Gaming" },
-    { rank: 2, username: "@madridista_14", roi: "+189.2%", profit: "$18,920 USDC", category: "Sports" },
-    { rank: 3, username: "@onepiece_theory", roi: "+143.5%", profit: "$14,350 USDC", category: "Anime" },
-    { rank: 4, username: state.walletAddress ? `${shortenAddress(state.walletAddress)} (You)` : "@anonymous_trader", roi: "+24.5%", profit: "$245 USDC", category: "Mixed" },
-    { rank: 5, username: "@gta6_hype", roi: "+12.1%", profit: "$1,210 USDC", category: "Gaming" }
+  // Calculate points dynamically
+  let userPoints = 0;
+  let wins = 0;
+  let activeInProfit = 0;
+  const dailyMarketIds = ["wc-mbappe-haaland-goals", "wc-england-panama-spread", "wc-scotland-qualification"];
+
+  if (state.walletAddress) {
+    const closedProfitsKey = `siftle_closed_profits_${state.walletAddress.toLowerCase()}`;
+    let closedProfits: string[] = [];
+    try {
+      closedProfits = JSON.parse(localStorage.getItem(closedProfitsKey) || "[]") as string[];
+    } catch {}
+
+    for (const mId of dailyMarketIds) {
+      const market = marketPreviews.find(m => m.id === mId);
+      if (!market) continue;
+      const position = state.marketPositions[mId];
+      const snapshot = state.marketSnapshots[mId];
+      const outcome = snapshot?.outcome ?? 0;
+
+      let marketPoints = 0;
+      const wasClosedInProfit = closedProfits.includes(mId);
+
+      if (outcome !== 0) {
+        // Resolved outcome
+        if (outcome === 1 && position && position.yesSharesUsdc > 0) {
+          marketPoints = 100;
+          wins++;
+        } else if (outcome === 2 && position && position.noSharesUsdc > 0) {
+          marketPoints = 100;
+          wins++;
+        } else if (wasClosedInProfit) {
+          marketPoints = 30;
+          activeInProfit++;
+        }
+      } else {
+        // Unresolved outcome: MUST have closed (sold) in profit before resolution
+        if (wasClosedInProfit) {
+          marketPoints = 30;
+          activeInProfit++;
+        }
+      }
+      userPoints += marketPoints;
+    }
+  }
+
+  // Define seasonal competitors
+  const competitors = [
+    { username: "@daily_sniper", points: 230, status: "2 wins, 1 closed profit" },
+    { username: "@pep_tactics", points: 160, status: "1 win, 2 closed profits" },
+    { username: "@arbitrage_king", points: 100, status: "1 win, 0 closed profits" },
+    { username: "@risk_taker", points: 30, status: "0 wins, 1 closed profit" },
+    { username: "@market_maker", points: 0, status: "0 wins, 0 closed profits" }
   ];
+
+  const userUsername = state.walletAddress ? `${shortenAddress(state.walletAddress)} (You)` : "@anonymous_trader";
+  const userStatus = `${wins} win${wins === 1 ? "" : "s"}, ${activeInProfit} closed profit${activeInProfit === 1 ? "" : "s"}`;
+
+  // Build combined and sorted rankings
+  const allRankings = [
+    ...competitors,
+    { username: userUsername, points: userPoints, status: userStatus }
+  ];
+  allRankings.sort((a, b) => b.points - a.points);
+
+  const leaderboardUsers = allRankings.map((user, idx) => ({
+    rank: idx + 1,
+    username: user.username,
+    points: user.points,
+    status: user.status
+  }));
 
   storyList.innerHTML = `
     <section class="leaderboard-surface">
       <header class="leaderboard-header">
-        <span>Siftle Arena</span>
-        <h1>ROI Leaderboard</h1>
-        <p>Compete with other nerds. The higher your trading ROI from news updates, the higher you climb.</p>
+        <span>Siftle Seasonal Arena</span>
+        <h1>Seasonal Leaderboard</h1>
+        <p>Compete with other traders. Points are earned from **Daily** markets: +100 pts for finishing on the winning side, and +30 pts for holding/closing in profit before resolution.</p>
       </header>
 
       <div class="leaderboard-faucet-box">
         <div class="faucet-box-details">
           <h3>Claim Test USDC</h3>
-          <p>Get $100 USDC to trade prediction markets and test your theories.</p>
+          <p>Get $100 USDC to trade daily prediction markets and climb the seasonal ranks.</p>
         </div>
         <button id="faucetClaimButton" class="faucet-claim-btn" type="button">Claim Faucet</button>
       </div>
@@ -1851,9 +2043,9 @@ const renderLeaderboard = (): void => {
               <span class="leaderboard-rank rank-${user.rank}">${user.rank}</span>
               <span class="leaderboard-username">${user.username}</span>
             </div>
-            <div class="leaderboard-row-right">
-              <span class="leaderboard-roi">${user.roi} ROI</span>
-              <span class="leaderboard-profit">${user.profit}</span>
+            <div class="leaderboard-row-right" style="text-align: right;">
+              <span class="leaderboard-roi" style="color: var(--color-electric-blue, #3B82F6); font-weight: bold;">${user.points} pts</span>
+              <span class="leaderboard-profit">${user.status}</span>
             </div>
           </div>
         `).join("")}
@@ -1916,7 +2108,7 @@ const renderPortfolioPositionCard = (market: MarketPreview): string => {
   return `
     <article class="portfolio-position-card">
       <div class="portfolio-position-top">
-        <span class="category-chip ${market.category}">${market.category}</span>
+        <span class="category-chip ${market.category}">${displayCategory(market.category)}</span>
         <span>${outcome}</span>
       </div>
       <h2>${market.question}</h2>
@@ -2043,7 +2235,7 @@ categoryTabs?.addEventListener("click", (event) => {
   if (!button) return;
 
   state.activeCategory = button.dataset.category as Category;
-  window.history.pushState({}, "", window.location.pathname);
+  window.history.pushState({}, "", "#feed");
   resetFeedScroll();
   render();
   void loadFeed(state.activeCategory);
@@ -2063,7 +2255,7 @@ topMarketsButton?.addEventListener("click", () => {
 topNewsButton?.addEventListener("click", () => {
   state.activeSurface = "feed";
   state.showSaved = false;
-  window.history.pushState({}, "", window.location.pathname);
+  window.history.pushState({}, "", "#feed");
   resetFeedScroll();
   render();
 });
@@ -2128,11 +2320,7 @@ bottomNavButtons.forEach((button) => {
       window.history.pushState({}, "", "#leaderboard");
     } else {
       state.activeSurface = "feed";
-      if (target === "feed") {
-        window.history.pushState({}, "", "#feed");
-      } else {
-        window.history.pushState({}, "", window.location.pathname);
-      }
+      window.history.pushState({}, "", "#feed");
       if (target === "saved") {
         loadSavedFromStorage();
         applySavedFlags();
@@ -2145,7 +2333,7 @@ bottomNavButtons.forEach((button) => {
 
 archiveDateSelect?.addEventListener("change", () => {
   state.activeArchiveDate = archiveDateSelect.value || null;
-  window.history.pushState({}, "", window.location.pathname);
+  window.history.pushState({}, "", "#feed");
   resetFeedScroll();
   render();
   void loadFeed(state.activeCategory);
@@ -2154,7 +2342,7 @@ archiveDateSelect?.addEventListener("change", () => {
 todayButton?.addEventListener("click", () => {
   state.activeArchiveDate = null;
   if (archiveDateSelect) archiveDateSelect.value = "";
-  window.history.pushState({}, "", window.location.pathname);
+  window.history.pushState({}, "", "#feed");
   resetFeedScroll();
   render();
   void loadFeed(state.activeCategory);
@@ -2162,6 +2350,15 @@ todayButton?.addEventListener("click", () => {
 
 storyList?.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
+
+  const timeframeBtn = target.closest<HTMLButtonElement>("[data-timeframe]");
+  if (timeframeBtn) {
+    const tf = timeframeBtn.dataset.timeframe as "All" | "Daily" | "Weekly" | "Sagas";
+    state.activeMarketTimeframe = tf;
+    renderMarkets();
+    return;
+  }
+
   const marketCard = target.closest<HTMLButtonElement>("[data-market-id]");
   if (marketCard) {
     state.selectedMarketId = marketCard.dataset.marketId ?? null;

@@ -1,19 +1,8 @@
 [
   {
-    "id": "gta6-delay-2026",
-    "category": "Gaming",
-    "question": "Will GTA 6 official release date be delayed past December 31, 2026?",
-    "probability": 54,
-    "closes": "December 31, 2026",
-    "resolution": "Resolves Yes if Rockstar Games officially announces that GTA 6 will release in 2027 or later.",
-    "threadTopic": "GTA 6 Release Timing and Studio Status",
-    "volume": "$125K",
-    "traders": "840",
-    "liquidity": "$38K"
-  },
-  {
     "id": "transfer-davies-realmadrid",
     "category": "Sports",
+    "timeframe": "Sagas",
     "question": "Will Real Madrid officially sign Alphonso Davies in the Summer Transfer Window?",
     "probability": 72,
     "closes": "September 1, 2026",
@@ -21,11 +10,83 @@
     "threadTopic": "Alphonso Davies Real Madrid Transfer Talks",
     "volume": "$240K",
     "traders": "1,450",
-    "liquidity": "$78K"
+    "liquidity": "$78K",
+    "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80"
+  },
+  {
+    "id": "transfer-tonali-spurs",
+    "category": "Sports",
+    "timeframe": "Sagas",
+    "question": "Will Sandro Tonali sign with Tottenham Hotspur in the Summer Transfer Window?",
+    "probability": 58,
+    "closes": "September 1, 2026",
+    "resolution": "Resolves Yes if Tottenham Hotspur officially announces the transfer/signing of Sandro Tonali by the transfer deadline.",
+    "threadTopic": "Sandro Tonali Tottenham Transfer Link",
+    "volume": "$182K",
+    "traders": "980",
+    "liquidity": "$29K",
+    "imageUrl": "https://images.unsplash.com/photo-1556056504-5c7696c4c28d?auto=format&fit=crop&w=1200&q=80"
+  },
+  {
+    "id": "transfer-guimaraes-arsenal",
+    "category": "Sports",
+    "timeframe": "Sagas",
+    "question": "Will Bruno Guimarães officially sign with Arsenal by September 1, 2026?",
+    "probability": 45,
+    "closes": "September 1, 2026",
+    "resolution": "Resolves Yes if Arsenal officially announces the transfer/signing of Bruno Guimarães by the transfer deadline.",
+    "threadTopic": "Bruno Guimarães Arsenal Transfer Link",
+    "volume": "$204K",
+    "traders": "1,240",
+    "liquidity": "$36K",
+    "imageUrl": "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=1200&q=80"
+  },
+  {
+    "id": "wc-mbappe-haaland-goals",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "question": "Will Kylian Mbappé score more goals than Erling Haaland in the France vs Norway World Cup match today?",
+    "probability": 48,
+    "closes": "June 26, 2026",
+    "resolution": "Resolves Yes if Kylian Mbappé scores more goals than Erling Haaland in the official match on Friday, June 26, 2026. Otherwise resolves No.",
+    "threadTopic": "Mbappé vs Haaland World Cup Clash",
+    "volume": "$89K",
+    "traders": "670",
+    "liquidity": "$19K",
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80"
+  },
+  {
+    "id": "wc-england-panama-spread",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "question": "Will England defeat Panama by a margin of 2 or more goals in their World Cup match on Saturday?",
+    "probability": 65,
+    "closes": "June 27, 2026",
+    "resolution": "Resolves Yes if England wins the match on June 27, 2026 by a goal difference of 2 or more (e.g. 2-0, 3-1, 3-0, etc.). Otherwise resolves No.",
+    "threadTopic": "England vs Panama Match Details",
+    "volume": "$156K",
+    "traders": "1,120",
+    "liquidity": "$42K",
+    "imageUrl": "https://images.unsplash.com/photo-1518063319789-7217e6706b04?auto=format&fit=crop&w=1200&q=80"
+  },
+  {
+    "id": "wc-scotland-qualification",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "question": "Will Scotland qualify for the World Cup Round of 32?",
+    "probability": 15,
+    "closes": "June 28, 2026",
+    "resolution": "Resolves Yes if Scotland officially qualifies for the Round of 32 (knockout stage) of the 2026 World Cup. Otherwise resolves No.",
+    "threadTopic": "Scotland World Cup Status",
+    "volume": "$73K",
+    "traders": "590",
+    "liquidity": "$15K",
+    "imageUrl": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80"
   },
   {
     "id": "manga-onepiece-1200",
     "category": "Anime",
+    "timeframe": "Weekly",
     "question": "Will Manga Chapter 1200 reveal the identity of the final Ancient Weapon?",
     "probability": 40,
     "closes": "At official release of Chapter 1200",
@@ -33,6 +94,21 @@
     "threadTopic": "One Piece Manga Chapter Spoilers",
     "volume": "$64K",
     "traders": "920",
-    "liquidity": "$22K"
+    "liquidity": "$22K",
+    "imageUrl": "https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?auto=format&fit=crop&w=1200&q=80"
+  },
+  {
+    "id": "wc-messi-ronaldo-16",
+    "category": "Sports",
+    "timeframe": "Weekly",
+    "question": "Will both Lionel Messi and Cristiano Ronaldo qualify for the World Cup Round of 16 next week?",
+    "probability": 68,
+    "closes": "July 3, 2026",
+    "resolution": "Resolves to YES if both Argentina and Portugal win their Round of 32 matches next week to reach the Round of 16. Resolves to NO if either Argentina, Portugal, or both are eliminated in the Round of 32.",
+    "threadTopic": "Messi and Ronaldo World Cup Knockout",
+    "volume": "$195K",
+    "traders": "1,140",
+    "liquidity": "$38K",
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80"
   }
 ]
