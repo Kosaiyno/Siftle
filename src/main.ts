@@ -562,39 +562,52 @@ function syncStoryFromHash(): void {
     render();
     return;
   }
-
-  state.activeSurface = "feed";
-  const storyMatch = window.location.hash.match(/^#story-(\d+)$/);
-  const threadMatch = window.location.hash.match(/^#thread-(\d+)$/);
-  const story = storyMatch ? state.stories.find((item) => item.id === Number(storyMatch[1])) : undefined;
-  const threadStory = threadMatch ? state.stories.find((item) => item.id === Number(threadMatch[1])) : undefined;
-  const wasInDetail = state.selectedStoryId !== null || state.selectedThreadUrl !== null;
-  state.selectedStoryId = story?.id ?? null;
-  state.selectedThreadUrl = threadStory?.sourceUrl ?? null;
-  state.activeThread = null;
-  render();
-  if (story) void loadStorySummary(story);
-  if (threadStory) void loadStoryThread(threadStory);
-  if (!story && !threadStory && wasInDetail) {
-    requestAnimationFrame(() => window.scrollTo({ top: state.feedScrollY, behavior: "auto" }));
+  if (window.location.hash === "#feed" || window.location.hash.startsWith("#story-") || window.location.hash.startsWith("#thread-")) {
+    state.activeSurface = "feed";
+    const storyMatch = window.location.hash.match(/^#story-(\d+)$/);
+    const threadMatch = window.location.hash.match(/^#thread-(\d+)$/);
+    const story = storyMatch ? state.stories.find((item) => item.id === Number(storyMatch[1])) : undefined;
+    const threadStory = threadMatch ? state.stories.find((item) => item.id === Number(threadMatch[1])) : undefined;
+    const wasInDetail = state.selectedStoryId !== null || state.selectedThreadUrl !== null;
+    state.selectedStoryId = story?.id ?? null;
+    state.selectedThreadUrl = threadStory?.sourceUrl ?? null;
+    state.activeThread = null;
+    render();
+    if (story) void loadStorySummary(story);
+    if (threadStory) void loadStoryThread(threadStory);
+    if (!story && !threadStory && wasInDetail) {
+      requestAnimationFrame(() => window.scrollTo({ top: state.feedScrollY, behavior: "auto" }));
+    }
+    return;
   }
+
+  // Fallback default: Markets first
+  state.activeSurface = "markets";
+  state.selectedMarketId = null;
+  state.selectedStoryId = null;
+  state.selectedThreadUrl = null;
+  render();
 }
 
 const setArchiveStatus = (message: string): void => {
   if (archiveStatus) archiveStatus.textContent = message;
 };
 
-const loadFeed = async (category: Category = state.activeCategory): Promise<void> => {
-  state.activeSurface = "feed";
-  state.selectedMarketId = null;
-  state.selectedStoryId = null;
-  state.selectedThreadUrl = null;
-  state.activeThread = null;
-  state.loadingThreadUrl = null;
-  state.showSaved = false;
+const loadFeed = async (category: Category = state.activeCategory, isBackground = false): Promise<void> => {
+  if (!isBackground) {
+    state.activeSurface = "feed";
+    state.selectedMarketId = null;
+    state.selectedStoryId = null;
+    state.selectedThreadUrl = null;
+    state.activeThread = null;
+    state.loadingThreadUrl = null;
+    state.showSaved = false;
+  }
   state.isLoading = true;
-  renderCategories();
-  render();
+  if (state.activeSurface === "feed") {
+    renderCategories();
+    render();
+  }
 
   try {
     const endpoint = state.activeArchiveDate
@@ -693,7 +706,8 @@ const sortThreadItemsNewestFirst = (items: NewsStory[] = []): NewsStory[] =>
 
 const getMarketView = (market: MarketPreview): MarketPreview => {
   const override = state.marketEvidenceOverrides[market.id];
-  return override ? { ...market, ...override, updates: override.evidence.length } : market;
+  const base = { ...market, evidence: market.evidence ?? [] };
+  return override ? { ...base, ...override, updates: override.evidence.length } : base;
 };
 
 const marketEvidenceDate = (story: NewsStory, index: number): string => {
@@ -2114,7 +2128,11 @@ bottomNavButtons.forEach((button) => {
       window.history.pushState({}, "", "#leaderboard");
     } else {
       state.activeSurface = "feed";
-      window.history.pushState({}, "", window.location.pathname);
+      if (target === "feed") {
+        window.history.pushState({}, "", "#feed");
+      } else {
+        window.history.pushState({}, "", window.location.pathname);
+      }
       if (target === "saved") {
         loadSavedFromStorage();
         applySavedFlags();
@@ -2346,7 +2364,7 @@ void loadMarkets().then(() => {
   render();
   renderWalletState();
   void loadArchiveIndex();
-  void loadFeed();
+  void loadFeed(state.activeCategory, true);
 });
 
 // Mobile archive card: toggle the archive controls via class (safe for desktop)

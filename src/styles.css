@@ -5860,6 +5860,13 @@ h4 {
   --market-accent: #7C3AED;      /* Royal Violet */
   --market-yes: #10B981;         /* Emerald Green */
   --market-no: #EF4444;          /* Rose Red */
+  
+  /* Map legacy theme variables to dark theme */
+  --paper: #1E1E22;
+  --soft: #18181B;
+  --ink: #FFFFFF;
+  --muted: #A1A1AA;
+  --line: #2E2E34;
 }
 
 /* Base Body Adjustments */
