@@ -5852,21 +5852,63 @@ h4 {
 
 /* Overwriting variables for a premium dark prediction market theme */
 :root {
-  --market-bg: #121214;
-  --market-card-bg: #1E1E22;
-  --market-border: #2E2E34;
+  --market-bg: #111827;          /* Dark Slate background */
+  --market-card-bg: #1E293B;     /* Slate Card background */
+  --market-border: #334155;      /* Slate border */
   --market-text-main: #FFFFFF;
-  --market-text-muted: #A1A1AA;
-  --market-accent: #7C3AED;      /* Royal Violet */
-  --market-yes: #10B981;         /* Emerald Green */
-  --market-no: #EF4444;          /* Rose Red */
+  --market-text-muted: #94A3B8;
+  --market-accent: #3B82F6;      /* Electric Blue accent */
+  --market-yes: #60A5FA;         /* Electric Light Blue for Yes */
+  --market-no: #94A3B8;          /* Classy Slate Blue/Grey for No */
   
   /* Map legacy theme variables to dark theme */
-  --paper: #1E1E22;
-  --soft: #18181B;
+  --paper: #1E293B;
+  --soft: #111827;
   --ink: #FFFFFF;
-  --muted: #A1A1AA;
-  --line: #2E2E34;
+  --muted: #94A3B8;
+  --line: #334155;
+  
+  --blue: #3B82F6;
+  --violet: #60A5FA;
+  --teal: #94A3B8;
+  --orange: #475569;
+}
+
+/* Category chip overrides for dark slate + electric blue theme */
+.category-chip {
+  color: var(--market-accent) !important;
+  background: rgba(59, 130, 246, 0.12) !important;
+}
+.category-chip.Gaming {
+  color: #60A5FA !important;
+  background: rgba(96, 165, 250, 0.12) !important;
+}
+.category-chip.Crypto {
+  color: #93C5FD !important;
+  background: rgba(147, 197, 253, 0.12) !important;
+}
+.category-chip.Sports {
+  color: #3B82F6 !important;
+  background: rgba(59, 130, 246, 0.12) !important;
+}
+.category-chip.Anime {
+  color: #94A3B8 !important;
+  background: rgba(148, 163, 184, 0.12) !important;
+}
+.category-chip.Tech {
+  color: #CBD5E1 !important;
+  background: rgba(203, 213, 225, 0.12) !important;
+}
+
+/* Yes/No visual representation overrides */
+.market-status-pill {
+  background: rgba(59, 130, 246, 0.12) !important;
+}
+.market-side.yes.active {
+  background: rgba(59, 130, 246, 0.12) !important;
+}
+.market-side.no.active {
+  background: rgba(148, 163, 184, 0.12) !important;
 }
 
 /* Base Body Adjustments */
