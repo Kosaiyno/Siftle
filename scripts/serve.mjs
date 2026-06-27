@@ -4422,6 +4422,23 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
     for (const category of sourceCategories) {
       try {
         resetThreadReviewBudget();
+        
+        // Optimize: Check if today's snapshot already exists (locally or on Shelby)
+        // to prevent wasteful daily regenerations that starve the server's CPU.
+        const today = getTodayKey();
+        const existing = await getRecoverablePublishedSnapshot(category);
+        if (existing?.date === today && hasRealStories(existing)) {
+          console.log(`[SCHEDULED] Today's snapshot for category ${category} already exists. Skipping generation.`);
+          publishedSnapshots.set(category, existing);
+          publishStatus.categories[category] = {
+            status: "kept_previous",
+            story_count: existing.top_stories?.length ?? 0,
+            published_at: existing.published_at,
+            archive_provider: existing.archive?.provider ?? "unknown"
+          };
+          continue;
+        }
+
         const snapshot = await generateAndPublishFeed(category);
         publishedSnapshots.set(category, snapshot);
         publishStatus.categories[category] = {
