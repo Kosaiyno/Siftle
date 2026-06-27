@@ -47,6 +47,15 @@ export const marketThreadRules = {
     ],
     reject: []
   },
+  "wc-croatia-ghana-spread": {
+    category: "Sports",
+    topic: "Croatia vs Ghana World Cup Clash",
+    includeAnySets: [
+      ["croatia", "ghana"],
+      ["saturday", "philadelphia", "lincoln", "budimir", "dalic", "modric", "queiroz", "group l", "knockout", "draw", "win", "clean sheet"]
+    ],
+    reject: []
+  },
   "wc-scotland-qualification": {
     category: "Sports",
     topic: "Scotland World Cup Status",

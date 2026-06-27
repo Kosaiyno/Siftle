@@ -671,7 +671,9 @@ export const executeArcMarketOrder = async (
   mode: "buy" | "sell",
   side: "yes" | "no",
   amountUsdc: number,
-  onStatus?: (status: string) => void
+  onStatus?: (status: string) => void,
+  yesPriceCents?: number,
+  noPriceCents?: number
 ): Promise<string> => {
   if (!activeWalletAddress) throw new Error("Connect your wallet first");
   if (!marketAddress) throw new Error("This market needs an Arc contract address before trading");
@@ -733,17 +735,23 @@ export const executeArcMarketOrder = async (
         } catch {}
       }
 
+      const yesPrice = (yesPriceCents ?? 50) / 100;
+      const noPrice = (noPriceCents ?? 50) / 100;
+      const activePrice = side === "yes" ? yesPrice : noPrice;
+
       if (mode === "buy") {
+        const sharesBought = amountUsdc / activePrice;
         if (side === "yes") {
-          position.yesSharesUsdc += amountUsdc;
+          position.yesSharesUsdc += sharesBought;
         } else {
-          position.noSharesUsdc += amountUsdc;
+          position.noSharesUsdc += sharesBought;
         }
       } else {
+        const sharesSold = amountUsdc / activePrice;
         if (side === "yes") {
-          position.yesSharesUsdc = Math.max(0, position.yesSharesUsdc - amountUsdc);
+          position.yesSharesUsdc = Math.max(0, position.yesSharesUsdc - sharesSold);
         } else {
-          position.noSharesUsdc = Math.max(0, position.noSharesUsdc - amountUsdc);
+          position.noSharesUsdc = Math.max(0, position.noSharesUsdc - sharesSold);
         }
       }
       localStorage.setItem(posKey, JSON.stringify(position));

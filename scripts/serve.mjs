@@ -1688,7 +1688,7 @@ const prioritizeMarketStories = (stories) => {
 const annotateSnapshotThreads = (snapshot) => {
   if (!snapshot?.top_stories) return snapshot;
 
-  const prioritizedStories = prioritizeMarketStories(snapshot.top_stories);
+  const prioritizedStories = snapshot.top_stories;
   return enableFeedThreadPreviews
     ? {
         ...snapshot,
@@ -4276,9 +4276,23 @@ const getPublishedFeed = async (category) => {
   const selectedCategory = normalizeCategory(category);
   if (selectedCategory === "All") {
     const currentAll = readPublishedSnapshot("All");
-    if (currentAll?.date === getTodayKey() && hasRealStories(currentAll)) {
+    if (currentAll && hasRealStories(currentAll)) {
+      if (currentAll.date !== getTodayKey()) {
+        console.log(`[PERF] Snapshot for All is outdated (${currentAll.date}), triggering background refresh...`);
+        void buildAllSnapshotFromCategories().then(composed => {
+          const sanitized = sanitizeSnapshotForCategory(composed);
+          writePublishedSnapshot({
+            ...sanitized,
+            archive: {
+              provider: "composed",
+              composed_from_categories: sourceCategories
+            },
+            published_at: new Date().toISOString(),
+            status: "published"
+          });
+        }).catch(err => console.error("Background All feed generation failed:", err));
+      }
       const sanitized = sanitizeSnapshotForCategory(currentAll);
-      if (sanitized.top_stories.length !== currentAll.top_stories.length) writePublishedSnapshot(sanitized);
       return annotateSnapshotThreads(sanitized);
     }
 
@@ -4297,9 +4311,12 @@ const getPublishedFeed = async (category) => {
   }
 
   const snapshot = await getRecoverablePublishedSnapshot(selectedCategory);
-  if (snapshot?.date === getTodayKey() && hasRealStories(snapshot)) {
+  if (snapshot && hasRealStories(snapshot)) {
+    if (snapshot.date !== getTodayKey()) {
+      console.log(`[PERF] Snapshot for ${selectedCategory} is outdated (${snapshot.date}), triggering background refresh...`);
+      void generateAndPublishFeed(selectedCategory).catch(err => console.error("Background feed generation failed:", err));
+    }
     const sanitized = sanitizeSnapshotForCategory(snapshot);
-    if (sanitized.top_stories.length !== snapshot.top_stories.length) writePublishedSnapshot(sanitized);
     return annotateSnapshotThreads(sanitized);
   }
 
@@ -4307,6 +4324,8 @@ const getPublishedFeed = async (category) => {
   const sanitized = sanitizeSnapshotForCategory(fresh);
   return annotateSnapshotThreads(sanitized);
 };
+
+
 
 const refreshIntervalMinutes = Number(process.env.REFRESH_INTERVAL_MINUTES ?? 60);
 const publishedSnapshots = new Map();

@@ -1,4 +1,3 @@
-import { categories, mockStories } from "./mockNews.js";
 import type { ArchiveDate, Category, NewsStory, StoryThread } from "./types.js";
 import {
   ARC_TESTNET_FAUCET,
@@ -22,6 +21,8 @@ declare global {
     SIFTLE_MARKET_ADDRESSES?: Record<string, string>;
   }
 }
+
+const categories: Category[] = ["All", "Gaming", "Sports", "Anime", "Crypto", "Tech"];
 
 const apiBase = (window.SIFTLE_API_BASE || "").replace(/\/$/, "");
 const apiUrl = (path: string): string => `${apiBase}${path}`;
@@ -88,7 +89,7 @@ const state: {
   walletAddress: null,
   walletBalance: null,
   activeCategory: "All",
-  stories: mockStories,
+  stories: [],
   isLoading: false,
   selectedStoryId: null,
   aiSummaries: {},
@@ -622,7 +623,7 @@ const loadFeed = async (category: Category = state.activeCategory, isBackground 
     if (!response.ok) throw new Error(`Feed request failed with ${response.status}`);
 
     const data = await response.json();
-    state.stories = data.top_stories ?? mockStories;
+    state.stories = data.top_stories ?? [];
     // apply saved flags from storage
     applySavedFlags();
     state.hasLoadedFeed = true;
@@ -639,13 +640,13 @@ const loadFeed = async (category: Category = state.activeCategory, isBackground 
   } catch (error) {
     console.warn(error);
     if (!state.hasLoadedFeed) {
-      state.stories = mockStories;
+      state.stories = [];
     }
     applySavedFlags();
     if (menuStatus) {
       menuStatus.textContent = state.activeArchiveDate
         ? "That saved day/category is not available yet"
-        : "Using mock feed until sources are configured";
+        : "Feed data is currently unavailable. Please check back shortly.";
     }
   } finally {
     state.isLoading = false;
@@ -815,6 +816,12 @@ const loadPortfolioPositions = async (): Promise<void> => {
 };
 
 const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<void> => {
+  if (!state.walletAddress) {
+    showActionToast("Session expired or wallet not connected. Please sign in.");
+    void connectWallet();
+    return;
+  }
+
   const market = marketPreviews.find((item) => item.id === marketId);
   if (!market) return;
 
@@ -841,13 +848,56 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
       (status: string) => {
         state.marketTradeStatus = status;
         render();
-      }
+      },
+      yesPrice,
+      noPrice
     );
     delete state.marketSnapshots[market.id];
     delete state.marketPositions[market.id];
     state.walletAddress = getConnectedArcWallet();
     if (state.walletAddress) state.walletBalance = await readArcUsdcBalance(state.walletAddress);
     await loadPortfolioPositions();
+
+    // Update cost basis in localStorage
+    if (state.walletAddress) {
+      const costKey = `siftle_cost_basis_${market.id}_${state.walletAddress.toLowerCase()}`;
+      let costBasis = { yesCost: 0, noCost: 0 };
+      try {
+        costBasis = JSON.parse(localStorage.getItem(costKey) || '{"yesCost":0,"noCost":0}');
+      } catch {}
+
+      const tradeAmountNum = Math.max(0, Number(state.marketTradeAmount) || 0);
+
+      if (state.marketOrderMode === "buy") {
+        const sidesKey = `siftle_traded_sides_${market.id}_${state.walletAddress.toLowerCase()}`;
+        let tradedSides: string[] = [];
+        try {
+          tradedSides = JSON.parse(localStorage.getItem(sidesKey) || "[]");
+        } catch {}
+        if (!tradedSides.includes(side)) {
+          tradedSides.push(side);
+          localStorage.setItem(sidesKey, JSON.stringify(tradedSides));
+        }
+
+        if (side === "yes") {
+          costBasis.yesCost += tradeAmountNum;
+        } else {
+          costBasis.noCost += tradeAmountNum;
+        }
+      } else {
+        const position = state.marketPositions[market.id];
+        if (position) {
+          if (side === "yes" && position.yesSharesUsdc > 0) {
+            const sellRatio = Math.min(1, tradeAmountNum / (position.yesSharesUsdc * (yesPrice / 100)));
+            costBasis.yesCost = Math.max(0, costBasis.yesCost - costBasis.yesCost * sellRatio);
+          } else if (side === "no" && position.noSharesUsdc > 0) {
+            const sellRatio = Math.min(1, tradeAmountNum / (position.noSharesUsdc * (noPrice / 100)));
+            costBasis.noCost = Math.max(0, costBasis.noCost - costBasis.noCost * sellRatio);
+          }
+        }
+      }
+      localStorage.setItem(costKey, JSON.stringify(costBasis));
+    }
 
     if (state.marketOrderMode === "sell" && market.timeframe === "Daily" && state.walletAddress) {
       let inProfit = false;
@@ -1678,6 +1728,46 @@ const renderMarketDetail = (market: MarketPreview): void => {
   void loadMarketSnapshot(market);
   void loadMarketEvidence(market);
 
+  // Read user position and cost basis
+  const position = state.marketPositions[market.id] || { yesSharesUsdc: 0, noSharesUsdc: 0 };
+  const hasPosition = position.yesSharesUsdc > 0 || position.noSharesUsdc > 0;
+  let pnlHtml = "";
+  if (hasPosition && state.walletAddress) {
+    let costBasis = { yesCost: 0, noCost: 0 };
+    try {
+      costBasis = JSON.parse(localStorage.getItem(`siftle_cost_basis_${market.id}_${state.walletAddress.toLowerCase()}`) || '{"yesCost":0,"noCost":0}');
+    } catch {}
+    const yesVal = position.yesSharesUsdc * (yesPrice / 100);
+    const noVal = position.noSharesUsdc * (noPrice / 100);
+    const currentVal = yesVal + noVal;
+    const totalCost = costBasis.yesCost + costBasis.noCost;
+    const pnl = currentVal - totalCost;
+    const pnlPercent = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
+    const pnlSign = pnl >= 0 ? "+" : "";
+    
+    pnlHtml = `
+      <div class="user-market-position-box" style="margin: 16px 0; padding: 16px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.15); border-radius: 12px; font-family: 'Space Grotesk', sans-serif;">
+        <h3 style="font-size: 0.9rem; font-weight: 700; color: #FFFFFF; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.05em;">Your Position</h3>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 8px;">
+          <div>
+            <span style="font-size: 0.72rem; color: #94A3B8; display: block; margin-bottom: 2px;">YES Shares</span>
+            <strong style="font-size: 0.95rem; color: #FFFFFF;">${formatMoney(position.yesSharesUsdc)} <span style="font-size: 0.75rem; color: #94A3B8; font-weight: normal;">(value: $${yesVal.toFixed(2)})</span></strong>
+          </div>
+          <div>
+            <span style="font-size: 0.72rem; color: #94A3B8; display: block; margin-bottom: 2px;">NO Shares</span>
+            <strong style="font-size: 0.95rem; color: #FFFFFF;">${formatMoney(position.noSharesUsdc)} <span style="font-size: 0.75rem; color: #94A3B8; font-weight: normal;">(value: $${noVal.toFixed(2)})</span></strong>
+          </div>
+        </div>
+        <div style="border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.78rem; color: #94A3B8;">Total Cost: $${formatMoney(totalCost)}</span>
+          <span class="pnl-val" style="font-size: 0.85rem; font-weight: 700; color: ${pnl >= 0 ? '#10B981' : '#EF4444'};">
+            P&L: ${pnlSign}$${formatMoney(pnl)} (${pnlSign}${pnlPercent.toFixed(1)}%)
+          </span>
+        </div>
+      </div>
+    `;
+  }
+
   storyDetail.innerHTML = `
     <div class="detail-container market-detail-container">
       <div class="detail-header-row">
@@ -1699,6 +1789,7 @@ const renderMarketDetail = (market: MarketPreview): void => {
             <span class="market-status-pill">${marketStatus}</span>
           </div>
           <h2>${market.question}</h2>
+          ${pnlHtml}
           ${marketView.imageUrl ? `
           <div class="market-detail-hero-image" style="width: 100%; height: 160px; border-radius: 14px; overflow: hidden; margin: 12px 0; border: 1px solid var(--market-border);">
             <img src="${marketView.imageUrl}" alt="" style="width: 100%; height: 100%; object-fit: cover;" />
@@ -1921,12 +2012,14 @@ const renderMarkets = (): void => {
   }
 
   storyList.innerHTML = `
-    <header class="markets-header">
-      <div>
-        <h1>Markets</h1>
-        <p>Predict real-world outcomes with full news evidence. Trade contracts, climb the global ROI leaderboard, compete with other top analysts, and earn exclusive trading badges.</p>
+    <header class="markets-header" style="display: flex; flex-direction: column; gap: 12px; align-items: stretch; width: 100%;">
+      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+        <h1 style="margin: 0;">Markets</h1>
+        <a class="arc-faucet-button" href="${ARC_TESTNET_FAUCET}" target="_blank" rel="noreferrer">Get testnet USDC</a>
       </div>
-      <a class="arc-faucet-button" href="${ARC_TESTNET_FAUCET}" target="_blank" rel="noreferrer">Get testnet USDC</a>
+      <p style="margin: 0; width: 100%; max-width: 100%; color: #647089; font-size: 1.05rem; font-weight: 650; line-height: 1.5;">
+        Predict real-world outcomes with full news evidence. Trade daily contracts and earn points to climb the seasonal leaderboard: get +100 points for finishing on the winning side of resolved markets (+50 points if you switched sides before resolution), and +30 points for closing/selling trades in profit before resolution.
+      </p>
     </header>
     ${timeframeTabsHtml}
     <div class="markets-container">
@@ -1952,7 +2045,7 @@ const renderLeaderboard = (): void => {
   let userPoints = 0;
   let wins = 0;
   let activeInProfit = 0;
-  const dailyMarketIds = ["wc-mbappe-haaland-goals", "wc-england-panama-spread", "wc-scotland-qualification"];
+  const dailyMarketIds = marketPreviews.filter(m => m.timeframe === "Daily").map(m => m.id);
 
   if (state.walletAddress) {
     const closedProfitsKey = `siftle_closed_profits_${state.walletAddress.toLowerCase()}`;
@@ -1971,37 +2064,38 @@ const renderLeaderboard = (): void => {
       let marketPoints = 0;
       const wasClosedInProfit = closedProfits.includes(mId);
 
+      const sidesKey = `siftle_traded_sides_${mId}_${state.walletAddress.toLowerCase()}`;
+      let tradedSides: string[] = [];
+      try {
+        tradedSides = JSON.parse(localStorage.getItem(sidesKey) || "[]") as string[];
+      } catch {}
+      const hasSwitched = tradedSides.includes("yes") && tradedSides.includes("no");
+
+      let winPoints = 0;
       if (outcome !== 0) {
         // Resolved outcome
         if (outcome === 1 && position && position.yesSharesUsdc > 0) {
-          marketPoints = 100;
+          winPoints = hasSwitched ? 50 : 100;
           wins++;
         } else if (outcome === 2 && position && position.noSharesUsdc > 0) {
-          marketPoints = 100;
+          winPoints = hasSwitched ? 50 : 100;
           wins++;
-        } else if (wasClosedInProfit) {
-          marketPoints = 30;
-          activeInProfit++;
-        }
-      } else {
-        // Unresolved outcome: MUST have closed (sold) in profit before resolution
-        if (wasClosedInProfit) {
-          marketPoints = 30;
-          activeInProfit++;
         }
       }
+
+      let profitPoints = 0;
+      if (wasClosedInProfit) {
+        profitPoints = 30;
+        activeInProfit++;
+      }
+
+      marketPoints = winPoints + profitPoints;
       userPoints += marketPoints;
     }
   }
 
-  // Define seasonal competitors
-  const competitors = [
-    { username: "@daily_sniper", points: 230, status: "2 wins, 1 closed profit" },
-    { username: "@pep_tactics", points: 160, status: "1 win, 2 closed profits" },
-    { username: "@arbitrage_king", points: 100, status: "1 win, 0 closed profits" },
-    { username: "@risk_taker", points: 30, status: "0 wins, 1 closed profit" },
-    { username: "@market_maker", points: 0, status: "0 wins, 0 closed profits" }
-  ];
+  const competitors: { username: string; points: number; status: string }[] = [];
+
 
   const userUsername = state.walletAddress ? `${shortenAddress(state.walletAddress)} (You)` : "@anonymous_trader";
   const userStatus = `${wins} win${wins === 1 ? "" : "s"}, ${activeInProfit} closed profit${activeInProfit === 1 ? "" : "s"}`;
@@ -2025,7 +2119,7 @@ const renderLeaderboard = (): void => {
       <header class="leaderboard-header">
         <span>Siftle Seasonal Arena</span>
         <h1>Seasonal Leaderboard</h1>
-        <p>Compete with other traders. Points are earned from **Daily** markets: +100 pts for finishing on the winning side, and +30 pts for holding/closing in profit before resolution.</p>
+        <p>Compete with other traders. Points are earned from **Daily** markets: +100 pts for finishing on the winning side of resolved markets (+50 pts if you switched sides before resolution), and +30 pts for closing/selling trades in profit before resolution.</p>
       </header>
 
       <div class="leaderboard-faucet-box">
@@ -2100,10 +2194,28 @@ const renderPortfolioPositionCard = (market: MarketPreview): string => {
   const position = state.marketPositions[market.id] || { yesSharesUsdc: 0, noSharesUsdc: 0 };
   const snapshot = state.marketSnapshots[market.id];
   const totalShares = position.yesSharesUsdc + position.noSharesUsdc;
-  const yesValue = position.yesSharesUsdc * ((snapshot?.yesPriceCents ?? market.probability) / 100);
-  const noValue = position.noSharesUsdc * ((snapshot?.noPriceCents ?? 100 - market.probability) / 100);
+  const yesPrice = (snapshot?.yesPriceCents ?? market.probability);
+  const noPrice = (snapshot?.noPriceCents ?? 100 - market.probability);
+  const yesValue = position.yesSharesUsdc * (yesPrice / 100);
+  const noValue = position.noSharesUsdc * (noPrice / 100);
   const currentValue = yesValue + noValue;
   const outcome = getMarketOutcomeLabel(snapshot?.outcome);
+
+  // Read cost basis
+  let costBasis = { yesCost: 0, noCost: 0 };
+  if (state.walletAddress) {
+    try {
+      costBasis = JSON.parse(localStorage.getItem(`siftle_cost_basis_${market.id}_${state.walletAddress.toLowerCase()}`) || '{"yesCost":0,"noCost":0}');
+    } catch {}
+  }
+  const totalCost = costBasis.yesCost + costBasis.noCost;
+  const pnl = currentValue - totalCost;
+  const pnlPercent = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
+  const pnlSign = pnl >= 0 ? "+" : "";
+  const pnlClass = pnl >= 0 ? "profit" : "loss";
+  const pnlHtml = totalCost > 0
+    ? `<span class="portfolio-pnl-tag ${pnlClass}" style="color: ${pnl >= 0 ? '#10B981' : '#EF4444'}; font-weight: 700; font-size: 0.8rem; margin-left: 8px;">(P&L: ${pnlSign}$${formatMoney(pnl)} / ${pnlSign}${pnlPercent.toFixed(1)}%)</span>`
+    : "";
 
   return `
     <article class="portfolio-position-card">
@@ -2113,7 +2225,7 @@ const renderPortfolioPositionCard = (market: MarketPreview): string => {
       </div>
       <h2>${market.question}</h2>
       <div class="portfolio-position-stats">
-        <div><span>Current value</span><strong>$${formatMoney(currentValue)}</strong></div>
+        <div><span>Current value</span><strong>$${formatMoney(currentValue)} ${pnlHtml}</strong></div>
         <div><span>Yes shares</span><strong>$${formatMoney(position.yesSharesUsdc)}</strong></div>
         <div><span>No shares</span><strong>$${formatMoney(position.noSharesUsdc)}</strong></div>
       </div>

@@ -7813,3 +7813,75 @@ body::before {
   border-radius: 12px !important;
 }
 
+/* Premium Navigation & Mobile Overrides - Full Width & Clean Borders */
+@media (max-width: 820px) {
+  .app-shell {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  .site-header {
+    position: sticky !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    margin: 0 0 16px 0 !important;
+    padding: 12px 16px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 0 !important;
+    border: none !important;
+    border-bottom: 1px solid #1E293B !important;
+    background: #111827 !important;
+    box-shadow: none !important;
+  }
+
+  .mobile-bottom-nav {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 64px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    border-top: 1px solid #1E293B !important;
+    background: #111827 !important;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  .mobile-bottom-nav button {
+    border-radius: 0 !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  .mobile-bottom-nav button.active {
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: #3B82F6 !important;
+  }
+
+  /* Adjust padding for inner content so they don't touch screen edges */
+  .brief-hero,
+  .archive-controls,
+  .category-tabs,
+  .markets-container,
+  .portfolio-surface,
+  .leaderboard-surface,
+  .story-list,
+  .story-detail {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  
+  .category-tabs {
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+  }
+}
+
