@@ -2012,13 +2012,13 @@ const renderMarkets = (): void => {
   }
 
   storyList.innerHTML = `
-    <header class="markets-header" style="display: flex; flex-direction: column; gap: 12px; align-items: stretch; width: 100%;">
-      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+    <header class="markets-header" style="box-sizing: border-box; width: 100%; display: block; padding-top: 18px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 12px; flex-wrap: wrap;">
         <h1 style="margin: 0;">Markets</h1>
-        <a class="arc-faucet-button" href="${ARC_TESTNET_FAUCET}" target="_blank" rel="noreferrer">Get testnet USDC</a>
+        <a class="arc-faucet-button" href="${ARC_TESTNET_FAUCET}" target="_blank" rel="noreferrer" style="flex-shrink: 0;">Get testnet USDC</a>
       </div>
-      <p style="margin: 0; width: 100%; max-width: 100%; color: #647089; font-size: 1.05rem; font-weight: 650; line-height: 1.5;">
-        Predict real-world outcomes with full news evidence. Trade daily contracts and earn points to climb the seasonal leaderboard: get +100 points for finishing on the winning side of resolved markets (+50 points if you switched sides before resolution), and +30 points for closing/selling trades in profit before resolution.
+      <p style="margin: 10px 0 0; color: #647089; font-size: 0.95rem; font-weight: 600; line-height: 1.4; width: 100%;">
+        Trade daily prediction markets. Get +100 pts for winning (+50 if you switched sides) and +30 pts for closing in profit.
       </p>
     </header>
     ${timeframeTabsHtml}

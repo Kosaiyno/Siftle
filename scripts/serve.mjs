@@ -4428,6 +4428,11 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
       } catch (err) {
         console.warn("Failed to pre-populate cache from Shelby on startup:", err.message);
       }
+
+      publishStatus.is_running = false;
+      publishStatus.last_finished_at = new Date().toISOString();
+      console.log("[STARTUP] Pre-population from Shelby finished. Server is ready to handle traffic.");
+      return { skipped: false, status: publishStatus };
     }
 
     console.log(`Publishing feeds every ${refreshIntervalMinutes} minutes (${reason})...`);
