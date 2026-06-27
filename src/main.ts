@@ -45,6 +45,7 @@ const state: {
   marketPositions: Record<string, ArcMarketPosition>;
   marketEvidenceOverrides: Record<string, MarketEvidenceOverride>;
   checkedMarketEvidence: Record<string, boolean>;
+  checkedMarketSnapshots: Record<string, boolean>;
   loadingMarketSnapshots: Record<string, boolean>;
   loadingMarketEvidence: Record<string, boolean>;
   loadingPortfolioPositions: boolean;
@@ -80,6 +81,7 @@ const state: {
   marketPositions: {},
   marketEvidenceOverrides: {},
   checkedMarketEvidence: {},
+  checkedMarketSnapshots: {},
   loadingMarketSnapshots: {},
   loadingMarketEvidence: {},
   loadingPortfolioPositions: false,
@@ -775,7 +777,7 @@ const formatMoney = (value: number): string =>
 
 const loadMarketSnapshot = async (market: MarketPreview): Promise<void> => {
   const marketAddress = getMarketAddress(market);
-  if (!marketAddress || state.marketSnapshots[market.id] || state.loadingMarketSnapshots[market.id]) return;
+  if (!marketAddress || state.marketSnapshots[market.id] || state.loadingMarketSnapshots[market.id] || state.checkedMarketSnapshots[market.id]) return;
 
   state.loadingMarketSnapshots[market.id] = true;
   try {
@@ -783,6 +785,7 @@ const loadMarketSnapshot = async (market: MarketPreview): Promise<void> => {
   } catch (error) {
     console.warn(error);
   } finally {
+    state.checkedMarketSnapshots[market.id] = true;
     state.loadingMarketSnapshots[market.id] = false;
     if (state.activeSurface === "markets") render();
   }
