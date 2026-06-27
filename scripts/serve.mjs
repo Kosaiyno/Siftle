@@ -4272,25 +4272,55 @@ const publishSnapshot = async (snapshot) => {
 
 const generateAndPublishFeed = async (category) => publishSnapshot(await buildCategorySnapshot(category));
 
+const activeBackgroundRefreshes = new Set();
+const lastRefreshAttempt = new Map();
+
+const triggerBackgroundRefresh = (category) => {
+  if (publishStatus.is_running) return;
+  if (activeBackgroundRefreshes.has(category)) return;
+
+  const now = Date.now();
+  const lastAttempt = lastRefreshAttempt.get(category) ?? 0;
+  if (now - lastAttempt < 5 * 60 * 1000) {
+    return;
+  }
+
+  lastRefreshAttempt.set(category, now);
+  activeBackgroundRefreshes.add(category);
+  console.log(`[PERF] Starting background refresh for category: ${category}`);
+
+  const task = category === "All"
+    ? buildAllSnapshotFromCategories().then(composed => {
+        const sanitized = sanitizeSnapshotForCategory(composed);
+        writePublishedSnapshot({
+          ...sanitized,
+          archive: {
+            provider: "composed",
+            composed_from_categories: sourceCategories
+          },
+          published_at: new Date().toISOString(),
+          status: "published"
+        });
+      })
+    : generateAndPublishFeed(category);
+
+  task.then(() => {
+    console.log(`[PERF] Background refresh completed for category: ${category}`);
+  }).catch((err) => {
+    console.error(`[PERF] Background refresh failed for category ${category}:`, err);
+  }).finally(() => {
+    activeBackgroundRefreshes.delete(category);
+  });
+};
+
 const getPublishedFeed = async (category) => {
   const selectedCategory = normalizeCategory(category);
   if (selectedCategory === "All") {
     const currentAll = readPublishedSnapshot("All");
     if (currentAll && hasRealStories(currentAll)) {
       if (currentAll.date !== getTodayKey()) {
-        console.log(`[PERF] Snapshot for All is outdated (${currentAll.date}), triggering background refresh...`);
-        void buildAllSnapshotFromCategories().then(composed => {
-          const sanitized = sanitizeSnapshotForCategory(composed);
-          writePublishedSnapshot({
-            ...sanitized,
-            archive: {
-              provider: "composed",
-              composed_from_categories: sourceCategories
-            },
-            published_at: new Date().toISOString(),
-            status: "published"
-          });
-        }).catch(err => console.error("Background All feed generation failed:", err));
+        console.log(`[PERF] Snapshot for All is outdated (${currentAll.date}), queueing background refresh...`);
+        triggerBackgroundRefresh("All");
       }
       const sanitized = sanitizeSnapshotForCategory(currentAll);
       return annotateSnapshotThreads(sanitized);
@@ -4313,8 +4343,8 @@ const getPublishedFeed = async (category) => {
   const snapshot = await getRecoverablePublishedSnapshot(selectedCategory);
   if (snapshot && hasRealStories(snapshot)) {
     if (snapshot.date !== getTodayKey()) {
-      console.log(`[PERF] Snapshot for ${selectedCategory} is outdated (${snapshot.date}), triggering background refresh...`);
-      void generateAndPublishFeed(selectedCategory).catch(err => console.error("Background feed generation failed:", err));
+      console.log(`[PERF] Snapshot for ${selectedCategory} is outdated (${snapshot.date}), queueing background refresh...`);
+      triggerBackgroundRefresh(selectedCategory);
     }
     const sanitized = sanitizeSnapshotForCategory(snapshot);
     return annotateSnapshotThreads(sanitized);
