@@ -1944,10 +1944,7 @@ const renderMarkets = (): void => {
   storyList.hidden = false;
   storyList.classList.add("markets-list");
 
-  const visibleMarkets = marketPreviews.filter((market) => {
-    if (!state.checkedMarketEvidence[market.id]) return true;
-    return getMarketView(market).evidence.length > 0;
-  });
+  const visibleMarkets = marketPreviews;
 
   const timeframes: ("All" | "Daily" | "Weekly" | "Sagas")[] = ["All", "Daily", "Weekly", "Sagas"];
   const timeframeTabsHtml = `
