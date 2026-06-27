@@ -4528,6 +4528,14 @@ if (isMain) {
   } else {
     void refreshPublishedFeeds("startup");
   }
+
+  // Trigger an initial background scheduled refresh 5 seconds after boot
+  // so the server starts serving today's news shortly after waking up
+  setTimeout(() => {
+    console.log("[STARTUP] Triggering initial background scheduled feed refresh to get fresh news...");
+    void refreshPublishedFeeds("scheduled");
+  }, 5000);
+
   setInterval(() => void refreshPublishedFeeds("scheduled"), Math.max(1, refreshIntervalMinutes) * 60 * 1000);
 }
 
