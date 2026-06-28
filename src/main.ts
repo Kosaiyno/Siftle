@@ -109,6 +109,9 @@ const state: {
   activeMarketTimeframe: "All"
 };
 
+let selectedLeaderboardDivision: number | null = null;
+let seasonTimerInterval: any = null;
+
 interface MarketPreview {
   id: string;
   category: Exclude<Category, "All">;
@@ -2073,7 +2076,6 @@ const renderLeaderboard = (): void => {
 
       let winPoints = 0;
       if (outcome !== 0) {
-        // Resolved outcome
         if (outcome === 1 && position && position.yesSharesUsdc > 0) {
           winPoints = hasSwitched ? 50 : 100;
           wins++;
@@ -2094,25 +2096,26 @@ const renderLeaderboard = (): void => {
     }
   }
 
-  const competitors: { username: string; points: number; status: string }[] = [];
-
-
-  const userUsername = state.walletAddress ? `${shortenAddress(state.walletAddress)} (You)` : "@anonymous_trader";
   const userStatus = `${wins} win${wins === 1 ? "" : "s"}, ${activeInProfit} closed profit${activeInProfit === 1 ? "" : "s"}`;
 
-  // Build combined and sorted rankings
-  const allRankings = [
-    ...competitors,
-    { username: userUsername, points: userPoints, status: userStatus }
-  ];
-  allRankings.sort((a, b) => b.points - a.points);
+  // Sync user score with backend
+  if (state.walletAddress) {
+    fetch(apiUrl("/api/leaderboard/report"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        walletAddress: state.walletAddress,
+        points: userPoints,
+        status: userStatus
+      })
+    }).catch(err => console.error("Failed to report user score:", err));
+  }
 
-  const leaderboardUsers = allRankings.map((user, idx) => ({
-    rank: idx + 1,
-    username: user.username,
-    points: user.points,
-    status: user.status
-  }));
+  // Clear any existing timer interval
+  if (seasonTimerInterval) {
+    clearInterval(seasonTimerInterval);
+    seasonTimerInterval = null;
+  }
 
   storyList.innerHTML = `
     <section class="leaderboard-surface">
@@ -2130,22 +2133,192 @@ const renderLeaderboard = (): void => {
         <button id="faucetClaimButton" class="faucet-claim-btn" type="button">Claim Faucet</button>
       </div>
 
-      <div class="leaderboard-list" role="list">
-        ${leaderboardUsers.map(user => `
-          <div class="leaderboard-row ${user.username.includes('(You)') ? 'user-highlight' : ''}" role="listitem">
-            <div class="leaderboard-row-left">
-              <span class="leaderboard-rank rank-${user.rank}">${user.rank}</span>
-              <span class="leaderboard-username">${user.username}</span>
+      <div class="season-countdown-banner">
+        <span class="countdown-label">Season 1 Countdown</span>
+        <span id="seasonTimer" class="countdown-value">Loading...</span>
+      </div>
+
+      <div class="division-title-container">
+        <div class="division-title-left">
+          <h2 id="divisionTitleText">Division 1</h2>
+          <button class="how-it-works-btn" id="howItWorksBtn" type="button" title="How it works">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
+        </div>
+        <select id="divisionSelector" class="division-select-menu">
+          <option value="1">Division 1</option>
+        </select>
+      </div>
+
+      <div class="leaderboard-list" id="leaderboardListContainer" role="list">
+        <!-- Loader Skeleton -->
+        <div class="leaderboard-skeleton" style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+          ${Array.from({ length: 6 }).map(() => `
+            <div style="height: 52px; background: rgba(255,255,255,0.02); border: 1px solid #1e1f2b; border-radius: 8px; width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0 16px;">
+              <div style="display: flex; align-items: center; gap: 12px; width: 60%;">
+                <div style="width: 24px; height: 24px; background: rgba(255,255,255,0.05); border-radius: 50%;"></div>
+                <div style="width: 100px; height: 16px; background: rgba(255,255,255,0.05); border-radius: 4px;"></div>
+              </div>
+              <div style="width: 60px; height: 16px; background: rgba(255,255,255,0.05); border-radius: 4px;"></div>
             </div>
-            <div class="leaderboard-row-right" style="text-align: right;">
-              <span class="leaderboard-roi" style="color: var(--color-electric-blue, #3B82F6); font-weight: bold;">${user.points} pts</span>
-              <span class="leaderboard-profit">${user.status}</span>
-            </div>
-          </div>
-        `).join("")}
+          `).join("")}
+        </div>
       </div>
     </section>
+
+    <!-- How It Works Dropdown Modal -->
+    <div id="howItWorksModal" class="rules-modal-overlay">
+      <div class="rules-modal-content">
+        <div class="rules-modal-header">
+          <h2>Seasonal Arena Rules</h2>
+          <button id="closeRulesModalBtn" class="close-modal-btn" type="button">&times;</button>
+        </div>
+        <div class="rules-modal-body">
+          <div class="rules-section">
+            <h3>🏆 6-Player Divisions</h3>
+            <p>You are assigned to a division of 6 players. You only compete against the 5 opponents in your division. Global rankings exist but are secondary.</p>
+          </div>
+          <div class="rules-section">
+            <h3>⚡ Daily Markets Only</h3>
+            <p>Points are only accumulated on Daily Markets (which resolve in 24–72 hours). Weekly and Saga markets are for trading, portfolio growth, and long-term engagement.</p>
+          </div>
+          <div class="rules-section">
+            <h3>📈 Scoring System</h3>
+            <p><strong>+100 pts</strong> for finishing on the winning side.<br>
+            <strong>+30 pts</strong> for taking profit (closing/selling at profit before resolution).<br>
+            <strong>+50 pts</strong> if you switched sides and ultimately finished on the winning side.</p>
+          </div>
+          <div class="rules-section">
+            <h3>▲ Promotion & Relegation ▼</h3>
+            <p>At the end of the season, the top 2 players are promoted to the next division up, and the bottom 2 are relegated to the division below.</p>
+          </div>
+        </div>
+      </div>
+    </div>
   `;
+
+  const fetchAndRenderDivision = (targetDivNum?: number) => {
+    const listContainer = document.getElementById("leaderboardListContainer");
+    if (listContainer && targetDivNum !== undefined) {
+      listContainer.innerHTML = `
+        <div class="leaderboard-skeleton" style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+          ${Array.from({ length: 6 }).map(() => `
+            <div style="height: 52px; background: rgba(255,255,255,0.02); border: 1px solid #1e1f2b; border-radius: 8px; width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0 16px;">
+              <div style="display: flex; align-items: center; gap: 12px; width: 60%;">
+                <div style="width: 24px; height: 24px; background: rgba(255,255,255,0.05); border-radius: 50%;"></div>
+                <div style="width: 100px; height: 16px; background: rgba(255,255,255,0.05); border-radius: 4px;"></div>
+              </div>
+              <div style="width: 60px; height: 16px; background: rgba(255,255,255,0.05); border-radius: 4px;"></div>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    const walletQuery = state.walletAddress ? `&walletAddress=${encodeURIComponent(state.walletAddress)}` : "";
+    const divQuery = targetDivNum ? `&division=${targetDivNum}` : "";
+
+    fetch(apiUrl(`/api/leaderboard/division?nocache=1${walletQuery}${divQuery}`))
+      .then(res => res.json())
+      .then((data: any) => {
+        const divisionNumber = data.divisionNumber || 1;
+        const players = data.players || [];
+        const totalDivisions = data.totalDivisions || 1;
+        const seasonEndsAt = data.seasonEndsAt;
+
+        selectedLeaderboardDivision = divisionNumber;
+
+        const divisionTitleText = document.getElementById("divisionTitleText");
+        if (divisionTitleText) divisionTitleText.innerText = `Division ${divisionNumber}`;
+
+        const divisionSelector = document.getElementById("divisionSelector") as HTMLSelectElement | null;
+        if (divisionSelector) {
+          divisionSelector.innerHTML = Array.from({ length: totalDivisions }, (_, i) => i + 1).map(divNum => `
+            <option value="${divNum}" ${divNum === divisionNumber ? 'selected' : ''}>Division ${divNum}</option>
+          `).join("");
+        }
+
+        if (listContainer) {
+          if (players.length === 0) {
+            listContainer.innerHTML = `<p style="color: var(--market-text-muted); text-align: center; padding: 24px 0; font-family: 'Space Grotesk', sans-serif;">No active players in this division.</p>`;
+          } else {
+            listContainer.innerHTML = players.map((player: any, idx: number) => {
+              const rank = idx + 1;
+              const isUser = state.walletAddress && player.username.toLowerCase() === state.walletAddress.toLowerCase();
+              const displayName = isUser ? `${shortenAddress(player.username)} (You)` : shortenAddress(player.username);
+
+              let zoneClass = "safety-zone";
+              let zoneTag = "";
+              if (rank <= 2) {
+                zoneClass = "promotion-zone";
+                zoneTag = `<span class="zone-tag promotion">▲ Promoted</span>`;
+              } else if (rank >= 5) {
+                zoneClass = "relegation-zone";
+                zoneTag = `<span class="zone-tag relegation">▼ Relegated</span>`;
+              }
+
+              return `
+                <div class="leaderboard-row ${isUser ? 'user-highlight' : ''} ${zoneClass}" role="listitem">
+                  <div class="leaderboard-row-left">
+                    <span class="leaderboard-rank rank-${rank}">${rank}</span>
+                    <span class="leaderboard-username">${displayName}</span>
+                    ${zoneTag}
+                  </div>
+                  <div class="leaderboard-row-right" style="text-align: right;">
+                    <span class="leaderboard-roi" style="color: #ffffff; font-weight: bold;">${player.points} pts</span>
+                    <span class="leaderboard-profit">${player.status}</span>
+                  </div>
+                </div>
+              `;
+            }).join("");
+          }
+        }
+
+        const seasonTimer = document.getElementById("seasonTimer");
+        if (seasonTimerInterval) clearInterval(seasonTimerInterval);
+
+        const updateTimer = () => {
+          const nowTime = new Date().getTime();
+          const targetTime = new Date(seasonEndsAt).getTime();
+          const diff = targetTime - nowTime;
+
+          if (diff <= 0) {
+            if (seasonTimer) seasonTimer.innerText = "Season Finished!";
+            if (seasonTimerInterval) clearInterval(seasonTimerInterval);
+            return;
+          }
+
+          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+          if (seasonTimer) {
+            seasonTimer.innerText = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+          }
+        };
+
+        updateTimer();
+        seasonTimerInterval = setInterval(updateTimer, 1000);
+      })
+      .catch(err => {
+        console.error("Failed to load division leaderboard:", err);
+        if (listContainer) {
+          listContainer.innerHTML = `<p style="color: var(--market-text-muted); text-align: center; padding: 24px 0; font-family: 'Space Grotesk', sans-serif;">Error loading division leaderboard. Please try again.</p>`;
+        }
+      });
+  };
+
+  fetchAndRenderDivision(selectedLeaderboardDivision || undefined);
+
+  // Attach event listener for division selector change
+  const divisionSelector = document.getElementById("divisionSelector") as HTMLSelectElement | null;
+  divisionSelector?.addEventListener("change", (e) => {
+    const val = Number((e.target as HTMLSelectElement).value);
+    fetchAndRenderDivision(val);
+  });
 
   // Attach event listener for faucet claim button
   const faucetClaimButton = document.getElementById("faucetClaimButton");
@@ -2154,8 +2327,6 @@ const renderLeaderboard = (): void => {
       showActionToast("Please sign in first!");
       return;
     }
-    
-    // Check if mock session
     if (localStorage.getItem("siftle_circle_is_mock") === "true") {
       const currentBalance = parseFloat(localStorage.getItem(`siftle_mock_balance_${state.walletAddress}`) || "1000.00");
       const newBalance = currentBalance + 100.0;
@@ -2167,6 +2338,25 @@ const renderLeaderboard = (): void => {
     } else {
       showActionToast("Opening Circle Faucet...");
       window.open(ARC_TESTNET_FAUCET, "_blank");
+    }
+  });
+
+  // Attach event listener for modal popup
+  const howItWorksBtn = document.getElementById("howItWorksBtn");
+  const howItWorksModal = document.getElementById("howItWorksModal");
+  const closeRulesModalBtn = document.getElementById("closeRulesModalBtn");
+
+  howItWorksBtn?.addEventListener("click", () => {
+    if (howItWorksModal) howItWorksModal.style.display = "flex";
+  });
+
+  closeRulesModalBtn?.addEventListener("click", () => {
+    if (howItWorksModal) howItWorksModal.style.display = "none";
+  });
+
+  howItWorksModal?.addEventListener("click", (e) => {
+    if (e.target === howItWorksModal) {
+      howItWorksModal.style.display = "none";
     }
   });
 };

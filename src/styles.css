@@ -8394,3 +8394,218 @@ html, body, .app-shell, main {
     padding-bottom: env(safe-area-inset-bottom) !important;
   }
 }
+
+/* 17. Siftle Seasonal Leaderboard & Division League Table */
+.season-countdown-banner {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid #1e1f2b !important;
+  border-radius: 8px !important;
+  padding: 12px 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  margin-bottom: 24px !important;
+  box-sizing: border-box !important;
+}
+
+.countdown-label {
+  color: #8e8e93 !important;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+}
+
+.countdown-value {
+  color: #34d399 !important;
+  font-size: 0.95rem !important;
+  font-weight: 750 !important;
+  font-family: monospace !important;
+}
+
+.division-title-container {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  margin-bottom: 20px !important;
+  padding: 0 4px !important;
+}
+
+.division-title-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.division-title-left h2 {
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 1.45rem !important;
+  font-weight: 750 !important;
+  color: #ffffff !important;
+  margin: 0 !important;
+}
+
+.how-it-works-btn {
+  background: transparent !important;
+  border: none !important;
+  color: #8e8e93 !important;
+  cursor: pointer !important;
+  padding: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: color 0.2s ease !important;
+}
+
+.how-it-works-btn:hover {
+  color: #ffffff !important;
+}
+
+.how-it-works-btn svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+.division-select-menu {
+  background: #12131a !important;
+  color: #ffffff !important;
+  border: 1px solid #1e1f2b !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  outline: none !important;
+  transition: border-color 0.2s ease !important;
+}
+
+.division-select-menu:hover {
+  border-color: #ffffff !important;
+}
+
+/* Division Table Rows and Zones */
+.leaderboard-row.promotion-zone {
+  border-left: 3px solid #34d399 !important;
+}
+
+.leaderboard-row.safety-zone {
+  border-left: 3px solid #1e1f2b !important;
+}
+
+.leaderboard-row.relegation-zone {
+  border-left: 3px solid #ef4444 !important;
+}
+
+.leaderboard-row.user-highlight {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: #ffffff !important;
+}
+
+.zone-tag {
+  font-size: 0.65rem !important;
+  font-weight: 700 !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  margin-left: 8px !important;
+  display: inline-block !important;
+}
+
+.zone-tag.promotion {
+  color: #34d399 !important;
+  background: rgba(52, 211, 153, 0.1) !important;
+}
+
+.zone-tag.relegation {
+  color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.1) !important;
+}
+
+/* How It Works Modal Popup */
+.rules-modal-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.85) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 2000 !important;
+  padding: 20px !important;
+  box-sizing: border-box !important;
+}
+
+.rules-modal-content {
+  background: #12131a !important;
+  border: 1px solid #1e1f2b !important;
+  border-radius: 16px !important;
+  max-width: 440px !important;
+  width: 100% !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.rules-modal-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 16px 20px !important;
+  border-bottom: 1px solid #1e1f2b !important;
+}
+
+.rules-modal-header h2 {
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 1.25rem !important;
+  font-weight: 750 !important;
+  color: #ffffff !important;
+  margin: 0 !important;
+}
+
+.close-modal-btn {
+  background: transparent !important;
+  border: none !important;
+  color: #8e8e93 !important;
+  font-size: 1.5rem !important;
+  cursor: pointer !important;
+  padding: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: color 0.2s ease !important;
+}
+
+.close-modal-btn:hover {
+  color: #ffffff !important;
+}
+
+.rules-modal-body {
+  padding: 20px !important;
+  max-height: 400px !important;
+  overflow-y: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 20px !important;
+}
+
+.rules-section h3 {
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  margin: 0 0 6px 0 !important;
+}
+
+.rules-section p {
+  font-size: 0.88rem !important;
+  color: #8e8e93 !important;
+  line-height: 1.45 !important;
+  margin: 0 !important;
+}

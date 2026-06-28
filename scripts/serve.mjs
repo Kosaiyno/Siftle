@@ -5827,6 +5827,89 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (requestUrl.pathname === "/api/leaderboard/report" && request.method === "POST") {
+    readJsonBody(request)
+      .then((body) => {
+        const { walletAddress, points, status } = body;
+        if (!walletAddress) {
+          sendJson(response, 400, { error: "Missing walletAddress" });
+          return;
+        }
+        const data = loadAnalytics();
+        if (!data.leaderboard) data.leaderboard = { traders: {} };
+        if (!data.leaderboard.traders) data.leaderboard.traders = {};
+        
+        data.leaderboard.traders[walletAddress.toLowerCase()] = {
+          points: Number(points) || 0,
+          status: String(status || ""),
+          updated_at: new Date().toISOString()
+        };
+        saveAnalytics(data);
+        sendJson(response, 200, { success: true });
+      })
+      .catch((error) => sendJson(response, 500, { error: error.message }));
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/leaderboard/division" && request.method === "GET") {
+    const walletAddress = (requestUrl.searchParams.get("walletAddress") || "").toLowerCase();
+    const divisionParam = requestUrl.searchParams.get("division");
+    const reqDivisionNumber = divisionParam ? Number(divisionParam) : null;
+    
+    const data = loadAnalytics();
+    const tradersMap = data.leaderboard?.traders || {};
+    
+    const tradersList = Object.entries(tradersMap).map(([address, info]) => ({
+      username: address,
+      points: Number(info.points) || 0,
+      status: String(info.status || ""),
+      updated_at: info.updated_at
+    }));
+    
+    tradersList.sort((a, b) => b.points - a.points);
+    
+    if (walletAddress && !tradersList.some(t => t.username === walletAddress)) {
+      tradersList.push({
+        username: walletAddress,
+        points: 0,
+        status: "0 wins, 0 profit",
+        updated_at: new Date().toISOString()
+      });
+    }
+    
+    const divisions = [];
+    for (let i = 0; i < tradersList.length; i += 6) {
+      divisions.push(tradersList.slice(i, i + 6));
+    }
+    
+    let userDivisionNumber = 1;
+    if (walletAddress) {
+      const idx = tradersList.findIndex(t => t.username === walletAddress);
+      if (idx !== -1) {
+        userDivisionNumber = Math.floor(idx / 6) + 1;
+      }
+    }
+    
+    let targetDivisionNumber = reqDivisionNumber || userDivisionNumber;
+    if (targetDivisionNumber < 1) targetDivisionNumber = 1;
+    if (divisions.length > 0 && targetDivisionNumber > divisions.length) {
+      targetDivisionNumber = divisions.length;
+    }
+    
+    const targetDivisionList = divisions[targetDivisionNumber - 1] || [];
+    const now = new Date();
+    // Static countdown: set to end in 3 days, 12 hours for demo/launch excitement
+    const seasonEndsAt = new Date(now.getTime() + (3 * 24 + 12) * 60 * 60 * 1000).toISOString();
+    
+    sendJson(response, 200, {
+      divisionNumber: targetDivisionNumber,
+      players: targetDivisionList,
+      totalDivisions: Math.max(1, divisions.length),
+      seasonEndsAt
+    });
+    return;
+  }
+
   if (requestUrl.pathname === "/api/0g/cost" && request.method === "GET") {
     sendJson(response, 200, getZeroGCostEstimate());
     return;
