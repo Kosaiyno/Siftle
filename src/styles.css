@@ -8371,19 +8371,22 @@ html, body, .app-shell, main {
   display: none !important;
 }
 
-/* 16. Premium Floating Bottom Navigation on Desktop */
+/* 16. Full-Width Bottom Navigation on Desktop and Mobile */
 .mobile-bottom-nav {
   display: grid !important;
   grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   align-content: center !important;
-  max-width: 480px !important;
-  left: 50% !important;
-  right: auto !important;
-  transform: translateX(-50%) !important;
-  bottom: 24px !important;
-  border-radius: 980px !important;
-  border: 1px solid #1e1f2b !important;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6) !important;
+  max-width: 100% !important;
+  left: 0 !important;
+  right: 0 !important;
+  transform: none !important;
+  bottom: 0 !important;
+  border-radius: 0 !important;
+  border-top: 1px solid #1e1f2b !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: none !important;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.6) !important;
   padding-bottom: 0 !important;
 }
 
