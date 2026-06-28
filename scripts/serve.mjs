@@ -3656,6 +3656,8 @@ const runWithConcurrency = async (items, limit, worker) => {
         const currentIndex = nextIndex;
         nextIndex += 1;
         results[currentIndex] = await worker(items[currentIndex], currentIndex);
+        // Yield to the event loop to allow incoming HTTP requests/health pings to be handled
+        await new Promise(resolve => setImmediate(resolve));
       }
     })
   );
@@ -4413,6 +4415,12 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
       publishStatus.is_running = false;
       publishStatus.last_finished_at = new Date().toISOString();
       console.log("[STARTUP] Pre-population from Shelby finished. Server is ready to handle traffic.");
+      
+      setTimeout(() => {
+        console.log("[STARTUP] Triggering initial background scheduled feed refresh now that server is ready...");
+        void refreshPublishedFeeds("scheduled");
+      }, 1000);
+
       return { skipped: false, status: publishStatus };
     }
 
@@ -4422,23 +4430,6 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
     for (const category of sourceCategories) {
       try {
         resetThreadReviewBudget();
-        
-        // Optimize: Check if today's snapshot already exists (locally or on Shelby)
-        // to prevent wasteful daily regenerations that starve the server's CPU.
-        const today = getTodayKey();
-        const existing = await getRecoverablePublishedSnapshot(category);
-        if (existing?.date === today && hasRealStories(existing)) {
-          console.log(`[SCHEDULED] Today's snapshot for category ${category} already exists. Skipping generation.`);
-          publishedSnapshots.set(category, existing);
-          publishStatus.categories[category] = {
-            status: "kept_previous",
-            story_count: existing.top_stories?.length ?? 0,
-            published_at: existing.published_at,
-            archive_provider: existing.archive?.provider ?? "unknown"
-          };
-          continue;
-        }
-
         const snapshot = await generateAndPublishFeed(category);
         publishedSnapshots.set(category, snapshot);
         publishStatus.categories[category] = {
@@ -4459,6 +4450,8 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
         };
         console.warn(`Failed to publish ${category}:`, error.message);
       }
+      // Yield to the event loop between category generations to prevent CPU starvation
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     const allSnapshot = await buildAllSnapshotFromCategories();
@@ -4545,13 +4538,6 @@ if (isMain) {
   } else {
     void refreshPublishedFeeds("startup");
   }
-
-  // Trigger an initial background scheduled refresh 5 seconds after boot
-  // so the server starts serving today's news shortly after waking up
-  setTimeout(() => {
-    console.log("[STARTUP] Triggering initial background scheduled feed refresh to get fresh news...");
-    void refreshPublishedFeeds("scheduled");
-  }, 5000);
 
   setInterval(() => void refreshPublishedFeeds("scheduled"), Math.max(1, refreshIntervalMinutes) * 60 * 1000);
 }
