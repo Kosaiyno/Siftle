@@ -8543,8 +8543,7 @@ html, body, .app-shell, main {
 }
 
 .leaderboard-row.user-highlight {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border-color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.05) !important;
 }
 
 .zone-tag {
@@ -8683,4 +8682,40 @@ html, body, .app-shell, main {
   transform: scale(1.02) !important;
   opacity: 1 !important;
 }
+
+/* 18. Strict Mobile Viewport Overrides (Forces alignment and prevents cut-offs on iPhone SE and other small screens) */
+@media (max-width: 640px) {
+  .division-title-container {
+    gap: 4px !important;
+    margin-bottom: 16px !important;
+    padding: 0 !important;
+  }
+  .division-title-left {
+    gap: 6px !important;
+  }
+  .division-title-left h2 {
+    font-size: 1.05rem !important;
+  }
+  .how-it-works-btn {
+    font-size: 0.72rem !important;
+    padding: 3px 6px !important;
+  }
+  .division-select-menu {
+    padding: 4px 6px !important;
+    font-size: 0.75rem !important;
+    max-width: 105px !important;
+  }
+  
+  /* Leaderboard Row spacing and size optimizations for small viewports */
+  .leaderboard-row {
+    padding: 10px 8px !important;
+  }
+  .leaderboard-username {
+    font-size: 0.76rem !important;
+  }
+  .leaderboard-row div span {
+    font-size: 0.74rem !important;
+  }
+}
+
 
