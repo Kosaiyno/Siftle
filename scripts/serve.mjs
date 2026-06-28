@@ -2320,7 +2320,7 @@ const fallbackImages = {
   Sports: [
     "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
     "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1200&q=80"
+    "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80"
   ],
   Anime: [
     "https://images.unsplash.com/photo-1613376023733-0a73315d9b06?auto=format&fit=crop&w=1200&q=80",
@@ -3752,9 +3752,7 @@ const sanitizeSnapshotForCategory = (snapshot) => {
         : () => true;
 
   const categoryStories = snapshot.top_stories.filter((story) => isPredictionMarketFriendly(story) && storyFilter(story));
-  const filteredStories = categoryStories.some((story) => !isDevelopmentFallbackStory(story))
-    ? categoryStories.filter((story) => !isDevelopmentFallbackStory(story))
-    : categoryStories;
+  const filteredStories = categoryStories.filter((story) => !isDevelopmentFallbackStory(story));
   const validThreads = {};
   const sanitizedStories = filteredStories.map((story, index) => {
     const url = normalizeStoryUrl(story.sourceUrl);

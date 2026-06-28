@@ -7890,11 +7890,7 @@ body::before {
    ========================================================================== */
 
 /* 1. Typography & Classy Pairing */
-*, *::before, *::after, html, body, button, input, select, textarea, span, p, strong, small, a, div, section, header, nav, article {
-  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
-}
-
-h1, h2, h3, h4, h5, h6, .brand-lockup span, .site-header .brand-lockup span {
+*, *::before, *::after, html, body, button, input, select, textarea, span, p, strong, small, a, div, section, header, nav, article, h1, h2, h3, h4, h5, h6, .brand-lockup span, .site-header .brand-lockup span {
   font-family: 'Cormorant Garamond', 'Times New Roman', serif !important;
 }
 
@@ -8112,5 +8108,37 @@ html, body, .app-shell, main {
     padding-bottom: 100px !important;
   }
 }
+
+/* 12. Trade Button & AI Briefing visibility fixes */
+.sticky-trade-btn, .market-submit-button {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #ffffff !important;
+  border-radius: 980px !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.95rem !important;
+}
+
+.sticky-trade-btn:hover, .market-submit-button:hover {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.9) !important;
+  transform: scale(1.02) !important;
+}
+
+.detail-summary strong {
+  color: #ffffff !important;
+  font-size: 0.85rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  font-weight: 700 !important;
+  display: block !important;
+  margin-bottom: 8px !important;
+}
+
 
 
