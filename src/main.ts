@@ -2191,8 +2191,8 @@ const renderLeaderboard = (): void => {
             <strong>+50 pts</strong> if you switched sides and ultimately finished on the winning side.</p>
           </div>
           <div class="rules-section">
-            <h3>▲ Promotion & Relegation ▼</h3>
-            <p>At the end of the season, the top 2 players are promoted to the next division up, and the bottom 2 are relegated to the division below.</p>
+            <h3>🔄 Division Rebalancing</h3>
+            <p>At the end of each season, divisions are dynamically restructured. You are matched and regrouped into a new 6-player league with competitors who finished the season with similar point totals. Depending on your performance, you may face higher or lower tier matchups next season to keep the competition balanced, fair, and fun.</p>
           </div>
         </div>
       </div>
@@ -2347,16 +2347,16 @@ const renderLeaderboard = (): void => {
   const closeRulesModalBtn = document.getElementById("closeRulesModalBtn");
 
   howItWorksBtn?.addEventListener("click", () => {
-    if (howItWorksModal) howItWorksModal.style.display = "flex";
+    if (howItWorksModal) howItWorksModal.classList.add("active");
   });
 
   closeRulesModalBtn?.addEventListener("click", () => {
-    if (howItWorksModal) howItWorksModal.style.display = "none";
+    if (howItWorksModal) howItWorksModal.classList.remove("active");
   });
 
   howItWorksModal?.addEventListener("click", (e) => {
     if (e.target === howItWorksModal) {
-      howItWorksModal.style.display = "none";
+      howItWorksModal.classList.remove("active");
     }
   });
 };
