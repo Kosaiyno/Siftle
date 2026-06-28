@@ -82,7 +82,7 @@ const mimeTypes = new Map([
   [".webp", "image/webp"]
 ]);
 
-const categories = ["All", "Crypto", "Sports", "Anime", "Tech", "Gaming"];
+const categories = ["All", "Sports"];
 const sourceCategories = categories.filter((category) => category !== "All");
 const archiveDir = join(root, ".siftle", "archive");
 const publishedDir = join(root, ".siftle", "published");
@@ -371,45 +371,18 @@ const isPaidSource = (article) => {
 };
 
 const rssFeeds = {
-  Crypto: [
-    "https://www.coindesk.com/arc/outboundfeeds/rss/",
-    "https://cointelegraph.com/rss",
-    "https://decrypt.co/feed",
-    "https://bitcoinmagazine.com/.rss/full/",
-    "https://www.newsbtc.com/feed/",
-    "https://bitcoinist.com/feed/",
-    "https://airdropalert.com/feed/rssfeed",
-    "https://bankless.com/feed",
-    "https://thedefiant.io/feed/",
-    "https://medium.com/feed/@slowmist",
-    "https://blog.trailofbits.com/feed/"
-  ],
   Sports: [
     "https://feeds.bbci.co.uk/sport/football/rss.xml",
     "https://www.theguardian.com/football/rss",
     "https://www.transfermarkt.co.uk/rss/news",
-    "https://www.hoopsrumors.com/feed/"
-  ],
-  Anime: [
-    "https://myanimelist.net/rss/news.xml",
-    "https://animecorner.me/feed/",
-    "https://www.animenewsnetwork.com/all/rss.xml",
-    "https://honeysanime.com/feed/"
-  ],
-  Tech: [
-    "https://www.theverge.com/rss/index.xml",
-    "https://techcrunch.com/feed/",
-    "https://www.engadget.com/rss.xml",
-    "https://feeds.arstechnica.com/arstechnica/index",
-    "https://www.zdnet.com/news/rss.xml",
-    "https://github.blog/feed/"
-  ],
-  Gaming: [
-    "https://www.videogameschronicle.com/category/news/feed/",
-    "https://www.gamesindustry.biz/feed/news",
-    "https://www.rockpapershotgun.com/feed",
-    "https://www.dualshockers.com/feed/video-games/",
-    "https://www.pcgamer.com/rss/"
+    "https://www.skysports.com/rss/12040",
+    "https://www.caughtoffside.com/feed/",
+    "https://www.football365.com/transfer-gossip/feed",
+    "https://www.90min.com/posts.rss",
+    "https://e00-marca.uecdn.es/rss/en/index.xml",
+    "https://www.football-espana.net/feed",
+    "https://football-italia.net/feed/",
+    "https://bulinews.com/rss.xml"
   ]
 };
 

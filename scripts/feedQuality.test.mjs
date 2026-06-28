@@ -4,7 +4,7 @@ import { analyzeFeedSnapshot, assertFeedSnapshotQuality, isSortedNewestFirst } f
 
 const story = (headline, publishedAt, sourceUrl = `https://news.example/${encodeURIComponent(headline)}`) => ({
   headline,
-  category: "Crypto",
+  category: "Sports",
   source: "Test Source",
   sourceUrl,
   publishedAt,
@@ -14,10 +14,10 @@ const story = (headline, publishedAt, sourceUrl = `https://news.example/${encode
 
 test("feed health flags development fallback mixed with real stories", () => {
   const snapshot = {
-    category: "Crypto",
+    category: "Sports",
     generated_at: "2026-06-06T12:00:00.000Z",
     top_stories: [
-      story("Real crypto story", "2026-06-06T11:30:00.000Z", "https://coindesk.com/story"),
+      story("Real sports story", "2026-06-06T11:30:00.000Z", "https://coindesk.com/story"),
       story("Mock fallback story", "2026-06-06T11:45:00.000Z", "https://example.com/mock")
     ]
   };
@@ -30,7 +30,7 @@ test("feed health flags development fallback mixed with real stories", () => {
 
 test("feed health accepts real stories sorted newest first", () => {
   const snapshot = {
-    category: "Crypto",
+    category: "Sports",
     generated_at: "2026-06-06T12:00:00.000Z",
     top_stories: [
       story("Newest", "2026-06-06T11:45:00.000Z", "https://coindesk.com/newest"),

@@ -22,7 +22,7 @@ declare global {
   }
 }
 
-const categories: Category[] = ["All", "Gaming", "Sports", "Anime", "Crypto", "Tech"];
+const categories: Category[] = ["Sports"];
 
 const apiBase = (window.SIFTLE_API_BASE || "").replace(/\/$/, "");
 const apiUrl = (path: string): string => `${apiBase}${path}`;
@@ -90,7 +90,7 @@ const state: {
   walletConnecting: false,
   walletAddress: null,
   walletBalance: null,
-  activeCategory: "All",
+  activeCategory: "Sports",
   stories: [],
   isLoading: false,
   selectedStoryId: null,
