@@ -8236,6 +8236,9 @@ html, body, .app-shell, main {
   border-top: 1px solid #1e1f2b !important;
   box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.6) !important;
   z-index: 1000 !important;
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  align-content: center !important;
 }
 
 .mobile-bottom-nav button {
@@ -8370,7 +8373,9 @@ html, body, .app-shell, main {
 
 /* 16. Premium Floating Bottom Navigation on Desktop */
 .mobile-bottom-nav {
-  display: flex !important;
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  align-content: center !important;
   max-width: 480px !important;
   left: 50% !important;
   right: auto !important;

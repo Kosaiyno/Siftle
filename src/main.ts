@@ -744,7 +744,7 @@ const loadMarketEvidence = async (market: MarketPreview): Promise<void> => {
 
   state.loadingMarketEvidence[market.id] = true;
   try {
-    const threadResponse = await fetch(apiUrl(`/api/market-thread?id=${encodeURIComponent(market.id)}`));
+    const threadResponse = await fetch(apiUrl(`/api/market-thread?id=${encodeURIComponent(market.id)}&nocache=${Date.now()}`));
     if (!threadResponse.ok) return;
 
     const thread = (await threadResponse.json()) as StoryThread;
