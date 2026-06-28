@@ -71,8 +71,10 @@ const state: {
   showSaved: boolean;
   tradeDrawerOpen: boolean;
   activeMarketTimeframe: "All" | "Daily" | "Weekly" | "Sagas";
+  profileUsername: string | null;
 } = {
   activeSurface: "markets",
+  profileUsername: localStorage.getItem("siftle_profile_username") || null,
   selectedMarketId: null,
   marketOrderMode: "buy",
   marketTradeSide: "yes",
@@ -867,9 +869,18 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
     // Update cost basis in localStorage
     if (state.walletAddress) {
       const costKey = `siftle_cost_basis_${market.id}_${state.walletAddress.toLowerCase()}`;
-      let costBasis = { yesCost: 0, noCost: 0 };
+      let costBasis = { yesCost: 0, noCost: 0, yesShares: 0, noShares: 0 };
       try {
-        costBasis = JSON.parse(localStorage.getItem(costKey) || '{"yesCost":0,"noCost":0}');
+        const stored = localStorage.getItem(costKey);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          costBasis = {
+            yesCost: parsed.yesCost || 0,
+            noCost: parsed.noCost || 0,
+            yesShares: parsed.yesShares || 0,
+            noShares: parsed.noShares || 0
+          };
+        }
       } catch {}
 
       const tradeAmountNum = Math.max(0, Number(state.marketTradeAmount) || 0);
@@ -887,18 +898,22 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
 
         if (side === "yes") {
           costBasis.yesCost += tradeAmountNum;
+          costBasis.yesShares = (costBasis.yesShares || 0) + (tradeAmountNum / (yesPrice / 100));
         } else {
           costBasis.noCost += tradeAmountNum;
+          costBasis.noShares = (costBasis.noShares || 0) + (tradeAmountNum / (noPrice / 100));
         }
       } else {
         const position = state.marketPositions[market.id];
         if (position) {
           if (side === "yes" && position.yesSharesUsdc > 0) {
-            const sellRatio = Math.min(1, tradeAmountNum / (position.yesSharesUsdc * (yesPrice / 100)));
+            const sellRatio = Math.min(1, tradeAmountNum / position.yesSharesUsdc);
             costBasis.yesCost = Math.max(0, costBasis.yesCost - costBasis.yesCost * sellRatio);
+            costBasis.yesShares = Math.max(0, (costBasis.yesShares || 0) - (costBasis.yesShares || 0) * sellRatio);
           } else if (side === "no" && position.noSharesUsdc > 0) {
-            const sellRatio = Math.min(1, tradeAmountNum / (position.noSharesUsdc * (noPrice / 100)));
+            const sellRatio = Math.min(1, tradeAmountNum / position.noSharesUsdc);
             costBasis.noCost = Math.max(0, costBasis.noCost - costBasis.noCost * sellRatio);
+            costBasis.noShares = Math.max(0, (costBasis.noShares || 0) - (costBasis.noShares || 0) * sellRatio);
           }
         }
       }
@@ -1739,12 +1754,14 @@ const renderMarketDetail = (market: MarketPreview): void => {
   const hasPosition = position.yesSharesUsdc > 0 || position.noSharesUsdc > 0;
   let pnlHtml = "";
   if (hasPosition && state.walletAddress) {
-    let costBasis = { yesCost: 0, noCost: 0 };
+    let costBasis = { yesCost: 0, noCost: 0, yesShares: 0, noShares: 0 };
     try {
-      costBasis = JSON.parse(localStorage.getItem(`siftle_cost_basis_${market.id}_${state.walletAddress.toLowerCase()}`) || '{"yesCost":0,"noCost":0}');
+      costBasis = JSON.parse(localStorage.getItem(`siftle_cost_basis_${market.id}_${state.walletAddress.toLowerCase()}`) || '{"yesCost":0,"noCost":0,"yesShares":0,"noShares":0}');
     } catch {}
-    const yesVal = position.yesSharesUsdc * (yesPrice / 100);
-    const noVal = position.noSharesUsdc * (noPrice / 100);
+    const yesShares = costBasis.yesShares || (position.yesSharesUsdc / (yesPrice / 100));
+    const noShares = costBasis.noShares || (position.noSharesUsdc / (noPrice / 100));
+    const yesVal = yesShares * (yesPrice / 100);
+    const noVal = noShares * (noPrice / 100);
     const currentVal = yesVal + noVal;
     const totalCost = costBasis.yesCost + costBasis.noCost;
     const pnl = currentVal - totalCost;
@@ -1757,11 +1774,11 @@ const renderMarketDetail = (market: MarketPreview): void => {
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 8px;">
           <div>
             <span style="font-size: 0.72rem; color: #94A3B8; display: block; margin-bottom: 2px;">YES Shares</span>
-            <strong style="font-size: 0.95rem; color: #FFFFFF;">${formatMoney(position.yesSharesUsdc)} <span style="font-size: 0.75rem; color: #94A3B8; font-weight: normal;">(value: $${yesVal.toFixed(2)})</span></strong>
+            <strong style="font-size: 0.95rem; color: #FFFFFF;">${formatMoney(yesShares)} <span style="font-size: 0.75rem; color: #94A3B8; font-weight: normal;">(value: $${yesVal.toFixed(2)})</span></strong>
           </div>
           <div>
             <span style="font-size: 0.72rem; color: #94A3B8; display: block; margin-bottom: 2px;">NO Shares</span>
-            <strong style="font-size: 0.95rem; color: #FFFFFF;">${formatMoney(position.noSharesUsdc)} <span style="font-size: 0.75rem; color: #94A3B8; font-weight: normal;">(value: $${noVal.toFixed(2)})</span></strong>
+            <strong style="font-size: 0.95rem; color: #FFFFFF;">${formatMoney(noShares)} <span style="font-size: 0.75rem; color: #94A3B8; font-weight: normal;">(value: $${noVal.toFixed(2)})</span></strong>
           </div>
         </div>
         <div style="border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 8px; display: flex; justify-content: space-between; align-items: center;">
@@ -2243,7 +2260,10 @@ const renderLeaderboard = (): void => {
             listContainer.innerHTML = players.map((player: any, idx: number) => {
               const rank = idx + 1;
               const isUser = state.walletAddress && player.username.toLowerCase() === state.walletAddress.toLowerCase();
-              const displayName = isUser ? `${shortenAddress(player.username)} (You)` : shortenAddress(player.username);
+              const resolvedUsername = isUser && state.profileUsername ? state.profileUsername : player.username;
+              const displayName = isUser
+                ? `${state.profileUsername ? resolvedUsername : shortenAddress(player.username)} (You)`
+                : (resolvedUsername.startsWith("0x") && resolvedUsername.length === 42 ? shortenAddress(resolvedUsername) : resolvedUsername);
 
               let zoneClass = "safety-zone";
               let arrowHtml = '<span style="color: transparent; font-weight: bold; font-size: 0.85rem; margin-right: 4px; display: inline-block; width: 10px;">•</span>';
@@ -2384,21 +2404,25 @@ const getMarketOutcomeLabel = (outcome?: number): string => {
 const renderPortfolioPositionCard = (market: MarketPreview): string => {
   const position = state.marketPositions[market.id] || { yesSharesUsdc: 0, noSharesUsdc: 0 };
   const snapshot = state.marketSnapshots[market.id];
-  const totalShares = position.yesSharesUsdc + position.noSharesUsdc;
   const yesPrice = (snapshot?.yesPriceCents ?? market.probability);
   const noPrice = (snapshot?.noPriceCents ?? 100 - market.probability);
-  const yesValue = position.yesSharesUsdc * (yesPrice / 100);
-  const noValue = position.noSharesUsdc * (noPrice / 100);
-  const currentValue = yesValue + noValue;
   const outcome = getMarketOutcomeLabel(snapshot?.outcome);
 
   // Read cost basis
-  let costBasis = { yesCost: 0, noCost: 0 };
+  let costBasis = { yesCost: 0, noCost: 0, yesShares: 0, noShares: 0 };
   if (state.walletAddress) {
     try {
-      costBasis = JSON.parse(localStorage.getItem(`siftle_cost_basis_${market.id}_${state.walletAddress.toLowerCase()}`) || '{"yesCost":0,"noCost":0}');
+      costBasis = JSON.parse(localStorage.getItem(`siftle_cost_basis_${market.id}_${state.walletAddress.toLowerCase()}`) || '{"yesCost":0,"noCost":0,"yesShares":0,"noShares":0}');
     } catch {}
   }
+
+  const yesShares = costBasis.yesShares || (position.yesSharesUsdc / (yesPrice / 100));
+  const noShares = costBasis.noShares || (position.noSharesUsdc / (noPrice / 100));
+  const yesValue = yesShares * (yesPrice / 100);
+  const noValue = noShares * (noPrice / 100);
+  const currentValue = yesValue + noValue;
+  const totalShares = yesShares + noShares;
+
   const totalCost = costBasis.yesCost + costBasis.noCost;
   const pnl = currentValue - totalCost;
   const pnlPercent = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
@@ -2417,11 +2441,11 @@ const renderPortfolioPositionCard = (market: MarketPreview): string => {
       <h2>${market.question}</h2>
       <div class="portfolio-position-stats">
         <div><span>Current value</span><strong>$${formatMoney(currentValue)} ${pnlHtml}</strong></div>
-        <div><span>Yes shares</span><strong>$${formatMoney(position.yesSharesUsdc)}</strong></div>
-        <div><span>No shares</span><strong>$${formatMoney(position.noSharesUsdc)}</strong></div>
+        <div><span>Yes shares</span><strong>${formatMoney(yesShares)} <span style="font-weight: normal; font-size: 0.72rem; color: #94A3B8;">(value: $${formatMoney(yesValue)})</span></strong></div>
+        <div><span>No shares</span><strong>${formatMoney(noShares)} <span style="font-weight: normal; font-size: 0.72rem; color: #94A3B8;">(value: $${formatMoney(noValue)})</span></strong></div>
       </div>
       <div class="portfolio-position-footer">
-        <span>${totalShares > 0 ? `$${formatMoney(totalShares)} total shares` : "No shares"}</span>
+        <span>${totalCost > 0 ? `Total Cost: $${formatMoney(totalCost)}` : ""}</span>
         <span>Closes ${market.closes}</span>
       </div>
     </article>
@@ -2449,36 +2473,69 @@ const renderPortfolio = (): void => {
   });
   const openPositions = portfolioMarkets.filter((market) => (state.marketSnapshots[market.id]?.outcome ?? 0) === 0);
   const finalizedPositions = portfolioMarkets.filter((market) => (state.marketSnapshots[market.id]?.outcome ?? 0) !== 0);
+  const walletConnected = !!state.walletAddress;
+  const usernameDisplay = state.profileUsername || (state.walletAddress ? shortenAddress(state.walletAddress) : "Anonymous");
+  const avatarLetter = usernameDisplay.charAt(0).toUpperCase();
+
   storyList.innerHTML = `
     <section class="portfolio-surface">
-      <header>
-        <span>Arc Testnet</span>
-        <h1>Portfolio</h1>
-        <p>Track your open shares, resolved outcomes, and available Arc testnet USDC.</p>
-      </header>
-      <div class="portfolio-wallet-state">
-        <div>
-          <span>Available balance</span>
-          <strong>${state.walletAddress
-            ? state.walletBalance === null
-              ? `<span class="skeleton wallet-balance-skeleton" aria-hidden="true"></span>${renderSkeletonAria("Loading wallet balance")}`
-              : `${state.walletBalance} USDC`
-            : "Sign in"}</strong>
-          ${state.walletAddress ? `
-            <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
-              <small style="color: #748099; font-family: monospace; font-size: 0.78rem;">${shortenAddress(state.walletAddress)}</small>
-              <button type="button" class="copy-address-btn" data-address="${state.walletAddress}" title="Copy Address">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                Copy
-              </button>
-              <a href="https://faucet.circle.com/" target="_blank" rel="noreferrer" class="faucet-link" title="Get free testnet USDC">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                Get Faucet USDC
-              </a>
+      <div class="profile-card" style="background: rgba(255, 255, 255, 0.02) !important; border: 1px solid #1e1f2b !important; border-radius: 12px !important; padding: 24px !important; margin-bottom: 24px !important; box-sizing: border-box !important;">
+        <div class="profile-avatar-container" style="display: flex !important; align-items: center !important; gap: 16px !important;">
+          <div class="profile-avatar-gradient" style="width: 54px !important; height: 54px !important; border-radius: 50% !important; background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important; display: flex !important; align-items: center !important; justify-content: center !important; flex-shrink: 0 !important; border: 1px solid rgba(255, 255, 255, 0.1) !important;">
+            <span class="avatar-letter" style="color: #ffffff !important; font-family: 'Space Grotesk', sans-serif !important; font-size: 1.45rem !important; font-weight: 750 !important;">${avatarLetter}</span>
+          </div>
+          <div class="profile-details" style="display: flex !important; flex-direction: column !important; min-width: 0 !important;">
+            <div class="username-display-row" style="display: flex !important; align-items: center !important; gap: 8px !important;">
+              <span class="profile-username" style="font-family: 'Space Grotesk', sans-serif !important; font-size: 1.35rem !important; font-weight: 750 !important; color: #ffffff !important; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis !important; max-width: 180px !important;">${usernameDisplay}</span>
+              ${walletConnected ? `
+                <button type="button" class="edit-username-btn" id="editUsernameBtn" style="background: transparent !important; border: none !important; color: #8e8e93 !important; cursor: pointer !important; padding: 4px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; transition: color 0.2s ease !important; outline: none !important;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none !important;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path></svg>
+                </button>
+              ` : ""}
             </div>
-          ` : `<small>Sign in to see your balance and positions.</small>`}
+            ${walletConnected ? `
+              <div class="wallet-address-row" style="display: flex !important; align-items: center !important; gap: 8px !important; margin-top: 4px !important;">
+                <small style="color: #748099 !important; font-family: monospace !important; font-size: 0.78rem !important;">${shortenAddress(state.walletAddress!)}</small>
+                <button type="button" class="copy-address-btn" data-address="${state.walletAddress}" style="background: rgba(255,255,255,0.04) !important; border: 1px solid rgba(255,255,255,0.06) !important; color: #8e8e93 !important; border-radius: 4px !important; padding: 2px 6px !important; font-size: 0.7rem !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 4px !important; transition: all 0.2s ease !important; outline: none !important;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none !important;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  Copy
+                </button>
+              </div>
+            ` : `<small style="color: #748099 !important; font-size: 0.8rem !important; display: block !important; margin-top: 4px !important;">Connect wallet to customize profile</small>`}
+          </div>
         </div>
-        <button type="button" data-connect-wallet ${state.walletConnecting ? "disabled" : ""}>${state.walletConnecting ? "Signing in..." : state.walletAddress ? "Disconnect wallet" : "Sign in"}</button>
+
+        ${walletConnected ? `
+          <div class="profile-username-edit-form" id="usernameEditForm" style="display: none !important; align-items: center !important; gap: 8px !important; margin-top: 16px !important; width: 100% !important;">
+            <input type="text" id="usernameInput" placeholder="Enter username..." value="${state.profileUsername || ""}" maxlength="15" style="flex: 1 !important; background: #090a0f !important; border: 1px solid #1e1f2b !important; border-radius: 6px !important; padding: 8px 12px !important; color: #ffffff !important; font-size: 0.85rem !important; outline: none !important; font-family: 'Outfit', sans-serif !important;" />
+            <button type="button" class="save-username-btn" id="saveUsernameBtn" style="background: #ffffff !important; color: #000000 !important; border: 1px solid #ffffff !important; border-radius: 6px !important; padding: 8px 14px !important; font-size: 0.82rem !important; font-weight: 700 !important; cursor: pointer !important; transition: all 0.2s ease !important; outline: none !important;">Save</button>
+            <button type="button" class="cancel-username-btn" id="cancelUsernameBtn" style="background: transparent !important; color: #8e8e93 !important; border: 1px solid #1e1f2b !important; border-radius: 6px !important; padding: 8px 12px !important; font-size: 0.82rem !important; cursor: pointer !important; transition: all 0.2s ease !important; outline: none !important;">Cancel</button>
+          </div>
+        ` : ""}
+
+        <div class="portfolio-wallet-balance-row" style="margin-top: 24px !important; padding-top: 16px !important; border-top: 1px solid #1e1f2b !important; display: flex !important; justify-content: space-between !important; align-items: center !important; flex-wrap: wrap !important; gap: 12px !important;">
+          <div>
+            <span style="font-size: 0.72rem !important; color: #8e8e93 !important; display: block !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; margin-bottom: 2px !important;">Available Balance</span>
+            <strong style="font-size: 1.25rem !important; color: #ffffff !important; font-family: 'Space Grotesk', sans-serif !important;">
+              ${state.walletAddress
+                ? state.walletBalance === null
+                  ? `<span class="skeleton wallet-balance-skeleton" aria-hidden="true" style="display: inline-block !important; width: 80px !important; height: 20px !important; vertical-align: middle !important;"></span>${renderSkeletonAria("Loading wallet balance")}`
+                  : `${state.walletBalance} USDC`
+                : "0.00 USDC"}
+            </strong>
+          </div>
+          <div style="display: flex !important; align-items: center !important; gap: 8px !important;">
+            ${walletConnected ? `
+              <a href="https://faucet.circle.com/" target="_blank" rel="noreferrer" class="faucet-link" style="background: transparent !important; border: 1px solid #1e1f2b !important; color: #8e8e93 !important; border-radius: 6px !important; padding: 8px 12px !important; font-size: 0.8rem !important; text-decoration: none !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; transition: all 0.2s ease !important;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none !important;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                Get USDC
+              </a>
+            ` : ""}
+            <button type="button" class="connect-wallet-btn" data-connect-wallet style="background: #ffffff !important; color: #000000 !important; border: 1px solid #ffffff !important; border-radius: 6px !important; padding: 8px 16px !important; font-size: 0.82rem !important; font-weight: 700 !important; cursor: pointer !important; transition: all 0.2s ease !important; outline: none !important;" ${state.walletConnecting ? "disabled" : ""}>
+              ${state.walletConnecting ? "Connecting..." : state.walletAddress ? "Disconnect" : "Connect Wallet"}
+            </button>
+          </div>
+        </div>
       </div>
       <div class="portfolio-section-tabs">
         <span>Open ${openPositions.length}</span>
@@ -2653,6 +2710,49 @@ todayButton?.addEventListener("click", () => {
 
 storyList?.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
+
+  // Profile username edit/cancel/save handlers
+  const editBtn = target.closest("#editUsernameBtn");
+  if (editBtn) {
+    const displayRow = storyList?.querySelector(".username-display-row");
+    const editForm = storyList?.querySelector("#usernameEditForm");
+    if (displayRow && editForm) {
+      (displayRow as HTMLElement).style.display = "none";
+      (editForm as HTMLElement).style.display = "flex";
+      const input = editForm.querySelector<HTMLInputElement>("#usernameInput");
+      if (input) input.focus();
+    }
+    return;
+  }
+
+  const cancelBtn = target.closest("#cancelUsernameBtn");
+  if (cancelBtn) {
+    const displayRow = storyList?.querySelector(".username-display-row");
+    const editForm = storyList?.querySelector("#usernameEditForm");
+    if (displayRow && editForm) {
+      (displayRow as HTMLElement).style.display = "flex";
+      (editForm as HTMLElement).style.display = "none";
+    }
+    return;
+  }
+
+  const saveBtn = target.closest("#saveUsernameBtn");
+  if (saveBtn) {
+    const editForm = storyList?.querySelector("#usernameEditForm");
+    const input = editForm?.querySelector<HTMLInputElement>("#usernameInput");
+    if (input) {
+      const newUsername = input.value.trim().slice(0, 15);
+      state.profileUsername = newUsername || null;
+      if (newUsername) {
+        localStorage.setItem("siftle_profile_username", newUsername);
+      } else {
+        localStorage.removeItem("siftle_profile_username");
+      }
+      showActionToast("Username updated");
+      renderPortfolio();
+    }
+    return;
+  }
 
   const timeframeBtn = target.closest<HTMLButtonElement>("[data-timeframe]");
   if (timeframeBtn) {

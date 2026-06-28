@@ -8718,4 +8718,50 @@ html, body, .app-shell, main {
   }
 }
 
+/* 19. Profile Card and Username Editing Styles */
+.profile-card {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.profile-card:hover {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4) !important;
+}
+
+.profile-avatar-gradient {
+  box-shadow: 0 0 16px rgba(59, 130, 246, 0.2) !important;
+}
+
+.edit-username-btn:hover {
+  color: #ffffff !important;
+  transform: scale(1.05) !important;
+}
+
+.copy-address-btn:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.save-username-btn:hover {
+  background: rgba(255, 255, 255, 0.9) !important;
+  transform: scale(1.02) !important;
+}
+
+.cancel-username-btn:hover {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+.faucet-link:hover {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+.connect-wallet-btn:hover {
+  background: rgba(255, 255, 255, 0.9) !important;
+  transform: scale(1.02) !important;
+}
+
 
