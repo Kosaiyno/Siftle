@@ -2139,9 +2139,9 @@ const renderLeaderboard = (): void => {
       </div>
 
       <div class="division-title-container">
-        <div class="division-title-left" style="display: flex; align-items: center; gap: 12px;">
-          <h2 id="divisionTitleText" style="margin: 0;">Division 1</h2>
-          <button class="how-it-works-btn" id="howItWorksBtn" type="button" style="background: rgba(255,255,255,0.06) !important; border: 1px solid #1e1f2b !important; color: #ffffff !important; border-radius: 6px !important; padding: 4px 10px !important; font-size: 0.82rem !important; font-weight: 600 !important; cursor: pointer !important; font-family: 'Space Grotesk', sans-serif !important;">How it works</button>
+        <div class="division-title-left" style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap !important; flex-shrink: 0 !important;">
+          <h2 id="divisionTitleText" style="margin: 0; white-space: nowrap !important;">Division 1</h2>
+          <button class="how-it-works-btn" id="howItWorksBtn" type="button" style="background: rgba(255,255,255,0.06) !important; border: 1px solid #1e1f2b !important; color: #ffffff !important; border-radius: 6px !important; padding: 4px 10px !important; font-size: 0.82rem !important; font-weight: 600 !important; cursor: pointer !important; font-family: 'Space Grotesk', sans-serif !important; white-space: nowrap !important; flex-shrink: 0 !important;">How it works</button>
         </div>
         <select id="divisionSelector" class="division-select-menu">
           <option value="1">Division 1</option>
@@ -2246,25 +2246,30 @@ const renderLeaderboard = (): void => {
               const displayName = isUser ? `${shortenAddress(player.username)} (You)` : shortenAddress(player.username);
 
               let zoneClass = "safety-zone";
-              let zoneTag = "";
+              let arrowHtml = '<span style="color: transparent; font-weight: bold; font-size: 0.85rem; margin-right: 4px; display: inline-block; width: 10px;">•</span>';
               if (rank <= 2) {
                 zoneClass = "promotion-zone";
-                zoneTag = `<span class="zone-tag promotion">▲ Promoted</span>`;
+                arrowHtml = '<span style="color: #34d399; font-weight: bold; font-size: 0.85rem; margin-right: 4px; display: inline-block; width: 10px;">▲</span>';
               } else if (rank >= 5) {
                 zoneClass = "relegation-zone";
-                zoneTag = `<span class="zone-tag relegation">▼ Relegated</span>`;
+                arrowHtml = '<span style="color: #ef4444; font-weight: bold; font-size: 0.85rem; margin-right: 4px; display: inline-block; width: 10px;">▼</span>';
               }
 
               return `
-                <div class="leaderboard-row ${isUser ? 'user-highlight' : ''} ${zoneClass}" role="listitem">
-                  <div class="leaderboard-row-left">
-                    <span class="leaderboard-rank rank-${rank}">${rank}</span>
-                    <span class="leaderboard-username">${displayName}</span>
-                    ${zoneTag}
+                <div class="leaderboard-row ${isUser ? 'user-highlight' : ''} ${zoneClass}" role="listitem" style="display: flex !important; align-items: center !important; justify-content: space-between !important; padding: 12px 16px !important; border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important; margin-bottom: 0 !important; background: transparent !important; font-family: 'Space Grotesk', sans-serif !important;">
+                  <!-- Left Side: Arrow + Rank + Username -->
+                  <div style="flex: 1.5; display: flex; align-items: center; gap: 8px; min-width: 0;">
+                    ${arrowHtml}
+                    <span class="leaderboard-rank rank-${rank}" style="flex-shrink: 0; margin-right: 4px;">${rank}</span>
+                    <span class="leaderboard-username" style="font-weight: 600; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${displayName}</span>
                   </div>
-                  <div class="leaderboard-row-right" style="text-align: right;">
-                    <span class="leaderboard-roi" style="color: #ffffff; font-weight: bold;">${player.points} pts</span>
-                    <span class="leaderboard-profit">${player.status}</span>
+                  <!-- Center Side: Points -->
+                  <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
+                    <span style="color: #ffffff; font-weight: 750; font-size: 0.95rem; white-space: nowrap;">${player.points} pts</span>
+                  </div>
+                  <!-- Right Side: Status (Wins & Profits) -->
+                  <div style="flex: 1.5; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; text-align: right; min-width: 0;">
+                    <span style="font-size: 0.78rem; color: #8e8e93; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${player.status}</span>
                   </div>
                 </div>
               `;

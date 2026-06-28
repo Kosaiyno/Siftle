@@ -8431,15 +8431,18 @@ html, body, .app-shell, main {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  gap: 16px !important;
+  gap: 12px !important;
   margin-bottom: 20px !important;
   padding: 0 4px !important;
+  flex-wrap: nowrap !important;
 }
 
 .division-title-left {
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
+  flex-wrap: nowrap !important;
+  flex-shrink: 0 !important;
 }
 
 .division-title-left h2 {
@@ -8448,6 +8451,7 @@ html, body, .app-shell, main {
   font-weight: 750 !important;
   color: #ffffff !important;
   margin: 0 !important;
+  white-space: nowrap !important;
 }
 
 .how-it-works-btn {
