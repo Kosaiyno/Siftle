@@ -8135,6 +8135,201 @@ html, body, .app-shell, main {
   color: #ffffff !important;
   font-size: 0.85rem !important;
   text-transform: uppercase !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.5px !important;
+  color: #ffffff !important;
+}
+
+/* 4. Elegant Cards & Micro-Animations */
+.story-card, .market-card, .detail-card, .market-detail-card, .thread-card {
+  background: #12131a !important;
+  border: 1px solid #1e1f2b !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3) !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.story-card:hover, .market-card:hover {
+  background: #161722 !important;
+  border-color: #ffffff !important;
+  transform: translateY(-2px) scale(1.01) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* 5. Clean, Minimal Badges & Chips */
+.category-chip, .timeframe-chip, .market-card-updates, .mobile-card-time {
+  color: #ffffff !important;
+  background: #1c1e28 !important;
+  border: 1px solid #2c2e3d !important;
+  border-radius: 6px !important;
+  font-size: 0.68rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.05em !important;
+  padding: 4px 8px !important;
+  text-transform: uppercase !important;
+  box-shadow: none !important;
+}
+
+/* 6. Apple-style Rectangular Wallet Button */
+.site-header .wallet-button {
+  background: #ffffff !important;
+  border: 1px solid #ffffff !important;
+  color: #000000 !important;
+  border-radius: 6px !important; /* Classy rectangular button style */
+  font-weight: 600 !important;
+  font-size: 0.85rem !important;
+  padding: 8px 16px !important;
+  box-shadow: none !important;
+  transition: all 0.25s ease !important;
+}
+
+.site-header .wallet-button:hover {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.9) !important;
+  transform: scale(1.02) !important;
+}
+
+.site-header .wallet-button.connected {
+  background: #12131a !important;
+  border-color: #1e1f2b !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+  border-radius: 6px !important;
+}
+
+/* 7. Clean, Minimalist Yes/No Active Styles */
+.market-status-pill {
+  color: #34d399 !important;
+  background: rgba(52, 211, 153, 0.12) !important;
+}
+
+.market-side.yes.active {
+  background: rgba(52, 211, 153, 0.12) !important;
+  border-color: #34d399 !important;
+  color: #34d399 !important;
+}
+
+.market-side.yes.active strong {
+  color: #34d399 !important;
+}
+
+.market-side.no.active {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+}
+
+.market-side.no.active strong {
+  color: #ffffff !important;
+}
+
+/* 8. Pure Glassmorphic Bottom Nav */
+.mobile-bottom-nav {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 64px !important;
+  background: rgba(9, 10, 15, 0.85) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-top: 1px solid #1e1f2b !important;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.6) !important;
+  z-index: 1000 !important;
+}
+
+.mobile-bottom-nav button {
+  background: transparent !important;
+  color: #8e8e93 !important;
+  border: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.mobile-bottom-nav button.active {
+  background: transparent !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+}
+
+.mobile-bottom-nav button svg {
+  stroke: currentColor !important;
+}
+
+/* 9. Category Tabs overrides */
+.category-tabs {
+  background: #090a0f !important;
+  border-bottom: 1px solid #1e1f2b !important;
+}
+
+.category-tab {
+  background: #12131a !important;
+  border: 1px solid #1e1f2b !important;
+  color: #8e8e93 !important;
+}
+
+.category-tab.active {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #ffffff !important;
+}
+
+.category-tab:hover:not(.active) {
+  background: #1c1e28 !important;
+  color: #ffffff !important;
+  border-color: #2c2e3d !important;
+}
+
+/* 10. Apple-style Action Buttons */
+.mobile-action-btn.summary-btn, .summary-btn, .portfolio-wallet-state button:not(.copy-address-btn), .back-button, .share-whatsapp-btn {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #ffffff !important;
+  border-radius: 980px !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+
+.mobile-action-btn.source-btn, .mobile-action-btn.thread-btn, .card-source-button {
+  background: #12131a !important;
+  color: #ffffff !important;
+  border: 1px solid #1e1f2b !important;
+  border-radius: 980px !important;
+  font-weight: 600 !important;
+}
+
+/* 11. Mobile Spacing Fix (Prevent elements from being cut off by the sticky bottom nav) */
+@media (max-width: 640px) {
+  .app-shell {
+    padding-bottom: 100px !important;
+  }
+}
+
+/* 12. Trade Button & AI Briefing visibility fixes */
+.sticky-trade-btn, .market-submit-button {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #ffffff !important;
+  border-radius: 980px !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.95rem !important;
+}
+
+.sticky-trade-btn:hover, .market-submit-button:hover {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.9) !important;
+  transform: scale(1.02) !important;
+}
+
+.detail-summary strong {
+  color: #ffffff !important;
+  font-size: 0.85rem !important;
+  text-transform: uppercase !important;
   letter-spacing: 0.05em !important;
   font-weight: 700 !important;
   display: block !important;
@@ -8157,4 +8352,45 @@ html, body, .app-shell, main {
   gap: 12px !important;
   width: 100% !important;
   box-sizing: border-box !important;
+}
+
+/* 14. Fix Count Badge Vertical Wrapping */
+.timeframe-section-count-badge {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* 15. Hide redundant desktop top controls nav buttons */
+.desktop-header-nav {
+  display: none !important;
+}
+
+/* 16. Premium Floating Bottom Navigation on Desktop */
+.mobile-bottom-nav {
+  display: flex !important;
+  max-width: 480px !important;
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+  bottom: 24px !important;
+  border-radius: 980px !important;
+  border: 1px solid #1e1f2b !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6) !important;
+  padding-bottom: 0 !important;
+}
+
+@media (max-width: 640px) {
+  .mobile-bottom-nav {
+    max-width: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
+    transform: none !important;
+    bottom: 0 !important;
+    border-radius: 0 !important;
+    border-top: 1px solid #1e1f2b !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+  }
 }
