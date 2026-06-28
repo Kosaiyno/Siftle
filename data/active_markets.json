@@ -1,19 +1,5 @@
 [
   {
-    "id": "transfer-davies-realmadrid",
-    "category": "Sports",
-    "timeframe": "Sagas",
-    "question": "Will Real Madrid officially sign Alphonso Davies in the Summer Transfer Window?",
-    "probability": 72,
-    "closes": "September 1, 2026",
-    "resolution": "Resolves Yes if Real Madrid officially announces the transfer/signing of Alphonso Davies.",
-    "threadTopic": "Alphonso Davies Real Madrid Transfer Talks",
-    "volume": "$240K",
-    "traders": "1,450",
-    "liquidity": "$78K",
-    "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80"
-  },
-  {
     "id": "transfer-tonali-spurs",
     "category": "Sports",
     "timeframe": "Sagas",

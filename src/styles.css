@@ -7975,12 +7975,12 @@ html, body, .app-shell, main {
   box-shadow: none !important;
 }
 
-/* 6. Apple-style Pill Wallet Button */
+/* 6. Apple-style Rectangular Wallet Button */
 .site-header .wallet-button {
   background: #ffffff !important;
   border: 1px solid #ffffff !important;
   color: #000000 !important;
-  border-radius: 980px !important;
+  border-radius: 6px !important; /* Classy rectangular button style */
   font-weight: 600 !important;
   font-size: 0.85rem !important;
   padding: 8px 16px !important;
@@ -7999,6 +7999,7 @@ html, body, .app-shell, main {
   border-color: #1e1f2b !important;
   color: #ffffff !important;
   box-shadow: none !important;
+  border-radius: 6px !important;
 }
 
 /* 7. Clean, Minimalist Yes/No Active Styles */
@@ -8140,5 +8141,20 @@ html, body, .app-shell, main {
   margin-bottom: 8px !important;
 }
 
+/* 13. Markets Grid & Card Spacing Fix (Single-column layout for both mobile and desktop) */
+.markets-grid {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 24px !important;
+  padding: 16px 0 !important;
+  margin-bottom: 80px !important;
+}
 
-
+.market-card {
+  margin-bottom: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
