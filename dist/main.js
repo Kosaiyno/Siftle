@@ -782,7 +782,7 @@ Trade and discuss here: ${a}`},wW=r=>{if(!Le||!Ee)return;let e=Fw(r),t=!m.checke
       <div class="leaderboard-faucet-box">
         <div class="faucet-box-details">
           <h3>Claim Test USDC</h3>
-          <p>Get $100 USDC to trade daily prediction markets and climb the seasonal ranks.</p>
+          <p>Get test USDC to trade daily prediction markets and climb the seasonal ranks.</p>
         </div>
         <button id="faucetClaimButton" class="faucet-claim-btn" type="button">Claim Faucet</button>
       </div>
@@ -793,13 +793,9 @@ Trade and discuss here: ${a}`},wW=r=>{if(!Le||!Ee)return;let e=Fw(r),t=!m.checke
       </div>
 
       <div class="division-title-container">
-        <div class="division-title-left">
-          <h2 id="divisionTitleText">Division 1</h2>
-          <button class="how-it-works-btn" id="howItWorksBtn" type="button" title="How it works">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </button>
+        <div class="division-title-left" style="display: flex; align-items: center; gap: 12px;">
+          <h2 id="divisionTitleText" style="margin: 0;">Division 1</h2>
+          <button class="how-it-works-btn" id="howItWorksBtn" type="button" style="background: rgba(255,255,255,0.06) !important; border: 1px solid #1e1f2b !important; color: #ffffff !important; border-radius: 6px !important; padding: 4px 10px !important; font-size: 0.82rem !important; font-weight: 600 !important; cursor: pointer !important; font-family: 'Space Grotesk', sans-serif !important;">How it works</button>
         </div>
         <select id="divisionSelector" class="division-select-menu">
           <option value="1">Division 1</option>
