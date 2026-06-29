@@ -86,6 +86,20 @@ const ARC_TESTNET_RPC_URL = process.env.ARC_TESTNET_RPC_URL || "https://rpc.test
 const leaderboardProvider = new JsonRpcProvider(ARC_TESTNET_RPC_URL, ARC_TESTNET_CHAIN_ID);
 const LOCAL_TEST_MARKET_ADDRESS = "0x0000000000000000000000000000000000000101";
 const isLocalTestMarketAddress = (address) => /^0x0{36}01[0-9a-f]{2}$/i.test(String(address || ""));
+const marketAddresses = {
+  "wc-vinicius-score-japan": process.env.SIFTLE_MARKET_VINICIUS_JAPAN_ADDRESS || "",
+  "wc-paraguay-score-germany": process.env.SIFTLE_MARKET_PARAGUAY_GERMANY_ADDRESS || "",
+  "wc-morocco-eliminate-netherlands": process.env.SIFTLE_MARKET_MOROCCO_NETHERLANDS_ADDRESS || "",
+  "transfer-davies-realmadrid": process.env.SIFTLE_MARKET_DAVIES_ADDRESS || "0xa8D7bd361e33aE4dd9638D3afA9f1f01f0018423",
+  "transfer-tonali-spurs": process.env.SIFTLE_MARKET_TONALI_ADDRESS || "0xB4F9E7a45aB1B4D26D71e32b67565cE875220615",
+  "transfer-guimaraes-arsenal": process.env.SIFTLE_MARKET_GUIMARAES_ADDRESS || "0xc83F2feA4b9cF25d074c4a8F26D13f26156b496B",
+  "wc-mbappe-haaland-goals": process.env.SIFTLE_MARKET_MBAPPE_HAALAND_ADDRESS || "0x1a88012C4a397085FB49cD00185Ce4E9cb0bB768",
+  "wc-england-panama-spread": process.env.SIFTLE_MARKET_ENGLAND_PANAMA_ADDRESS || "0x0e7a9A2D2e9D7ef96E967bd89816d138829Cb73c",
+  "wc-croatia-ghana-spread": process.env.SIFTLE_MARKET_CROATIA_GHANA_ADDRESS || "0x6e7A9A2D2e9D7ef96E967bd89816d138829Cb73c",
+  "wc-scotland-qualification": process.env.SIFTLE_MARKET_SCOTLAND_ADDRESS || "0xb7315D790Ab4FbED3bD7B50477984F7aE6Eabf14",
+  "manga-onepiece-1200": process.env.SIFTLE_MARKET_ONE_PIECE_ADDRESS || "0x6AC2CFa9112C40b9D4A2Bd9d49aC82859889057c",
+  "wc-messi-ronaldo-16": process.env.SIFTLE_MARKET_MESSI_RONALDO_ADDRESS || "0x4aBc5E6Adcf26E35d70A2b38506896CEd8170a09"
+};
 const ARC_TESTNET_USDC = process.env.ARC_TESTNET_USDC_ADDRESS || "0x3600000000000000000000000000000000000000";
 const aiBriefingUnlockUsdc = Number(process.env.AI_BRIEFING_UNLOCK_USDC ?? 0.05);
 const aiBriefingTreasuryAddress = (
@@ -4988,6 +5002,64 @@ function getActiveMarkets() {
   }
 }
 
+function getConfiguredMarketAddress(marketId) {
+  return normalizeWalletAddress(marketAddresses[marketId] || "");
+}
+
+function getSeasonId() {
+  return "season-1-world-cup-2026";
+}
+
+function getStoredDivisionAssignments(data, seasonId = getSeasonId()) {
+  if (!data.leaderboard) data.leaderboard = {};
+  if (!data.leaderboard.divisionAssignments) data.leaderboard.divisionAssignments = {};
+  if (!data.leaderboard.divisionAssignments[seasonId]) data.leaderboard.divisionAssignments[seasonId] = {};
+  return data.leaderboard.divisionAssignments[seasonId];
+}
+
+function buildSeasonDivisions(data, tradersList, seasonId = getSeasonId()) {
+  const assignments = getStoredDivisionAssignments(data, seasonId);
+  const eligibleTraders = tradersList.filter((trader) => !isAdminWallet(trader.username));
+  const activeAddresses = new Set(eligibleTraders.map((trader) => trader.username));
+
+  Object.keys(assignments).forEach((address) => {
+    if (!activeAddresses.has(address)) delete assignments[address];
+  });
+
+  const assignedCounts = new Map();
+  Object.entries(assignments).forEach(([address, divisionNumber]) => {
+    if (!activeAddresses.has(address)) return;
+    const division = Math.max(1, Number(divisionNumber) || 1);
+    assignments[address] = division;
+    assignedCounts.set(division, (assignedCounts.get(division) || 0) + 1);
+  });
+
+  const unassigned = eligibleTraders.filter((trader) => !assignments[trader.username]);
+  for (const trader of unassigned) {
+    let divisionNumber = 1;
+    while ((assignedCounts.get(divisionNumber) || 0) >= 6) divisionNumber += 1;
+    assignments[trader.username] = divisionNumber;
+    assignedCounts.set(divisionNumber, (assignedCounts.get(divisionNumber) || 0) + 1);
+  }
+
+  const grouped = new Map();
+  eligibleTraders.forEach((trader) => {
+    const divisionNumber = Math.max(1, Number(assignments[trader.username]) || 1);
+    if (!grouped.has(divisionNumber)) grouped.set(divisionNumber, []);
+    grouped.get(divisionNumber).push(trader);
+  });
+
+  const divisionNumbers = Array.from(grouped.keys()).sort((a, b) => a - b);
+  const divisions = divisionNumbers.map((divisionNumber) =>
+    grouped.get(divisionNumber).slice().sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      return (Date.parse(a.updated_at || "") || 0) - (Date.parse(b.updated_at || "") || 0);
+    })
+  );
+
+  return { divisions, assignments };
+}
+
 function ensureLeaderboardState(data) {
   if (!data.leaderboard) data.leaderboard = {};
   if (!data.leaderboard.traders) data.leaderboard.traders = {};
@@ -6410,13 +6482,30 @@ const server = createServer(async (request, response) => {
 
   if (requestUrl.pathname === "/api/markets" && request.method === "GET") {
     try {
-      const filePath = join(root, "data", "active_markets.json");
-      if (existsSync(filePath)) {
-        const content = readFileSync(filePath, "utf8");
-        sendJson(response, 200, JSON.parse(content));
-      } else {
-        sendJson(response, 200, []);
-      }
+      const markets = getActiveMarkets();
+      const enrichedMarkets = await Promise.all(markets.map(async (market) => {
+        const marketAddress = getConfiguredMarketAddress(market.id);
+        if (!marketAddress || isLocalTestMarketAddress(marketAddress)) {
+          return market;
+        }
+
+        try {
+          const { traders } = await collectMarketTradeSignals(marketAddress);
+          const traderCount = traders.size;
+          return {
+            ...market,
+            marketAddress,
+            traderCount,
+            traders: traderCount > 0 ? String(traderCount) : String(market.traders || "0")
+          };
+        } catch {
+          return {
+            ...market,
+            marketAddress
+          };
+        }
+      }));
+      sendJson(response, 200, enrichedMarkets);
     } catch (error) {
       sendJson(response, 500, { error: error.message });
     }
@@ -6538,17 +6627,13 @@ const server = createServer(async (request, response) => {
       });
     }
     
-    const divisions = [];
-    for (let i = 0; i < tradersList.length; i += 6) {
-      divisions.push(tradersList.slice(i, i + 6));
-    }
+    const seasonId = getSeasonId();
+    const { divisions, assignments } = buildSeasonDivisions(data, tradersList, seasonId);
+    saveAnalytics(data);
     
     let userDivisionNumber = 1;
     if (walletAddress) {
-      const idx = tradersList.findIndex(t => t.username === walletAddress);
-      if (idx !== -1) {
-        userDivisionNumber = Math.floor(idx / 6) + 1;
-      }
+      userDivisionNumber = Math.max(1, Number(assignments[walletAddress]) || 1);
     }
     
     let targetDivisionNumber = reqDivisionNumber || userDivisionNumber;

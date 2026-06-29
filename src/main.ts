@@ -157,6 +157,7 @@ interface MarketPreview {
   movement: number;
   volume: string;
   traders: string;
+  traderCount?: number;
   liquidity: string;
   imageUrl?: string;
   evidence: {
@@ -1135,6 +1136,8 @@ const normalizeTradeSideForMode = (
 const getDisplayTraderCount = (market: MarketPreview, snapshot: ArcMarketSnapshot | undefined): string => {
   if (!snapshot) return market.traders;
   if (typeof snapshot.traderCount === "number" && snapshot.traderCount > 0) return String(snapshot.traderCount);
+  if (typeof market.traderCount === "number" && market.traderCount > 0) return String(market.traderCount);
+  if (market.traders) return market.traders;
   const activeSides = Number(snapshot.yesSharesUsdc > 0) + Number(snapshot.noSharesUsdc > 0);
   return activeSides > 0 ? String(activeSides) : market.traders;
 };
