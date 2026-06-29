@@ -87,9 +87,9 @@ const leaderboardProvider = new JsonRpcProvider(ARC_TESTNET_RPC_URL, ARC_TESTNET
 const LOCAL_TEST_MARKET_ADDRESS = "0x0000000000000000000000000000000000000101";
 const isLocalTestMarketAddress = (address) => /^0x0{36}01[0-9a-f]{2}$/i.test(String(address || ""));
 const marketAddresses = {
-  "wc-vinicius-score-japan": process.env.SIFTLE_MARKET_VINICIUS_JAPAN_ADDRESS || "",
-  "wc-paraguay-score-germany": process.env.SIFTLE_MARKET_PARAGUAY_GERMANY_ADDRESS || "",
-  "wc-morocco-eliminate-netherlands": process.env.SIFTLE_MARKET_MOROCCO_NETHERLANDS_ADDRESS || "",
+  "wc-vinicius-score-japan": process.env.SIFTLE_MARKET_VINICIUS_JAPAN_ADDRESS || "0xa7886aF4C0D359bA16DD63017962D5CD125a5E7F",
+  "wc-paraguay-score-germany": process.env.SIFTLE_MARKET_PARAGUAY_GERMANY_ADDRESS || "0xcC0A41d7B8Ae967c28e981F96BFc9c833B7B0e75",
+  "wc-morocco-eliminate-netherlands": process.env.SIFTLE_MARKET_MOROCCO_NETHERLANDS_ADDRESS || "0x1c358D8f0cFBaF6Adb2c85Ebd16fcf8F8fa88B7d",
   "transfer-davies-realmadrid": process.env.SIFTLE_MARKET_DAVIES_ADDRESS || "0xa8D7bd361e33aE4dd9638D3afA9f1f01f0018423",
   "transfer-tonali-spurs": process.env.SIFTLE_MARKET_TONALI_ADDRESS || "0xB4F9E7a45aB1B4D26D71e32b67565cE875220615",
   "transfer-guimaraes-arsenal": process.env.SIFTLE_MARKET_GUIMARAES_ADDRESS || "0xc83F2feA4b9cF25d074c4a8F26D13f26156b496B",

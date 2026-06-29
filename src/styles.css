@@ -2924,13 +2924,15 @@ body::before {
 }
 
 .story-detail.fullscreen:has(.market-detail-container) {
-  overflow: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding-bottom: 18px;
 }
 
 .market-detail-container {
-  height: calc(100vh - 114px);
-  min-height: 0;
+  height: auto;
+  min-height: calc(100vh - 114px);
+  overflow: visible;
 }
 
 .market-detail-container > .back-button {
@@ -3969,11 +3971,12 @@ body::before {
   }
 
   .market-detail-container {
-    height: calc(100dvh - 20px);
+    height: auto;
+    min-height: calc(100dvh - 20px);
     inline-size: 100%;
     max-inline-size: 100%;
     min-inline-size: 0;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .market-story-surface {
@@ -4895,7 +4898,7 @@ h1 {
     inline-size: 100vw;
     max-inline-size: 100vw;
     padding: 10px 20px 10px 10px;
-    overflow: hidden;
+    overflow-y: auto;
   }
 
   .story-detail.fullscreen .market-detail-container {
@@ -6512,7 +6515,9 @@ body.detail-mode .mobile-bottom-nav {
   padding: 24px 20px calc(24px + env(safe-area-inset-bottom)) 20px;
   box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.6);
   max-width: 540px;
+  max-height: calc(100dvh - 20px);
   margin: 0 auto;
+  overflow: hidden;
 }
 
 .trade-drawer.open {
@@ -6553,6 +6558,10 @@ body.detail-mode .mobile-bottom-nav {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  max-height: calc(100dvh - 170px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .market-order-mode {
