@@ -1,0 +1,37 @@
+{
+  "topic": "Netherlands Morocco World Cup Stakes",
+  "current": {
+    "id": 10021,
+    "headline": "Netherlands vs Morocco knockout preview: team news and elimination stakes",
+    "category": "Sports",
+    "summary": "Morocco and the Netherlands enter a knockout meeting where the entire market question hinges on advancement. Pre-match coverage is centered on elimination stakes, expected lineups and how the tie may swing over regular time, extra time or penalties.",
+    "source": "Siftle Desk",
+    "sourceUrl": "https://example.com/netherlands-morocco-world-cup-knockout-preview",
+    "imageUrl": "https://images.unsplash.com/photo-1553778263-73a83bab9b0c?auto=format&fit=crop&w=1200&q=80",
+    "publishedAt": "Mon, 29 Jun 2026 16:00:00 GMT",
+    "readTime": "2 min read",
+    "postedAt": "Latest",
+    "accent": "blue",
+    "saved": false
+  },
+  "items": [
+    {
+      "id": 10022,
+      "headline": "Morocco and Netherlands prepare for high-stakes World Cup knockout",
+      "category": "Sports",
+      "summary": "Build-up to the Morocco-Netherlands tie has focused on knockout pressure, conservative tactical setups and the binary advancement outcome that directly decides whether the Dutch are eliminated.",
+      "source": "Siftle Desk",
+      "sourceUrl": "https://example.com/morocco-netherlands-world-cup-build-up",
+      "imageUrl": "https://images.unsplash.com/photo-1553778263-73a83bab9b0c?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Sun, 28 Jun 2026 18:00:00 GMT",
+      "readTime": "2 min read",
+      "postedAt": "Jun 28",
+      "accent": "blue",
+      "saved": false
+    }
+  ],
+  "reviewed_by": "local-market-thread",
+  "count": 1,
+  "market_id": "wc-morocco-eliminate-netherlands",
+  "saved_market_thread": true
+}

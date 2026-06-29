@@ -1,0 +1,37 @@
+{
+  "topic": "Brazil Japan World Cup Lineups",
+  "current": {
+    "id": 10001,
+    "headline": "Brazil vs Japan: kickoff time, lineups and round-of-32 preview",
+    "category": "Sports",
+    "summary": "Brazil meet Japan in the World Cup round of 32 with Vinicius Junior central to the attacking focus. Pre-match coverage is concentrating on lineups, selection decisions and whether Brazil create enough volume for Vinicius to get on the scoresheet.",
+    "source": "World Cup Match Time",
+    "sourceUrl": "https://www.worldcupmatchtime.com/en/match/brazil-vs-japan-jun-29-2026",
+    "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
+    "publishedAt": "Mon, 29 Jun 2026 14:00:00 GMT",
+    "readTime": "2 min read",
+    "postedAt": "Latest",
+    "accent": "blue",
+    "saved": false
+  },
+  "items": [
+    {
+      "id": 10002,
+      "headline": "Brazil vs Japan: how to watch, live stream and match time",
+      "category": "Sports",
+      "summary": "Broadcast coverage ahead of Brazil against Japan has focused on the Houston kickoff window and Brazil's attacking stars, with Vinicius Junior featured heavily in pre-match buildup.",
+      "source": "Bolavip",
+      "sourceUrl": "https://bolavip.com/en/world-cup/brazil-vs-japan-how-to-watch-live-stream-tv-channel-and-time-for-a-2026-world-cup-match-on-june-29-2026",
+      "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Mon, 29 Jun 2026 13:36:00 GMT",
+      "readTime": "2 min read",
+      "postedAt": "Jun 29",
+      "accent": "blue",
+      "saved": false
+    }
+  ],
+  "reviewed_by": "local-market-thread",
+  "count": 1,
+  "market_id": "wc-vinicius-score-japan",
+  "saved_market_thread": true
+}

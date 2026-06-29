@@ -1,0 +1,37 @@
+{
+  "topic": "Germany Paraguay World Cup Clash",
+  "current": {
+    "id": 10011,
+    "headline": "Germany vs Paraguay: start time, TV info and knockout preview",
+    "category": "Sports",
+    "summary": "Germany face Paraguay later in the round-of-32 schedule with pre-match coverage centered on kickoff time, likely lineups and whether Paraguay can create enough attacking volume to score once against Germany.",
+    "source": "Yahoo Sports",
+    "sourceUrl": "https://sports.yahoo.com/soccer/article/germany-vs-paraguay-where-to-watch-the-2026-world-cup-match-today-tv-channel-start-time-free-streaming-info-and-more-144437162.html",
+    "imageUrl": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80",
+    "publishedAt": "Mon, 29 Jun 2026 14:46:00 GMT",
+    "readTime": "2 min read",
+    "postedAt": "Latest",
+    "accent": "blue",
+    "saved": false
+  },
+  "items": [
+    {
+      "id": 10012,
+      "headline": "Germany vs Paraguay World Cup schedule and match preview",
+      "category": "Sports",
+      "summary": "Preview pieces for Germany against Paraguay have locked in the Boston kickoff slot and highlighted the knockout stakes, with focus on Paraguay's chance to find a goal against a heavier favorite.",
+      "source": "Khaas Press",
+      "sourceUrl": "https://www.khaspress.com/2026/06/germany-vs-paraguay-fifa-world-cup-2026-schedule-prediction/",
+      "imageUrl": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Sat, 27 Jun 2026 12:00:00 GMT",
+      "readTime": "2 min read",
+      "postedAt": "Jun 27",
+      "accent": "blue",
+      "saved": false
+    }
+  ],
+  "reviewed_by": "local-market-thread",
+  "count": 1,
+  "market_id": "wc-paraguay-score-germany",
+  "saved_market_thread": true
+}

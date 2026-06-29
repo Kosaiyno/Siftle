@@ -28,8 +28,27 @@ declare global {
 
 const categories: Category[] = ["Sports"];
 
-const apiBase = (window.SIFTLE_API_BASE || "").replace(/\/$/, "");
+const DEFAULT_PUBLIC_API_BASE = "https://siftle.onrender.com";
+
+const resolvePublicApiBase = (): string => {
+  const configured = (window.SIFTLE_API_BASE || "").replace(/\/$/, "");
+  if (configured) return configured;
+
+  const hostname = typeof window !== "undefined" ? window.location.hostname.toLowerCase() : "";
+  if (hostname === "siftle.xyz" || hostname.endsWith(".vercel.app")) {
+    return DEFAULT_PUBLIC_API_BASE;
+  }
+
+  return "";
+};
+
+const apiBase = resolvePublicApiBase();
 const apiUrl = (path: string): string => `${apiBase}${path}`;
+
+type ProfileNotice = {
+  type: "success" | "error";
+  message: string;
+};
 
 function trackEvent(event: string) {
   fetch(apiUrl("/api/analytics"), {
@@ -77,6 +96,7 @@ const state: {
   tradeDrawerOpen: boolean;
   activeMarketTimeframe: "All" | "Daily" | "Weekly" | "Sagas";
   profileUsername: string | null;
+  profileNotice: ProfileNotice | null;
 } = {
   activeSurface: "markets",
   profileUsername: null,
@@ -114,7 +134,8 @@ const state: {
   hasLoadedFeed: false,
   showSaved: false,
   tradeDrawerOpen: false,
-  activeMarketTimeframe: "All"
+  activeMarketTimeframe: "All",
+  profileNotice: null
 };
 
 let selectedLeaderboardDivision: number | null = null;
@@ -507,10 +528,9 @@ const findBriefingTargetBySourceUrl = (sourceUrl: string): BriefingTarget | null
 };
 
 const getDailyTradeLockTime = (market: MarketPreview, snapshot: ArcMarketSnapshot | undefined): number | null => {
-  if (market.timeframe !== "Daily") return null;
-  const closesAtUnix = snapshot?.closesAtUnix ?? 0;
-  if (!closesAtUnix) return null;
-  return closesAtUnix * 1000 - DAILY_TRADE_LOCK_MINUTES * 60 * 1000;
+  const kickoffTime = parseMarketKickoffTime(market, snapshot);
+  if (kickoffTime === null) return null;
+  return kickoffTime - DAILY_TRADE_LOCK_MINUTES * 60 * 1000;
 };
 
 const getDailyTradeLockLabel = (market: MarketPreview, snapshot: ArcMarketSnapshot | undefined): string => {
@@ -895,6 +915,16 @@ const getMarketView = (market: MarketPreview): MarketPreview => {
   return override ? { ...base, ...override, updates: override.evidence.length } : base;
 };
 
+const parseMarketKickoffTime = (market: MarketPreview, snapshot: ArcMarketSnapshot | undefined): number | null => {
+  if (market.timeframe !== "Daily") return null;
+
+  const kickoffFromData = market.kickoffAt ? new Date(market.kickoffAt).getTime() : Number.NaN;
+  if (Number.isFinite(kickoffFromData)) return kickoffFromData;
+
+  const closesAtUnix = snapshot?.closesAtUnix ?? 0;
+  return closesAtUnix > 0 ? closesAtUnix * 1000 : null;
+};
+
 const marketEvidenceDate = (story: NewsStory, index: number): string => {
   if (index === 0) return "Latest";
   if (!story.publishedAt) return story.postedAt;
@@ -928,7 +958,7 @@ const loadMarketEvidence = async (market: MarketPreview): Promise<void> => {
     const latestStory = threadStories[0];
     const newsImageUrl = latestStory?.imageUrl;
 
-    if (evidence.length >= 2) {
+    if (evidence.length >= 1) {
       state.marketEvidenceOverrides[market.id] = {
         threadTopic: thread.topic || market.threadTopic,
         evidence,
@@ -965,6 +995,7 @@ const cleanProfileUsername = (value: string): string => value.trim().replace(/\s
 const syncProfileUsernameForWallet = (): void => {
   if (!state.walletAddress) {
     state.profileUsername = null;
+    state.profileNotice = null;
     return;
   }
 
@@ -978,6 +1009,7 @@ const syncProfileUsernameForWallet = (): void => {
   }
 
   state.profileUsername = username || null;
+  state.profileNotice = null;
 };
 
 const saveProfileUsernameForWallet = (username: string): void => {
@@ -2423,6 +2455,8 @@ const renderMarketDetail = (market: MarketPreview): void => {
             <div class="market-thread-timeline">
               ${isLoadingEvidence
                 ? renderMarketEvidenceSkeleton(3)
+                : marketView.evidence.length === 0
+                  ? `<div class="portfolio-empty compact">Market thread is still being prepared for this match.</div>`
                 : marketView.evidence.map((item) => `
                 <article class="market-thread-update">
                   <div class="market-thread-marker"></div>
@@ -3050,6 +3084,9 @@ const renderPortfolio = (): void => {
   const usernameDisplay = state.profileUsername || (state.walletAddress ? shortenAddress(state.walletAddress) : "Anonymous");
   const safeUsernameDisplay = escapeHtml(usernameDisplay);
   const safeProfileUsername = escapeHtml(state.profileUsername || "");
+  const profileNoticeHtml = state.profileNotice
+    ? `<div style="margin-top: 14px !important; padding: 10px 12px !important; border-radius: 8px !important; border: 1px solid ${state.profileNotice.type === "error" ? "rgba(239, 68, 68, 0.28)" : "rgba(16, 185, 129, 0.24)"} !important; background: ${state.profileNotice.type === "error" ? "rgba(127, 29, 29, 0.22)" : "rgba(6, 95, 70, 0.18)"} !important; color: ${state.profileNotice.type === "error" ? "#fca5a5" : "#86efac"} !important; font-size: 0.8rem !important; font-weight: 650 !important;">${escapeHtml(state.profileNotice.message)}</div>`
+    : "";
   const avatarLetter = usernameDisplay.charAt(0).toUpperCase();
 
   storyList.innerHTML = `
@@ -3087,6 +3124,8 @@ const renderPortfolio = (): void => {
             <button type="button" class="cancel-username-btn" id="cancelUsernameBtn" style="background: transparent !important; color: #8e8e93 !important; border: 1px solid #1e1f2b !important; border-radius: 6px !important; padding: 8px 12px !important; font-size: 0.82rem !important; cursor: pointer !important; transition: all 0.2s ease !important; outline: none !important;">Cancel</button>
           </div>
         ` : ""}
+
+        ${profileNoticeHtml}
 
         <div class="portfolio-wallet-balance-row" style="margin-top: 24px !important; padding-top: 16px !important; border-top: 1px solid #1e1f2b !important; display: flex !important; justify-content: space-between !important; align-items: center !important; flex-wrap: wrap !important; gap: 12px !important;">
           <div>
@@ -3329,16 +3368,27 @@ storyList?.addEventListener("click", async (event) => {
       button.disabled = true;
       button.textContent = "Saving...";
       saveProfileUsernameForWallet(newUsername);
+      state.profileNotice = null;
       try {
         if (state.walletAddress) {
           await reportLeaderboardEntry(false);
         }
+        state.profileNotice = {
+          type: "success",
+          message: "Username saved to your shared leaderboard profile."
+        };
         showActionToast("Username updated");
         renderPortfolio();
       } catch (error) {
-        showActionToast(error instanceof Error ? error.message : "Username save failed");
+        const message = error instanceof Error ? error.message : "Username save failed";
+        state.profileNotice = {
+          type: "error",
+          message
+        };
+        showActionToast(message);
         button.disabled = false;
         button.textContent = previousLabel;
+        renderPortfolio();
       }
     }
     return;

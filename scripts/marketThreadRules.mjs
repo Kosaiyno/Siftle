@@ -1,4 +1,34 @@
 export const marketThreadRules = {
+  "wc-vinicius-score-japan": {
+    category: "Sports",
+    topic: "Brazil Japan World Cup Lineups",
+    includeAnySets: [
+      ["brazil", "vinicius", "vinicius junior"],
+      ["japan"],
+      ["world cup", "round of 32", "knockout", "lineup", "lineups", "kickoff", "match", "preview", "team news", "starting xi", "start time"]
+    ],
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball"]
+  },
+  "wc-paraguay-score-germany": {
+    category: "Sports",
+    topic: "Germany Paraguay World Cup Clash",
+    includeAnySets: [
+      ["germany"],
+      ["paraguay"],
+      ["world cup", "round of 32", "knockout", "kickoff", "match", "preview", "team news", "lineup", "lineups", "start time"]
+    ],
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball"]
+  },
+  "wc-morocco-eliminate-netherlands": {
+    category: "Sports",
+    topic: "Netherlands Morocco World Cup Stakes",
+    includeAnySets: [
+      ["morocco"],
+      ["netherlands", "dutch"],
+      ["world cup", "round of 32", "knockout", "kickoff", "match", "preview", "team news", "lineup", "lineups", "start time", "eliminate", "elimination"]
+    ],
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball"]
+  },
   "transfer-davies-realmadrid": {
     category: "Sports",
     topic: "Alphonso Davies Real Madrid Transfer Talks",
