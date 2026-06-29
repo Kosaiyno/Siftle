@@ -1,16 +1,20 @@
 import type { ArchiveDate, Category, NewsStory, StoryThread } from "./types.js";
 import {
   ARC_TESTNET_FAUCET,
+  claimArcMarketPayout,
   connectArcWallet,
   executeArcMarketOrder,
   getConnectedArcWallet,
   isWalletConnectConfigured,
+  payAiBriefingUnlock,
   readArcMarketPosition,
   readArcMarketSnapshot,
   readArcUsdcBalance,
+  resolveLocalTestMarketYes,
   shortenAddress,
   subscribeArcWallet,
-  disconnectArcWallet
+  disconnectArcWallet,
+  validateArcSession
 } from "./arc.js";
 import type { ArcMarketPosition, ArcMarketSnapshot } from "./arc.js";
 
@@ -60,6 +64,7 @@ const state: {
   selectedStoryId: number | null;
   aiSummaries: Record<string, string>;
   loadingSummaryUrl: string | null;
+  unlockingSummaryUrl: string | null;
   archiveDates: ArchiveDate[];
   activeArchiveDate: string | null;
   activeShareStoryId: number | null;
@@ -74,11 +79,11 @@ const state: {
   profileUsername: string | null;
 } = {
   activeSurface: "markets",
-  profileUsername: localStorage.getItem("siftle_profile_username") || null,
+  profileUsername: null,
   selectedMarketId: null,
   marketOrderMode: "buy",
   marketTradeSide: "yes",
-  marketTradeAmount: 100,
+  marketTradeAmount: 5,
   marketSnapshots: {},
   marketPositions: {},
   marketEvidenceOverrides: {},
@@ -98,6 +103,7 @@ const state: {
   selectedStoryId: null,
   aiSummaries: {},
   loadingSummaryUrl: null,
+  unlockingSummaryUrl: null,
   archiveDates: [],
   activeArchiveDate: null,
   activeShareStoryId: null,
@@ -121,6 +127,7 @@ interface MarketPreview {
   question: string;
   probability: number;
   marketAddress?: string;
+  kickoffAt?: string;
   closes: string;
   resolution: string;
   threadTopic: string;
@@ -147,6 +154,10 @@ interface MarketEvidenceOverride {
   evidence: MarketPreview["evidence"];
   imageUrl?: string;
 }
+
+type BriefingTarget = NewsStory;
+
+const DAILY_TRADE_LOCK_MINUTES = 20;
 
 let marketPreviews: MarketPreview[] = [];
 
@@ -236,8 +247,10 @@ const connectWallet = async (): Promise<void> => {
     const account = await connectArcWallet();
     if (account) {
       state.walletAddress = account;
+      syncProfileUsernameForWallet();
       state.walletBalance = await readArcUsdcBalance(account);
       await loadPortfolioPositions();
+      void reportLeaderboardEntry(true).catch(err => console.error("Failed to report leaderboard entry:", err));
       showActionToast("Connected to Arc Testnet");
       window.location.hash = "#portfolio";
       syncStoryFromHash();
@@ -285,7 +298,7 @@ const showSuccessModal = (mode: "buy" | "sell", amount: string | number, outcome
       </div>
       <h3 class="success-modal-title">Transaction Confirmed</h3>
       <p class="success-modal-body">
-        You have successfully <strong>${mode === "buy" ? "bought" : "sold"}</strong> <strong>${amount} USDC</strong> worth of <strong>${outcome}</strong> shares in:
+        You have successfully <strong>${mode === "buy" ? "bought" : "exited"}</strong> <strong>${amount} USDC</strong> worth of <strong>${outcome}</strong> shares in:
       </p>
       <div class="success-modal-market-title">${marketTitle}</div>
       <button class="success-modal-action-btn" type="button">Awesome</button>
@@ -446,7 +459,136 @@ const formatAIBriefing = (text: string): string => {
   return html;
 };
 
-const loadStorySummary = async (story: NewsStory): Promise<void> => {
+const briefingUnlockKey = (story: BriefingTarget): string =>
+  `siftle_ai_briefing_unlock_${btoa(unescape(encodeURIComponent(story.sourceUrl))).replace(/=+$/g, "")}`;
+
+const getBriefingUnlockToken = (story: BriefingTarget): string =>
+  localStorage.getItem(briefingUnlockKey(story)) || "";
+
+const isBriefingUnlocked = (story: BriefingTarget): boolean => Boolean(getBriefingUnlockToken(story));
+
+const getBriefingTargetFromMarketEvidence = (
+  market: MarketPreview,
+  item: MarketPreview["evidence"][number]
+): BriefingTarget => ({
+  id: 0,
+  headline: item.headline,
+  category: market.category,
+  summary: item.summary,
+  source: item.source,
+  sourceUrl: item.sourceUrl,
+  imageUrl: market.imageUrl || "",
+  publishedAt: undefined,
+  readTime: "3 min read",
+  postedAt: item.date,
+  accent: "slate",
+  saved: savedUrls.has(item.sourceUrl),
+  ai_summary: undefined,
+  ai_provider: undefined
+});
+
+const findBriefingTargetBySourceUrl = (sourceUrl: string): BriefingTarget | null => {
+  const story = state.stories.find((item) => item.sourceUrl === sourceUrl);
+  if (story) return story;
+
+  const activeThreadItems = [state.activeThread?.current, ...(state.activeThread?.items ?? [])].filter(Boolean) as NewsStory[];
+  const threadStory = activeThreadItems.find((item) => item.sourceUrl === sourceUrl);
+  if (threadStory) return threadStory;
+
+  if (state.selectedMarketId) {
+    const market = marketPreviews.find((item) => item.id === state.selectedMarketId);
+    if (market) {
+      const evidenceItem = getMarketView(market).evidence.find((item) => item.sourceUrl === sourceUrl);
+      if (evidenceItem) return getBriefingTargetFromMarketEvidence(market, evidenceItem);
+    }
+  }
+
+  return null;
+};
+
+const getDailyTradeLockTime = (market: MarketPreview, snapshot: ArcMarketSnapshot | undefined): number | null => {
+  if (market.timeframe !== "Daily") return null;
+  const closesAtUnix = snapshot?.closesAtUnix ?? 0;
+  if (!closesAtUnix) return null;
+  return closesAtUnix * 1000 - DAILY_TRADE_LOCK_MINUTES * 60 * 1000;
+};
+
+const getDailyTradeLockLabel = (market: MarketPreview, snapshot: ArcMarketSnapshot | undefined): string => {
+  const lockTime = getDailyTradeLockTime(market, snapshot);
+  if (lockTime === null) return market.closes;
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short"
+  }).format(new Date(lockTime));
+};
+
+const getMarketTradeLockMessage = (market: MarketPreview, snapshot: ArcMarketSnapshot | undefined): string | null => {
+  const lockTime = getDailyTradeLockTime(market, snapshot);
+  if (lockTime === null) return null;
+  return Date.now() >= lockTime ? `Locked ${DAILY_TRADE_LOCK_MINUTES}m before kickoff` : null;
+};
+
+const renderLockedBriefing = (story: BriefingTarget, isUnlocking: boolean): string => `
+  <div class="briefing-section">
+    <h4 class="briefing-title">Locked briefing</h4>
+    <p class="briefing-text">Unlock this AI briefing with a small USDC payment.</p>
+    <button type="button" class="source-button" data-unlock-briefing-url="${encodeURIComponent(story.sourceUrl)}" ${isUnlocking ? "disabled" : ""}>
+      ${isUnlocking ? "Unlocking..." : "Unlock AI briefing"}
+    </button>
+  </div>
+`;
+
+const unlockAndLoadStorySummary = async (story: BriefingTarget): Promise<void> => {
+  if (!state.walletAddress) {
+    showActionToast("Please sign in first.");
+    return;
+  }
+  if (state.unlockingSummaryUrl === story.sourceUrl) return;
+
+  state.unlockingSummaryUrl = story.sourceUrl;
+  render();
+
+  try {
+    const configRes = await fetch(apiUrl("/api/summary/unlock-config"));
+    const config = await configRes.json();
+    if (!configRes.ok || !config.treasuryAddress) {
+      throw new Error(config.error || "AI briefing unlock is not configured");
+    }
+
+    const txHash = await payAiBriefingUnlock(config.treasuryAddress, Number(config.amountUsdc) || 0.05, (status) => {
+      if (menuStatus) menuStatus.textContent = status;
+    });
+
+    const unlockRes = await fetch(apiUrl("/api/summary/unlock"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sourceUrl: story.sourceUrl,
+        walletAddress: state.walletAddress,
+        txHash
+      })
+    });
+    const unlockData = await unlockRes.json();
+    if (!unlockRes.ok || !unlockData.unlockToken) {
+      throw new Error(unlockData.error || "AI briefing unlock failed");
+    }
+
+    localStorage.setItem(briefingUnlockKey(story), unlockData.unlockToken);
+    showActionToast("AI briefing unlocked");
+    await loadStorySummary(story);
+  } catch (error) {
+    showActionToast(error instanceof Error ? error.message : "Unlock failed");
+  } finally {
+    state.unlockingSummaryUrl = null;
+    render();
+  }
+};
+
+const loadStorySummary = async (story: BriefingTarget): Promise<void> => {
+  if (!isBriefingUnlocked(story)) return;
   if (state.aiSummaries[story.sourceUrl] || state.loadingSummaryUrl === story.sourceUrl) return;
 
   if (story.ai_summary) {
@@ -454,18 +596,22 @@ const loadStorySummary = async (story: NewsStory): Promise<void> => {
     if (menuStatus) {
       menuStatus.textContent = story.ai_provider === "0g" ? "Archived 0G summary loaded" : "Archived summary loaded";
     }
-    renderDetail();
+    render();
     return;
   }
 
   state.loadingSummaryUrl = story.sourceUrl;
-  renderDetail();
+  render();
 
   try {
     const response = await fetch(apiUrl("/api/summary"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(story)
+      body: JSON.stringify({
+        ...story,
+        walletAddress: state.walletAddress,
+        unlockToken: getBriefingUnlockToken(story)
+      })
     });
 
     if (!response.ok) {
@@ -485,7 +631,7 @@ const loadStorySummary = async (story: NewsStory): Promise<void> => {
     }
   } finally {
     state.loadingSummaryUrl = null;
-    renderDetail();
+    render();
   }
 };
 
@@ -549,6 +695,30 @@ const loadStoryThread = async (story: NewsStory): Promise<void> => {
 };
 
 function syncStoryFromHash(): void {
+  if (window.location.hash === "#resolve-local-yes") {
+    const market = marketPreviews.find((item) => item.id === "siftle-local-test-2")
+      || marketPreviews.find((item) => item.timeframe === "Daily" && getMarketAddress(item).startsWith("0x00000000000000000000000000000000000001"));
+    if (market) {
+      resolveLocalTestMarketYes(getMarketAddress(market));
+      scoreLocalResolvedMarketForAllStoredWallets(market, "yes");
+      delete state.marketSnapshots[market.id];
+      delete state.marketPositions[market.id];
+      delete state.checkedMarketSnapshots[market.id];
+      delete state.loadingMarketSnapshots[market.id];
+      state.hasLoadedPortfolioPositions = false;
+      state.activeSurface = "portfolio";
+      state.selectedMarketId = null;
+      window.history.replaceState({}, "", "#portfolio");
+      showActionToast("Local test market resolved YES");
+      void loadPortfolioPositions().then(() => {
+        void reportLeaderboardEntry(true).catch(err => console.error("Failed to report leaderboard entry:", err));
+        renderWalletState();
+        renderPortfolio();
+      });
+      return;
+    }
+  }
+
   const marketMatch = window.location.hash.match(/^#market-(.+)$/);
   if (window.location.hash === "#markets" || marketMatch) {
     state.activeSurface = "markets";
@@ -780,6 +950,361 @@ const getMarketAddress = (market: MarketPreview): string =>
 const formatMoney = (value: number): string =>
   value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const profileUsernameKey = (address: string): string => `siftle_profile_username_${address.toLowerCase()}`;
+
+const cleanProfileUsername = (value: string): string => value.trim().replace(/\s+/g, " ").slice(0, 15);
+
+const syncProfileUsernameForWallet = (): void => {
+  if (!state.walletAddress) {
+    state.profileUsername = null;
+    return;
+  }
+
+  const key = profileUsernameKey(state.walletAddress);
+  let username = localStorage.getItem(key);
+  const oldSharedUsername = localStorage.getItem("siftle_profile_username");
+  if (!username && oldSharedUsername) {
+    username = cleanProfileUsername(oldSharedUsername);
+    if (username) localStorage.setItem(key, username);
+    localStorage.removeItem("siftle_profile_username");
+  }
+
+  state.profileUsername = username || null;
+};
+
+const saveProfileUsernameForWallet = (username: string): void => {
+  if (!state.walletAddress) return;
+
+  const key = profileUsernameKey(state.walletAddress);
+  const cleaned = cleanProfileUsername(username);
+  if (cleaned) {
+    localStorage.setItem(key, cleaned);
+    state.profileUsername = cleaned;
+  } else {
+    localStorage.removeItem(key);
+    state.profileUsername = null;
+  }
+  localStorage.removeItem("siftle_profile_username");
+};
+
+const clearLegacyMarketCache = (): void => {
+  const legacyMarketId = "one-hour-test-market";
+  const toRemove: string[] = [];
+
+  for (let index = 0; index < localStorage.length; index++) {
+    const key = localStorage.key(index);
+    if (!key) continue;
+    if (key.includes(legacyMarketId)) toRemove.push(key);
+  }
+
+  toRemove.forEach((key) => localStorage.removeItem(key));
+};
+
+const normalizeMarketTradeAmount = (value: number): number => {
+  if (!Number.isFinite(value)) return 5;
+  return Math.min(10, Math.max(5, value));
+};
+
+const estimatePoolPayout = (
+  snapshot: ArcMarketSnapshot | undefined,
+  side: "yes" | "no",
+  amount: number,
+  mode: "buy" | "sell",
+  position?: ArcMarketPosition
+): number => {
+  if (!snapshot || !Number.isFinite(amount) || amount <= 0) return 0;
+
+  const currentSideShares = side === "yes" ? position?.yesSharesUsdc ?? 0 : position?.noSharesUsdc ?? 0;
+  const yesPool = snapshot.yesSharesUsdc;
+  const noPool = snapshot.noSharesUsdc;
+
+  if (mode === "sell") return Math.min(amount, currentSideShares);
+
+  const sidePoolAfterBuy = (side === "yes" ? yesPool : noPool) + amount;
+  const totalPoolAfterBuy = yesPool + noPool + amount;
+
+  if (sidePoolAfterBuy <= 0 || totalPoolAfterBuy <= 0) return amount;
+  return ((currentSideShares + amount) / sidePoolAfterBuy) * totalPoolAfterBuy;
+};
+
+const getHeldPositionRows = (
+  position: ArcMarketPosition,
+  snapshot: ArcMarketSnapshot | undefined
+): Array<{ label: string; shares: number; payout: number }> => {
+  const volume = snapshot?.volumeUsdc ?? 0;
+  const rows: Array<{ label: string; shares: number; payout: number }> = [];
+
+  if (position.yesSharesUsdc > 0) {
+    rows.push({
+      label: "YES Shares",
+      shares: position.yesSharesUsdc,
+      payout: snapshot && snapshot.yesSharesUsdc > 0 ? (position.yesSharesUsdc / snapshot.yesSharesUsdc) * volume : 0
+    });
+  }
+
+  if (position.noSharesUsdc > 0) {
+    rows.push({
+      label: "NO Shares",
+      shares: position.noSharesUsdc,
+      payout: snapshot && snapshot.noSharesUsdc > 0 ? (position.noSharesUsdc / snapshot.noSharesUsdc) * volume : 0
+    });
+  }
+
+  return rows;
+};
+
+const getHeldSide = (position: ArcMarketPosition | undefined): "yes" | "no" | null => {
+  const yesShares = position?.yesSharesUsdc ?? 0;
+  const noShares = position?.noSharesUsdc ?? 0;
+  if (yesShares > 0 && noShares <= 0) return "yes";
+  if (noShares > 0 && yesShares <= 0) return "no";
+  return null;
+};
+
+const isMarketResolved = (market: MarketPreview, snapshot: ArcMarketSnapshot | undefined): boolean => {
+  if ((snapshot?.outcome ?? 0) !== 0) return true;
+  return /^resolved$/i.test(String(market.closes || "").trim());
+};
+
+const canTradeSide = (
+  mode: "buy" | "sell",
+  side: "yes" | "no",
+  position: ArcMarketPosition | undefined
+): boolean => {
+  const yesShares = position?.yesSharesUsdc ?? 0;
+  const noShares = position?.noSharesUsdc ?? 0;
+
+  if (mode === "sell") {
+    return side === "yes" ? yesShares > 0 : noShares > 0;
+  }
+
+  if (side === "yes") return noShares <= 0;
+  return yesShares <= 0;
+};
+
+const normalizeTradeSideForMode = (
+  mode: "buy" | "sell",
+  currentSide: "yes" | "no",
+  position: ArcMarketPosition | undefined
+): "yes" | "no" => {
+  if (canTradeSide(mode, currentSide, position)) return currentSide;
+  const fallbackSide = currentSide === "yes" ? "no" : "yes";
+  return canTradeSide(mode, fallbackSide, position) ? fallbackSide : currentSide;
+};
+
+const getDisplayTraderCount = (market: MarketPreview, snapshot: ArcMarketSnapshot | undefined): string => {
+  if (!snapshot) return market.traders;
+  if (typeof snapshot.traderCount === "number" && snapshot.traderCount > 0) return String(snapshot.traderCount);
+  const activeSides = Number(snapshot.yesSharesUsdc > 0) + Number(snapshot.noSharesUsdc > 0);
+  return activeSides > 0 ? String(activeSides) : market.traders;
+};
+
+const isSessionExpiredError = (error: unknown): boolean => {
+  const message = error instanceof Error ? error.message : String(error || "");
+  return /token|session|auth|unauthori[sz]ed|expired|401/i.test(message);
+};
+
+const formatLeaderboardStatus = (status: string): string => {
+  const clean = String(status || "").trim();
+  if (!clean) return "0 wins, 0 losses";
+  const normalized = clean
+    .replace(/closed profits?/gi, "losses")
+    .replace(/\bprofit\b/gi, "losses");
+  return /\bloss/i.test(normalized) ? normalized : `${normalized}, 0 losses`;
+};
+
+const calculateLeaderboardScore = (): { points: number; status: string } => {
+  let points = 0;
+  let wins = 0;
+  let losses = 0;
+  const dailyMarketIds = marketPreviews.filter(m => m.timeframe === "Daily").map(m => m.id);
+  const resolvedResultKey = state.walletAddress ? `siftle_resolved_results_${state.walletAddress.toLowerCase()}` : "";
+  let resolvedResults: Record<string, { result: "win" | "loss"; points: number }> = {};
+  if (resolvedResultKey) {
+    try {
+      resolvedResults = JSON.parse(localStorage.getItem(resolvedResultKey) || "{}");
+    } catch {}
+  }
+
+  if (state.walletAddress && state.hasLoadedPortfolioPositions) {
+    for (const mId of dailyMarketIds) {
+      if (resolvedResults[mId]?.result === "win") {
+        points += Number(resolvedResults[mId].points) || 0;
+        wins++;
+        continue;
+      }
+      if (resolvedResults[mId]?.result === "loss") {
+        losses++;
+        continue;
+      }
+
+      const position = state.marketPositions[mId];
+      const snapshot = state.marketSnapshots[mId];
+      const outcome = snapshot?.outcome ?? 0;
+      if (outcome === 0) continue;
+
+      const sidesKey = `siftle_traded_sides_${mId}_${state.walletAddress.toLowerCase()}`;
+      let tradedSides: string[] = [];
+      try {
+        tradedSides = JSON.parse(localStorage.getItem(sidesKey) || "[]") as string[];
+      } catch {}
+      const hasSwitched = tradedSides.includes("yes") && tradedSides.includes("no");
+
+      if (outcome === 1 && position && position.yesSharesUsdc > 0) {
+        const earnedPoints = hasSwitched ? 50 : 100;
+        points += earnedPoints;
+        wins++;
+        resolvedResults[mId] = { result: "win", points: earnedPoints };
+      } else if (outcome === 2 && position && position.noSharesUsdc > 0) {
+        const earnedPoints = hasSwitched ? 50 : 100;
+        points += earnedPoints;
+        wins++;
+        resolvedResults[mId] = { result: "win", points: earnedPoints };
+      } else if (position && (position.yesSharesUsdc > 0 || position.noSharesUsdc > 0)) {
+        losses++;
+        resolvedResults[mId] = { result: "loss", points: 0 };
+      }
+    }
+  }
+
+  if (resolvedResultKey) {
+    localStorage.setItem(resolvedResultKey, JSON.stringify(resolvedResults));
+  }
+
+  return {
+    points,
+    status: `${wins} win${wins === 1 ? "" : "s"}, ${losses} loss${losses === 1 ? "" : "es"}`
+  };
+};
+
+const scoreLocalResolvedMarketForAllStoredWallets = (market: MarketPreview, winningSide: "yes" | "no"): void => {
+  const marketAddress = getMarketAddress(market).toLowerCase();
+  if (!marketAddress) return;
+
+  const positionPrefix = `siftle_mock_pos_${marketAddress}_`;
+  const wallets = new Set<string>();
+
+  for (let index = 0; index < localStorage.length; index++) {
+    const key = localStorage.key(index);
+    if (!key || !key.startsWith(positionPrefix)) continue;
+    const walletAddress = key.slice(positionPrefix.length).toLowerCase();
+    if (/^0x[a-f0-9]{40}$/.test(walletAddress)) wallets.add(walletAddress);
+  }
+
+  wallets.forEach((walletAddress) => {
+    const positionKey = `${positionPrefix}${walletAddress}`;
+    let position: ArcMarketPosition = { yesSharesUsdc: 0, noSharesUsdc: 0 };
+    try {
+      position = JSON.parse(localStorage.getItem(positionKey) || "{}");
+    } catch {}
+
+    const hasYes = (Number(position.yesSharesUsdc) || 0) > 0;
+    const hasNo = (Number(position.noSharesUsdc) || 0) > 0;
+    if (!hasYes && !hasNo) return;
+
+    const sidesKey = `siftle_traded_sides_${market.id}_${walletAddress}`;
+    let tradedSides: string[] = [];
+    try {
+      tradedSides = JSON.parse(localStorage.getItem(sidesKey) || "[]") as string[];
+    } catch {}
+    const switched = tradedSides.includes("yes") && tradedSides.includes("no");
+    const won = winningSide === "yes" ? hasYes : hasNo;
+
+    const resolvedKey = `siftle_resolved_results_${walletAddress}`;
+    let resolvedResults: Record<string, { result: "win" | "loss"; points: number }> = {};
+    try {
+      resolvedResults = JSON.parse(localStorage.getItem(resolvedKey) || "{}");
+    } catch {}
+
+    resolvedResults[market.id] = {
+      result: won ? "win" : "loss",
+      points: won ? switched ? 50 : 100 : 0
+    };
+    localStorage.setItem(resolvedKey, JSON.stringify(resolvedResults));
+
+    let points = 0;
+    let wins = 0;
+    let losses = 0;
+    Object.values(resolvedResults).forEach((entry) => {
+      if (entry.result === "win") {
+        wins += 1;
+        points += Number(entry.points) || 0;
+      } else if (entry.result === "loss") {
+        losses += 1;
+      }
+    });
+
+    const username = localStorage.getItem(profileUsernameKey(walletAddress)) || "";
+    fetch(apiUrl("/api/leaderboard/report"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        walletAddress,
+        username,
+        points,
+        status: `${wins} win${wins === 1 ? "" : "s"}, ${losses} loss${losses === 1 ? "" : "es"}`
+      })
+    }).catch(err => console.error("Failed to report local resolved score:", err));
+  });
+};
+
+const reportLeaderboardEntry = async (includeScore: boolean): Promise<boolean> => {
+  if (!state.walletAddress) return false;
+  const score = includeScore && state.hasLoadedPortfolioPositions ? calculateLeaderboardScore() : null;
+  const response = await fetch(apiUrl("/api/leaderboard/report"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      walletAddress: state.walletAddress,
+      username: state.profileUsername || "",
+      ...(score ? { points: score.points, status: score.status } : {})
+    })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data?.success === false) {
+    throw new Error(data?.error || "Failed to save leaderboard profile");
+  }
+  if (data?.supabaseConfigured && data?.supabaseSaved === false) {
+    throw new Error(data?.supabaseError || "Supabase did not save profile");
+  }
+  return true;
+};
+
+const reportStoredLocalMarketTraders = (): void => {
+  const traders = new Set<string>();
+
+  for (let index = 0; index < localStorage.length; index++) {
+    const key = localStorage.key(index);
+    if (!key) continue;
+
+    if (key.startsWith("siftle_mock_pos_")) {
+      const address = key.slice(key.lastIndexOf("_") + 1).toLowerCase();
+      try {
+        const position = JSON.parse(localStorage.getItem(key) || "{}");
+        const hasPosition = (Number(position.yesSharesUsdc) || 0) > 0 || (Number(position.noSharesUsdc) || 0) > 0;
+        if (hasPosition && /^0x[a-f0-9]{40}$/.test(address)) traders.add(address);
+      } catch {}
+    }
+
+  }
+
+  traders.forEach((walletAddress) => {
+    fetch(apiUrl("/api/leaderboard/report"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ walletAddress })
+    }).catch(err => console.error("Failed to report stored local trader:", err));
+  });
+};
+
 const loadMarketSnapshot = async (market: MarketPreview): Promise<void> => {
   const marketAddress = getMarketAddress(market);
   if (!marketAddress || state.marketSnapshots[market.id] || state.loadingMarketSnapshots[market.id] || state.checkedMarketSnapshots[market.id]) return;
@@ -819,7 +1344,8 @@ const loadPortfolioPositions = async (): Promise<void> => {
   } finally {
     state.loadingPortfolioPositions = false;
     state.hasLoadedPortfolioPositions = true;
-    if (state.activeSurface === "portfolio") render();
+    void reportLeaderboardEntry(true).catch(err => console.error("Failed to report leaderboard entry:", err));
+    if (state.activeSurface === "portfolio" || state.activeSurface === "leaderboard") render();
   }
 };
 
@@ -841,9 +1367,45 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
     return;
   }
 
+  if (!state.hasLoadedPortfolioPositions && !state.loadingPortfolioPositions) {
+    state.marketTradeStatus = "Loading position...";
+    render();
+    await loadPortfolioPositions();
+    state.marketTradeStatus = null;
+  }
+  if (!state.hasLoadedPortfolioPositions) {
+    showActionToast("Still loading your position. Try again in a moment.");
+    render();
+    return;
+  }
+
   const initialSnapshot = state.marketSnapshots[market.id];
+  if (isMarketResolved(market, initialSnapshot)) {
+    state.tradeDrawerOpen = false;
+    showActionToast("This market is resolved and can no longer be traded.");
+    render();
+    return;
+  }
+
   const yesPrice = initialSnapshot?.yesPriceCents ?? market.probability;
   const noPrice = initialSnapshot?.noPriceCents ?? (100 - market.probability);
+  const currentPosition = state.marketPositions[market.id] || { yesSharesUsdc: 0, noSharesUsdc: 0 };
+  if (!canTradeSide(state.marketOrderMode, side, currentPosition)) {
+    const heldSide = getHeldSide(currentPosition);
+    const message = state.marketOrderMode === "sell"
+      ? heldSide
+        ? `You can only exit your ${heldSide.toUpperCase()} shares.`
+        : "You do not have shares to exit in this market."
+      : heldSide
+        ? `Exit your ${heldSide.toUpperCase()} shares before buying the other side.`
+        : "You cannot buy both sides in the same market.";
+    showActionToast(message);
+    state.marketTradeSide = normalizeTradeSideForMode(state.marketOrderMode, side, currentPosition);
+    render();
+    return;
+  }
+  const tradeAmount = normalizeMarketTradeAmount(Number(state.marketTradeAmount) || 0);
+  state.marketTradeAmount = tradeAmount;
 
   try {
     state.marketTradeStatus = "Preparing transaction...";
@@ -852,7 +1414,7 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
       marketAddress,
       state.marketOrderMode,
       side,
-      Math.max(0, Number(state.marketTradeAmount) || 0),
+      tradeAmount,
       (status: string) => {
         state.marketTradeStatus = status;
         render();
@@ -862,9 +1424,12 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
     );
     delete state.marketSnapshots[market.id];
     delete state.marketPositions[market.id];
+    delete state.checkedMarketSnapshots[market.id];
+    delete state.loadingMarketSnapshots[market.id];
     state.walletAddress = getConnectedArcWallet();
     if (state.walletAddress) state.walletBalance = await readArcUsdcBalance(state.walletAddress);
     await loadPortfolioPositions();
+    void reportLeaderboardEntry(true).catch(err => console.error("Failed to report leaderboard entry:", err));
 
     // Update cost basis in localStorage
     if (state.walletAddress) {
@@ -883,7 +1448,7 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
         }
       } catch {}
 
-      const tradeAmountNum = Math.max(0, Number(state.marketTradeAmount) || 0);
+      const tradeAmountNum = tradeAmount;
 
       if (state.marketOrderMode === "buy") {
         const sidesKey = `siftle_traded_sides_${market.id}_${state.walletAddress.toLowerCase()}`;
@@ -920,27 +1485,6 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
       localStorage.setItem(costKey, JSON.stringify(costBasis));
     }
 
-    if (state.marketOrderMode === "sell" && market.timeframe === "Daily" && state.walletAddress) {
-      let inProfit = false;
-      if (side === "yes" && yesPrice > market.probability) {
-        inProfit = true;
-      } else if (side === "no" && noPrice > (100 - market.probability)) {
-        inProfit = true;
-      }
-      if (inProfit) {
-        try {
-          const key = `siftle_closed_profits_${state.walletAddress.toLowerCase()}`;
-          const currentList = JSON.parse(localStorage.getItem(key) || "[]") as string[];
-          if (!currentList.includes(market.id)) {
-            currentList.push(market.id);
-            localStorage.setItem(key, JSON.stringify(currentList));
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      }
-    }
-
     showActionToast(`Trade confirmed ${txHash.slice(0, 8)}...`);
     showSuccessModal(
       state.marketOrderMode,
@@ -949,7 +1493,15 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
       market.question
     );
   } catch (error) {
-    showActionToast(error instanceof Error ? error.message : "Arc trade failed");
+    if (isSessionExpiredError(error)) {
+      disconnectArcWallet();
+      state.walletAddress = null;
+      state.walletBalance = null;
+      syncProfileUsernameForWallet();
+      showActionToast("Session expired. Please sign in again.");
+    } else {
+      showActionToast(error instanceof Error ? error.message : "Arc trade failed");
+    }
   } finally {
     state.marketTradeStatus = null;
     renderWalletState();
@@ -1550,9 +2102,17 @@ const renderThreadTimelineItem = (story: NewsStory, label: string): string => `
       </div>
       <h3>${story.headline}</h3>
       <p>${safeStorySummary(story, story.ai_summary)}</p>
-      ${/example\\.com/i.test(story.sourceUrl)
-        ? ""
-        : `<a class="thread-source-link" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
+      <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+        ${/example\.com/i.test(story.sourceUrl)
+          ? ""
+          : `<a class="thread-source-link" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
+        <button type="button" class="thread-source-link" data-unlock-briefing-url="${encodeURIComponent(story.sourceUrl)}">${isBriefingUnlocked(story) ? "AI briefing" : "Unlock AI briefing"}</button>
+      </div>
+      ${isBriefingUnlocked(story)
+        ? (state.loadingSummaryUrl === story.sourceUrl
+            ? `<div style="margin-top: 12px;">${renderSummarySkeleton()}</div>`
+            : `<div style="margin-top: 12px;">${formatAIBriefing(safeStorySummary(story, state.aiSummaries[story.sourceUrl] || story.ai_summary))}</div>`)
+        : ""}
     </div>
   </article>
 `;
@@ -1629,6 +2189,8 @@ const renderDetail = (): void => {
 
   const summary = safeStorySummary(story, state.aiSummaries[story.sourceUrl]);
   const isLoadingSummary = state.loadingSummaryUrl === story.sourceUrl;
+  const isUnlocked = isBriefingUnlocked(story);
+  const isUnlocking = state.unlockingSummaryUrl === story.sourceUrl;
 
   storyList.hidden = true;
   storyDetail.hidden = false;
@@ -1649,7 +2211,7 @@ const renderDetail = (): void => {
         <img class="detail-image" src="${story.imageUrl}" alt="" />
         <section class="detail-summary ${story.category}">
           <strong>AI briefing</strong>
-          ${isLoadingSummary ? renderSummarySkeleton() : formatAIBriefing(summary)}
+          ${!isUnlocked ? renderLockedBriefing(story, isUnlocking) : isLoadingSummary ? renderSummarySkeleton() : formatAIBriefing(summary)}
         </section>
         <a class="source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>
       </article>
@@ -1662,6 +2224,7 @@ const renderMarketCard = (market: MarketPreview): string => {
   const snapshot = state.marketSnapshots[market.id];
   const marketAddress = getMarketAddress(market);
   const isLoadingSnapshot = Boolean(marketAddress && !snapshot);
+  const traderCount = getDisplayTraderCount(market, snapshot);
 
   if (isCheckingEvidence || isLoadingSnapshot) {
     return `
@@ -1731,14 +2294,37 @@ const renderMarketDetail = (market: MarketPreview): void => {
   const marketAddress = getMarketAddress(market);
   const snapshot = state.marketSnapshots[market.id];
   const isLoadingSnapshot = Boolean(marketAddress && !snapshot);
+  const traderCount = getDisplayTraderCount(market, snapshot);
   const yesPrice = snapshot?.yesPriceCents ?? (marketAddress ? market.probability : 0);
   const noPrice = snapshot?.noPriceCents ?? (marketAddress ? 100 - market.probability : 0);
   const yesPriceLabel = isLoadingSnapshot ? "" : marketAddress ? `${yesPrice}¢` : "--";
   const noPriceLabel = isLoadingSnapshot ? "" : marketAddress ? `${noPrice}¢` : "--";
-  const activePrice = state.marketTradeSide === "yes" ? yesPrice : noPrice;
-  const amount = Math.max(0, Number(state.marketTradeAmount) || 0);
-  const projectedPayout = activePrice > 0 ? amount / (activePrice / 100) : 0;
-  const orderLabel = state.marketOrderMode === "buy" ? "Buy" : "Sell";
+  const amount = normalizeMarketTradeAmount(Number(state.marketTradeAmount) || 0);
+  const position = state.marketPositions[market.id] || { yesSharesUsdc: 0, noSharesUsdc: 0 };
+  const positionReady = !state.walletAddress || state.hasLoadedPortfolioPositions;
+  const marketResolved = isMarketResolved(market, snapshot);
+  const marketTradeLockMessage = getMarketTradeLockMessage(market, snapshot);
+  const marketTradeLocked = Boolean(marketTradeLockMessage);
+  state.marketTradeSide = normalizeTradeSideForMode(state.marketOrderMode, state.marketTradeSide, position);
+  const canTradeYes = !marketResolved && !marketTradeLocked && positionReady && canTradeSide(state.marketOrderMode, "yes", position);
+  const canTradeNo = !marketResolved && !marketTradeLocked && positionReady && canTradeSide(state.marketOrderMode, "no", position);
+  const canSubmitTrade = !marketResolved && !marketTradeLocked && positionReady && canTradeSide(state.marketOrderMode, state.marketTradeSide, position);
+  const yesDisabledLabel = marketResolved
+    ? "Market resolved"
+    : marketTradeLockMessage
+      ? marketTradeLockMessage
+    : state.marketOrderMode === "sell"
+      ? "No YES shares"
+      : "Exit NO first";
+  const noDisabledLabel = marketResolved
+    ? "Market resolved"
+    : marketTradeLockMessage
+      ? marketTradeLockMessage
+    : state.marketOrderMode === "sell"
+      ? "No NO shares"
+      : "Exit YES first";
+  const projectedPayout = estimatePoolPayout(snapshot, state.marketTradeSide, amount, state.marketOrderMode, position);
+  const orderLabel = state.marketOrderMode === "buy" ? "Buy" : "Exit";
   const marketStatus = marketAddress ? "Arc testnet live" : "Contract not deployed";
 
   storyList.hidden = true;
@@ -1748,44 +2334,32 @@ const renderMarketDetail = (market: MarketPreview): void => {
 
   void loadMarketSnapshot(market);
   void loadMarketEvidence(market);
+  if (state.walletAddress && !state.hasLoadedPortfolioPositions && !state.loadingPortfolioPositions) {
+    void loadPortfolioPositions();
+  }
 
-  // Read user position and cost basis
-  const position = state.marketPositions[market.id] || { yesSharesUsdc: 0, noSharesUsdc: 0 };
   const hasPosition = position.yesSharesUsdc > 0 || position.noSharesUsdc > 0;
-  let pnlHtml = "";
+  let positionHtml = "";
   if (hasPosition && state.walletAddress) {
-    let costBasis = { yesCost: 0, noCost: 0, yesShares: 0, noShares: 0 };
-    try {
-      costBasis = JSON.parse(localStorage.getItem(`siftle_cost_basis_${market.id}_${state.walletAddress.toLowerCase()}`) || '{"yesCost":0,"noCost":0,"yesShares":0,"noShares":0}');
-    } catch {}
-    const yesShares = costBasis.yesShares || (position.yesSharesUsdc / (yesPrice / 100));
-    const noShares = costBasis.noShares || (position.noSharesUsdc / (noPrice / 100));
-    const yesVal = yesShares * (yesPrice / 100);
-    const noVal = noShares * (noPrice / 100);
-    const currentVal = yesVal + noVal;
-    const totalCost = costBasis.yesCost + costBasis.noCost;
-    const pnl = currentVal - totalCost;
-    const pnlPercent = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
-    const pnlSign = pnl >= 0 ? "+" : "";
-    
-    pnlHtml = `
+    const heldRows = getHeldPositionRows(position, snapshot);
+
+    positionHtml = `
       <div class="user-market-position-box" style="margin: 16px 0; padding: 16px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.15); border-radius: 12px; font-family: 'Space Grotesk', sans-serif;">
         <h3 style="font-size: 0.9rem; font-weight: 700; color: #FFFFFF; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.05em;">Your Position</h3>
-        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 8px;">
-          <div>
-            <span style="font-size: 0.72rem; color: #94A3B8; display: block; margin-bottom: 2px;">YES Shares</span>
-            <strong style="font-size: 0.95rem; color: #FFFFFF;">${formatMoney(yesShares)} <span style="font-size: 0.75rem; color: #94A3B8; font-weight: normal;">(value: $${yesVal.toFixed(2)})</span></strong>
+        ${heldRows.map((row) => `
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-bottom: 8px;">
+            <div>
+              <span style="font-size: 0.72rem; color: #94A3B8; display: block; margin-bottom: 2px;">${row.label}</span>
+              <strong style="font-size: 0.95rem; color: #FFFFFF;">${formatMoney(row.shares)}</strong>
+            </div>
+            <div>
+              <span style="font-size: 0.72rem; color: #94A3B8; display: block; margin-bottom: 2px;">Projected payout</span>
+              <strong style="font-size: 0.95rem; color: #FFFFFF;">$${formatMoney(row.payout)}</strong>
+            </div>
           </div>
-          <div>
-            <span style="font-size: 0.72rem; color: #94A3B8; display: block; margin-bottom: 2px;">NO Shares</span>
-            <strong style="font-size: 0.95rem; color: #FFFFFF;">${formatMoney(noShares)} <span style="font-size: 0.75rem; color: #94A3B8; font-weight: normal;">(value: $${noVal.toFixed(2)})</span></strong>
-          </div>
-        </div>
+        `).join("")}
         <div style="border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 8px; display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 0.78rem; color: #94A3B8;">Total Cost: $${formatMoney(totalCost)}</span>
-          <span class="pnl-val" style="font-size: 0.85rem; font-weight: 700; color: ${pnl >= 0 ? '#10B981' : '#EF4444'};">
-            P&L: ${pnlSign}$${formatMoney(pnl)} (${pnlSign}${pnlPercent.toFixed(1)}%)
-          </span>
+          <span style="font-size: 0.78rem; color: #94A3B8;">Winning side splits the final pool</span>
         </div>
       </div>
     `;
@@ -1812,7 +2386,7 @@ const renderMarketDetail = (market: MarketPreview): void => {
             <span class="market-status-pill">${marketStatus}</span>
           </div>
           <h2>${market.question}</h2>
-          ${pnlHtml}
+          ${positionHtml}
           ${marketView.imageUrl ? `
           <div class="market-detail-hero-image" style="width: 100%; height: 160px; border-radius: 14px; overflow: hidden; margin: 12px 0; border: 1px solid var(--market-border);">
             <img src="${marketView.imageUrl}" alt="" style="width: 100%; height: 100%; object-fit: cover;" />
@@ -1821,8 +2395,8 @@ const renderMarketDetail = (market: MarketPreview): void => {
           
           <div class="market-stats-row">
             <div class="market-stat">
-              <span>Closes</span>
-              <strong>${market.closes}</strong>
+              <span>${getDailyTradeLockTime(market, snapshot) === null ? "Closes" : "Trade lock"}</span>
+              <strong>${getDailyTradeLockLabel(market, snapshot)}</strong>
             </div>
             <div class="market-stat">
               <span>Volume</span>
@@ -1830,13 +2404,14 @@ const renderMarketDetail = (market: MarketPreview): void => {
             </div>
             <div class="market-stat">
               <span>Traders</span>
-              <strong>${market.traders}</strong>
+              <strong>${traderCount}</strong>
             </div>
           </div>
 
           <div class="market-resolution-panel">
             <h3>Resolution Rules</h3>
             <p>${market.resolution}</p>
+            ${marketTradeLockMessage ? `<p style="margin-top: 10px; color: #f59e0b; font-weight: 600;">${marketTradeLockMessage}</p>` : ""}
           </div>
 
           <section class="market-evidence-thread">
@@ -1857,7 +2432,15 @@ const renderMarketDetail = (market: MarketPreview): void => {
                     </div>
                     <h4>${item.headline}</h4>
                     <p>${item.summary}</p>
-                    ${/example\\.com/i.test(item.sourceUrl) ? "" : `<a class="market-thread-source-link" href="${item.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                      ${/example\.com/i.test(item.sourceUrl) ? "" : `<a class="market-thread-source-link" href="${item.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
+                      <button type="button" class="market-thread-source-link" data-unlock-briefing-url="${encodeURIComponent(item.sourceUrl)}">${isBriefingUnlocked(getBriefingTargetFromMarketEvidence(market, item)) ? "AI briefing" : "Unlock AI briefing"}</button>
+                    </div>
+                    ${isBriefingUnlocked(getBriefingTargetFromMarketEvidence(market, item))
+                      ? (state.loadingSummaryUrl === item.sourceUrl
+                          ? `<div style="margin-top: 12px;">${renderSummarySkeleton()}</div>`
+                          : `<div style="margin-top: 12px;">${formatAIBriefing(safeStorySummary(getBriefingTargetFromMarketEvidence(market, item), state.aiSummaries[item.sourceUrl]))}</div>`)
+                      : ""}
                   </div>
                 </article>
               `).join("")}
@@ -1871,8 +2454,8 @@ const renderMarketDetail = (market: MarketPreview): void => {
           <span>Yes <strong>${yesPriceLabel}</strong></span>
           <span>No <strong>${noPriceLabel}</strong></span>
         </div>
-        <button class="sticky-trade-btn" type="button" id="openTradeDrawerBtn">
-          Trade Market
+        <button class="sticky-trade-btn" type="button" id="openTradeDrawerBtn" ${marketResolved || marketTradeLocked ? "disabled" : ""}>
+          ${marketResolved ? "Market Resolved" : marketTradeLockMessage || "Trade Market"}
         </button>
       </div>
 
@@ -1884,8 +2467,8 @@ const renderMarketDetail = (market: MarketPreview): void => {
         </div>
         <div class="trade-drawer-body">
           <div class="market-order-mode">
-            <button type="button" class="${state.marketOrderMode === "buy" ? "active" : ""}" data-market-order-mode="buy">Buy</button>
-            <button type="button" class="${state.marketOrderMode === "sell" ? "active" : ""}" data-market-order-mode="sell">Sell</button>
+            <button type="button" class="${state.marketOrderMode === "buy" ? "active" : ""}" data-market-order-mode="buy" ${marketResolved || marketTradeLocked ? "disabled" : ""}>Buy</button>
+            <button type="button" class="${state.marketOrderMode === "sell" ? "active" : ""}" data-market-order-mode="sell" ${marketResolved || marketTradeLocked ? "disabled" : ""}>Exit</button>
           </div>
 
           <div class="market-action-grid">
@@ -1895,13 +2478,15 @@ const renderMarketDetail = (market: MarketPreview): void => {
                 <div class="market-side no" aria-busy="true"><div class="skeleton skeleton-line md" style="height: 18px; margin: 0 auto 6px;"></div></div>
               `
               : `
-                <button type="button" class="market-side yes ${state.marketTradeSide === "yes" ? "active" : ""}" data-market-trade-side="yes">
+                <button type="button" class="market-side yes ${state.marketTradeSide === "yes" ? "active" : ""} ${canTradeYes ? "" : "disabled"}" data-market-trade-side="yes" ${canTradeYes ? "" : "disabled"} title="${canTradeYes ? "Yes" : yesDisabledLabel}">
                   <span>Yes</span>
                   <strong>${yesPriceLabel}</strong>
+                  ${canTradeYes ? "" : `<small>${yesDisabledLabel}</small>`}
                 </button>
-                <button type="button" class="market-side no ${state.marketTradeSide === "no" ? "active" : ""}" data-market-trade-side="no">
+                <button type="button" class="market-side no ${state.marketTradeSide === "no" ? "active" : ""} ${canTradeNo ? "" : "disabled"}" data-market-trade-side="no" ${canTradeNo ? "" : "disabled"} title="${canTradeNo ? "No" : noDisabledLabel}">
                   <span>No</span>
                   <strong>${noPriceLabel}</strong>
+                  ${canTradeNo ? "" : `<small>${noDisabledLabel}</small>`}
                 </button>
               `}
           </div>
@@ -1910,13 +2495,13 @@ const renderMarketDetail = (market: MarketPreview): void => {
             <label for="marketAmountInput">Trade Amount</label>
             <div class="market-amount-input-row">
               <span>$</span>
-              <input id="marketAmountInput" type="number" min="1" step="1" inputmode="decimal" value="${amount}" data-market-amount />
+              <input id="marketAmountInput" type="number" min="5" max="10" step="0.01" inputmode="decimal" value="${amount}" data-market-amount ${marketResolved || marketTradeLocked ? "disabled" : ""} />
               <span>USDC</span>
             </div>
           </div>
 
           <div class="market-inline-payout">
-            <span>${state.marketOrderMode === "buy" ? "Projected payout" : "Estimated proceeds"}</span>
+            <span>${state.marketOrderMode === "buy" ? "Projected payout" : "Exit amount"}</span>
             <strong>$${formatMoney(projectedPayout)}</strong>
           </div>
 
@@ -1925,8 +2510,16 @@ const renderMarketDetail = (market: MarketPreview): void => {
               ? `<div class="market-submit-button skeleton" style="min-height: 48px; border-radius: 12px;"></div>`
               : state.marketTradeStatus
                 ? `<button type="button" class="market-submit-button disabled" style="opacity: 0.8; pointer-events: none;">${state.marketTradeStatus}</button>`
+                : marketResolved
+                  ? `<button type="button" class="market-submit-button disabled" style="opacity: 0.6; pointer-events: none;">Market resolved</button>`
+                : marketTradeLocked
+                  ? `<button type="button" class="market-submit-button disabled" style="opacity: 0.6; pointer-events: none;">${marketTradeLockMessage}</button>`
                 : state.walletAddress
-                  ? `<button type="button" class="market-submit-button" data-market-trade="${state.marketTradeSide}">Confirm ${orderLabel} ${state.marketTradeSide === "yes" ? "Yes" : "No"}</button>`
+                  ? !positionReady
+                    ? `<button type="button" class="market-submit-button disabled" style="opacity: 0.6; pointer-events: none;">Loading position...</button>`
+                    : canSubmitTrade
+                    ? `<button type="button" class="market-submit-button" data-market-trade="${state.marketTradeSide}">Confirm ${orderLabel} ${state.marketTradeSide === "yes" ? "Yes" : "No"}</button>`
+                    : `<button type="button" class="market-submit-button disabled" style="opacity: 0.6; pointer-events: none;">No valid ${orderLabel.toLowerCase()} side</button>`
                   : `<button type="button" class="market-submit-button" data-connect-wallet>Sign in to trade</button>`
             }
           </div>
@@ -1954,7 +2547,15 @@ const renderMarkets = (): void => {
 
   if (state.selectedMarketId) {
     const market = marketPreviews.find((item) => item.id === state.selectedMarketId);
-    if (market) renderMarketDetail(market);
+    if (market) {
+      renderMarketDetail(market);
+      return;
+    }
+    // If hash points to a removed market, reset to list view.
+    state.selectedMarketId = null;
+    if (window.location.hash.startsWith("#market-")) {
+      window.history.replaceState({}, "", "#markets");
+    }
     return;
   }
 
@@ -2038,7 +2639,7 @@ const renderMarkets = (): void => {
         <a class="arc-faucet-button" href="${ARC_TESTNET_FAUCET}" target="_blank" rel="noreferrer" style="flex-shrink: 0;">Get testnet USDC</a>
       </div>
       <p style="margin: 10px 0 0; color: #647089; font-size: 0.95rem; font-weight: 600; line-height: 1.4; width: 100%;">
-        Trade daily prediction markets. Get +100 pts for winning (+50 if you switched sides) and +30 pts for closing in profit.
+        Trade daily prediction markets. Winning shares split the final pool, and Daily winners earn leaderboard points.
       </p>
     </header>
     ${timeframeTabsHtml}
@@ -2060,70 +2661,22 @@ const renderLeaderboard = (): void => {
   storyDetail.hidden = true;
   storyList.hidden = false;
   storyList.classList.add("markets-list");
-
-  // Calculate points dynamically
-  let userPoints = 0;
-  let wins = 0;
-  let activeInProfit = 0;
-  const dailyMarketIds = marketPreviews.filter(m => m.timeframe === "Daily").map(m => m.id);
-
-  if (state.walletAddress) {
-    const closedProfitsKey = `siftle_closed_profits_${state.walletAddress.toLowerCase()}`;
-    let closedProfits: string[] = [];
-    try {
-      closedProfits = JSON.parse(localStorage.getItem(closedProfitsKey) || "[]") as string[];
-    } catch {}
-
-    for (const mId of dailyMarketIds) {
-      const market = marketPreviews.find(m => m.id === mId);
-      if (!market) continue;
-      const position = state.marketPositions[mId];
-      const snapshot = state.marketSnapshots[mId];
-      const outcome = snapshot?.outcome ?? 0;
-
-      let marketPoints = 0;
-      const wasClosedInProfit = closedProfits.includes(mId);
-
-      const sidesKey = `siftle_traded_sides_${mId}_${state.walletAddress.toLowerCase()}`;
-      let tradedSides: string[] = [];
-      try {
-        tradedSides = JSON.parse(localStorage.getItem(sidesKey) || "[]") as string[];
-      } catch {}
-      const hasSwitched = tradedSides.includes("yes") && tradedSides.includes("no");
-
-      let winPoints = 0;
-      if (outcome !== 0) {
-        if (outcome === 1 && position && position.yesSharesUsdc > 0) {
-          winPoints = hasSwitched ? 50 : 100;
-          wins++;
-        } else if (outcome === 2 && position && position.noSharesUsdc > 0) {
-          winPoints = hasSwitched ? 50 : 100;
-          wins++;
-        }
-      }
-
-      let profitPoints = 0;
-      if (wasClosedInProfit) {
-        profitPoints = 30;
-        activeInProfit++;
-      }
-
-      marketPoints = winPoints + profitPoints;
-      userPoints += marketPoints;
-    }
+  if (state.walletAddress && !state.hasLoadedPortfolioPositions && !state.loadingPortfolioPositions) {
+    void loadPortfolioPositions();
   }
 
-  const userStatus = `${wins} win${wins === 1 ? "" : "s"}, ${activeInProfit} closed profit${activeInProfit === 1 ? "" : "s"}`;
+  const score = state.walletAddress && state.hasLoadedPortfolioPositions ? calculateLeaderboardScore() : null;
 
   // Sync user score with backend
-  if (state.walletAddress) {
+  if (state.walletAddress && score) {
     fetch(apiUrl("/api/leaderboard/report"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         walletAddress: state.walletAddress,
-        points: userPoints,
-        status: userStatus
+        points: score.points,
+        status: score.status,
+        username: state.profileUsername || ""
       })
     }).catch(err => console.error("Failed to report user score:", err));
   }
@@ -2139,7 +2692,7 @@ const renderLeaderboard = (): void => {
       <header class="leaderboard-header">
         <span>Siftle Seasonal Arena</span>
         <h1>Seasonal Leaderboard</h1>
-        <p>Compete with other traders. Points are earned from **Daily** markets: +100 pts for finishing on the winning side of resolved markets (+50 pts if you switched sides before resolution), and +30 pts for closing/selling trades in profit before resolution.</p>
+        <p>Compete with other traders. Points are earned from Daily markets: +100 pts for finishing on the winning side of resolved markets, or +50 pts if you switched sides before resolution.</p>
       </header>
 
       <div class="leaderboard-faucet-box">
@@ -2200,7 +2753,6 @@ const renderLeaderboard = (): void => {
           <div class="rules-section">
             <h3>📈 Scoring System</h3>
             <p><strong>+100 pts</strong> for finishing on the winning side.<br>
-            <strong>+30 pts</strong> for taking profit (closing/selling at profit before resolution).<br>
             <strong>+50 pts</strong> if you switched sides and ultimately finished on the winning side.</p>
           </div>
           <div class="rules-section">
@@ -2260,10 +2812,14 @@ const renderLeaderboard = (): void => {
             listContainer.innerHTML = players.map((player: any, idx: number) => {
               const rank = idx + 1;
               const isUser = state.walletAddress && player.username.toLowerCase() === state.walletAddress.toLowerCase();
-              const resolvedUsername = isUser && state.profileUsername ? state.profileUsername : player.username;
+              const resolvedUsername = isUser && state.profileUsername
+                ? state.profileUsername
+                : (player.displayName || player.username);
+              const playerStatus = escapeHtml(formatLeaderboardStatus(player.status));
               const displayName = isUser
                 ? `${state.profileUsername ? resolvedUsername : shortenAddress(player.username)} (You)`
                 : (resolvedUsername.startsWith("0x") && resolvedUsername.length === 42 ? shortenAddress(resolvedUsername) : resolvedUsername);
+              const safeDisplayName = escapeHtml(displayName);
 
               let zoneClass = "safety-zone";
               let arrowHtml = '<span style="color: transparent; font-weight: bold; font-size: 0.85rem; margin-right: 4px; display: inline-block; width: 10px;">•</span>';
@@ -2281,15 +2837,15 @@ const renderLeaderboard = (): void => {
                   <div style="flex: 1.5; display: flex; align-items: center; gap: 8px; min-width: 0;">
                     ${arrowHtml}
                     <span class="leaderboard-rank rank-${rank}" style="flex-shrink: 0; margin-right: 4px;">${rank}</span>
-                    <span class="leaderboard-username" style="font-weight: 600; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${displayName}</span>
+                    <span class="leaderboard-username" style="font-weight: 600; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${safeDisplayName}</span>
                   </div>
                   <!-- Center Side: Points -->
                   <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
                     <span style="color: #ffffff; font-weight: 750; font-size: 0.95rem; white-space: nowrap;">${player.points} pts</span>
                   </div>
-                  <!-- Right Side: Status (Wins & Profits) -->
+                  <!-- Right Side: Status -->
                   <div style="flex: 1.5; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; text-align: right; min-width: 0;">
-                    <span style="font-size: 0.78rem; color: #8e8e93; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${player.status}</span>
+                    <span style="font-size: 0.78rem; color: #8e8e93; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${playerStatus}</span>
                   </div>
                 </div>
               `;
@@ -2404,33 +2960,20 @@ const getMarketOutcomeLabel = (outcome?: number): string => {
 const renderPortfolioPositionCard = (market: MarketPreview): string => {
   const position = state.marketPositions[market.id] || { yesSharesUsdc: 0, noSharesUsdc: 0 };
   const snapshot = state.marketSnapshots[market.id];
-  const yesPrice = (snapshot?.yesPriceCents ?? market.probability);
-  const noPrice = (snapshot?.noPriceCents ?? 100 - market.probability);
   const outcome = getMarketOutcomeLabel(snapshot?.outcome);
-
-  // Read cost basis
-  let costBasis = { yesCost: 0, noCost: 0, yesShares: 0, noShares: 0 };
-  if (state.walletAddress) {
-    try {
-      costBasis = JSON.parse(localStorage.getItem(`siftle_cost_basis_${market.id}_${state.walletAddress.toLowerCase()}`) || '{"yesCost":0,"noCost":0,"yesShares":0,"noShares":0}');
-    } catch {}
-  }
-
-  const yesShares = costBasis.yesShares || (position.yesSharesUsdc / (yesPrice / 100));
-  const noShares = costBasis.noShares || (position.noSharesUsdc / (noPrice / 100));
-  const yesValue = yesShares * (yesPrice / 100);
-  const noValue = noShares * (noPrice / 100);
-  const currentValue = yesValue + noValue;
-  const totalShares = yesShares + noShares;
-
-  const totalCost = costBasis.yesCost + costBasis.noCost;
-  const pnl = currentValue - totalCost;
-  const pnlPercent = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
-  const pnlSign = pnl >= 0 ? "+" : "";
-  const pnlClass = pnl >= 0 ? "profit" : "loss";
-  const pnlHtml = totalCost > 0
-    ? `<span class="portfolio-pnl-tag ${pnlClass}" style="color: ${pnl >= 0 ? '#10B981' : '#EF4444'}; font-weight: 700; font-size: 0.8rem; margin-left: 8px;">(P&L: ${pnlSign}$${formatMoney(pnl)} / ${pnlSign}${pnlPercent.toFixed(1)}%)</span>`
-    : "";
+  const heldRows = getHeldPositionRows(position, snapshot);
+  const bestPotentialPayout = heldRows.reduce((best, row) => Math.max(best, row.payout), 0);
+  const totalShares = position.yesSharesUsdc + position.noSharesUsdc;
+  const resolvedOutcome = snapshot?.outcome ?? 0;
+  const winningShares = resolvedOutcome === 1 ? position.yesSharesUsdc : resolvedOutcome === 2 ? position.noSharesUsdc : 0;
+  const winningPool = resolvedOutcome === 1 ? snapshot?.yesSharesUsdc ?? 0 : resolvedOutcome === 2 ? snapshot?.noSharesUsdc ?? 0 : 0;
+  const totalPool = snapshot?.volumeUsdc ?? 0;
+  const claimAmount = winningShares > 0 && winningPool > 0 ? (winningShares / winningPool) * totalPool : 0;
+  const claimHtml = resolvedOutcome === 0
+    ? ""
+    : claimAmount > 0
+      ? `<button type="button" class="connect-wallet-btn" data-claim-market="${market.id}" style="background: #ffffff !important; color: #000000 !important; border: 1px solid #ffffff !important; border-radius: 6px !important; padding: 8px 14px !important; font-size: 0.82rem !important; font-weight: 700 !important; cursor: pointer !important;">Claim $${formatMoney(claimAmount)}</button>`
+      : `<span style="color: #8e8e93; font-size: 0.82rem; font-weight: 700;">No payout</span>`;
 
   return `
     <article class="portfolio-position-card">
@@ -2440,16 +2983,46 @@ const renderPortfolioPositionCard = (market: MarketPreview): string => {
       </div>
       <h2>${market.question}</h2>
       <div class="portfolio-position-stats">
-        <div><span>Current value</span><strong>$${formatMoney(currentValue)} ${pnlHtml}</strong></div>
-        <div><span>Yes shares</span><strong>${formatMoney(yesShares)} <span style="font-weight: normal; font-size: 0.72rem; color: #94A3B8;">(value: $${formatMoney(yesValue)})</span></strong></div>
-        <div><span>No shares</span><strong>${formatMoney(noShares)} <span style="font-weight: normal; font-size: 0.72rem; color: #94A3B8;">(value: $${formatMoney(noValue)})</span></strong></div>
+        <div><span>Projected payout</span><strong>$${formatMoney(bestPotentialPayout)}</strong></div>
+        ${heldRows.map((row) => `
+          <div><span>${row.label}</span><strong>${formatMoney(row.shares)}</strong></div>
+        `).join("")}
       </div>
       <div class="portfolio-position-footer">
-        <span>${totalCost > 0 ? `Total Cost: $${formatMoney(totalCost)}` : ""}</span>
-        <span>Closes ${market.closes}</span>
+        <span>${totalShares > 0 ? `${formatMoney(totalShares)} total shares` : ""}</span>
+        ${claimHtml || `<span>Closes ${market.closes}</span>`}
       </div>
     </article>
   `;
+};
+
+const claimPortfolioMarket = async (marketId: string): Promise<void> => {
+  if (!state.walletAddress) {
+    showActionToast("Please sign in first.");
+    return;
+  }
+
+  const market = marketPreviews.find((item) => item.id === marketId);
+  const marketAddress = market ? getMarketAddress(market) : "";
+  if (!market || !marketAddress) {
+    showActionToast("Market is not available.");
+    return;
+  }
+
+  try {
+    calculateLeaderboardScore();
+    const result = await claimArcMarketPayout(marketAddress, state.walletAddress);
+    delete state.marketPositions[market.id];
+    delete state.marketSnapshots[market.id];
+    state.hasLoadedPortfolioPositions = false;
+    state.walletBalance = await readArcUsdcBalance(state.walletAddress);
+    await loadPortfolioPositions();
+    showActionToast(result.won ? `Claimed $${formatMoney(result.amountUsdc)}` : "No payout to claim");
+    renderWalletState();
+    renderPortfolio();
+  } catch (error) {
+    showActionToast(error instanceof Error ? error.message : "Claim failed");
+  }
 };
 
 const renderPortfolio = (): void => {
@@ -2475,6 +3048,8 @@ const renderPortfolio = (): void => {
   const finalizedPositions = portfolioMarkets.filter((market) => (state.marketSnapshots[market.id]?.outcome ?? 0) !== 0);
   const walletConnected = !!state.walletAddress;
   const usernameDisplay = state.profileUsername || (state.walletAddress ? shortenAddress(state.walletAddress) : "Anonymous");
+  const safeUsernameDisplay = escapeHtml(usernameDisplay);
+  const safeProfileUsername = escapeHtml(state.profileUsername || "");
   const avatarLetter = usernameDisplay.charAt(0).toUpperCase();
 
   storyList.innerHTML = `
@@ -2486,7 +3061,7 @@ const renderPortfolio = (): void => {
           </div>
           <div class="profile-details" style="display: flex !important; flex-direction: column !important; min-width: 0 !important;">
             <div class="username-display-row" style="display: flex !important; align-items: center !important; gap: 8px !important;">
-              <span class="profile-username" style="font-family: 'Space Grotesk', sans-serif !important; font-size: 1.35rem !important; font-weight: 750 !important; color: #ffffff !important; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis !important; max-width: 180px !important;">${usernameDisplay}</span>
+              <span class="profile-username" style="font-family: 'Space Grotesk', sans-serif !important; font-size: 1.35rem !important; font-weight: 750 !important; color: #ffffff !important; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis !important; max-width: 180px !important;">${safeUsernameDisplay}</span>
               ${walletConnected ? `
                 <button type="button" class="edit-username-btn" id="editUsernameBtn" style="background: transparent !important; border: none !important; color: #8e8e93 !important; cursor: pointer !important; padding: 4px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; transition: color 0.2s ease !important; outline: none !important;">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none !important;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path></svg>
@@ -2507,7 +3082,7 @@ const renderPortfolio = (): void => {
 
         ${walletConnected ? `
           <div class="profile-username-edit-form" id="usernameEditForm" style="display: none !important; align-items: center !important; gap: 8px !important; margin-top: 16px !important; width: 100% !important;">
-            <input type="text" id="usernameInput" placeholder="Enter username..." value="${state.profileUsername || ""}" maxlength="15" style="flex: 1 !important; background: #090a0f !important; border: 1px solid #1e1f2b !important; border-radius: 6px !important; padding: 8px 12px !important; color: #ffffff !important; font-size: 0.85rem !important; outline: none !important; font-family: 'Outfit', sans-serif !important;" />
+            <input type="text" id="usernameInput" placeholder="Enter username..." value="${safeProfileUsername}" maxlength="15" style="flex: 1 !important; background: #090a0f !important; border: 1px solid #1e1f2b !important; border-radius: 6px !important; padding: 8px 12px !important; color: #ffffff !important; font-size: 0.85rem !important; outline: none !important; font-family: 'Outfit', sans-serif !important;" />
             <button type="button" class="save-username-btn" id="saveUsernameBtn" style="background: #ffffff !important; color: #000000 !important; border: 1px solid #ffffff !important; border-radius: 6px !important; padding: 8px 14px !important; font-size: 0.82rem !important; font-weight: 700 !important; cursor: pointer !important; transition: all 0.2s ease !important; outline: none !important;">Save</button>
             <button type="button" class="cancel-username-btn" id="cancelUsernameBtn" style="background: transparent !important; color: #8e8e93 !important; border: 1px solid #1e1f2b !important; border-radius: 6px !important; padding: 8px 12px !important; font-size: 0.82rem !important; cursor: pointer !important; transition: all 0.2s ease !important; outline: none !important;">Cancel</button>
           </div>
@@ -2652,6 +3227,12 @@ document.addEventListener("click", (event) => {
       });
     }
   }
+  const claimBtn = target.closest<HTMLElement>("[data-claim-market]");
+  if (claimBtn) {
+    const marketId = claimBtn.getAttribute("data-claim-market");
+    if (marketId) void claimPortfolioMarket(marketId);
+    return;
+  }
   if (target.closest("[data-connect-wallet]")) {
     if (state.walletAddress) {
       disconnectArcWallet();
@@ -2682,6 +3263,7 @@ bottomNavButtons.forEach((button) => {
       state.activeSurface = "feed";
       window.history.pushState({}, "", "#feed");
       if (target === "saved") {
+        clearLegacyMarketCache();
         loadSavedFromStorage();
         applySavedFlags();
       }
@@ -2708,7 +3290,7 @@ todayButton?.addEventListener("click", () => {
   void loadFeed(state.activeCategory);
 });
 
-storyList?.addEventListener("click", (event) => {
+storyList?.addEventListener("click", async (event) => {
   const target = event.target as HTMLElement;
 
   // Profile username edit/cancel/save handlers
@@ -2742,14 +3324,22 @@ storyList?.addEventListener("click", (event) => {
     const input = editForm?.querySelector<HTMLInputElement>("#usernameInput");
     if (input) {
       const newUsername = input.value.trim().slice(0, 15);
-      state.profileUsername = newUsername || null;
-      if (newUsername) {
-        localStorage.setItem("siftle_profile_username", newUsername);
-      } else {
-        localStorage.removeItem("siftle_profile_username");
+      const button = saveBtn as HTMLButtonElement;
+      const previousLabel = button.textContent || "Save";
+      button.disabled = true;
+      button.textContent = "Saving...";
+      saveProfileUsernameForWallet(newUsername);
+      try {
+        if (state.walletAddress) {
+          await reportLeaderboardEntry(false);
+        }
+        showActionToast("Username updated");
+        renderPortfolio();
+      } catch (error) {
+        showActionToast(error instanceof Error ? error.message : "Username save failed");
+        button.disabled = false;
+        button.textContent = previousLabel;
       }
-      showActionToast("Username updated");
-      renderPortfolio();
     }
     return;
   }
@@ -2829,6 +3419,26 @@ storyList?.addEventListener("keydown", (event) => {
 
 storyDetail?.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
+  const unlockBriefingBtn = target.closest<HTMLButtonElement>("[data-unlock-briefing]");
+  if (unlockBriefingBtn) {
+    const story = state.stories.find((item) => item.id === Number(unlockBriefingBtn.dataset.unlockBriefing));
+    if (story) void unlockAndLoadStorySummary(story);
+    return;
+  }
+  const unlockBriefingByUrlBtn = target.closest<HTMLButtonElement>("[data-unlock-briefing-url]");
+  if (unlockBriefingByUrlBtn) {
+    const sourceUrl = decodeURIComponent(unlockBriefingByUrlBtn.dataset.unlockBriefingUrl || "");
+    const story = findBriefingTargetBySourceUrl(sourceUrl);
+    if (story) {
+      if (isBriefingUnlocked(story)) {
+        void loadStorySummary(story);
+      } else {
+        void unlockAndLoadStorySummary(story);
+      }
+    }
+    return;
+  }
+
   if (target.closest("[data-back-markets]")) {
     state.selectedMarketId = null;
     state.tradeDrawerOpen = false;
@@ -2837,6 +3447,18 @@ storyDetail?.addEventListener("click", (event) => {
     return;
   }
   if (target.closest("#openTradeDrawerBtn")) {
+    const market = marketPreviews.find((item) => item.id === state.selectedMarketId);
+    if (market) {
+      if (isMarketResolved(market, state.marketSnapshots[market.id])) {
+        showActionToast("This market is resolved and can no longer be traded.");
+        return;
+      }
+      const marketTradeLockMessage = getMarketTradeLockMessage(market, state.marketSnapshots[market.id]);
+      if (marketTradeLockMessage) {
+        showActionToast("Trading is locked 20 minutes before kickoff.");
+        return;
+      }
+    }
     state.tradeDrawerOpen = true;
     const drawer = storyDetail.querySelector("#tradeDrawer");
     const backdrop = storyDetail.querySelector("#tradeDrawerBackdrop");
@@ -2869,13 +3491,21 @@ storyDetail?.addEventListener("click", (event) => {
   }
   const tradeSide = target.closest<HTMLButtonElement>("[data-market-trade-side]");
   if (tradeSide) {
-    state.marketTradeSide = tradeSide.dataset.marketTradeSide as "yes" | "no";
+    if (tradeSide.disabled || tradeSide.classList.contains("disabled")) return;
+    const market = marketPreviews.find((item) => item.id === state.selectedMarketId);
+    const position = market ? state.marketPositions[market.id] : undefined;
+    const nextSide = tradeSide.dataset.marketTradeSide as "yes" | "no";
+    if (!canTradeSide(state.marketOrderMode, nextSide, position)) return;
+    state.marketTradeSide = nextSide;
     render();
     return;
   }
   const orderMode = target.closest<HTMLButtonElement>("[data-market-order-mode]");
   if (orderMode) {
     state.marketOrderMode = orderMode.dataset.marketOrderMode as "buy" | "sell";
+    const market = marketPreviews.find((item) => item.id === state.selectedMarketId);
+    const position = market ? state.marketPositions[market.id] : undefined;
+    state.marketTradeSide = normalizeTradeSideForMode(state.marketOrderMode, state.marketTradeSide, position);
     render();
     return;
   }
@@ -2886,13 +3516,11 @@ storyDetail?.addEventListener("click", (event) => {
 storyDetail?.addEventListener("input", (event) => {
   const target = event.target as HTMLInputElement;
   if (!target.matches("[data-market-amount]")) return;
-  state.marketTradeAmount = Math.max(0, Number(target.value) || 0);
+  state.marketTradeAmount = normalizeMarketTradeAmount(Number(target.value) || 0);
   const market = marketPreviews.find((item) => item.id === state.selectedMarketId);
   const snapshot = market ? state.marketSnapshots[market.id] : undefined;
-  const activePrice = state.marketTradeSide === "yes"
-    ? snapshot?.yesPriceCents ?? market?.probability ?? 0
-    : snapshot?.noPriceCents ?? (market ? 100 - market.probability : 0);
-  const payout = activePrice > 0 ? state.marketTradeAmount / (activePrice / 100) : 0;
+  const position = market ? state.marketPositions[market.id] : undefined;
+  const payout = estimatePoolPayout(snapshot, state.marketTradeSide, state.marketTradeAmount, state.marketOrderMode, position);
   const payoutValue = storyDetail.querySelector<HTMLElement>(".market-inline-payout strong");
   if (payoutValue) payoutValue.textContent = `$${formatMoney(payout)}`;
 });
@@ -2961,6 +3589,7 @@ document.addEventListener("click", (event) => {
 });
 
 void loadMarkets().then(() => {
+  reportStoredLocalMarketTraders();
   render();
   renderWalletState();
   void loadArchiveIndex();
@@ -2988,17 +3617,49 @@ archivePill?.addEventListener("click", (e) => {
 });
 
 const initialWallet = getConnectedArcWallet();
+let isRestoringWalletSession = Boolean(initialWallet);
 if (initialWallet) {
-  state.walletAddress = initialWallet;
-  void readArcUsdcBalance(initialWallet).then((balance) => {
-    state.walletBalance = balance;
+  state.walletConnecting = true;
+  renderWalletState();
+  void validateArcSession().then(async (isValid) => {
+    isRestoringWalletSession = false;
+    state.walletConnecting = false;
+    if (!isValid) {
+      state.walletAddress = null;
+      state.walletBalance = null;
+      syncProfileUsernameForWallet();
+      showActionToast("Session expired. Please sign in again.");
+      renderWalletState();
+      render();
+      return;
+    }
+    state.walletAddress = getConnectedArcWallet();
+    if (state.walletAddress) {
+      syncProfileUsernameForWallet();
+      state.walletBalance = await readArcUsdcBalance(state.walletAddress);
+      await loadPortfolioPositions();
+    }
     renderWalletState();
+    if (state.activeSurface === "portfolio") render();
+  }).catch((error) => {
+    console.warn(error);
+    isRestoringWalletSession = false;
+    state.walletConnecting = false;
+    state.walletAddress = null;
+    state.walletBalance = null;
+    syncProfileUsernameForWallet();
+    showActionToast("Session expired. Please sign in again.");
+    renderWalletState();
+    render();
   });
 }
 
 subscribeArcWallet((address) => {
+  if (isRestoringWalletSession) return;
   state.walletAddress = address;
   state.walletBalance = null;
+  syncProfileUsernameForWallet();
+  if (address) void reportLeaderboardEntry(false).catch(err => console.error("Failed to report leaderboard entry:", err));
   state.marketPositions = {};
   state.hasLoadedPortfolioPositions = false;
   renderWalletState();

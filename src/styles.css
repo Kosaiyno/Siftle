@@ -5017,6 +5017,22 @@ h1 {
   width: 100%;
 }
 
+.market-action-grid .market-side.disabled,
+.market-action-grid .market-side:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  filter: grayscale(0.35);
+}
+
+.market-action-grid .market-side small {
+  display: block;
+  margin-top: 2px;
+  color: rgba(226, 232, 240, 0.72);
+  font-size: 0.66rem;
+  font-weight: 650;
+  line-height: 1.1;
+}
+
 .market-volume {
   margin: 10px 8px 0;
   font-size: 0.78rem;
@@ -8763,5 +8779,4 @@ html, body, .app-shell, main {
   background: rgba(255, 255, 255, 0.9) !important;
   transform: scale(1.02) !important;
 }
-
 

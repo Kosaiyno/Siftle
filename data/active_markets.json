@@ -1,5 +1,47 @@
 [
   {
+    "id": "wc-vinicius-score-japan",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "question": "Will Vinicius Junior score against Japan?",
+    "probability": 42,
+    "closes": "Tonight",
+    "resolution": "Resolves Yes if Vinicius Junior is officially credited with at least one goal for Brazil against Japan in the 2026 World Cup match. Own goals do not count. If he does not score, does not play, or the match is abandoned without an official result, resolves No unless the match is rescheduled as part of the same fixture window.",
+    "threadTopic": "Brazil Japan World Cup Lineups",
+    "volume": "$0",
+    "traders": "0",
+    "liquidity": "$0",
+    "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80"
+  },
+  {
+    "id": "wc-paraguay-score-germany",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "question": "Will Paraguay score a goal against Germany?",
+    "probability": 48,
+    "closes": "Tonight",
+    "resolution": "Resolves Yes if Paraguay is officially credited with at least one goal against Germany in the 2026 World Cup match, including regular time and extra time if played. Penalty shootout goals do not count. If Paraguay scores zero official match goals, resolves No.",
+    "threadTopic": "Germany Paraguay World Cup Clash",
+    "volume": "$0",
+    "traders": "0",
+    "liquidity": "$0",
+    "imageUrl": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80"
+  },
+  {
+    "id": "wc-morocco-eliminate-netherlands",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "question": "Will Morocco eliminate the Netherlands from the World Cup?",
+    "probability": 36,
+    "closes": "Tonight",
+    "resolution": "Resolves Yes if Morocco advances and the Netherlands is eliminated from the 2026 World Cup as a result of their knockout match, whether in regular time, extra time, or penalties. Resolves No if the Netherlands advances.",
+    "threadTopic": "Netherlands Morocco World Cup Stakes",
+    "volume": "$0",
+    "traders": "0",
+    "liquidity": "$0",
+    "imageUrl": "https://images.unsplash.com/photo-1553778263-73a83bab9b0c?auto=format&fit=crop&w=1200&q=80"
+  },
+  {
     "id": "transfer-tonali-spurs",
     "category": "Sports",
     "timeframe": "Sagas",

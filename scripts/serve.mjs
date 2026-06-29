@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 setDefaultResultOrder("ipv4first");
 import nodemailer from "nodemailer";
 import { createZGComputeNetworkReadOnlyBroker } from "@0gfoundation/0g-compute-ts-sdk";
+import { Contract, Interface, JsonRpcProvider, Wallet, formatUnits, parseUnits } from "ethers";
 
 const isMain = process.argv[1] && (
   process.argv[1] === fileURLToPath(import.meta.url) ||
@@ -70,6 +71,83 @@ const loadEnv = () => {
 
 loadEnv();
 
+let deployerAddress = "";
+if (process.env.ARC_DEPLOYER_PRIVATE_KEY) {
+  try {
+    const wallet = new Wallet(process.env.ARC_DEPLOYER_PRIVATE_KEY);
+    deployerAddress = wallet.address.toLowerCase();
+  } catch (err) {
+    console.error("Failed to derive deployer address:", err);
+  }
+}
+const resolverAddress = (process.env.SIFTLE_MARKET_RESOLVER ?? "").toLowerCase();
+const ARC_TESTNET_CHAIN_ID = Number(process.env.ARC_TESTNET_CHAIN_ID ?? 5042002);
+const ARC_TESTNET_RPC_URL = process.env.ARC_TESTNET_RPC_URL || "https://rpc.testnet.arc.network";
+const leaderboardProvider = new JsonRpcProvider(ARC_TESTNET_RPC_URL, ARC_TESTNET_CHAIN_ID);
+const LOCAL_TEST_MARKET_ADDRESS = "0x0000000000000000000000000000000000000101";
+const isLocalTestMarketAddress = (address) => /^0x0{36}01[0-9a-f]{2}$/i.test(String(address || ""));
+const ARC_TESTNET_USDC = process.env.ARC_TESTNET_USDC_ADDRESS || "0x3600000000000000000000000000000000000000";
+const aiBriefingUnlockUsdc = Number(process.env.AI_BRIEFING_UNLOCK_USDC ?? 0.05);
+const aiBriefingTreasuryAddress = (
+  process.env.AI_BRIEFING_TREASURY_ADDRESS ||
+  process.env.SIFTLE_TREASURY_ADDRESS ||
+  deployerAddress ||
+  resolverAddress ||
+  ""
+).toLowerCase();
+const aiBriefingUnlocks = new Map();
+const erc20TransferInterface = new Interface([
+  "event Transfer(address indexed from, address indexed to, uint256 value)"
+]);
+const erc20TransferTopic = erc20TransferInterface.getEvent("Transfer").topicHash;
+const leaderboardLogChunkSize = Number(process.env.LEADERBOARD_LOG_CHUNK_SIZE ?? 9000);
+const leaderboardLogLookbackBlocks = Number(process.env.LEADERBOARD_LOG_LOOKBACK_BLOCKS ?? 50000);
+
+const LEADERBOARD_MARKET_ABI = [
+  "function outcome() view returns (uint8)",
+  "function yesShares(address owner) view returns (uint256)",
+  "function noShares(address owner) view returns (uint256)",
+  "event SharesBought(address indexed buyer, bool indexed yes, uint256 amount)",
+  "event Redeemed(address indexed account, uint256 payout)"
+];
+
+const leaderboardMarketInterface = new Interface(LEADERBOARD_MARKET_ABI);
+const sharesBoughtTopic = leaderboardMarketInterface.getEvent("SharesBought").topicHash;
+const redeemedTopic = leaderboardMarketInterface.getEvent("Redeemed").topicHash;
+
+let leaderboardCache = {
+  expiresAt: 0,
+  analytics: null
+};
+
+const leaderboardMode = String(process.env.LEADERBOARD_MODE || "server").toLowerCase();
+const allowClientLeaderboardFallback = leaderboardMode !== "server";
+const supabaseUrl = String(
+  process.env.SUPABASE_URL ||
+  process.env.SUPABASE_PROJECT_URL ||
+  process.env.PROJECT_URL ||
+  process.env.project_url ||
+  ""
+).replace(/\/$/, "");
+const supabaseServiceRoleKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE ||
+  process.env.SERVICE_ROLE_KEY ||
+  process.env.service_role ||
+  "";
+const isSupabaseConfigured = Boolean(supabaseUrl && supabaseServiceRoleKey);
+const supabaseRequestTimeoutMs = Number(process.env.SUPABASE_REQUEST_TIMEOUT_MS ?? 8000);
+
+const isAdminWallet = (address) => {
+  const clean = (address || "").toLowerCase();
+  if (!clean) return false;
+  if (clean === deployerAddress) return true;
+  if (clean === resolverAddress) return true;
+  const adminAddressesEnv = (process.env.ADMIN_ADDRESSES ?? "").split(",").map(a => a.trim().toLowerCase()).filter(Boolean);
+  if (adminAddressesEnv.includes(clean)) return true;
+  return false;
+};
+
 const mimeTypes = new Map([
   [".css", "text/css; charset=utf-8"],
   [".html", "text/html; charset=utf-8"],
@@ -88,6 +166,7 @@ const archiveDir = join(root, ".siftle", "archive");
 const publishedDir = join(root, ".siftle", "published");
 const marketThreadStoreDir = join(root, ".siftle", "market-threads");
 const marketThreadSeedDir = join(root, "data", "marketThreads");
+const analyticsBootFile = join(root, ".siftle", "analytics.json");
 
 const getAppDate = (value = new Date()) => {
   const date = value instanceof Date ? value : new Date(value);
@@ -4452,7 +4531,7 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
       try {
         console.log("[ANALYTICS BACKUP] Backing up analytics cache to Shelby during scheduled publish...");
         const data = loadAnalytics();
-        await backupAnalyticsToShelby(data);
+        await backupAnalyticsToShelby(getShelbySafeAnalytics(data));
       } catch (backupErr) {
         console.warn("[ANALYTICS BACKUP] Failed to backup analytics to Shelby during scheduled publish:", backupErr.message);
       }
@@ -4477,7 +4556,7 @@ const handleShutdown = async (signal) => {
   if (isShelbyArchiveConfigured()) {
     try {
       const data = loadAnalytics();
-      await backupAnalyticsToShelby(data);
+      await backupAnalyticsToShelby(getShelbySafeAnalytics(data));
       console.log("[SHUTDOWN] Analytics backup completed successfully.");
     } catch (err) {
       console.error("[SHUTDOWN] Failed to backup analytics on shutdown:", err);
@@ -4491,11 +4570,17 @@ process.on("SIGINT", () => void handleShutdown("SIGINT"));
 // Kick off initial refresh and schedule periodic refreshes
 if (isMain) {
   if (isShelbyArchiveConfigured()) {
+    if (existsSync(analyticsBootFile)) {
+      console.log("[ANALYTICS] Local analytics found. Skipping Shelby restore on boot.");
+      void refreshPublishedFeeds("startup");
+    } else {
     console.log("Attempting to restore analytics cache from Shelby on boot...");
     restoreAnalyticsFromShelby()
       .then((data) => {
         if (data) {
-          saveAnalytics(data);
+          const localBeforeRestore = loadAnalytics();
+          const merged = mergeAnalytics(localBeforeRestore, data);
+          saveAnalytics(merged);
           console.log("[ANALYTICS] Restored successfully from Shelby backup.");
         } else {
           console.log("[ANALYTICS] No backup found on Shelby. Starting fresh.");
@@ -4506,6 +4591,7 @@ if (isMain) {
         console.error("[ANALYTICS] Failed to restore from Shelby on boot:", err);
         void refreshPublishedFeeds("startup");
       });
+    }
   } else {
     void refreshPublishedFeeds("startup");
   }
@@ -4563,7 +4649,7 @@ const ANALYTICS_FILE = join(root, ".siftle", "analytics.json");
 function loadAnalytics() {
   try {
     if (existsSync(ANALYTICS_FILE)) {
-      const content = readFileSync(ANALYTICS_FILE, "utf8");
+      const content = readFileSync(ANALYTICS_FILE, "utf8").replace(/^\uFEFF/, "");
       return JSON.parse(content);
     }
   } catch (err) {
@@ -4586,6 +4672,558 @@ function saveAnalytics(data) {
   } catch (err) {
     console.error("Failed to save analytics:", err);
   }
+}
+
+function mergeLeaderboardTraders(localTraders = {}, remoteTraders = {}) {
+  const merged = {};
+  const addresses = new Set([
+    ...Object.keys(localTraders || {}),
+    ...Object.keys(remoteTraders || {})
+  ]);
+
+  addresses.forEach((address) => {
+    const key = normalizeWalletAddress(address);
+    if (!key) return;
+
+    const localEntry = localTraders?.[key] || localTraders?.[address] || {};
+    const remoteEntry = remoteTraders?.[key] || remoteTraders?.[address] || {};
+
+    const localUpdated = Date.parse(localEntry.updated_at || "") || 0;
+    const remoteUpdated = Date.parse(remoteEntry.updated_at || "") || 0;
+    const newer = localUpdated >= remoteUpdated ? localEntry : remoteEntry;
+    const older = newer === localEntry ? remoteEntry : localEntry;
+
+    merged[key] = {
+      points: Number(newer.points ?? older.points) || 0,
+      status: String(newer.status || older.status || "0 wins, 0 losses"),
+      username: String(localEntry.username || remoteEntry.username || ""),
+      reported_points: Number(newer.reported_points ?? older.reported_points ?? newer.points ?? older.points) || 0,
+      reported_status: String(newer.reported_status || older.reported_status || newer.status || older.status || "0 wins, 0 losses"),
+      updated_at: new Date(Math.max(localUpdated, remoteUpdated, Date.now())).toISOString()
+    };
+  });
+
+  return merged;
+}
+
+function mergeResolvedResults(localResults = {}, remoteResults = {}) {
+  const merged = {};
+  const addresses = new Set([
+    ...Object.keys(localResults || {}),
+    ...Object.keys(remoteResults || {})
+  ]);
+
+  addresses.forEach((address) => {
+    const key = normalizeWalletAddress(address);
+    if (!key) return;
+    merged[key] = {
+      ...(remoteResults?.[address] || remoteResults?.[key] || {}),
+      ...(localResults?.[address] || localResults?.[key] || {})
+    };
+  });
+
+  return merged;
+}
+
+function mergeAnalytics(localData, remoteData) {
+  const local = localData || {};
+  const remote = remoteData || {};
+
+  const merged = {
+    ...remote,
+    ...local,
+    totals: {
+      ...(remote.totals || {}),
+      ...(local.totals || {})
+    },
+    daily: {
+      ...(remote.daily || {}),
+      ...(local.daily || {})
+    },
+    emails: Array.from(new Set([...(remote.emails || []), ...(local.emails || [])]))
+  };
+
+  const localLeaderboard = local.leaderboard || {};
+
+  merged.leaderboard = {
+    ...localLeaderboard,
+    traders: mergeLeaderboardTraders(localLeaderboard.traders || {}, {}),
+    resolvedResults: mergeResolvedResults(localLeaderboard.resolvedResults || {}, {}),
+    lastComputedAt: localLeaderboard.lastComputedAt || null
+  };
+
+  return merged;
+}
+
+function getShelbySafeAnalytics(data) {
+  const { leaderboard, ...safeData } = data || {};
+  return safeData;
+}
+
+async function supabaseRequest(path, options = {}) {
+  if (!isSupabaseConfigured) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), Math.max(1000, supabaseRequestTimeoutMs));
+  const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+    method: options.method || "GET",
+    signal: controller.signal,
+    headers: {
+      apikey: supabaseServiceRoleKey,
+      Authorization: `Bearer ${supabaseServiceRoleKey}`,
+      "Content-Type": "application/json",
+      ...(options.prefer ? { Prefer: options.prefer } : {}),
+      ...(options.headers || {})
+    },
+    body: options.body === undefined ? undefined : JSON.stringify(options.body)
+  }).finally(() => clearTimeout(timeout));
+
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!response.ok) {
+    throw new Error(`Supabase ${options.method || "GET"} ${path} failed: ${text || response.statusText}`);
+  }
+  return data;
+}
+
+function parseLeaderboardStatus(status = "") {
+  const winsMatch = String(status).match(/(\d+)\s+wins?/i);
+  const lossesMatch = String(status).match(/(\d+)\s+loss(?:es)?/i);
+  return {
+    wins: winsMatch ? Number(winsMatch[1]) || 0 : 0,
+    losses: lossesMatch ? Number(lossesMatch[1]) || 0 : 0
+  };
+}
+
+async function loadLeaderboardFromSupabase(data) {
+  if (!isSupabaseConfigured) return data;
+
+  try {
+    const [profiles, entries, results] = await Promise.all([
+      supabaseRequest("profiles?select=wallet_address,username,updated_at"),
+      supabaseRequest("leaderboard_entries?select=wallet_address,points,status,reported_points,reported_status,updated_at"),
+      supabaseRequest("resolved_results?select=wallet_address,market_id,result,points,switched")
+    ]);
+
+    const leaderboard = ensureLeaderboardState(data);
+    const profileMap = new Map((profiles || []).map((profile) => [profile.wallet_address, profile]));
+
+    for (const entry of entries || []) {
+      const address = normalizeWalletAddress(entry.wallet_address);
+      if (!address) continue;
+      const profile = profileMap.get(address) || {};
+      leaderboard.traders[address] = {
+        points: Number(entry.points) || 0,
+        status: String(entry.status || "0 wins, 0 losses"),
+        username: String(profile.username || leaderboard.traders[address]?.username || ""),
+        reported_points: Number(entry.reported_points) || 0,
+        reported_status: String(entry.reported_status || "0 wins, 0 losses"),
+        updated_at: entry.updated_at || leaderboard.traders[address]?.updated_at || new Date().toISOString()
+      };
+    }
+
+    for (const result of results || []) {
+      const address = normalizeWalletAddress(result.wallet_address);
+      const marketId = String(result.market_id || "");
+      if (!address || !marketId) continue;
+      if (!leaderboard.resolvedResults[address]) leaderboard.resolvedResults[address] = {};
+      leaderboard.resolvedResults[address][marketId] = {
+        result: result.result === "win" ? "win" : "loss",
+        points: Number(result.points) || 0,
+        switched: Boolean(result.switched)
+      };
+    }
+  } catch (err) {
+    console.warn("[SUPABASE] Leaderboard read failed; using local fallback:", err.message);
+  }
+
+  return data;
+}
+
+async function saveLeaderboardToSupabase(data) {
+  if (!isSupabaseConfigured) return { saved: false, error: "Supabase is not configured" };
+
+  try {
+    const leaderboard = ensureLeaderboardState(data);
+    const nowIso = new Date().toISOString();
+    const traders = Object.entries(leaderboard.traders || {})
+      .map(([address, entry]) => {
+        const walletAddress = normalizeWalletAddress(address);
+        if (!walletAddress || isAdminWallet(walletAddress)) return null;
+        return { walletAddress, entry };
+      })
+      .filter(Boolean);
+
+    if (traders.length > 0) {
+      await supabaseRequest("profiles?on_conflict=wallet_address", {
+        method: "POST",
+        prefer: "resolution=merge-duplicates",
+        body: traders.map(({ walletAddress, entry }) => ({
+          wallet_address: walletAddress,
+          username: String(entry.username || ""),
+          updated_at: entry.updated_at || nowIso
+        }))
+      });
+
+      await supabaseRequest("leaderboard_entries?on_conflict=wallet_address", {
+        method: "POST",
+        prefer: "resolution=merge-duplicates",
+        body: traders.map(({ walletAddress, entry }) => {
+          const parsedStatus = parseLeaderboardStatus(entry.status);
+          return {
+            wallet_address: walletAddress,
+            points: Number(entry.points) || 0,
+            wins: parsedStatus.wins,
+            losses: parsedStatus.losses,
+            status: String(entry.status || "0 wins, 0 losses"),
+            reported_points: Number(entry.reported_points) || 0,
+            reported_status: String(entry.reported_status || "0 wins, 0 losses"),
+            updated_at: entry.updated_at || nowIso
+          };
+        })
+      });
+    }
+
+    const resolvedRows = [];
+    Object.entries(leaderboard.resolvedResults || {}).forEach(([address, resultsByMarket]) => {
+      const walletAddress = normalizeWalletAddress(address);
+      if (!walletAddress || isAdminWallet(walletAddress)) return;
+      Object.entries(resultsByMarket || {}).forEach(([marketId, result]) => {
+        if (!marketId || !result) return;
+        resolvedRows.push({
+          wallet_address: walletAddress,
+          market_id: String(marketId),
+          result: result.result === "win" ? "win" : "loss",
+          points: Number(result.points) || 0,
+          switched: Boolean(result.switched)
+        });
+      });
+    });
+
+    if (resolvedRows.length > 0) {
+      await supabaseRequest("resolved_results?on_conflict=wallet_address,market_id", {
+        method: "POST",
+        prefer: "resolution=merge-duplicates",
+        body: resolvedRows
+      });
+    }
+    return { saved: true, error: "" };
+  } catch (err) {
+    console.warn("[SUPABASE] Leaderboard write failed; local JSON fallback kept:", err.message);
+    return { saved: false, error: err.message };
+  }
+}
+
+function normalizeWalletAddress(value) {
+  const clean = String(value || "").trim().toLowerCase();
+  return /^0x[a-f0-9]{40}$/.test(clean) ? clean : "";
+}
+
+const getSummaryUnlockKey = (sourceUrl = "") =>
+  createHash("sha256").update(String(sourceUrl || "").trim()).digest("hex");
+
+const createSummaryUnlockToken = (sourceUrl, walletAddress) => {
+  const token = randomUUID();
+  aiBriefingUnlocks.set(token, {
+    key: getSummaryUnlockKey(sourceUrl),
+    walletAddress: normalizeWalletAddress(walletAddress),
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000
+  });
+  return token;
+};
+
+const hasValidSummaryUnlock = (sourceUrl, walletAddress, token) => {
+  if (aiBriefingUnlockUsdc <= 0) return true;
+  const entry = aiBriefingUnlocks.get(String(token || ""));
+  if (!entry || entry.expiresAt < Date.now()) return false;
+  return entry.key === getSummaryUnlockKey(sourceUrl)
+    && (!entry.walletAddress || entry.walletAddress === normalizeWalletAddress(walletAddress));
+};
+
+async function verifyAiBriefingUnlockPayment({ sourceUrl, walletAddress, txHash }) {
+  const cleanWallet = normalizeWalletAddress(walletAddress);
+  const cleanTreasury = normalizeWalletAddress(aiBriefingTreasuryAddress);
+  if (!cleanWallet) throw new Error("Missing wallet address");
+  if (!sourceUrl) throw new Error("Missing source URL");
+  if (!cleanTreasury) throw new Error("AI briefing treasury is not configured");
+
+  if (!process.env.CIRCLE_API_KEY || String(txHash || "").startsWith("0xmockunlock")) {
+    return createSummaryUnlockToken(sourceUrl, cleanWallet);
+  }
+
+  if (!/^0x[a-f0-9]{64}$/i.test(String(txHash || ""))) {
+    throw new Error("Invalid unlock transaction hash");
+  }
+
+  const receipt = await leaderboardProvider.getTransactionReceipt(txHash);
+  if (!receipt || receipt.status !== 1) throw new Error("Unlock transaction is not confirmed");
+
+  const requiredAmount = parseUnits(aiBriefingUnlockUsdc.toFixed(6), 6);
+  const paid = receipt.logs.some((log) => {
+    if (String(log.address).toLowerCase() !== ARC_TESTNET_USDC.toLowerCase()) return false;
+    if (log.topics?.[0] !== erc20TransferTopic) return false;
+    try {
+      const parsed = erc20TransferInterface.parseLog(log);
+      return normalizeWalletAddress(parsed.args.from) === cleanWallet
+        && normalizeWalletAddress(parsed.args.to) === cleanTreasury
+        && BigInt(parsed.args.value) >= requiredAmount;
+    } catch {
+      return false;
+    }
+  });
+
+  if (!paid) throw new Error("Unlock payment was not found in the transaction");
+  return createSummaryUnlockToken(sourceUrl, cleanWallet);
+}
+
+function getActiveMarkets() {
+  const filePath = join(root, "data", "active_markets.json");
+  if (!existsSync(filePath)) return [];
+  try {
+    const content = readFileSync(filePath, "utf8");
+    const parsed = JSON.parse(content);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    console.error("Failed to parse active markets:", err);
+    return [];
+  }
+}
+
+function ensureLeaderboardState(data) {
+  if (!data.leaderboard) data.leaderboard = {};
+  if (!data.leaderboard.traders) data.leaderboard.traders = {};
+  if (!data.leaderboard.resolvedResults) data.leaderboard.resolvedResults = {};
+  return data.leaderboard;
+}
+
+async function collectMarketTradeSignals(marketAddress) {
+  const traders = new Set();
+  const boughtYes = new Set();
+  const boughtNo = new Set();
+  const redeemed = new Set();
+
+  const fetchLogsChunked = async (topic) => {
+    const latest = await leaderboardProvider.getBlockNumber();
+    const safeChunk = Math.max(100, leaderboardLogChunkSize);
+    const lookback = Math.max(safeChunk, leaderboardLogLookbackBlocks);
+    const start = Math.max(0, latest - lookback);
+    const allLogs = [];
+
+    for (let fromBlock = start; fromBlock <= latest; fromBlock += safeChunk) {
+      const toBlock = Math.min(fromBlock + safeChunk - 1, latest);
+      const logs = await leaderboardProvider.getLogs({
+        address: marketAddress,
+        topics: [topic],
+        fromBlock,
+        toBlock
+      });
+      allLogs.push(...logs);
+    }
+
+    return allLogs;
+  };
+
+  try {
+    const buyLogs = await fetchLogsChunked(sharesBoughtTopic);
+    for (const log of buyLogs) {
+      try {
+        const parsed = leaderboardMarketInterface.parseLog(log);
+        const buyer = normalizeWalletAddress(parsed.args.buyer);
+        if (!buyer) continue;
+        traders.add(buyer);
+        const isYes = Boolean(parsed.args.yes);
+        if (isYes) boughtYes.add(buyer);
+        else boughtNo.add(buyer);
+      } catch {}
+    }
+  } catch (err) {
+    console.warn(`[LEADERBOARD] Failed to read SharesBought logs for ${marketAddress}:`, err.message);
+  }
+
+  try {
+    const redeemedLogs = await fetchLogsChunked(redeemedTopic);
+    for (const log of redeemedLogs) {
+      try {
+        const parsed = leaderboardMarketInterface.parseLog(log);
+        const account = normalizeWalletAddress(parsed.args.account);
+        if (!account) continue;
+        traders.add(account);
+        redeemed.add(account);
+      } catch {}
+    }
+  } catch (err) {
+    console.warn(`[LEADERBOARD] Failed to read Redeemed logs for ${marketAddress}:`, err.message);
+  }
+
+  const switched = new Set();
+  boughtYes.forEach((address) => {
+    if (boughtNo.has(address)) switched.add(address);
+  });
+
+  return { traders, switched, redeemed };
+}
+
+async function recomputeLeaderboardFromChain(data) {
+  const leaderboard = ensureLeaderboardState(data);
+  const tradersMap = leaderboard.traders;
+  const resolvedResults = leaderboard.resolvedResults;
+
+  const dailyMarkets = getActiveMarkets().filter((market) => {
+    const marketAddress = normalizeWalletAddress(market.marketAddress);
+    return market.timeframe === "Daily" && Boolean(marketAddress);
+  });
+
+  const allTraders = new Set(
+    Object.keys(tradersMap)
+      .map(normalizeWalletAddress)
+      .filter(Boolean)
+  );
+
+  for (const market of dailyMarkets) {
+    const marketAddress = normalizeWalletAddress(market.marketAddress);
+    if (!marketAddress) continue;
+
+    // Local mock market is browser-local state, not an on-chain contract.
+    if (isLocalTestMarketAddress(marketAddress)) continue;
+
+    const marketId = String(market.id || "").trim();
+    if (!marketId) continue;
+
+    const { traders, switched, redeemed } = await collectMarketTradeSignals(marketAddress);
+    traders.forEach((address) => allTraders.add(address));
+
+    let outcome = 0;
+    try {
+      const contract = new Contract(marketAddress, LEADERBOARD_MARKET_ABI, leaderboardProvider);
+      outcome = Number(await contract.outcome()) || 0;
+
+      if (outcome === 0) continue;
+
+      const traderList = Array.from(traders);
+      const positions = await Promise.all(
+        traderList.map(async (address) => {
+          try {
+            const [yesRaw, noRaw] = await Promise.all([
+              contract.yesShares(address),
+              contract.noShares(address)
+            ]);
+            return {
+              address,
+              yesSharesUsdc: Number(formatUnits(yesRaw, 6)),
+              noSharesUsdc: Number(formatUnits(noRaw, 6))
+            };
+          } catch {
+            return { address, yesSharesUsdc: 0, noSharesUsdc: 0 };
+          }
+        })
+      );
+
+      for (const position of positions) {
+        const address = position.address;
+        if (!resolvedResults[address]) resolvedResults[address] = {};
+        if (resolvedResults[address][marketId]) continue;
+
+        const hasPosition = position.yesSharesUsdc > 0 || position.noSharesUsdc > 0;
+        const hasSwitched = switched.has(address);
+
+        if (outcome === 1 && position.yesSharesUsdc > 0) {
+          resolvedResults[address][marketId] = { result: "win", points: hasSwitched ? 50 : 100 };
+        } else if (outcome === 2 && position.noSharesUsdc > 0) {
+          resolvedResults[address][marketId] = { result: "win", points: hasSwitched ? 50 : 100 };
+        } else if ((outcome === 1 || outcome === 2) && redeemed.has(address)) {
+          resolvedResults[address][marketId] = { result: "win", points: hasSwitched ? 50 : 100 };
+        } else if (hasPosition) {
+          resolvedResults[address][marketId] = { result: "loss", points: 0 };
+        }
+      }
+
+      // Handle traders who already redeemed winning shares before current position reads.
+      if (outcome === 1 || outcome === 2) {
+        redeemed.forEach((address) => {
+          if (!resolvedResults[address]) resolvedResults[address] = {};
+          if (!resolvedResults[address][marketId]) {
+            resolvedResults[address][marketId] = {
+              result: "win",
+              points: switched.has(address) ? 50 : 100
+            };
+          }
+        });
+      }
+    } catch (err) {
+      const message = String(err?.message || err || "");
+      if (/BAD_DATA|could not decode result data|missing revert data/i.test(message)) {
+        continue;
+      }
+      console.warn(`[LEADERBOARD] Failed to recompute market ${marketId}:`, message);
+    }
+  }
+
+  Object.keys(resolvedResults).forEach((address) => {
+    const normalized = normalizeWalletAddress(address);
+    if (normalized) allTraders.add(normalized);
+  });
+
+  const nowIso = new Date().toISOString();
+  allTraders.forEach((address) => {
+    if (isAdminWallet(address)) return;
+
+    const resultsByMarket = resolvedResults[address] || {};
+    const resolvedCount = Object.keys(resultsByMarket).length;
+    let points = 0;
+    let wins = 0;
+    let losses = 0;
+
+    Object.values(resultsByMarket).forEach((entry) => {
+      if (!entry || typeof entry !== "object") return;
+      if (entry.result === "win") {
+        wins += 1;
+        points += Number(entry.points) || 0;
+      } else if (entry.result === "loss") {
+        losses += 1;
+      }
+    });
+
+    const existing = tradersMap[address] || {};
+    const fallbackPoints = Number(existing.reported_points) || 0;
+    const fallbackStatus = String(existing.reported_status || existing.status || "0 wins, 0 losses");
+    const useFallback = allowClientLeaderboardFallback && resolvedCount === 0;
+
+    tradersMap[address] = {
+      points: useFallback ? fallbackPoints : points,
+      status: useFallback
+        ? fallbackStatus
+        : `${wins} win${wins === 1 ? "" : "s"}, ${losses} loss${losses === 1 ? "" : "es"}`,
+      username: String(existing.username || ""),
+      reported_points: fallbackPoints,
+      reported_status: fallbackStatus,
+      updated_at: nowIso
+    };
+  });
+
+  leaderboard.lastComputedAt = nowIso;
+}
+
+async function getLeaderboardAnalyticsFresh() {
+  const now = Date.now();
+  if (leaderboardCache.analytics && leaderboardCache.expiresAt > now) {
+    return leaderboardCache.analytics;
+  }
+
+  const data = loadAnalytics();
+  await loadLeaderboardFromSupabase(data);
+  try {
+    await recomputeLeaderboardFromChain(data);
+    saveAnalytics(data);
+    await saveLeaderboardToSupabase(data);
+  } catch (err) {
+    console.error("[LEADERBOARD] Recompute failed:", err);
+  }
+
+  leaderboardCache = {
+    analytics: data,
+    expiresAt: now + 30_000
+  };
+
+  return data;
 }
 
 function trackAnalyticsEvent(event, email = null) {
@@ -5420,20 +6058,15 @@ const server = createServer(async (request, response) => {
       }
 
       // Real Circle Auth
+      const userId = `siftle_user_${getCircleUserId(email)}`;
+      // Register user
       try {
-        const userId = `siftle_user_${getCircleUserId(email)}`;
-        // Register user
-        try {
-          await callCircleApi("/v1/w3s/users", "POST", { userId });
-        } catch (err) {
-          console.log(`User registration attempt for ${userId}: ${err.message}`);
-        }
-
-        sendJson(response, 200, { mock: false, message: "OTP sent" });
+        await callCircleApi("/v1/w3s/users", "POST", { userId });
       } catch (err) {
-        console.error("Circle user registration error:", err);
-        sendJson(response, 500, { error: `Failed to initiate Circle registration: ${err.message}` });
+        console.log(`User registration attempt for ${userId}: ${err.message}`);
       }
+
+      sendJson(response, 200, { mock: false, message: "OTP sent" });
     } catch (err) {
       sendJson(response, 500, { error: err.message });
     }
@@ -5829,50 +6462,78 @@ const server = createServer(async (request, response) => {
 
   if (requestUrl.pathname === "/api/leaderboard/report" && request.method === "POST") {
     readJsonBody(request)
-      .then((body) => {
-        const { walletAddress, points, status } = body;
-        if (!walletAddress) {
+      .then(async (body) => {
+        const { walletAddress, username, points, status } = body;
+        const normalizedAddress = normalizeWalletAddress(walletAddress);
+        if (!normalizedAddress) {
           sendJson(response, 400, { error: "Missing walletAddress" });
           return;
         }
+        if (isAdminWallet(normalizedAddress)) {
+          sendJson(response, 200, { success: true, message: "Admin score report ignored" });
+          return;
+        }
         const data = loadAnalytics();
-        if (!data.leaderboard) data.leaderboard = { traders: {} };
-        if (!data.leaderboard.traders) data.leaderboard.traders = {};
+        const leaderboard = ensureLeaderboardState(data);
+        const key = normalizedAddress;
+        const existing = data.leaderboard.traders[key] || {};
+        const hasUsername = Object.prototype.hasOwnProperty.call(body, "username");
+        const hasPoints = Object.prototype.hasOwnProperty.call(body, "points");
+        const hasStatus = Object.prototype.hasOwnProperty.call(body, "status");
+        const cleanedUsername = String(username || "").trim().replace(/\s+/g, " ").slice(0, 15);
+        const reportedPoints = hasPoints ? Number(points) || 0 : Number(existing.reported_points) || Number(existing.points) || 0;
+        const reportedStatus = hasStatus ? String(status || "") : String(existing.reported_status || existing.status || "0 wins, 0 losses");
         
-        data.leaderboard.traders[walletAddress.toLowerCase()] = {
-          points: Number(points) || 0,
-          status: String(status || ""),
+        data.leaderboard.traders[key] = {
+          points: Number(existing.points) || 0,
+          status: String(existing.status || "0 wins, 0 losses"),
+          username: hasUsername ? cleanedUsername : existing.username || "",
+          reported_points: reportedPoints,
+          reported_status: reportedStatus,
           updated_at: new Date().toISOString()
         };
+        if (!leaderboard.resolvedResults[key]) leaderboard.resolvedResults[key] = {};
         saveAnalytics(data);
-        sendJson(response, 200, { success: true });
+        const supabaseResult = await saveLeaderboardToSupabase(data);
+        leaderboardCache.expiresAt = 0;
+        leaderboardCache.analytics = null;
+        sendJson(response, 200, {
+          success: true,
+          supabaseConfigured: isSupabaseConfigured,
+          supabaseSaved: supabaseResult.saved,
+          supabaseError: supabaseResult.error
+        });
       })
       .catch((error) => sendJson(response, 500, { error: error.message }));
     return;
   }
 
   if (requestUrl.pathname === "/api/leaderboard/division" && request.method === "GET") {
-    const walletAddress = (requestUrl.searchParams.get("walletAddress") || "").toLowerCase();
+    const walletAddress = normalizeWalletAddress(requestUrl.searchParams.get("walletAddress") || "");
     const divisionParam = requestUrl.searchParams.get("division");
     const reqDivisionNumber = divisionParam ? Number(divisionParam) : null;
-    
-    const data = loadAnalytics();
+
+    const data = await getLeaderboardAnalyticsFresh();
     const tradersMap = data.leaderboard?.traders || {};
     
-    const tradersList = Object.entries(tradersMap).map(([address, info]) => ({
-      username: address,
-      points: Number(info.points) || 0,
-      status: String(info.status || ""),
-      updated_at: info.updated_at
-    }));
+    const tradersList = Object.entries(tradersMap)
+      .filter(([address]) => !isAdminWallet(address))
+      .map(([address, info]) => ({
+        username: address,
+        displayName: String(info.username || ""),
+        points: Number(info.points) || 0,
+        status: String(info.status || ""),
+        updated_at: info.updated_at
+      }));
     
     tradersList.sort((a, b) => b.points - a.points);
     
-    if (walletAddress && !tradersList.some(t => t.username === walletAddress)) {
+    if (walletAddress && !isAdminWallet(walletAddress) && !tradersList.some(t => t.username === walletAddress)) {
       tradersList.push({
         username: walletAddress,
+        displayName: "",
         points: 0,
-        status: "0 wins, 0 profit",
+        status: "0 wins, 0 losses",
         updated_at: new Date().toISOString()
       });
     }
@@ -5953,9 +6614,31 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (requestUrl.pathname === "/api/summary/unlock-config" && request.method === "GET") {
+    sendJson(response, 200, {
+      enabled: aiBriefingUnlockUsdc > 0,
+      amountUsdc: aiBriefingUnlockUsdc,
+      treasuryAddress: aiBriefingTreasuryAddress
+    });
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/summary/unlock" && request.method === "POST") {
+    readJsonBody(request)
+      .then((body) => verifyAiBriefingUnlockPayment(body))
+      .then((unlockToken) => sendJson(response, 200, { success: true, unlockToken }))
+      .catch((error) => sendJson(response, 400, { error: error.message }));
+    return;
+  }
+
   if (requestUrl.pathname === "/api/summary" && request.method === "POST") {
     readJsonBody(request)
       .then(async (article) => {
+        if (!hasValidSummaryUnlock(article?.sourceUrl, article?.walletAddress, article?.unlockToken)) {
+          const error = new Error("AI briefing unlock payment required");
+          error.statusCode = 402;
+          throw error;
+        }
         const force = Boolean(article && article.force);
         const result = await summarizeWith0G(article, { force });
         if (result?.provider !== "local-fallback" && result?.provider !== "local-no-key") {
@@ -5969,7 +6652,7 @@ const server = createServer(async (request, response) => {
         return result;
       })
       .then((payload) => sendJson(response, 200, payload))
-      .catch((error) => sendJson(response, 500, { error: error.message }));
+      .catch((error) => sendJson(response, error.statusCode || 500, { error: error.message }));
     return;
   }
 

@@ -21,6 +21,7 @@ const publicProvider = new JsonRpcProvider(ARC_TESTNET_RPC_URL, ARC_TESTNET_CHAI
 const ERC20_ABI = [
   "function allowance(address owner, address spender) view returns (uint256)",
   "function approve(address spender, uint256 amount) returns (bool)",
+  "function transfer(address to, uint256 amount) returns (bool)",
   "function balanceOf(address owner) view returns (uint256)"
 ];
 
@@ -32,8 +33,14 @@ const SIFTLE_MARKET_ABI = [
   "function totalYesShares() view returns (uint256)",
   "function totalNoShares() view returns (uint256)",
   "function impliedYesProbability() view returns (uint256)",
-  "function outcome() view returns (uint8)"
+  "function outcome() view returns (uint8)",
+  "function closesAt() view returns (uint64)"
 ];
+
+const LOCAL_TEST_MARKET_ADDRESS = "0x0000000000000000000000000000000000000101";
+const isLocalTestMarket = (marketAddress: string): boolean =>
+  /^0x0{36}01[0-9a-f]{2}$/i.test(marketAddress) ||
+  marketAddress.toLowerCase() === LOCAL_TEST_MARKET_ADDRESS.toLowerCase();
 
 export interface ArcMarketSnapshot {
   yesPriceCents: number;
@@ -42,11 +49,18 @@ export interface ArcMarketSnapshot {
   yesSharesUsdc: number;
   noSharesUsdc: number;
   outcome: 0 | 1 | 2 | 3;
+  closesAtUnix?: number;
+  traderCount?: number;
 }
 
 export interface ArcMarketPosition {
   yesSharesUsdc: number;
   noSharesUsdc: number;
+}
+
+export interface ArcClaimResult {
+  amountUsdc: number;
+  won: boolean;
 }
 
 const requestRpc = async <T>(method: string, params: unknown[]): Promise<T> => {
@@ -569,6 +583,37 @@ export const disconnectArcWallet = () => {
   triggerWalletListeners(null);
 };
 
+export const validateArcSession = async (): Promise<boolean> => {
+  if (!activeWalletAddress) return false;
+  if (isMockSession) return true;
+  if (!activeUserToken) {
+    disconnectArcWallet();
+    return false;
+  }
+
+  try {
+    const res = await fetch(apiUrl("/api/circle/wallet"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userToken: activeUserToken })
+    });
+    if (!res.ok) throw new Error("Circle session expired");
+
+    const data = await res.json();
+    if (!data.walletAddress || data.walletAddress.toLowerCase() !== activeWalletAddress.toLowerCase()) {
+      throw new Error("Circle session wallet mismatch");
+    }
+
+    activeWalletId = data.walletId || activeWalletId;
+    localStorage.setItem("siftle_circle_wallet_id", activeWalletId!);
+    return true;
+  } catch (error) {
+    console.warn("Stored Circle session is no longer valid:", error);
+    disconnectArcWallet();
+    return false;
+  }
+};
+
 export const readArcUsdcBalance = async (account: string): Promise<string> => {
   if (isMockSession) {
     const key = `siftle_mock_balance_${account.toLowerCase()}`;
@@ -589,13 +634,120 @@ export const readArcUsdcBalance = async (account: string): Promise<string> => {
 
 export const isWalletConnectConfigured = (): boolean => true;
 
+const mockMarketPoolKey = (marketAddress: string): string => `siftle_mock_pool_${marketAddress.toLowerCase()}`;
+
+const readMockMarketPool = (marketAddress: string): {
+  yesSharesUsdc: number;
+  noSharesUsdc: number;
+  outcome: 0 | 1 | 2 | 3;
+  traders: string[];
+} => {
+  const stored = localStorage.getItem(mockMarketPoolKey(marketAddress));
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      return {
+        yesSharesUsdc: Number(parsed.yesSharesUsdc) || 0,
+        noSharesUsdc: Number(parsed.noSharesUsdc) || 0,
+        outcome: (Number(parsed.outcome) || 0) as 0 | 1 | 2 | 3,
+        traders: Array.isArray(parsed.traders) ? parsed.traders.map((item: unknown) => String(item).toLowerCase()) : []
+      };
+    } catch {}
+  }
+  return { yesSharesUsdc: 0, noSharesUsdc: 0, outcome: 0, traders: [] };
+};
+
+const writeMockMarketPool = (
+  marketAddress: string,
+  pool: { yesSharesUsdc: number; noSharesUsdc: number; outcome: 0 | 1 | 2 | 3; traders: string[] }
+): void => {
+  localStorage.setItem(mockMarketPoolKey(marketAddress), JSON.stringify(pool));
+};
+
+const countMockMarketTraders = (marketAddress: string): number => {
+  const prefix = `siftle_mock_pos_${marketAddress.toLowerCase()}_`;
+  const traders = new Set<string>();
+
+  for (let index = 0; index < localStorage.length; index++) {
+    const key = localStorage.key(index);
+    if (!key || !key.startsWith(prefix)) continue;
+
+    try {
+      const position = JSON.parse(localStorage.getItem(key) || "{}");
+      const hasPosition = (Number(position.yesSharesUsdc) || 0) > 0 || (Number(position.noSharesUsdc) || 0) > 0;
+      if (hasPosition) traders.add(key.slice(prefix.length));
+    } catch {}
+  }
+
+  return traders.size;
+};
+
+const mockMarketPositionKey = (marketAddress: string, account: string): string =>
+  `siftle_mock_pos_${marketAddress.toLowerCase()}_${account.toLowerCase()}`;
+
+export const resolveLocalTestMarketYes = (marketAddress = LOCAL_TEST_MARKET_ADDRESS): void => {
+  const pool = readMockMarketPool(marketAddress);
+  if (pool.outcome !== 1) {
+    pool.outcome = 1;
+    writeMockMarketPool(marketAddress, pool);
+  }
+};
+
+export const claimArcMarketPayout = async (marketAddress: string, account: string): Promise<ArcClaimResult> => {
+  if (!isMockSession && !isLocalTestMarket(marketAddress)) {
+    throw new Error("Claiming is not available for this market yet");
+  }
+
+  const pool = readMockMarketPool(marketAddress);
+  if (pool.outcome === 0) throw new Error("Market is not resolved yet");
+  if (pool.outcome === 3) throw new Error("Invalid market claims are not available yet");
+
+  const posKey = mockMarketPositionKey(marketAddress, account);
+  const stored = localStorage.getItem(posKey);
+  const position: ArcMarketPosition = stored ? JSON.parse(stored) : { yesSharesUsdc: 0, noSharesUsdc: 0 };
+  const winningShares = pool.outcome === 1 ? position.yesSharesUsdc : position.noSharesUsdc;
+  const totalWinningShares = pool.outcome === 1 ? pool.yesSharesUsdc : pool.noSharesUsdc;
+  const totalPool = pool.yesSharesUsdc + pool.noSharesUsdc;
+  const amountUsdc = winningShares > 0 && totalWinningShares > 0 ? (winningShares / totalWinningShares) * totalPool : 0;
+
+  localStorage.removeItem(posKey);
+  pool.traders = pool.traders.filter((trader) => trader !== account.toLowerCase());
+  writeMockMarketPool(marketAddress, pool);
+
+  if (isMockSession && amountUsdc > 0) {
+    const balanceKey = `siftle_mock_balance_${account.toLowerCase()}`;
+    const currentBalance = parseFloat(localStorage.getItem(balanceKey) || "1000.00");
+    localStorage.setItem(balanceKey, (currentBalance + amountUsdc).toFixed(2));
+  }
+
+  return { amountUsdc, won: amountUsdc > 0 };
+};
+
 export const readArcMarketSnapshot = async (marketAddress: string): Promise<ArcMarketSnapshot> => {
+  if (isMockSession || isLocalTestMarket(marketAddress)) {
+    const pool = readMockMarketPool(marketAddress);
+    const volumeUsdc = pool.yesSharesUsdc + pool.noSharesUsdc;
+    const yesPriceCents = volumeUsdc > 0 ? Math.round((pool.yesSharesUsdc * 100) / volumeUsdc) : 50;
+    const traderCount = countMockMarketTraders(marketAddress);
+    return {
+      yesPriceCents,
+      noPriceCents: 100 - yesPriceCents,
+      volumeUsdc,
+      yesSharesUsdc: pool.yesSharesUsdc,
+      noSharesUsdc: pool.noSharesUsdc,
+      outcome: pool.outcome,
+      closesAtUnix: 0,
+      traderCount
+    };
+  }
+
   const market = new Contract(marketAddress, SIFTLE_MARKET_ABI, publicProvider);
-  const [totalYes, totalNo, probability, outcome] = await Promise.all([
+  const [totalYes, totalNo, probability, outcome, closesAt] = await Promise.all([
     market.totalYesShares() as Promise<bigint>,
     market.totalNoShares() as Promise<bigint>,
     market.impliedYesProbability() as Promise<bigint>,
-    market.outcome() as Promise<bigint>
+    market.outcome() as Promise<bigint>,
+    market.closesAt() as Promise<bigint>
   ]);
   const yesPriceCents = Math.round(Number(probability) / 100);
   const yesSharesUsdc = Number(formatUnits(totalYes, 6));
@@ -606,13 +758,14 @@ export const readArcMarketSnapshot = async (marketAddress: string): Promise<ArcM
     volumeUsdc: yesSharesUsdc + noSharesUsdc,
     yesSharesUsdc,
     noSharesUsdc,
-    outcome: Number(outcome) as 0 | 1 | 2 | 3
+    outcome: Number(outcome) as 0 | 1 | 2 | 3,
+    closesAtUnix: Number(closesAt)
   };
 };
 
 export const readArcMarketPosition = async (marketAddress: string, account: string): Promise<ArcMarketPosition> => {
-  if (isMockSession) {
-    const key = `siftle_mock_pos_${marketAddress.toLowerCase()}_${account.toLowerCase()}`;
+  if (isMockSession || isLocalTestMarket(marketAddress)) {
+    const key = mockMarketPositionKey(marketAddress, account);
     const stored = localStorage.getItem(key);
     if (stored) {
       try {
@@ -666,6 +819,41 @@ const waitForCircleTx = async (txId: string): Promise<string> => {
   throw new Error("Timed out waiting for transaction confirmation on-chain");
 };
 
+export const payAiBriefingUnlock = async (
+  treasuryAddress: string,
+  amountUsdc: number,
+  onStatus?: (status: string) => void
+): Promise<string> => {
+  if (!activeWalletAddress) throw new Error("Please sign in first");
+  if (!treasuryAddress) throw new Error("AI briefing treasury is not configured");
+  const amount = parseUnits(amountUsdc.toFixed(6), 6);
+
+  if (isMockSession) {
+    onStatus?.("Processing mock unlock...");
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return "0xmockunlock" + Math.random().toString(16).slice(2);
+  }
+
+  onStatus?.("Unlocking AI briefing (Awaiting PIN)...");
+  const res = await fetch(apiUrl("/api/circle/tx/contract-call"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userToken: activeUserToken,
+      contractAddress: ARC_TESTNET_USDC,
+      abiFunctionSignature: "transfer(address,uint256)",
+      abiParameters: [treasuryAddress, amount.toString()],
+      walletId: activeWalletId
+    })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to create briefing unlock challenge");
+
+  await runCircleChallenge(data.challengeId);
+  onStatus?.("Confirming unlock payment...");
+  return waitForCircleTx(data.id || data.challengeId);
+};
+
 export const executeArcMarketOrder = async (
   marketAddress: string,
   mode: "buy" | "sell",
@@ -681,86 +869,86 @@ export const executeArcMarketOrder = async (
 
   const amount = parseUnits(amountUsdc.toFixed(6), 6);
 
-  if (isMockSession) {
-    if (!mockWallet) throw new Error("Mock wallet not initialized");
+  if (isMockSession || isLocalTestMarket(marketAddress)) {
+    if (isMockSession && !mockWallet) throw new Error("Mock wallet not initialized");
 
-    try {
-      if (mode === "buy") {
-        onStatus?.("Checking USDC allowance...");
-        const usdc = new Contract(ARC_TESTNET_USDC, ERC20_ABI, mockWallet);
-        const allowance = (await usdc.allowance(activeWalletAddress, marketAddress)) as bigint;
-        if (allowance < amount) {
-          onStatus?.("Unlocking USDC...");
-          const approval = await usdc.approve(marketAddress, amount);
-          await approval.wait();
-        }
-        onStatus?.("Submitting buy order...");
-        const market = new Contract(marketAddress, SIFTLE_MARKET_ABI, mockWallet);
-        const tx = await market.buy(side === "yes", amount);
-        onStatus?.("Confirming trade on-chain...");
-        await tx.wait();
-        return tx.hash as string;
-      } else {
-        onStatus?.("Submitting sell order...");
-        const market = new Contract(marketAddress, SIFTLE_MARKET_ABI, mockWallet);
-        const tx = await market.sell(side === "yes", amount);
-        onStatus?.("Confirming trade on-chain...");
-        await tx.wait();
-        return tx.hash as string;
-      }
-    } catch (err) {
-      console.warn("On-chain mock transaction failed, falling back to local simulation:", err);
-      onStatus?.("Processing mock trade...");
-      await new Promise((r) => setTimeout(r, 1000));
+    onStatus?.("Processing mock trade...");
+    await new Promise((r) => setTimeout(r, 500));
 
-      const balanceKey = `siftle_mock_balance_${activeWalletAddress.toLowerCase()}`;
-      const currentBalance = parseFloat(localStorage.getItem(balanceKey) || "1000.00");
-      let newBalance = currentBalance;
-      if (mode === "buy") {
-        if (currentBalance < amountUsdc) {
-          throw new Error("Insufficient USDC mock balance");
-        }
-        newBalance = currentBalance - amountUsdc;
-      } else {
-        newBalance = currentBalance + amountUsdc;
-      }
-      localStorage.setItem(balanceKey, newBalance.toFixed(2));
-
-      const posKey = `siftle_mock_pos_${marketAddress.toLowerCase()}_${activeWalletAddress.toLowerCase()}`;
-      let position: ArcMarketPosition = { yesSharesUsdc: 0, noSharesUsdc: 0 };
-      const storedPos = localStorage.getItem(posKey);
-      if (storedPos) {
-        try {
-          position = JSON.parse(storedPos);
-        } catch {}
-      }
-
-      const yesPrice = (yesPriceCents ?? 50) / 100;
-      const noPrice = (noPriceCents ?? 50) / 100;
-      const activePrice = side === "yes" ? yesPrice : noPrice;
-
-      if (mode === "buy") {
-        const sharesBought = amountUsdc / activePrice;
-        if (side === "yes") {
-          position.yesSharesUsdc += sharesBought;
-        } else {
-          position.noSharesUsdc += sharesBought;
-        }
-      } else {
-        const sharesSold = amountUsdc / activePrice;
-        if (side === "yes") {
-          position.yesSharesUsdc = Math.max(0, position.yesSharesUsdc - sharesSold);
-        } else {
-          position.noSharesUsdc = Math.max(0, position.noSharesUsdc - sharesSold);
-        }
-      }
-      localStorage.setItem(posKey, JSON.stringify(position));
-
-      return "0xmocktxhash" + Math.random().toString(16).slice(2);
+    const pool = readMockMarketPool(marketAddress);
+    if (pool.outcome !== 0) {
+      throw new Error("This market is resolved and can no longer be traded");
     }
+
+    const balanceKey = `siftle_mock_balance_${activeWalletAddress.toLowerCase()}`;
+    const currentBalance = parseFloat(localStorage.getItem(balanceKey) || "1000.00");
+    let newBalance = currentBalance;
+    if (isMockSession && mode === "buy") {
+      if (currentBalance < amountUsdc) {
+        throw new Error("Insufficient USDC mock balance");
+      }
+      newBalance = currentBalance - amountUsdc;
+    } else if (isMockSession) {
+      newBalance = currentBalance + amountUsdc;
+    }
+    if (isMockSession) localStorage.setItem(balanceKey, newBalance.toFixed(2));
+
+    const posKey = `siftle_mock_pos_${marketAddress.toLowerCase()}_${activeWalletAddress.toLowerCase()}`;
+    let position: ArcMarketPosition = { yesSharesUsdc: 0, noSharesUsdc: 0 };
+    const storedPos = localStorage.getItem(posKey);
+    if (storedPos) {
+      try {
+        position = JSON.parse(storedPos);
+      } catch {}
+    }
+
+    const cleanTrader = activeWalletAddress.toLowerCase();
+
+    if (mode === "buy") {
+      if (!pool.traders.includes(cleanTrader)) pool.traders.push(cleanTrader);
+      if (side === "yes") {
+        position.yesSharesUsdc += amountUsdc;
+        pool.yesSharesUsdc += amountUsdc;
+      } else {
+        position.noSharesUsdc += amountUsdc;
+        pool.noSharesUsdc += amountUsdc;
+      }
+    } else {
+      if (side === "yes") {
+        const exitAmount = Math.min(amountUsdc, position.yesSharesUsdc);
+        if (exitAmount <= 0) throw new Error("You do not have YES shares to exit");
+        position.yesSharesUsdc -= exitAmount;
+        pool.yesSharesUsdc = Math.max(0, pool.yesSharesUsdc - exitAmount);
+      } else {
+        const exitAmount = Math.min(amountUsdc, position.noSharesUsdc);
+        if (exitAmount <= 0) throw new Error("You do not have NO shares to exit");
+        position.noSharesUsdc -= exitAmount;
+        pool.noSharesUsdc = Math.max(0, pool.noSharesUsdc - exitAmount);
+      }
+    }
+
+    position.yesSharesUsdc = Math.max(0, position.yesSharesUsdc);
+    position.noSharesUsdc = Math.max(0, position.noSharesUsdc);
+    const hasPosition = position.yesSharesUsdc > 0.000001 || position.noSharesUsdc > 0.000001;
+    if (hasPosition) {
+      localStorage.setItem(posKey, JSON.stringify(position));
+      if (!pool.traders.includes(cleanTrader)) pool.traders.push(cleanTrader);
+    } else {
+      localStorage.removeItem(posKey);
+      pool.traders = pool.traders.filter((trader) => trader !== cleanTrader);
+    }
+    writeMockMarketPool(marketAddress, pool);
+
+    return "0xmocktxhash" + Math.random().toString(16).slice(2);
   }
 
   // Real Circle transaction execution
+  const marketRead = new Contract(marketAddress, SIFTLE_MARKET_ABI, publicProvider);
+  const currentOutcome = Number(await marketRead.outcome());
+  if (currentOutcome !== 0) {
+    throw new Error("This market is resolved and can no longer be traded");
+  }
+
   if (mode === "buy") {
     onStatus?.("Checking USDC allowance...");
     // Check allowance
