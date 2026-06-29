@@ -2738,7 +2738,7 @@ const renderLeaderboard = (): void => {
       </div>
 
       <div class="season-countdown-banner">
-        <span class="countdown-label">Season 1 Countdown</span>
+        <span class="countdown-label">Season 1 (World Cup)</span>
         <span id="seasonTimer" class="countdown-value">Loading...</span>
       </div>
 

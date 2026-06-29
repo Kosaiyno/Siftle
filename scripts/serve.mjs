@@ -6558,9 +6558,7 @@ const server = createServer(async (request, response) => {
     }
     
     const targetDivisionList = divisions[targetDivisionNumber - 1] || [];
-    const now = new Date();
-    // Static countdown: set to end in 3 days, 12 hours for demo/launch excitement
-    const seasonEndsAt = new Date(now.getTime() + (3 * 24 + 12) * 60 * 60 * 1000).toISOString();
+    const seasonEndsAt = "2026-07-19T23:59:59.000Z";
     
     sendJson(response, 200, {
       divisionNumber: targetDivisionNumber,

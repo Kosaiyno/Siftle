@@ -35,7 +35,7 @@
     "timeframe": "Daily",
     "question": "Will Morocco eliminate the Netherlands from the World Cup?",
     "probability": 36,
-    "kickoffAt": "2026-06-29T23:00:00Z",
+    "kickoffAt": "2026-06-30T02:00:00Z",
     "closes": "Tonight",
     "resolution": "Resolves Yes if Morocco advances and the Netherlands is eliminated from the 2026 World Cup as a result of their knockout match, whether in regular time, extra time, or penalties. Resolves No if the Netherlands advances.",
     "threadTopic": "Netherlands Morocco World Cup Stakes",
