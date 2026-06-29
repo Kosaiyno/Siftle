@@ -23,7 +23,7 @@ export const mockStories: NewsStory[] = [
     summary: "Football fans are tracking reports around striker targets, contract renewals, and late-window squad decisions.",
     source: "Football Brief",
     sourceUrl: "https://example.com/football-transfer-rumors",
-    imageUrl: "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80",
     readTime: "3 min read",
     postedAt: "34m",
     accent: "teal",

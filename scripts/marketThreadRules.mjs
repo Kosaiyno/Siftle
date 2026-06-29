@@ -5,9 +5,9 @@ export const marketThreadRules = {
     includeAnySets: [
       ["brazil", "vinicius", "vinicius junior"],
       ["japan"],
-      ["world cup", "round of 32", "knockout", "lineup", "lineups", "kickoff", "match", "preview", "team news", "starting xi", "start time"]
+      ["world cup", "fifa", "2026", "round of 32", "round of 16", "last 16", "knockout", "lineup", "lineups", "kickoff", "match", "preview", "team news", "starting xi", "start time", "score", "scores", "goal", "goals", "advance", "advances", "penalties", "extra time"]
     ],
-    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball"]
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball"]
   },
   "wc-paraguay-score-germany": {
     category: "Sports",
@@ -15,9 +15,9 @@ export const marketThreadRules = {
     includeAnySets: [
       ["germany"],
       ["paraguay"],
-      ["world cup", "round of 32", "knockout", "kickoff", "match", "preview", "team news", "lineup", "lineups", "start time"]
+      ["world cup", "fifa", "2026", "round of 32", "round of 16", "last 16", "knockout", "kickoff", "match", "preview", "team news", "lineup", "lineups", "start time", "score", "scores", "goal", "goals", "advance", "advances", "penalties", "extra time"]
     ],
-    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball"]
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball"]
   },
   "wc-morocco-eliminate-netherlands": {
     category: "Sports",
@@ -25,9 +25,9 @@ export const marketThreadRules = {
     includeAnySets: [
       ["morocco"],
       ["netherlands", "dutch"],
-      ["world cup", "round of 32", "knockout", "kickoff", "match", "preview", "team news", "lineup", "lineups", "start time", "eliminate", "elimination"]
+      ["world cup", "fifa", "2026", "round of 32", "round of 16", "last 16", "knockout", "kickoff", "match", "preview", "team news", "lineup", "lineups", "start time", "eliminate", "elimination", "eliminated", "advance", "advances", "penalties", "extra time"]
     ],
-    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball"]
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball"]
   },
   "transfer-davies-realmadrid": {
     category: "Sports",

@@ -90,3 +90,33 @@ test("Messi and Ronaldo knockout market rejects unrelated sports stories", () =>
     false
   );
 });
+
+test("Brazil Japan market matches fresh World Cup scoring coverage", () => {
+  assert.equal(
+    storyMatchesMarketThreadRule(
+      story("Sports", "Vinicius helps Brazil beat Japan in World Cup knockout", "Brazil advance from the 2026 World Cup after Vinicius scores in the last-16 tie."),
+      marketThreadRules["wc-vinicius-score-japan"]
+    ),
+    true
+  );
+});
+
+test("Morocco Netherlands market matches elimination result coverage", () => {
+  assert.equal(
+    storyMatchesMarketThreadRule(
+      story("Sports", "Morocco eliminate Netherlands on penalties in World Cup thriller", "The Dutch are eliminated from the 2026 World Cup after Morocco advance from the knockout match."),
+      marketThreadRules["wc-morocco-eliminate-netherlands"]
+    ),
+    true
+  );
+});
+
+test("Current World Cup rules still reject basketball stories", () => {
+  assert.equal(
+    storyMatchesMarketThreadRule(
+      story("Sports", "Japan stun Germany in basketball exhibition", "A late three-pointer seals the result in pre-tournament play."),
+      marketThreadRules["wc-paraguay-score-germany"]
+    ),
+    false
+  );
+});

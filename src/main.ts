@@ -2778,11 +2778,11 @@ const renderLeaderboard = (): void => {
         <div class="rules-modal-body">
           <div class="rules-section">
             <h3>🏆 6-Player Divisions</h3>
-            <p>You are assigned to a division of 6 players. You only compete against the 5 opponents in your division. Global rankings exist but are secondary.</p>
+            <p>You are assigned to a division of 6 players. You only compete against the 5 opponents in your division.</p>
           </div>
           <div class="rules-section">
             <h3>⚡ Daily Markets Only</h3>
-            <p>Points are only accumulated on Daily Markets (which resolve in 24–72 hours). Weekly and Saga markets are for trading, portfolio growth, and long-term engagement.</p>
+            <p>Points are only accumulated on Daily Markets (which resolve in 24–72 hours).</p>
           </div>
           <div class="rules-section">
             <h3>📈 Scoring System</h3>
