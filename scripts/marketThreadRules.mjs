@@ -7,7 +7,7 @@ export const marketThreadRules = {
       ["norway", "norwegian", "haaland"],
       ["world cup", "fifa", "2026", "round of 32", "round of 16", "last 16", "knockout", "eliminate", "elimination", "advance", "advances", "penalties", "extra time", "match", "preview", "score"]
     ],
-    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball"]
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "brazil", "japan", "martinelli", "ancelotti", "vinicius", "selecao", "seleção"]
   },
   "wc-haaland-outscore-mbappe": {
     category: "Sports",

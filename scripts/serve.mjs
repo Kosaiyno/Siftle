@@ -1968,6 +1968,7 @@ const normalizeMarketThreadPayload = (thread, marketId) => {
   const rule = marketThreadRules[marketId];
   if (!rule || !thread?.current) return null;
   if (thread.current.category !== rule.category) return null;
+  if (!storyMatchesMarketThreadRule(thread.current, rule)) return null;
 
   const normalized = normalizeValidThread({
     topic: thread.topic || rule.topic,

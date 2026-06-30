@@ -120,3 +120,23 @@ test("Current World Cup rules still reject basketball stories", () => {
     false
   );
 });
+
+test("Ivory Coast Norway market rejects Brazil bridge stories", () => {
+  assert.equal(
+    storyMatchesMarketThreadRule(
+      story("Sports", "Martinelli scores stoppage-time winner to send Brazil through to last 16", "Brazil set up a World Cup last-16 tie against Norway or Ivory Coast after beating Japan."),
+      marketThreadRules["wc-ivory-coast-eliminate-norway"]
+    ),
+    false
+  );
+});
+
+test("Ivory Coast Norway market accepts real knockout preview context", () => {
+  assert.equal(
+    storyMatchesMarketThreadRule(
+      story("Sports", "Ivory Coast vs Norway knockout preview", "Ivory Coast and Norway meet in the 2026 World Cup last-16 match with elimination and advancement on the line."),
+      marketThreadRules["wc-ivory-coast-eliminate-norway"]
+    ),
+    true
+  );
+});

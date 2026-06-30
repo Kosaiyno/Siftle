@@ -1,0 +1,50 @@
+{
+  "topic": "Haaland Mbappe World Cup Goals Race",
+  "reviewed_by": "curated-local-market-thread",
+  "current": {
+    "id": "market-haaland-mbappe-current",
+    "category": "Sports",
+    "headline": "Mbappe v Haaland: Who is more important for their country?",
+    "summary": "Two of the biggest forwards in the tournament are being judged on the same knockout slate, with France and Kylian Mbappe set against Norway and Erling Haaland in a goals race that could swing this market quickly.",
+    "source": "feeds.bbci.co.uk",
+    "sourceUrl": "https://www.bbc.co.uk/sport/football/articles/c77yz87xdpno?at_medium=RSS&at_campaign=rss",
+    "imageUrl": "https://ichef.bbci.co.uk/ace/standard/240/cpsprodpb/4c27/live/57625f20-70cc-11f1-b217-6f3746be3039.jpg",
+    "publishedAt": "Fri, 26 Jun 2026 07:27:37 GMT",
+    "readTime": "1 min read",
+    "postedAt": "Latest",
+    "accent": "blue",
+    "saved": false
+  },
+  "items": [
+    {
+      "id": "market-haaland-mbappe-01",
+      "category": "Sports",
+      "headline": "Official: Thuram out of France squad for World Cup Round of 32 clash",
+      "summary": "France go into their knockout preparations without Marcus Thuram, a squad update that sharpens the focus on how much attacking burden falls on Mbappe in the market's France leg.",
+      "source": "football-italia.net",
+      "sourceUrl": "https://football-italia.net/official-thuram-out-of-france-squad-world-cup/",
+      "imageUrl": "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Mon, 29 Jun 2026 16:24:51 +0000",
+      "readTime": "1 min read",
+      "postedAt": "Jun 29",
+      "accent": "blue",
+      "saved": false
+    },
+    {
+      "id": "market-haaland-mbappe-02",
+      "category": "Sports",
+      "headline": "Norway’s Erling Haaland punishes Iraq with double on World Cup debut",
+      "summary": "Haaland's early-tournament finishing burst remains the clearest recent form marker for Norway and provides the natural counterweight to France's Mbappe storyline in this matchup market.",
+      "source": "theguardian.com",
+      "sourceUrl": "https://www.theguardian.com/football/2026/jun/17/iraq-norway-world-cup-group-i-match-report",
+      "imageUrl": "https://i.guim.co.uk/img/media/1f7d9b9555ff8cf3e909754fe1e4c95c8b657610/1_108_3271_2618/master/3271.jpg?width=140&amp;quality=85&amp;auto=format&amp;fit=max&amp;s=61f80fd91d5e75f436be5edb97f913b7",
+      "publishedAt": "Wed, 17 Jun 2026 00:17:03 GMT",
+      "readTime": "2 min read",
+      "postedAt": "Jun 17",
+      "accent": "blue",
+      "saved": false
+    }
+  ],
+  "market_id": "wc-haaland-outscore-mbappe",
+  "saved_market_thread": true
+}
