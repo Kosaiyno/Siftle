@@ -5140,7 +5140,7 @@ async function recomputeLeaderboardFromChain(data) {
   const resolvedResults = leaderboard.resolvedResults;
 
   const dailyMarkets = getActiveMarkets().filter((market) => {
-    const marketAddress = normalizeWalletAddress(market.marketAddress);
+    const marketAddress = normalizeWalletAddress(market.marketAddress) || getConfiguredMarketAddress(market.id);
     return market.timeframe === "Daily" && Boolean(marketAddress);
   });
 
@@ -5151,7 +5151,7 @@ async function recomputeLeaderboardFromChain(data) {
   );
 
   for (const market of dailyMarkets) {
-    const marketAddress = normalizeWalletAddress(market.marketAddress);
+    const marketAddress = normalizeWalletAddress(market.marketAddress) || getConfiguredMarketAddress(market.id);
     if (!marketAddress) continue;
 
     // Local mock market is browser-local state, not an on-chain contract.
