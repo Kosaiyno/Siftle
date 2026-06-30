@@ -14,8 +14,12 @@ create table if not exists leaderboard_entries (
   status text default '0 wins, 0 losses',
   reported_points integer default 0,
   reported_status text default '0 wins, 0 losses',
+  first_activity_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+alter table leaderboard_entries
+  add column if not exists first_activity_at timestamptz default now();
 
 create table if not exists resolved_results (
   wallet_address text references profiles(wallet_address) on delete cascade,
@@ -28,7 +32,7 @@ create table if not exists resolved_results (
 );
 
 create index if not exists leaderboard_entries_points_idx
-  on leaderboard_entries (points desc, updated_at desc);
+  on leaderboard_entries (points desc, wins desc, losses asc, first_activity_at asc);
 
 create index if not exists resolved_results_market_idx
   on resolved_results (market_id);

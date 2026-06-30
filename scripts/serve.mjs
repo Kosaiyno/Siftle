@@ -4812,11 +4812,17 @@ async function loadLeaderboardFromSupabase(data) {
   if (!isSupabaseConfigured) return data;
 
   try {
-    const [profiles, entries, results] = await Promise.all([
+    const [profiles, results] = await Promise.all([
       supabaseRequest("profiles?select=wallet_address,username,updated_at"),
-      supabaseRequest("leaderboard_entries?select=wallet_address,points,status,reported_points,reported_status,updated_at"),
       supabaseRequest("resolved_results?select=wallet_address,market_id,result,points,switched")
     ]);
+    let entries = [];
+    try {
+      entries = await supabaseRequest("leaderboard_entries?select=wallet_address,points,status,reported_points,reported_status,first_activity_at,updated_at");
+    } catch (err) {
+      if (!/first_activity_at|column/i.test(String(err.message || ""))) throw err;
+      entries = await supabaseRequest("leaderboard_entries?select=wallet_address,points,status,reported_points,reported_status,updated_at");
+    }
 
     const leaderboard = ensureLeaderboardState(data);
     const profileMap = new Map((profiles || []).map((profile) => [profile.wallet_address, profile]));
@@ -4831,6 +4837,7 @@ async function loadLeaderboardFromSupabase(data) {
         username: String(profile.username || leaderboard.traders[address]?.username || ""),
         reported_points: Number(entry.reported_points) || 0,
         reported_status: String(entry.reported_status || "0 wins, 0 losses"),
+        first_activity_at: entry.first_activity_at || leaderboard.traders[address]?.first_activity_at || entry.updated_at || new Date().toISOString(),
         updated_at: entry.updated_at || leaderboard.traders[address]?.updated_at || new Date().toISOString()
       };
     }
@@ -4878,23 +4885,35 @@ async function saveLeaderboardToSupabase(data) {
         }))
       });
 
-      await supabaseRequest("leaderboard_entries?on_conflict=wallet_address", {
-        method: "POST",
-        prefer: "resolution=merge-duplicates",
-        body: traders.map(({ walletAddress, entry }) => {
-          const parsedStatus = parseLeaderboardStatus(entry.status);
-          return {
-            wallet_address: walletAddress,
-            points: Number(entry.points) || 0,
-            wins: parsedStatus.wins,
-            losses: parsedStatus.losses,
-            status: String(entry.status || "0 wins, 0 losses"),
-            reported_points: Number(entry.reported_points) || 0,
-            reported_status: String(entry.reported_status || "0 wins, 0 losses"),
-            updated_at: entry.updated_at || nowIso
-          };
-        })
+      const leaderboardRows = traders.map(({ walletAddress, entry }) => {
+        const parsedStatus = parseLeaderboardStatus(entry.status);
+        return {
+          wallet_address: walletAddress,
+          points: Number(entry.points) || 0,
+          wins: parsedStatus.wins,
+          losses: parsedStatus.losses,
+          status: String(entry.status || "0 wins, 0 losses"),
+          reported_points: Number(entry.reported_points) || 0,
+          reported_status: String(entry.reported_status || "0 wins, 0 losses"),
+          first_activity_at: entry.first_activity_at || entry.updated_at || nowIso,
+          updated_at: entry.updated_at || nowIso
+        };
       });
+
+      try {
+        await supabaseRequest("leaderboard_entries?on_conflict=wallet_address", {
+          method: "POST",
+          prefer: "resolution=merge-duplicates",
+          body: leaderboardRows
+        });
+      } catch (err) {
+        if (!/first_activity_at|column/i.test(String(err.message || ""))) throw err;
+        await supabaseRequest("leaderboard_entries?on_conflict=wallet_address", {
+          method: "POST",
+          prefer: "resolution=merge-duplicates",
+          body: leaderboardRows.map(({ first_activity_at, ...row }) => row)
+        });
+      }
     }
 
     const resolvedRows = [];
@@ -5051,13 +5070,22 @@ function buildSeasonDivisions(data, tradersList, seasonId = getSeasonId()) {
 
   const divisionNumbers = Array.from(grouped.keys()).sort((a, b) => a - b);
   const divisions = divisionNumbers.map((divisionNumber) =>
-    grouped.get(divisionNumber).slice().sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points;
-      return (Date.parse(a.updated_at || "") || 0) - (Date.parse(b.updated_at || "") || 0);
-    })
+    grouped.get(divisionNumber).slice().sort(compareLeaderboardPlayers)
   );
 
   return { divisions, assignments };
+}
+
+function compareLeaderboardPlayers(a, b) {
+  const aStatus = parseLeaderboardStatus(a.status);
+  const bStatus = parseLeaderboardStatus(b.status);
+  if (b.points !== a.points) return b.points - a.points;
+  if (bStatus.wins !== aStatus.wins) return bStatus.wins - aStatus.wins;
+  if (aStatus.losses !== bStatus.losses) return aStatus.losses - bStatus.losses;
+  const aFirst = Date.parse(a.first_activity_at || a.updated_at || "") || Number.MAX_SAFE_INTEGER;
+  const bFirst = Date.parse(b.first_activity_at || b.updated_at || "") || Number.MAX_SAFE_INTEGER;
+  if (aFirst !== bFirst) return aFirst - bFirst;
+  return String(a.username || "").localeCompare(String(b.username || ""));
 }
 
 function ensureLeaderboardState(data) {
@@ -5072,6 +5100,7 @@ async function collectMarketTradeSignals(marketAddress) {
   const boughtYes = new Set();
   const boughtNo = new Set();
   const redeemed = new Set();
+  const firstActivityBlocks = new Map();
 
   const fetchLogsChunked = async (topic) => {
     const latest = await leaderboardProvider.getBlockNumber();
@@ -5102,6 +5131,11 @@ async function collectMarketTradeSignals(marketAddress) {
         const buyer = normalizeWalletAddress(parsed.args.buyer);
         if (!buyer) continue;
         traders.add(buyer);
+        const blockNumber = Number(log.blockNumber) || 0;
+        if (blockNumber > 0) {
+          const previous = firstActivityBlocks.get(buyer);
+          if (!previous || blockNumber < previous) firstActivityBlocks.set(buyer, blockNumber);
+        }
         const isYes = Boolean(parsed.args.yes);
         if (isYes) boughtYes.add(buyer);
         else boughtNo.add(buyer);
@@ -5131,7 +5165,7 @@ async function collectMarketTradeSignals(marketAddress) {
     if (boughtNo.has(address)) switched.add(address);
   });
 
-  return { traders, switched, redeemed };
+  return { traders, switched, redeemed, firstActivityBlocks };
 }
 
 async function recomputeLeaderboardFromChain(data) {
@@ -5160,7 +5194,7 @@ async function recomputeLeaderboardFromChain(data) {
     const marketId = String(market.id || "").trim();
     if (!marketId) continue;
 
-    const { traders, switched, redeemed } = await collectMarketTradeSignals(marketAddress);
+    const { traders, switched, redeemed, firstActivityBlocks } = await collectMarketTradeSignals(marketAddress);
     allTraders.forEach((address) => traders.add(address));
     traders.forEach((address) => allTraders.add(address));
 
@@ -5170,6 +5204,31 @@ async function recomputeLeaderboardFromChain(data) {
       outcome = Number(await contract.outcome()) || 0;
 
       if (outcome === 0) continue;
+
+      const firstActivityEntries = Array.from(firstActivityBlocks.entries());
+      if (firstActivityEntries.length > 0) {
+        const blockNumbers = Array.from(new Set(firstActivityEntries.map(([, blockNumber]) => blockNumber).filter(Boolean)));
+        const blockTimes = new Map();
+        await Promise.all(blockNumbers.map(async (blockNumber) => {
+          try {
+            const block = await leaderboardProvider.getBlock(blockNumber);
+            if (block?.timestamp) blockTimes.set(blockNumber, new Date(Number(block.timestamp) * 1000).toISOString());
+          } catch {}
+        }));
+        firstActivityEntries.forEach(([address, blockNumber]) => {
+          const firstActivityAt = blockTimes.get(blockNumber);
+          if (!firstActivityAt) return;
+          const existing = tradersMap[address] || {};
+          const existingFirst = Date.parse(existing.first_activity_at || "") || Number.MAX_SAFE_INTEGER;
+          const candidateFirst = Date.parse(firstActivityAt) || Number.MAX_SAFE_INTEGER;
+          if (candidateFirst < existingFirst) {
+            tradersMap[address] = {
+              ...existing,
+              first_activity_at: firstActivityAt
+            };
+          }
+        });
+      }
 
       const traderList = Array.from(traders);
       const positions = await Promise.all(
@@ -5268,6 +5327,7 @@ async function recomputeLeaderboardFromChain(data) {
       username: String(existing.username || ""),
       reported_points: fallbackPoints,
       reported_status: fallbackStatus,
+      first_activity_at: existing.first_activity_at || existing.updated_at || nowIso,
       updated_at: nowIso
     };
   });
@@ -6613,10 +6673,11 @@ const server = createServer(async (request, response) => {
         displayName: String(info.username || ""),
         points: Number(info.points) || 0,
         status: String(info.status || ""),
+        first_activity_at: info.first_activity_at,
         updated_at: info.updated_at
       }));
     
-    tradersList.sort((a, b) => b.points - a.points);
+    tradersList.sort(compareLeaderboardPlayers);
     
     if (walletAddress && !isAdminWallet(walletAddress) && !tradersList.some(t => t.username === walletAddress)) {
       tradersList.push({
@@ -6624,6 +6685,7 @@ const server = createServer(async (request, response) => {
         displayName: "",
         points: 0,
         status: "0 wins, 0 losses",
+        first_activity_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
     }
