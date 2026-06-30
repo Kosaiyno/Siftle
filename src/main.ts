@@ -2300,7 +2300,6 @@ const renderMarketCard = (market: MarketPreview): string => {
   const snapshot = state.marketSnapshots[market.id];
   const marketAddress = getMarketAddress(market);
   const isLoadingSnapshot = Boolean(marketAddress && !snapshot);
-  const traderCount = getDisplayTraderCount(market, snapshot);
 
   if (isCheckingEvidence || isLoadingSnapshot) {
     return `
@@ -2370,7 +2369,6 @@ const renderMarketDetail = (market: MarketPreview): void => {
   const marketAddress = getMarketAddress(market);
   const snapshot = state.marketSnapshots[market.id];
   const isLoadingSnapshot = Boolean(marketAddress && !snapshot);
-  const traderCount = getDisplayTraderCount(market, snapshot);
   const yesPrice = snapshot?.yesPriceCents ?? (marketAddress ? market.probability : 0);
   const noPrice = snapshot?.noPriceCents ?? (marketAddress ? 100 - market.probability : 0);
   const yesPriceLabel = isLoadingSnapshot ? "" : marketAddress ? `${yesPrice}¢` : "--";
@@ -2477,10 +2475,6 @@ const renderMarketDetail = (market: MarketPreview): void => {
             <div class="market-stat">
               <span>Volume</span>
               <strong>${snapshot ? `$${Math.round(snapshot.volumeUsdc).toLocaleString()}` : market.volume}</strong>
-            </div>
-            <div class="market-stat">
-              <span>Traders</span>
-              <strong>${traderCount}</strong>
             </div>
           </div>
 
