@@ -1,4 +1,34 @@
 export const marketThreadRules = {
+  "wc-ivory-coast-eliminate-norway": {
+    category: "Sports",
+    topic: "Ivory Coast Norway World Cup Knockout",
+    includeAnySets: [
+      ["ivory coast", "cote d'ivoire", "côte d'ivoire"],
+      ["norway", "norwegian", "haaland"],
+      ["world cup", "fifa", "2026", "round of 32", "round of 16", "last 16", "knockout", "eliminate", "elimination", "advance", "advances", "penalties", "extra time", "match", "preview", "score"]
+    ],
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball"]
+  },
+  "wc-haaland-outscore-mbappe": {
+    category: "Sports",
+    topic: "Haaland Mbappe World Cup Goals Race",
+    includeAnySets: [
+      ["haaland", "erling haaland", "mbappe", "mbappé", "kylian mbappe", "kylian mbappé"],
+      ["norway", "ivory coast", "cote d'ivoire", "côte d'ivoire", "france", "sweden"],
+      ["world cup", "fifa", "2026", "goal", "goals", "score", "scores", "scorer", "knockout", "match", "preview"]
+    ],
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball"]
+  },
+  "wc-france-sweden-spread": {
+    category: "Sports",
+    topic: "France Sweden World Cup Knockout",
+    includeAnySets: [
+      ["france", "french", "mbappe", "mbappé"],
+      ["sweden", "swedish", "isak"],
+      ["world cup", "fifa", "2026", "round of 32", "round of 16", "last 16", "knockout", "match", "preview", "team news", "lineup", "lineups", "score", "win", "margin", "advance", "advances"]
+    ],
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball"]
+  },
   "wc-vinicius-score-japan": {
     category: "Sports",
     topic: "Brazil Japan World Cup Lineups",

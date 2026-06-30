@@ -723,7 +723,7 @@ Trade and discuss here: ${a}`},xK=r=>{if(!ve||!Ie)return;let e=Bm(r),t=!h.checke
           </div>
 
           <div class="market-amount-panel">
-            <label for="marketAmountInput">Trade Amount</label>
+            <label for="marketAmountInput">Trade Amount <span style="color: var(--market-text-muted); font-size: 0.72rem; text-transform: none; letter-spacing: 0;">$5-$10 USDC</span></label>
             <div class="market-amount-input-row">
               <span>$</span>
               <input id="marketAmountInput" type="number" min="5" max="10" step="0.01" inputmode="decimal" value="${d}" data-market-amount ${g||v?"disabled":""} />

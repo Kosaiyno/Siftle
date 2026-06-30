@@ -2570,7 +2570,7 @@ const renderMarketDetail = (market: MarketPreview): void => {
           </div>
 
           <div class="market-amount-panel">
-            <label for="marketAmountInput">Trade Amount</label>
+            <label for="marketAmountInput">Trade Amount <span style="color: var(--market-text-muted); font-size: 0.72rem; text-transform: none; letter-spacing: 0;">$5-$10 USDC</span></label>
             <div class="market-amount-input-row">
               <span>$</span>
               <input id="marketAmountInput" type="number" min="5" max="10" step="0.01" inputmode="decimal" value="${amount}" data-market-amount ${marketResolved || marketTradeLocked ? "disabled" : ""} />

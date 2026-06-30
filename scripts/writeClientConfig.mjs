@@ -19,9 +19,9 @@ const reownProjectId = publicValue("REOWN_PROJECT_ID") || publicValue("WALLETCON
 const circleAppId = publicValue("CIRCLE_APP_ID");
 const arcUsdcAddress = publicValue("ARC_TESTNET_USDC_ADDRESS");
 const marketAddresses = {
-  "wc-vinicius-score-japan": publicValue("SIFTLE_MARKET_VINICIUS_JAPAN_ADDRESS"),
-  "wc-paraguay-score-germany": publicValue("SIFTLE_MARKET_PARAGUAY_GERMANY_ADDRESS"),
-  "wc-morocco-eliminate-netherlands": publicValue("SIFTLE_MARKET_MOROCCO_NETHERLANDS_ADDRESS"),
+  "wc-ivory-coast-eliminate-norway": publicValue("SIFTLE_MARKET_IVORY_COAST_NORWAY_ADDRESS") || "0xA9ba7b00F60dc541c1C73917Aba92577F3d1A252",
+  "wc-haaland-outscore-mbappe": publicValue("SIFTLE_MARKET_HAALAND_MBAPPE_ADDRESS") || "0x74f77d841d1a3e664Ba6C70f13a6E93E95dEA9D9",
+  "wc-france-sweden-spread": publicValue("SIFTLE_MARKET_FRANCE_SWEDEN_ADDRESS") || "0x18EF2D26ec18a4cd2835216E736a6655fFB8136D",
   "transfer-davies-realmadrid": publicValue("SIFTLE_MARKET_DAVIES_ADDRESS") || "0xa8D7bd361e33aE4dd9638D3afA9f1f01f0018423",
   "transfer-tonali-spurs": publicValue("SIFTLE_MARKET_TONALI_ADDRESS") || "0xB4F9E7a45aB1B4D26D71e32b67565cE875220615",
   "transfer-guimaraes-arsenal": publicValue("SIFTLE_MARKET_GUIMARAES_ADDRESS") || "0xc83F2feA4b9cF25d074c4a8F26D13f26156b496B",
