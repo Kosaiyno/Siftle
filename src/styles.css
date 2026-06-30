@@ -8802,3 +8802,259 @@ html, body, .app-shell, main {
   transform: scale(1.02) !important;
 }
 
+/* 20. Optional Light Mode */
+.theme-toggle-button {
+  flex-shrink: 0 !important;
+}
+
+.top-compact-controls .theme-toggle-button {
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 !important;
+  border-radius: 12px !important;
+}
+
+.theme-toggle-button .theme-icon {
+  display: none !important;
+}
+
+:root:not([data-theme="light"]) .theme-toggle-button .theme-icon-sun,
+:root[data-theme="dark"] .theme-toggle-button .theme-icon-sun {
+  display: block !important;
+}
+
+:root[data-theme="light"] .theme-toggle-button .theme-icon-moon {
+  display: block !important;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --market-bg: #f5f6fa !important;
+  --market-card-bg: #ffffff !important;
+  --market-border: #d9deea !important;
+  --market-text-main: #101522 !important;
+  --market-text-muted: #677184 !important;
+  --market-accent: #2563eb !important;
+  --market-yes: #079669 !important;
+  --market-no: #64748b !important;
+  --paper: #ffffff !important;
+  --soft: #f5f6fa !important;
+  --ink: #101522 !important;
+  --muted: #677184 !important;
+  --line: #d9deea !important;
+  --blue: #2563eb !important;
+  --violet: #4f46e5 !important;
+  --teal: #079669 !important;
+  --orange: #d97706 !important;
+}
+
+:root[data-theme="light"] html,
+:root[data-theme="light"] body,
+:root[data-theme="light"] .app-shell,
+:root[data-theme="light"] main,
+:root[data-theme="light"] .brief-board {
+  background: #f5f6fa !important;
+  background-color: #f5f6fa !important;
+  color: #101522 !important;
+}
+
+:root[data-theme="light"] .site-header {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border-bottom: 1px solid #d9deea !important;
+  box-shadow: 0 12px 32px rgba(16, 21, 34, 0.06) !important;
+}
+
+:root[data-theme="light"] .brand-lockup span,
+:root[data-theme="light"] .site-header .brand-lockup span,
+:root[data-theme="light"] .brief-hero h1,
+:root[data-theme="light"] .markets-header h1,
+:root[data-theme="light"] .portfolio-surface h1,
+:root[data-theme="light"] .leaderboard-header h1,
+:root[data-theme="light"] .story-card h2,
+:root[data-theme="light"] .detail-card h2,
+:root[data-theme="light"] .market-card h2,
+:root[data-theme="light"] .market-detail-card h2,
+:root[data-theme="light"] .leaderboard-username {
+  color: #101522 !important;
+}
+
+:root[data-theme="light"] .brand-lockup span,
+:root[data-theme="light"] .site-header .brand-lockup span {
+  letter-spacing: 0 !important;
+}
+
+:root[data-theme="light"] .date-label,
+:root[data-theme="light"] .portfolio-surface header p,
+:root[data-theme="light"] .leaderboard-header p,
+:root[data-theme="light"] .story-card p,
+:root[data-theme="light"] .detail-card p,
+:root[data-theme="light"] .market-detail-card p,
+:root[data-theme="light"] .market-card-footer,
+:root[data-theme="light"] .leaderboard-profit,
+:root[data-theme="light"] .rules-section p {
+  color: #677184 !important;
+}
+
+:root[data-theme="light"] .story-card,
+:root[data-theme="light"] .market-card,
+:root[data-theme="light"] .detail-card,
+:root[data-theme="light"] .market-detail-card,
+:root[data-theme="light"] .thread-card,
+:root[data-theme="light"] .portfolio-wallet-state,
+:root[data-theme="light"] .leaderboard-list,
+:root[data-theme="light"] .leaderboard-faucet-box,
+:root[data-theme="light"] .profile-card,
+:root[data-theme="light"] .rules-modal-content {
+  background: #ffffff !important;
+  border-color: #d9deea !important;
+  color: #101522 !important;
+  box-shadow: 0 18px 42px rgba(16, 21, 34, 0.08) !important;
+}
+
+:root[data-theme="light"] .story-card:hover,
+:root[data-theme="light"] .market-card:hover {
+  background: #ffffff !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 20px 48px rgba(37, 99, 235, 0.12) !important;
+}
+
+:root[data-theme="light"] .header-icon-button,
+:root[data-theme="light"] .site-header .archive-pill,
+:root[data-theme="light"] .site-header .wallet-button.connected,
+:root[data-theme="light"] .mobile-action-btn.source-btn,
+:root[data-theme="light"] .mobile-action-btn.thread-btn,
+:root[data-theme="light"] .card-source-button,
+:root[data-theme="light"] .category-chip,
+:root[data-theme="light"] .timeframe-chip,
+:root[data-theme="light"] .market-card-updates,
+:root[data-theme="light"] .mobile-card-time,
+:root[data-theme="light"] .category-tab,
+:root[data-theme="light"] .division-select-menu {
+  background: #eef2f8 !important;
+  border-color: #d9deea !important;
+  color: #334155 !important;
+}
+
+:root[data-theme="light"] .header-icon-button:hover,
+:root[data-theme="light"] .header-icon-button.active,
+:root[data-theme="light"] .site-header .archive-pill:hover,
+:root[data-theme="light"] .category-tab:hover:not(.active) {
+  background: #e8f0ff !important;
+  border-color: rgba(37, 99, 235, 0.28) !important;
+  color: #2563eb !important;
+}
+
+:root[data-theme="light"] .site-header .wallet-button,
+:root[data-theme="light"] .mobile-action-btn.summary-btn,
+:root[data-theme="light"] .summary-btn,
+:root[data-theme="light"] .portfolio-wallet-state button:not(.copy-address-btn),
+:root[data-theme="light"] .back-button,
+:root[data-theme="light"] .share-whatsapp-btn,
+:root[data-theme="light"] .sticky-trade-btn,
+:root[data-theme="light"] .market-submit-button,
+:root[data-theme="light"] .faucet-claim-btn,
+:root[data-theme="light"] .category-tab.active {
+  background: #101522 !important;
+  border-color: #101522 !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="light"] .site-header .wallet-button:hover,
+:root[data-theme="light"] .mobile-action-btn.summary-btn:hover,
+:root[data-theme="light"] .summary-btn:hover,
+:root[data-theme="light"] .sticky-trade-btn:hover,
+:root[data-theme="light"] .market-submit-button:hover,
+:root[data-theme="light"] .faucet-claim-btn:hover {
+  background: #1d2638 !important;
+  border-color: #1d2638 !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="light"] .mobile-bottom-nav {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-top: 1px solid #d9deea !important;
+  box-shadow: 0 -8px 30px rgba(16, 21, 34, 0.1) !important;
+}
+
+:root[data-theme="light"] .mobile-bottom-nav button {
+  color: #677184 !important;
+}
+
+:root[data-theme="light"] .mobile-bottom-nav button.active {
+  color: #101522 !important;
+}
+
+:root[data-theme="light"] .category-tabs {
+  background: #f5f6fa !important;
+  border-bottom: 1px solid #d9deea !important;
+}
+
+:root[data-theme="light"] .market-side.yes.active {
+  background: rgba(7, 150, 105, 0.1) !important;
+  border-color: #079669 !important;
+  color: #079669 !important;
+}
+
+:root[data-theme="light"] .market-side.yes.active strong {
+  color: #079669 !important;
+}
+
+:root[data-theme="light"] .market-side.no.active {
+  background: rgba(100, 116, 139, 0.12) !important;
+  border-color: #64748b !important;
+  color: #475569 !important;
+}
+
+:root[data-theme="light"] .market-side.no.active strong {
+  color: #475569 !important;
+}
+
+:root[data-theme="light"] .market-status-pill,
+:root[data-theme="light"] .leaderboard-roi,
+:root[data-theme="light"] .portfolio-surface header span,
+:root[data-theme="light"] .portfolio-wallet-state span {
+  color: #079669 !important;
+}
+
+:root[data-theme="light"] .leaderboard-row,
+:root[data-theme="light"] .rules-modal-header {
+  border-color: #d9deea !important;
+}
+
+:root[data-theme="light"] .leaderboard-row.user-highlight {
+  background: rgba(37, 99, 235, 0.08) !important;
+}
+
+:root[data-theme="light"] .rules-modal-overlay {
+  background: rgba(15, 23, 42, 0.42) !important;
+}
+
+:root[data-theme="light"] .rules-modal-header h2,
+:root[data-theme="light"] .rules-section h3 {
+  color: #101522 !important;
+}
+
+:root[data-theme="light"] .close-modal-btn,
+:root[data-theme="light"] .copy-address-btn,
+:root[data-theme="light"] .cancel-username-btn,
+:root[data-theme="light"] .faucet-link {
+  color: #475569 !important;
+}
+
+@media (max-width: 640px) {
+  .site-header .theme-toggle-button {
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 !important;
+  }
+
+  :root[data-theme="light"] .site-header {
+    background: rgba(255, 255, 255, 0.92) !important;
+    border-bottom: 1px solid #d9deea !important;
+  }
+}
+

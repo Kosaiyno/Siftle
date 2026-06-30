@@ -50,6 +50,20 @@ type ProfileNotice = {
   message: string;
 };
 
+type AppTheme = "dark" | "light";
+
+const THEME_STORAGE_KEY = "siftle_theme";
+
+const readStoredTheme = (): AppTheme => {
+  try {
+    return window.localStorage.getItem(THEME_STORAGE_KEY) === "light" ? "light" : "dark";
+  } catch (error) {
+    return "dark";
+  }
+};
+
+let currentTheme: AppTheme = readStoredTheme();
+
 function trackEvent(event: string) {
   fetch(apiUrl("/api/analytics"), {
     method: "POST",
@@ -242,9 +256,32 @@ const topMarketsButton = document.querySelector<HTMLButtonElement>("[data-surfac
 const topNewsButton = document.querySelector<HTMLButtonElement>("[data-surface='feed']");
 const topPortfolioButton = document.querySelector<HTMLButtonElement>("[data-surface='portfolio']");
 const walletButton = document.querySelector<HTMLButtonElement>("#walletButton");
+const themeToggleButton = document.querySelector<HTMLButtonElement>("[data-theme-toggle]");
 const bottomNavButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-bottom-nav]"));
 
 let toastTimer: number | undefined;
+
+const renderThemeToggleState = (): void => {
+  if (!themeToggleButton) return;
+  const nextTheme = currentTheme === "light" ? "dark" : "light";
+  const label = `Switch to ${nextTheme} mode`;
+  themeToggleButton.setAttribute("aria-label", label);
+  themeToggleButton.title = label;
+  themeToggleButton.dataset.activeTheme = currentTheme;
+};
+
+const applyTheme = (theme: AppTheme): void => {
+  currentTheme = theme;
+  document.documentElement.dataset.theme = theme;
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  } catch (error) {
+    // Theme still applies for the current session when storage is unavailable.
+  }
+  renderThemeToggleState();
+};
+
+applyTheme(currentTheme);
 
 const renderWalletState = (): void => {
   if (walletButton) {
@@ -260,6 +297,10 @@ const renderWalletState = (): void => {
 };
 
 window.addEventListener("resize", renderWalletState);
+
+themeToggleButton?.addEventListener("click", () => {
+  applyTheme(currentTheme === "light" ? "dark" : "light");
+});
 
 const connectWallet = async (): Promise<void> => {
   if (state.walletConnecting) return;
