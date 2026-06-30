@@ -9043,6 +9043,212 @@ html, body, .app-shell, main {
   color: #475569 !important;
 }
 
+:root[data-theme="light"] .story-detail,
+:root[data-theme="light"] .story-detail.fullscreen,
+:root[data-theme="light"] .detail-container,
+:root[data-theme="light"] .thread-container,
+:root[data-theme="light"] .market-detail-container {
+  background: #f5f6fa !important;
+  color: #101522 !important;
+}
+
+:root[data-theme="light"] .detail-card,
+:root[data-theme="light"] .market-detail-card,
+:root[data-theme="light"] .thread-card,
+:root[data-theme="light"] .thread-item-body,
+:root[data-theme="light"] .market-thread-update-content,
+:root[data-theme="light"] .detail-summary,
+:root[data-theme="light"] .market-resolution-panel,
+:root[data-theme="light"] .market-stats-row,
+:root[data-theme="light"] .portfolio-position-card,
+:root[data-theme="light"] .portfolio-empty,
+:root[data-theme="light"] .market-timeframe-tabs,
+:root[data-theme="light"] .sticky-trade-bar,
+:root[data-theme="light"] .trade-drawer {
+  background: #ffffff !important;
+  border-color: #d9deea !important;
+  color: #101522 !important;
+  box-shadow: 0 18px 42px rgba(16, 21, 34, 0.08) !important;
+}
+
+:root[data-theme="light"] .detail-card h2,
+:root[data-theme="light"] .market-detail-card h2,
+:root[data-theme="light"] .thread-card h2,
+:root[data-theme="light"] .thread-item-body h3,
+:root[data-theme="light"] .market-thread-update-content h4,
+:root[data-theme="light"] .detail-container h2,
+:root[data-theme="light"] .market-detail-container h2,
+:root[data-theme="light"] .detail-container h3,
+:root[data-theme="light"] .market-detail-container h3,
+:root[data-theme="light"] .portfolio-position-card h2,
+:root[data-theme="light"] .portfolio-position-section h2,
+:root[data-theme="light"] .profile-username,
+:root[data-theme="light"] .market-stat strong,
+:root[data-theme="light"] .sticky-trade-info strong {
+  color: #101522 !important;
+}
+
+:root[data-theme="light"] .detail-topline,
+:root[data-theme="light"] .detail-topline span,
+:root[data-theme="light"] .market-detail-topline span,
+:root[data-theme="light"] .thread-intro,
+:root[data-theme="light"] .thread-meta span,
+:root[data-theme="light"] .thread-item-body p,
+:root[data-theme="light"] .market-thread-intro,
+:root[data-theme="light"] .market-thread-update-meta span,
+:root[data-theme="light"] .market-thread-update-content p,
+:root[data-theme="light"] .market-resolution-panel p,
+:root[data-theme="light"] .market-stat span,
+:root[data-theme="light"] .portfolio-empty,
+:root[data-theme="light"] .portfolio-position-footer,
+:root[data-theme="light"] .portfolio-position-top,
+:root[data-theme="light"] .portfolio-position-stats span,
+:root[data-theme="light"] .sticky-trade-info span,
+:root[data-theme="light"] .detail-summary p,
+:root[data-theme="light"] .detail-summary div {
+  color: #677184 !important;
+}
+
+:root[data-theme="light"] .market-evidence-thread {
+  background: transparent !important;
+  border-top-color: #d9deea !important;
+}
+
+:root[data-theme="light"] .thread-timeline::before,
+:root[data-theme="light"] .market-thread-timeline::before {
+  background: #cbd5e1 !important;
+}
+
+:root[data-theme="light"] .thread-dot,
+:root[data-theme="light"] .market-thread-marker {
+  background: #2563eb !important;
+  border-color: #ffffff !important;
+}
+
+:root[data-theme="light"] .thread-source-link,
+:root[data-theme="light"] .market-thread-source-link,
+:root[data-theme="light"] .source-button,
+:root[data-theme="light"] .market-card-updates,
+:root[data-theme="light"] .market-evidence-thread header span,
+:root[data-theme="light"] .timeframe-section-count-badge {
+  color: #2563eb !important;
+}
+
+:root[data-theme="light"] .thread-source-link,
+:root[data-theme="light"] .market-thread-source-link,
+:root[data-theme="light"] .source-button {
+  background: #eef2f8 !important;
+  border: 1px solid #d9deea !important;
+}
+
+:root[data-theme="light"] .back-button,
+:root[data-theme="light"] .detail-header-row .back-button,
+:root[data-theme="light"] .share-whatsapp-btn {
+  background: #ffffff !important;
+  border: 1px solid #d9deea !important;
+  color: #101522 !important;
+  box-shadow: 0 12px 32px rgba(16, 21, 34, 0.06) !important;
+}
+
+:root[data-theme="light"] .share-whatsapp-btn {
+  color: #0f7a45 !important;
+}
+
+:root[data-theme="light"] .source-button:hover,
+:root[data-theme="light"] .thread-source-link:hover,
+:root[data-theme="light"] .market-thread-source-link:hover,
+:root[data-theme="light"] .back-button:hover,
+:root[data-theme="light"] .detail-header-row .back-button:hover {
+  background: #e8f0ff !important;
+  border-color: rgba(37, 99, 235, 0.28) !important;
+  color: #2563eb !important;
+}
+
+:root[data-theme="light"] .market-timeframe-tabs {
+  background: #eef2f8 !important;
+}
+
+:root[data-theme="light"] .timeframe-tab-btn {
+  color: #475569 !important;
+}
+
+:root[data-theme="light"] .timeframe-tab-btn:hover {
+  background: #ffffff !important;
+  color: #101522 !important;
+}
+
+:root[data-theme="light"] .timeframe-tab-btn.active {
+  background: #101522 !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="light"] .timeframe-section-header {
+  border-bottom-color: #d9deea !important;
+}
+
+:root[data-theme="light"] .timeframe-section-header h2 {
+  color: #101522 !important;
+}
+
+:root[data-theme="light"] .timeframe-section-subtitle {
+  color: #677184 !important;
+}
+
+:root[data-theme="light"] .sticky-trade-bar {
+  border-top: 1px solid #d9deea !important;
+  box-shadow: 0 -12px 32px rgba(16, 21, 34, 0.08) !important;
+}
+
+:root[data-theme="light"] .sticky-trade-btn:disabled,
+:root[data-theme="light"] .market-submit-button.disabled {
+  background: #e5e7eb !important;
+  border-color: #d1d5db !important;
+  color: #475569 !important;
+}
+
+:root[data-theme="light"] .market-order-mode,
+:root[data-theme="light"] .market-amount-input-row,
+:root[data-theme="light"] .market-payout-panel,
+:root[data-theme="light"] .market-inline-payout {
+  background: #f8fafc !important;
+  border-color: #d9deea !important;
+  color: #101522 !important;
+}
+
+:root[data-theme="light"] .market-order-mode button {
+  color: #475569 !important;
+}
+
+:root[data-theme="light"] .market-order-mode button.active {
+  background: #ffffff !important;
+  color: #101522 !important;
+}
+
+:root[data-theme="light"] .market-amount-input-row input,
+:root[data-theme="light"] .market-amount-input input {
+  color: #101522 !important;
+}
+
+:root[data-theme="light"] .portfolio-section-tabs span {
+  background: #eef2f8 !important;
+  border-color: #d9deea !important;
+  color: #334155 !important;
+}
+
+:root[data-theme="light"] .portfolio-position-stats {
+  border-color: #d9deea !important;
+}
+
+:root[data-theme="light"] .portfolio-position-stats strong {
+  color: #101522 !important;
+}
+
+:root[data-theme="light"] .connect-wallet-btn {
+  background: #101522 !important;
+  border-color: #101522 !important;
+  color: #ffffff !important;
+}
+
 @media (max-width: 640px) {
   .site-header .theme-toggle-button {
     width: 40px !important;

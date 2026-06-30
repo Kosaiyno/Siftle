@@ -2421,21 +2421,21 @@ const renderMarketDetail = (market: MarketPreview): void => {
 
     positionHtml = `
       <div class="user-market-position-box" style="margin: 16px 0; padding: 16px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.15); border-radius: 12px; font-family: 'Space Grotesk', sans-serif;">
-        <h3 style="font-size: 0.9rem; font-weight: 700; color: #FFFFFF; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.05em;">Your Position</h3>
+        <h3 style="font-size: 0.9rem; font-weight: 700; color: var(--market-text-main); margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.05em;">Your Position</h3>
         ${heldRows.map((row) => `
           <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-bottom: 8px;">
             <div>
-              <span style="font-size: 0.72rem; color: #94A3B8; display: block; margin-bottom: 2px;">${row.label}</span>
-              <strong style="font-size: 0.95rem; color: #FFFFFF;">${formatMoney(row.shares)}</strong>
+              <span style="font-size: 0.72rem; color: var(--market-text-muted); display: block; margin-bottom: 2px;">${row.label}</span>
+              <strong style="font-size: 0.95rem; color: var(--market-text-main);">${formatMoney(row.shares)}</strong>
             </div>
             <div>
-              <span style="font-size: 0.72rem; color: #94A3B8; display: block; margin-bottom: 2px;">Projected payout</span>
-              <strong style="font-size: 0.95rem; color: #FFFFFF;">$${formatMoney(row.payout)}</strong>
+              <span style="font-size: 0.72rem; color: var(--market-text-muted); display: block; margin-bottom: 2px;">Projected payout</span>
+              <strong style="font-size: 0.95rem; color: var(--market-text-main);">$${formatMoney(row.payout)}</strong>
             </div>
           </div>
         `).join("")}
-        <div style="border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 8px; display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 0.78rem; color: #94A3B8;">Winning side splits the final pool</span>
+        <div style="border-top: 1px solid var(--market-border); padding-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.78rem; color: var(--market-text-muted);">Winning side splits the final pool</span>
         </div>
       </div>
     `;
@@ -3135,46 +3135,46 @@ const renderPortfolio = (): void => {
 
   storyList.innerHTML = `
     <section class="portfolio-surface">
-      <div class="profile-card" style="background: rgba(255, 255, 255, 0.02) !important; border: 1px solid #1e1f2b !important; border-radius: 12px !important; padding: 24px !important; margin-bottom: 24px !important; box-sizing: border-box !important;">
+      <div class="profile-card" style="background: var(--market-card-bg) !important; border: 1px solid var(--market-border) !important; border-radius: 12px !important; padding: 24px !important; margin-bottom: 24px !important; box-sizing: border-box !important;">
         <div class="profile-avatar-container" style="display: flex !important; align-items: center !important; gap: 16px !important;">
           <div class="profile-avatar-gradient" style="width: 54px !important; height: 54px !important; border-radius: 50% !important; background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important; display: flex !important; align-items: center !important; justify-content: center !important; flex-shrink: 0 !important; border: 1px solid rgba(255, 255, 255, 0.1) !important;">
             <span class="avatar-letter" style="color: #ffffff !important; font-family: 'Space Grotesk', sans-serif !important; font-size: 1.45rem !important; font-weight: 750 !important;">${avatarLetter}</span>
           </div>
           <div class="profile-details" style="display: flex !important; flex-direction: column !important; min-width: 0 !important;">
             <div class="username-display-row" style="display: flex !important; align-items: center !important; gap: 8px !important;">
-              <span class="profile-username" style="font-family: 'Space Grotesk', sans-serif !important; font-size: 1.35rem !important; font-weight: 750 !important; color: #ffffff !important; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis !important; max-width: 180px !important;">${safeUsernameDisplay}</span>
+              <span class="profile-username" style="font-family: 'Space Grotesk', sans-serif !important; font-size: 1.35rem !important; font-weight: 750 !important; color: var(--market-text-main) !important; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis !important; max-width: 180px !important;">${safeUsernameDisplay}</span>
               ${walletConnected ? `
-                <button type="button" class="edit-username-btn" id="editUsernameBtn" style="background: transparent !important; border: none !important; color: #8e8e93 !important; cursor: pointer !important; padding: 4px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; transition: color 0.2s ease !important; outline: none !important;">
+                <button type="button" class="edit-username-btn" id="editUsernameBtn" style="background: transparent !important; border: none !important; color: var(--market-text-muted) !important; cursor: pointer !important; padding: 4px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; transition: color 0.2s ease !important; outline: none !important;">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none !important;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path></svg>
                 </button>
               ` : ""}
             </div>
             ${walletConnected ? `
               <div class="wallet-address-row" style="display: flex !important; align-items: center !important; gap: 8px !important; margin-top: 4px !important;">
-                <small style="color: #748099 !important; font-family: monospace !important; font-size: 0.78rem !important;">${shortenAddress(state.walletAddress!)}</small>
-                <button type="button" class="copy-address-btn" data-address="${state.walletAddress}" style="background: rgba(255,255,255,0.04) !important; border: 1px solid rgba(255,255,255,0.06) !important; color: #8e8e93 !important; border-radius: 4px !important; padding: 2px 6px !important; font-size: 0.7rem !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 4px !important; transition: all 0.2s ease !important; outline: none !important;">
+                <small style="color: var(--market-text-muted) !important; font-family: monospace !important; font-size: 0.78rem !important;">${shortenAddress(state.walletAddress!)}</small>
+                <button type="button" class="copy-address-btn" data-address="${state.walletAddress}" style="background: rgba(59,130,246,0.06) !important; border: 1px solid var(--market-border) !important; color: var(--market-text-muted) !important; border-radius: 4px !important; padding: 2px 6px !important; font-size: 0.7rem !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 4px !important; transition: all 0.2s ease !important; outline: none !important;">
                   <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none !important;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                   Copy
                 </button>
               </div>
-            ` : `<small style="color: #748099 !important; font-size: 0.8rem !important; display: block !important; margin-top: 4px !important;">Connect wallet to customize profile</small>`}
+            ` : `<small style="color: var(--market-text-muted) !important; font-size: 0.8rem !important; display: block !important; margin-top: 4px !important;">Connect wallet to customize profile</small>`}
           </div>
         </div>
 
         ${walletConnected ? `
           <div class="profile-username-edit-form" id="usernameEditForm" style="display: none !important; align-items: center !important; gap: 8px !important; margin-top: 16px !important; width: 100% !important;">
-            <input type="text" id="usernameInput" placeholder="Enter username..." value="${safeProfileUsername}" maxlength="15" style="flex: 1 !important; background: #090a0f !important; border: 1px solid #1e1f2b !important; border-radius: 6px !important; padding: 8px 12px !important; color: #ffffff !important; font-size: 0.85rem !important; outline: none !important; font-family: 'Outfit', sans-serif !important;" />
+            <input type="text" id="usernameInput" placeholder="Enter username..." value="${safeProfileUsername}" maxlength="15" style="flex: 1 !important; background: var(--market-bg) !important; border: 1px solid var(--market-border) !important; border-radius: 6px !important; padding: 8px 12px !important; color: var(--market-text-main) !important; font-size: 0.85rem !important; outline: none !important; font-family: 'Outfit', sans-serif !important;" />
             <button type="button" class="save-username-btn" id="saveUsernameBtn" style="background: #ffffff !important; color: #000000 !important; border: 1px solid #ffffff !important; border-radius: 6px !important; padding: 8px 14px !important; font-size: 0.82rem !important; font-weight: 700 !important; cursor: pointer !important; transition: all 0.2s ease !important; outline: none !important;">Save</button>
-            <button type="button" class="cancel-username-btn" id="cancelUsernameBtn" style="background: transparent !important; color: #8e8e93 !important; border: 1px solid #1e1f2b !important; border-radius: 6px !important; padding: 8px 12px !important; font-size: 0.82rem !important; cursor: pointer !important; transition: all 0.2s ease !important; outline: none !important;">Cancel</button>
+            <button type="button" class="cancel-username-btn" id="cancelUsernameBtn" style="background: transparent !important; color: var(--market-text-muted) !important; border: 1px solid var(--market-border) !important; border-radius: 6px !important; padding: 8px 12px !important; font-size: 0.82rem !important; cursor: pointer !important; transition: all 0.2s ease !important; outline: none !important;">Cancel</button>
           </div>
         ` : ""}
 
         ${profileNoticeHtml}
 
-        <div class="portfolio-wallet-balance-row" style="margin-top: 24px !important; padding-top: 16px !important; border-top: 1px solid #1e1f2b !important; display: flex !important; justify-content: space-between !important; align-items: center !important; flex-wrap: wrap !important; gap: 12px !important;">
+        <div class="portfolio-wallet-balance-row" style="margin-top: 24px !important; padding-top: 16px !important; border-top: 1px solid var(--market-border) !important; display: flex !important; justify-content: space-between !important; align-items: center !important; flex-wrap: wrap !important; gap: 12px !important;">
           <div>
-            <span style="font-size: 0.72rem !important; color: #8e8e93 !important; display: block !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; margin-bottom: 2px !important;">Available Balance</span>
-            <strong style="font-size: 1.25rem !important; color: #ffffff !important; font-family: 'Space Grotesk', sans-serif !important;">
+            <span style="font-size: 0.72rem !important; color: var(--market-text-muted) !important; display: block !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; margin-bottom: 2px !important;">Available Balance</span>
+            <strong style="font-size: 1.25rem !important; color: var(--market-text-main) !important; font-family: 'Space Grotesk', sans-serif !important;">
               ${state.walletAddress
                 ? state.walletBalance === null
                   ? `<span class="skeleton wallet-balance-skeleton" aria-hidden="true" style="display: inline-block !important; width: 80px !important; height: 20px !important; vertical-align: middle !important;"></span>${renderSkeletonAria("Loading wallet balance")}`
@@ -3184,7 +3184,7 @@ const renderPortfolio = (): void => {
           </div>
           <div style="display: flex !important; align-items: center !important; gap: 8px !important;">
             ${walletConnected ? `
-              <a href="https://faucet.circle.com/" target="_blank" rel="noreferrer" class="faucet-link" style="background: transparent !important; border: 1px solid #1e1f2b !important; color: #8e8e93 !important; border-radius: 6px !important; padding: 8px 12px !important; font-size: 0.8rem !important; text-decoration: none !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; transition: all 0.2s ease !important;">
+              <a href="https://faucet.circle.com/" target="_blank" rel="noreferrer" class="faucet-link" style="background: transparent !important; border: 1px solid var(--market-border) !important; color: var(--market-text-muted) !important; border-radius: 6px !important; padding: 8px 12px !important; font-size: 0.8rem !important; text-decoration: none !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; transition: all 0.2s ease !important;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none !important;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                 Get USDC
               </a>
