@@ -28,6 +28,7 @@ const ERC20_ABI = [
 const SIFTLE_MARKET_ABI = [
   "function buy(bool yes, uint256 amount) external",
   "function sell(bool yes, uint256 amount) external",
+  "function redeem() external",
   "function yesShares(address owner) view returns (uint256)",
   "function noShares(address owner) view returns (uint256)",
   "function totalYesShares() view returns (uint256)",
@@ -694,33 +695,71 @@ export const resolveLocalTestMarketYes = (marketAddress = LOCAL_TEST_MARKET_ADDR
 };
 
 export const claimArcMarketPayout = async (marketAddress: string, account: string): Promise<ArcClaimResult> => {
-  if (!isMockSession && !isLocalTestMarket(marketAddress)) {
-    throw new Error("Claiming is not available for this market yet");
+  if (isMockSession || isLocalTestMarket(marketAddress)) {
+    const pool = readMockMarketPool(marketAddress);
+    if (pool.outcome === 0) throw new Error("Market is not resolved yet");
+    if (pool.outcome === 3) throw new Error("Invalid market claims are not available yet");
+
+    const posKey = mockMarketPositionKey(marketAddress, account);
+    const stored = localStorage.getItem(posKey);
+    const position: ArcMarketPosition = stored ? JSON.parse(stored) : { yesSharesUsdc: 0, noSharesUsdc: 0 };
+    const winningShares = pool.outcome === 1 ? position.yesSharesUsdc : position.noSharesUsdc;
+    const totalWinningShares = pool.outcome === 1 ? pool.yesSharesUsdc : pool.noSharesUsdc;
+    const totalPool = pool.yesSharesUsdc + pool.noSharesUsdc;
+    const amountUsdc = winningShares > 0 && totalWinningShares > 0 ? (winningShares / totalWinningShares) * totalPool : 0;
+
+    localStorage.removeItem(posKey);
+    pool.traders = pool.traders.filter((trader) => trader !== account.toLowerCase());
+    writeMockMarketPool(marketAddress, pool);
+
+    if (isMockSession && amountUsdc > 0) {
+      const balanceKey = `siftle_mock_balance_${account.toLowerCase()}`;
+      const currentBalance = parseFloat(localStorage.getItem(balanceKey) || "1000.00");
+      localStorage.setItem(balanceKey, (currentBalance + amountUsdc).toFixed(2));
+    }
+
+    return { amountUsdc, won: amountUsdc > 0 };
   }
 
-  const pool = readMockMarketPool(marketAddress);
-  if (pool.outcome === 0) throw new Error("Market is not resolved yet");
-  if (pool.outcome === 3) throw new Error("Invalid market claims are not available yet");
+  if (!activeWalletAddress || activeWalletAddress.toLowerCase() !== account.toLowerCase()) {
+    throw new Error("Connect the wallet that holds this position first");
+  }
+  if (!activeUserToken || !activeWalletId) {
+    throw new Error("Session expired. Please sign in again.");
+  }
 
-  const posKey = mockMarketPositionKey(marketAddress, account);
-  const stored = localStorage.getItem(posKey);
-  const position: ArcMarketPosition = stored ? JSON.parse(stored) : { yesSharesUsdc: 0, noSharesUsdc: 0 };
-  const winningShares = pool.outcome === 1 ? position.yesSharesUsdc : position.noSharesUsdc;
-  const totalWinningShares = pool.outcome === 1 ? pool.yesSharesUsdc : pool.noSharesUsdc;
-  const totalPool = pool.yesSharesUsdc + pool.noSharesUsdc;
+  const [snapshot, position] = await Promise.all([
+    readArcMarketSnapshot(marketAddress),
+    readArcMarketPosition(marketAddress, account)
+  ]);
+  if (snapshot.outcome === 0) throw new Error("Market is not resolved yet");
+  if (snapshot.outcome === 3) throw new Error("Invalid market claims are not available yet");
+
+  const winningShares = snapshot.outcome === 1 ? position.yesSharesUsdc : position.noSharesUsdc;
+  const totalWinningShares = snapshot.outcome === 1 ? snapshot.yesSharesUsdc : snapshot.noSharesUsdc;
+  const totalPool = snapshot.yesSharesUsdc + snapshot.noSharesUsdc;
   const amountUsdc = winningShares > 0 && totalWinningShares > 0 ? (winningShares / totalWinningShares) * totalPool : 0;
+  if (amountUsdc <= 0) throw new Error("No winning payout to claim");
 
-  localStorage.removeItem(posKey);
-  pool.traders = pool.traders.filter((trader) => trader !== account.toLowerCase());
-  writeMockMarketPool(marketAddress, pool);
+  const redeemRes = await fetch(apiUrl("/api/circle/tx/contract-call"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userToken: activeUserToken,
+      contractAddress: marketAddress,
+      abiFunctionSignature: "redeem()",
+      abiParameters: [],
+      walletId: activeWalletId
+    })
+  });
+  const redeemData = await redeemRes.json();
+  if (!redeemRes.ok) throw new Error(redeemData.error || "Failed to create claim challenge");
 
-  if (isMockSession && amountUsdc > 0) {
-    const balanceKey = `siftle_mock_balance_${account.toLowerCase()}`;
-    const currentBalance = parseFloat(localStorage.getItem(balanceKey) || "1000.00");
-    localStorage.setItem(balanceKey, (currentBalance + amountUsdc).toFixed(2));
-  }
+  const redeemChallengeId = redeemData.challengeId;
+  await runCircleChallenge(redeemChallengeId);
+  await waitForCircleTx(redeemData.id || redeemChallengeId);
 
-  return { amountUsdc, won: amountUsdc > 0 };
+  return { amountUsdc, won: true };
 };
 
 export const readArcMarketSnapshot = async (marketAddress: string): Promise<ArcMarketSnapshot> => {
