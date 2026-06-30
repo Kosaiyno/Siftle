@@ -5161,6 +5161,7 @@ async function recomputeLeaderboardFromChain(data) {
     if (!marketId) continue;
 
     const { traders, switched, redeemed } = await collectMarketTradeSignals(marketAddress);
+    allTraders.forEach((address) => traders.add(address));
     traders.forEach((address) => allTraders.add(address));
 
     let outcome = 0;
