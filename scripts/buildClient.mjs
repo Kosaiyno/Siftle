@@ -18,10 +18,13 @@ const nodeShimsPlugin = {
 await build({
   entryPoints: ["src/main.ts"],
   bundle: true,
+  splitting: true,
   format: "esm",
   platform: "browser",
   target: ["es2020"],
-  outfile: "dist/main.js",
+  outdir: "dist",
+  entryNames: "main",
+  chunkNames: "chunks/[name]-[hash]",
   sourcemap: false,
   minify: true,
   plugins: [nodeShimsPlugin]

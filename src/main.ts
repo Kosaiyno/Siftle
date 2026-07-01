@@ -1,22 +1,50 @@
 import type { ArchiveDate, Category, NewsStory, StoryThread } from "./types.js";
-import {
-  ARC_TESTNET_FAUCET,
-  claimArcMarketPayout,
-  connectArcWallet,
-  executeArcMarketOrder,
-  getConnectedArcWallet,
-  isWalletConnectConfigured,
-  payAiBriefingUnlock,
-  readArcMarketPosition,
-  readArcMarketSnapshot,
-  readArcUsdcBalance,
-  resolveLocalTestMarketYes,
-  shortenAddress,
-  subscribeArcWallet,
-  disconnectArcWallet,
-  validateArcSession
-} from "./arc.js";
 import type { ArcMarketPosition, ArcMarketSnapshot } from "./arc.js";
+
+const ARC_TESTNET_FAUCET = "https://faucet.circle.com/";
+
+type ArcModule = typeof import("./arc.js");
+let arcModulePromise: Promise<ArcModule> | null = null;
+const loadArcModule = (): Promise<ArcModule> => {
+  if (!arcModulePromise) arcModulePromise = import("./arc.js");
+  return arcModulePromise;
+};
+
+const shortenAddress = (address: string): string =>
+  address.length > 10 ? `${address.slice(0, 6)}...${address.slice(-4)}` : address;
+
+const connectArcWallet = async (): Promise<string> => (await loadArcModule()).connectArcWallet();
+const readArcUsdcBalance = async (address: string): Promise<string> => (await loadArcModule()).readArcUsdcBalance(address);
+const payAiBriefingUnlock = async (
+  treasuryAddress: string,
+  amountUsdc: number,
+  onStatus?: (status: string) => void
+): Promise<string> => (await loadArcModule()).payAiBriefingUnlock(treasuryAddress, amountUsdc, onStatus);
+const resolveLocalTestMarketYes = (marketAddress: string): void => {
+  void loadArcModule().then((arc) => arc.resolveLocalTestMarketYes(marketAddress));
+};
+const readArcMarketSnapshot = async (marketAddress: string): Promise<ArcMarketSnapshot> =>
+  (await loadArcModule()).readArcMarketSnapshot(marketAddress);
+const readArcMarketPosition = async (marketAddress: string, account: string): Promise<ArcMarketPosition> =>
+  (await loadArcModule()).readArcMarketPosition(marketAddress, account);
+const executeArcMarketOrder = async (
+  marketAddress: string,
+  mode: "buy" | "sell",
+  side: "yes" | "no",
+  amountUsdc: number,
+  onStatus?: (status: string) => void,
+  yesPriceCents?: number,
+  noPriceCents?: number
+): Promise<string> => (await loadArcModule()).executeArcMarketOrder(marketAddress, mode, side, amountUsdc, onStatus, yesPriceCents, noPriceCents);
+const disconnectArcWallet = (): void => {
+  void loadArcModule().then((arc) => arc.disconnectArcWallet());
+};
+const claimArcMarketPayout = async (marketAddress: string, account: string) =>
+  (await loadArcModule()).claimArcMarketPayout(marketAddress, account);
+const getConnectedArcWallet = async (): Promise<string | null> => (await loadArcModule()).getConnectedArcWallet();
+const validateArcSession = async (): Promise<boolean> => (await loadArcModule()).validateArcSession();
+const subscribeArcWallet = async (callback: (address: string | null) => void): Promise<() => void> =>
+  (await loadArcModule()).subscribeArcWallet(callback);
 
 declare global {
   interface Window {
@@ -1532,7 +1560,7 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
     delete state.marketPositions[market.id];
     delete state.checkedMarketSnapshots[market.id];
     delete state.loadingMarketSnapshots[market.id];
-    state.walletAddress = getConnectedArcWallet();
+    state.walletAddress = await getConnectedArcWallet();
     if (state.walletAddress) state.walletBalance = await readArcUsdcBalance(state.walletAddress);
     await loadPortfolioPositions();
     void reportLeaderboardEntry(true).catch(err => console.error("Failed to report leaderboard entry:", err));
@@ -3894,6 +3922,7 @@ void loadMarkets().then(() => {
   reportStoredLocalMarketTraders();
   render();
   renderWalletState();
+  window.setTimeout(initializeWalletSession, 1200);
   warmFeedAfterFirstPaint();
 });
 
@@ -3917,64 +3946,74 @@ archivePill?.addEventListener("click", (e) => {
   if (isOpen) setTimeout(() => archiveControlsEl.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
 });
 
-const initialWallet = getConnectedArcWallet();
-let isRestoringWalletSession = Boolean(initialWallet);
-if (initialWallet) {
-  state.walletConnecting = true;
-  renderWalletState();
-  void validateArcSession().then(async (isValid) => {
-    isRestoringWalletSession = false;
-    state.walletConnecting = false;
-    if (!isValid) {
-      state.walletAddress = null;
+let isRestoringWalletSession = false;
+let walletSessionInitStarted = false;
+const initializeWalletSession = (): void => {
+  if (walletSessionInitStarted) return;
+  walletSessionInitStarted = true;
+
+  void (async () => {
+    const initialWallet = await getConnectedArcWallet();
+    isRestoringWalletSession = Boolean(initialWallet);
+    if (initialWallet) {
+      state.walletConnecting = true;
+      renderWalletState();
+      try {
+        const isValid = await validateArcSession();
+        isRestoringWalletSession = false;
+        state.walletConnecting = false;
+        if (!isValid) {
+          state.walletAddress = null;
+          state.walletBalance = null;
+          syncProfileUsernameForWallet();
+          showActionToast("Session expired. Please sign in again.");
+          renderWalletState();
+          render();
+        } else {
+          state.walletAddress = await getConnectedArcWallet();
+          if (state.walletAddress) {
+            syncProfileUsernameForWallet();
+            state.walletBalance = await readArcUsdcBalance(state.walletAddress);
+            await loadPortfolioPositions();
+          }
+          renderWalletState();
+          if (state.activeSurface === "portfolio") render();
+        }
+      } catch (error) {
+        console.warn(error);
+        isRestoringWalletSession = false;
+        state.walletConnecting = false;
+        state.walletAddress = null;
+        state.walletBalance = null;
+        syncProfileUsernameForWallet();
+        showActionToast("Session expired. Please sign in again.");
+        renderWalletState();
+        render();
+      }
+    }
+
+    await subscribeArcWallet((address) => {
+      if (isRestoringWalletSession) return;
+      state.walletAddress = address;
       state.walletBalance = null;
       syncProfileUsernameForWallet();
-      showActionToast("Session expired. Please sign in again.");
+      if (address) void reportLeaderboardEntry(false).catch(err => console.error("Failed to report leaderboard entry:", err));
+      state.marketPositions = {};
+      state.hasLoadedPortfolioPositions = false;
       renderWalletState();
-      render();
-      return;
-    }
-    state.walletAddress = getConnectedArcWallet();
-    if (state.walletAddress) {
-      syncProfileUsernameForWallet();
-      state.walletBalance = await readArcUsdcBalance(state.walletAddress);
-      await loadPortfolioPositions();
-    }
-    renderWalletState();
-    if (state.activeSurface === "portfolio") render();
-  }).catch((error) => {
-    console.warn(error);
-    isRestoringWalletSession = false;
-    state.walletConnecting = false;
-    state.walletAddress = null;
-    state.walletBalance = null;
-    syncProfileUsernameForWallet();
-    showActionToast("Session expired. Please sign in again.");
-    renderWalletState();
-    render();
-  });
-}
-
-subscribeArcWallet((address) => {
-  if (isRestoringWalletSession) return;
-  state.walletAddress = address;
-  state.walletBalance = null;
-  syncProfileUsernameForWallet();
-  if (address) void reportLeaderboardEntry(false).catch(err => console.error("Failed to report leaderboard entry:", err));
-  state.marketPositions = {};
-  state.hasLoadedPortfolioPositions = false;
-  renderWalletState();
-  if (address) {
-    void readArcUsdcBalance(address).then((balance) => {
-      state.walletBalance = balance;
-      renderWalletState();
-      if (state.activeSurface === "portfolio") render();
+      if (address) {
+        void readArcUsdcBalance(address).then((balance) => {
+          state.walletBalance = balance;
+          renderWalletState();
+          if (state.activeSurface === "portfolio") render();
+        });
+        void loadPortfolioPositions();
+      } else if (state.activeSurface === "portfolio") {
+        render();
+      }
     });
-    void loadPortfolioPositions();
-  } else {
-    if (state.activeSurface === "portfolio") render();
-  }
-});
+  })();
+};
 
 // Analytics tracking setup
 trackEvent("app_open");
