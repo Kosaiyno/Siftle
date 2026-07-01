@@ -140,3 +140,43 @@ test("Ivory Coast Norway market accepts real knockout preview context", () => {
     true
   );
 });
+
+test("England DR Congo market accepts team-specific scoring context", () => {
+  assert.equal(
+    storyMatchesMarketThreadRule(
+      story("Sports", "England right-backs Quansah and James out of DR Congo game", "Thomas Tuchel must adjust England's World Cup lineup before the knockout match against DR Congo."),
+      marketThreadRules["wc-england-score-both-halves-drc"]
+    ),
+    true
+  );
+});
+
+test("England DR Congo market rejects broad schedule involving other matches", () => {
+  assert.equal(
+    storyMatchesMarketThreadRule(
+      story("Sports", "World Cup today: England, Belgium and USA all in action", "Belgium face Senegal and the United States play Bosnia after England's fixture."),
+      marketThreadRules["wc-england-score-both-halves-drc"]
+    ),
+    false
+  );
+});
+
+test("De Bruyne Senegal market accepts Belgium player goal involvement context", () => {
+  assert.equal(
+    storyMatchesMarketThreadRule(
+      story("Sports", "Kevin De Bruyne can decide Belgium vs Senegal", "Belgium need De Bruyne's passing, goals and assists in their 2026 World Cup knockout match against Senegal."),
+      marketThreadRules["wc-de-bruyne-score-assist-senegal"]
+    ),
+    true
+  );
+});
+
+test("USA Bosnia market accepts early attacking context", () => {
+  assert.equal(
+    storyMatchesMarketThreadRule(
+      story("Sports", "USMNT face Bosnia in Santa Clara", "Pulisic and Pochettino want the United States to start fast and score early in the World Cup knockout match."),
+      marketThreadRules["wc-usa-score-before-20-bosnia"]
+    ),
+    true
+  );
+});

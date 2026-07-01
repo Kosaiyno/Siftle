@@ -1,0 +1,64 @@
+{
+  "topic": "Kevin De Bruyne Belgium Senegal",
+  "reviewed_by": "curated-local-market-thread",
+  "current": {
+    "id": "market-de-bruyne-senegal-current",
+    "category": "Sports",
+    "headline": "De Bruyne leads Belgium into Senegal knockout test",
+    "summary": "Belgium's knockout tie with Senegal has centered on whether Kevin De Bruyne can control the game and create the decisive goal involvement against a fast Senegal side.",
+    "source": "Siftle Desk",
+    "sourceUrl": "https://example.com/de-bruyne-belgium-senegal-preview",
+    "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
+    "publishedAt": "Wed, 01 Jul 2026 11:00:00 GMT",
+    "readTime": "2 min read",
+    "postedAt": "Latest",
+    "accent": "blue",
+    "saved": false
+  },
+  "items": [
+    {
+      "id": "market-de-bruyne-senegal-01",
+      "category": "Sports",
+      "headline": "Belgium vs Senegal: De Bruyne versus a side that does not stop scoring",
+      "summary": "Belgium enter with De Bruyne pulling the strings after a 5-1 group-stage win, while Senegal arrive with transition pace and a 5-0 victory over Iraq behind them.",
+      "source": "timesofindia.indiatimes.com",
+      "sourceUrl": "https://timesofindia.indiatimes.com/sports/football/fifa-world-cup/fifa-world-cup-today-schedule-where-and-how-to-watch-england-vs-dr-congo-usa-vs-bosnia-belgium-vs-senegal-live/articleshow/132109108.cms",
+      "imageUrl": "https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Wed, 01 Jul 2026 09:12:00 GMT",
+      "readTime": "2 min read",
+      "postedAt": "Jul 1",
+      "accent": "blue",
+      "saved": false
+    },
+    {
+      "id": "market-de-bruyne-senegal-02",
+      "category": "Sports",
+      "headline": "Belgium World Cup 2026 team guide highlights De Bruyne and Doku quality",
+      "summary": "Belgium's remaining golden-generation quality is built around De Bruyne's control and Doku's threat, making chance creation the core storyline before Senegal.",
+      "source": "theguardian.com",
+      "sourceUrl": "https://www.theguardian.com/football/2026/jun/10/belgium-world-cup-2026-team-guide",
+      "imageUrl": "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Tue, 30 Jun 2026 15:40:00 GMT",
+      "readTime": "2 min read",
+      "postedAt": "Jun 30",
+      "accent": "blue",
+      "saved": false
+    },
+    {
+      "id": "market-de-bruyne-senegal-03",
+      "category": "Sports",
+      "headline": "Senegal thrash 10-man Iraq to boost hopes of reaching last 32",
+      "summary": "Iliman Ndiaye and Ismaila Sarr produced a goal and an assist each as Senegal's attack found rhythm before meeting Belgium.",
+      "source": "bbc.co.uk",
+      "sourceUrl": "https://www.bbc.co.uk/sport/football/articles/cq8v4zz4nqyo",
+      "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Fri, 26 Jun 2026 22:30:00 GMT",
+      "readTime": "1 min read",
+      "postedAt": "Jun 26",
+      "accent": "blue",
+      "saved": false
+    }
+  ],
+  "market_id": "wc-de-bruyne-score-assist-senegal",
+  "saved_market_thread": true
+}

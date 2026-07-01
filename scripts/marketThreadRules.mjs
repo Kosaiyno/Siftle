@@ -1,4 +1,34 @@
 export const marketThreadRules = {
+  "wc-england-score-both-halves-drc": {
+    category: "Sports",
+    topic: "England DR Congo Team News",
+    includeAnySets: [
+      ["england", "tuchel", "kane", "bellingham", "saka", "madueke", "rice", "quansah", "reece james"],
+      ["dr congo", "drc", "congo", "wissa", "mbemba", "bakambu", "tuanzebe"],
+      ["world cup", "fifa", "2026", "round of 32", "knockout", "team news", "injury", "lineup", "score", "goal", "goals", "preview", "match"]
+    ],
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "mexico", "ecuador", "belgium", "senegal", "united states", "bosnia"]
+  },
+  "wc-de-bruyne-score-assist-senegal": {
+    category: "Sports",
+    topic: "Kevin De Bruyne Belgium Senegal",
+    includeAnySets: [
+      ["de bruyne", "kevin de bruyne", "belgium", "belgian", "lukaku", "doku", "trossard"],
+      ["senegal", "sadio mane", "mane", "ismaila sarr", "nicolas jackson", "mendy"],
+      ["world cup", "fifa", "2026", "round of 32", "knockout", "goal", "assist", "score", "team news", "preview", "match"]
+    ],
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "england", "dr congo", "united states", "bosnia"]
+  },
+  "wc-usa-score-before-20-bosnia": {
+    category: "Sports",
+    topic: "United States Bosnia Team News",
+    includeAnySets: [
+      ["united states", "usa", "usmnt", "pulisic", "pochettino", "reyna", "mckennie", "adams", "dest"],
+      ["bosnia", "bosnia and herzegovina", "herzegovina", "dzeko", "pjanic", "barbarez"],
+      ["world cup", "fifa", "2026", "round of 32", "knockout", "goal", "score", "early", "team news", "preview", "match", "santa clara"]
+    ],
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "england", "dr congo", "belgium", "senegal"]
+  },
   "wc-ivory-coast-eliminate-norway": {
     category: "Sports",
     topic: "Ivory Coast Norway World Cup Knockout",

@@ -1,0 +1,64 @@
+{
+  "topic": "England DR Congo Team News",
+  "reviewed_by": "curated-local-market-thread",
+  "current": {
+    "id": "market-england-drc-current",
+    "category": "Sports",
+    "headline": "England face DR Congo with scoring pressure and right-back absences",
+    "summary": "England enter the DR Congo knockout tie as favourites, but the buildup has focused on whether Thomas Tuchel's attack can turn control into goals while Reece James and Jarell Quansah miss out.",
+    "source": "Siftle Desk",
+    "sourceUrl": "https://example.com/england-dr-congo-team-news",
+    "imageUrl": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80",
+    "publishedAt": "Wed, 01 Jul 2026 10:30:00 GMT",
+    "readTime": "2 min read",
+    "postedAt": "Latest",
+    "accent": "blue",
+    "saved": false
+  },
+  "items": [
+    {
+      "id": "market-england-drc-01",
+      "category": "Sports",
+      "headline": "Jarell Quansah to miss England's round of 32 clash with DR Congo",
+      "summary": "England will have to manage without Bayer Leverkusen's Jarell Quansah against DR Congo, with Chelsea's Reece James also set to miss out.",
+      "source": "bbc.co.uk",
+      "sourceUrl": "https://www.bbc.co.uk/sport/football/articles/cy4nq9z1xwxo",
+      "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Wed, 01 Jul 2026 08:30:00 GMT",
+      "readTime": "1 min read",
+      "postedAt": "Jul 1",
+      "accent": "blue",
+      "saved": false
+    },
+    {
+      "id": "market-england-drc-02",
+      "category": "Sports",
+      "headline": "Fluency the key for Noni Madueke before England's difficult DR Congo test",
+      "summary": "Noni Madueke warned England must not take DR Congo lightly, while the squad has worked on penalties and attacking rhythm before the knockout meeting.",
+      "source": "theguardian.com",
+      "sourceUrl": "https://www.theguardian.com/football/2026/jul/01/noni-madueke-england-dr-congo-world-cup",
+      "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Wed, 01 Jul 2026 07:20:00 GMT",
+      "readTime": "2 min read",
+      "postedAt": "Jul 1",
+      "accent": "blue",
+      "saved": false
+    },
+    {
+      "id": "market-england-drc-03",
+      "category": "Sports",
+      "headline": "There are holes in England, DR Congo ready to produce World Cup shock",
+      "summary": "DR Congo's camp and former players believe England can be hurt, with Yoane Wissa and Chancel Mbemba among the names framed as threats to Tuchel's side.",
+      "source": "theguardian.com",
+      "sourceUrl": "https://www.theguardian.com/football/2026/jul/01/england-dr-congo-world-cup-shock-last-32-atlanta",
+      "imageUrl": "https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Wed, 01 Jul 2026 06:30:00 GMT",
+      "readTime": "2 min read",
+      "postedAt": "Jul 1",
+      "accent": "blue",
+      "saved": false
+    }
+  ],
+  "market_id": "wc-england-score-both-halves-drc",
+  "saved_market_thread": true
+}
