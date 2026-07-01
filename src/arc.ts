@@ -10,8 +10,11 @@ export const ARC_TESTNET_FAUCET = "https://faucet.circle.com/";
 export const ARC_TESTNET_RPC_URL = "https://rpc.testnet.arc.network";
 
 let apiBase = ((window as any).SIFTLE_API_BASE || "").replace(/\/$/, "");
-if (!apiBase && typeof window !== "undefined" && window.location.hostname.endsWith("vercel.app")) {
-  apiBase = "https://siftle.onrender.com";
+if (!apiBase && typeof window !== "undefined") {
+  const hostname = window.location.hostname.toLowerCase();
+  if (hostname === "siftle.xyz" || hostname.endsWith(".siftle.xyz") || hostname.endsWith("vercel.app")) {
+    apiBase = "https://siftle.onrender.com";
+  }
 }
 const apiUrl = (path: string): string => `${apiBase}${path}`;
 

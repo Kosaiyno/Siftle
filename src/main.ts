@@ -64,7 +64,7 @@ const resolvePublicApiBase = (): string => {
   if (configured) return configured;
 
   const hostname = typeof window !== "undefined" ? window.location.hostname.toLowerCase() : "";
-  if (hostname === "siftle.xyz" || hostname.endsWith(".vercel.app")) {
+  if (hostname === "siftle.xyz" || hostname.endsWith(".siftle.xyz") || hostname.endsWith(".vercel.app")) {
     return DEFAULT_PUBLIC_API_BASE;
   }
 
@@ -349,10 +349,12 @@ themeToggleButton?.addEventListener("click", () => {
 const connectWallet = async (): Promise<void> => {
   if (state.walletConnecting) return;
   state.walletConnecting = true;
+  trackEvent("wallet_connect_start");
   renderWalletState();
   try {
     const account = await connectArcWallet();
     if (account) {
+      trackEvent("wallet_connect_success");
       state.walletAddress = account;
       syncProfileUsernameForWallet();
       state.walletBalance = await readArcUsdcBalance(account);
@@ -363,6 +365,7 @@ const connectWallet = async (): Promise<void> => {
       syncStoryFromHash();
     }
   } catch (error) {
+    trackEvent("wallet_connect_failed");
     showActionToast(error instanceof Error ? error.message : "Wallet connection failed");
   } finally {
     state.walletConnecting = false;
@@ -655,6 +658,7 @@ const unlockAndLoadStorySummary = async (story: BriefingTarget): Promise<void> =
   if (state.unlockingSummaryUrl === story.sourceUrl) return;
 
   state.unlockingSummaryUrl = story.sourceUrl;
+  trackEvent("ai_unlock_attempt");
   render();
 
   try {
@@ -683,9 +687,11 @@ const unlockAndLoadStorySummary = async (story: BriefingTarget): Promise<void> =
     }
 
     localStorage.setItem(briefingUnlockKey(story), unlockData.unlockToken);
+    trackEvent("ai_unlock_success");
     showActionToast("AI briefing unlocked");
     await loadStorySummary(story);
   } catch (error) {
+    trackEvent("ai_unlock_failed");
     showActionToast(error instanceof Error ? error.message : "Unlock failed");
   } finally {
     state.unlockingSummaryUrl = null;
@@ -699,6 +705,7 @@ const loadStorySummary = async (story: BriefingTarget): Promise<void> => {
 
   if (story.ai_summary) {
     state.aiSummaries[story.sourceUrl] = safeStorySummary(story, story.ai_summary);
+    trackEvent("view_summary");
     if (menuStatus) {
       menuStatus.textContent = story.ai_provider === "0g" ? "Archived 0G summary loaded" : "Archived summary loaded";
     }
@@ -1548,6 +1555,7 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
   }
   const tradeAmount = normalizeMarketTradeAmount(Number(state.marketTradeAmount) || 0);
   state.marketTradeAmount = tradeAmount;
+  trackEvent("trade_attempt");
 
   try {
     state.marketTradeStatus = "Preparing transaction...";
@@ -1628,6 +1636,7 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
     }
 
     showActionToast(`Trade confirmed ${txHash.slice(0, 8)}...`);
+    trackEvent(state.marketOrderMode === "buy" ? "trade_buy_success" : "trade_sell_success");
     showSuccessModal(
       state.marketOrderMode,
       state.marketTradeAmount,
@@ -1635,6 +1644,7 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
       market.question
     );
   } catch (error) {
+    trackEvent("trade_failed");
     if (isSessionExpiredError(error)) {
       disconnectArcWallet();
       state.walletAddress = null;
@@ -3316,8 +3326,10 @@ const claimPortfolioMarket = async (marketId: string): Promise<void> => {
   }
 
   try {
+    trackEvent("claim_attempt");
     calculateLeaderboardScore();
     const result = await claimArcMarketPayout(marketAddress, state.walletAddress);
+    trackEvent("claim_success");
     delete state.marketPositions[market.id];
     delete state.marketSnapshots[market.id];
     state.hasLoadedPortfolioPositions = false;
@@ -3327,6 +3339,7 @@ const claimPortfolioMarket = async (marketId: string): Promise<void> => {
     renderWalletState();
     renderPortfolio();
   } catch (error) {
+    trackEvent("claim_failed");
     showActionToast(error instanceof Error ? error.message : "Claim failed");
   }
 };
@@ -3682,6 +3695,7 @@ storyList?.addEventListener("click", async (event) => {
   const marketCard = target.closest<HTMLButtonElement>("[data-market-id]");
   if (marketCard) {
     state.selectedMarketId = marketCard.dataset.marketId ?? null;
+    trackEvent("market_view");
     window.history.pushState({}, "", `#market-${state.selectedMarketId}`);
     render();
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -3787,6 +3801,7 @@ storyDetail?.addEventListener("click", (event) => {
       }
     }
     state.tradeDrawerOpen = true;
+    trackEvent("trade_drawer_open");
     const drawer = storyDetail.querySelector("#tradeDrawer");
     const backdrop = storyDetail.querySelector("#tradeDrawerBackdrop");
     drawer?.classList.add("open");
@@ -4025,13 +4040,19 @@ document.addEventListener("click", (event) => {
     const className = closestAnchor.className || "";
     const classStr = typeof className === "string" ? className : (closestAnchor.getAttribute("class") || "");
     const href = closestAnchor.getAttribute("href") || "";
+    const isBriefingUnlock =
+      closestAnchor.hasAttribute("data-unlock-briefing") ||
+      closestAnchor.hasAttribute("data-unlock-briefing-url");
     if (
-      classStr.includes("source-button") ||
-      classStr.includes("source-btn") ||
-      classStr.includes("source-link") ||
-      closestAnchor.textContent?.trim() === "Open source"
+      !isBriefingUnlock &&
+      (
+        classStr.includes("source-button") ||
+        classStr.includes("source-btn") ||
+        classStr.includes("source-link") ||
+        closestAnchor.textContent?.trim() === "Open source"
+      )
     ) {
-      if (!classStr.includes("disabled") && href !== "#" && href !== "") {
+      if (!classStr.includes("disabled") && href !== "#") {
         trackEvent("open_source");
       }
     }
