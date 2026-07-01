@@ -18,15 +18,15 @@ contract ResolveTonightWorldCupMarkets {
     function run() external {
         uint256 privateKey = vm.envUint("ARC_DEPLOYER_PRIVATE_KEY");
 
-        ISiftleMarket viniciusJapan = ISiftleMarket(vm.envAddress("SIFTLE_MARKET_VINICIUS_JAPAN_ADDRESS"));
-        ISiftleMarket paraguayGermany = ISiftleMarket(vm.envAddress("SIFTLE_MARKET_PARAGUAY_GERMANY_ADDRESS"));
-        ISiftleMarket moroccoNetherlands = ISiftleMarket(vm.envAddress("SIFTLE_MARKET_MOROCCO_NETHERLANDS_ADDRESS"));
+        ISiftleMarket ivoryCoastNorway = ISiftleMarket(vm.envAddress("SIFTLE_MARKET_IVORY_COAST_NORWAY_ADDRESS"));
+        ISiftleMarket haalandMbappe = ISiftleMarket(vm.envAddress("SIFTLE_MARKET_HAALAND_MBAPPE_ADDRESS"));
+        ISiftleMarket franceSweden = ISiftleMarket(vm.envAddress("SIFTLE_MARKET_FRANCE_SWEDEN_ADDRESS"));
 
         vm.startBroadcast(privateKey);
 
-        viniciusJapan.resolve(2);
-        paraguayGermany.resolve(1);
-        moroccoNetherlands.resolve(1);
+        ivoryCoastNorway.resolve(2);
+        haalandMbappe.resolve(2);
+        franceSweden.resolve(1);
 
         vm.stopBroadcast();
     }

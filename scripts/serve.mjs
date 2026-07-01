@@ -115,7 +115,7 @@ const erc20TransferInterface = new Interface([
 ]);
 const erc20TransferTopic = erc20TransferInterface.getEvent("Transfer").topicHash;
 const leaderboardLogChunkSize = Number(process.env.LEADERBOARD_LOG_CHUNK_SIZE ?? 9000);
-const leaderboardLogLookbackBlocks = Number(process.env.LEADERBOARD_LOG_LOOKBACK_BLOCKS ?? 50000);
+const leaderboardLogLookbackBlocks = Number(process.env.LEADERBOARD_LOG_LOOKBACK_BLOCKS ?? 500000);
 
 const LEADERBOARD_MARKET_ABI = [
   "function outcome() view returns (uint8)",
@@ -5099,7 +5099,7 @@ function ensureLeaderboardState(data) {
   return data.leaderboard;
 }
 
-async function collectMarketTradeSignals(marketAddress) {
+async function collectMarketTradeSignals(marketAddress, fromBlockHint = null) {
   const traders = new Set();
   const boughtYes = new Set();
   const boughtNo = new Set();
@@ -5110,7 +5110,10 @@ async function collectMarketTradeSignals(marketAddress) {
     const latest = await leaderboardProvider.getBlockNumber();
     const safeChunk = Math.max(100, leaderboardLogChunkSize);
     const lookback = Math.max(safeChunk, leaderboardLogLookbackBlocks);
-    const start = Math.max(0, latest - lookback);
+    const hintedStart = Number(fromBlockHint);
+    const start = Number.isFinite(hintedStart) && hintedStart > 0
+      ? Math.max(0, hintedStart)
+      : Math.max(0, latest - lookback);
     const allLogs = [];
 
     for (let fromBlock = start; fromBlock <= latest; fromBlock += safeChunk) {
@@ -5198,7 +5201,7 @@ async function recomputeLeaderboardFromChain(data) {
     const marketId = String(market.id || "").trim();
     if (!marketId) continue;
 
-    const { traders, switched, redeemed, firstActivityBlocks } = await collectMarketTradeSignals(marketAddress);
+    const { traders, switched, redeemed, firstActivityBlocks } = await collectMarketTradeSignals(marketAddress, market.deploymentBlock);
     allTraders.forEach((address) => traders.add(address));
     traders.forEach((address) => allTraders.add(address));
 
@@ -6555,7 +6558,7 @@ const server = createServer(async (request, response) => {
         }
 
         try {
-          const { traders } = await collectMarketTradeSignals(marketAddress);
+          const { traders } = await collectMarketTradeSignals(marketAddress, market.deploymentBlock);
           const traderCount = traders.size;
           return {
             ...market,
