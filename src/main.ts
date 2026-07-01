@@ -81,6 +81,7 @@ const state: {
   marketSnapshots: Record<string, ArcMarketSnapshot>;
   marketPositions: Record<string, ArcMarketPosition>;
   marketEvidenceOverrides: Record<string, MarketEvidenceOverride>;
+  loadingMarkets: boolean;
   checkedMarketEvidence: Record<string, boolean>;
   checkedMarketSnapshots: Record<string, boolean>;
   loadingMarketSnapshots: Record<string, boolean>;
@@ -121,6 +122,7 @@ const state: {
   marketSnapshots: {},
   marketPositions: {},
   marketEvidenceOverrides: {},
+  loadingMarkets: true,
   checkedMarketEvidence: {},
   checkedMarketSnapshots: {},
   loadingMarketSnapshots: {},
@@ -155,6 +157,8 @@ const state: {
 let selectedLeaderboardDivision: number | null = null;
 let selectedLeaderboardView: "division" | "global" = "global";
 let seasonTimerInterval: any = null;
+let archiveIndexRequested = false;
+let feedWarmupRequested = false;
 
 interface MarketPreview {
   id: string;
@@ -199,6 +203,7 @@ const DAILY_TRADE_LOCK_MINUTES = 20;
 let marketPreviews: MarketPreview[] = [];
 
 const loadMarkets = async (): Promise<void> => {
+  state.loadingMarkets = true;
   try {
     const res = await fetch(apiUrl("/api/markets"));
     if (res.ok) {
@@ -206,6 +211,8 @@ const loadMarkets = async (): Promise<void> => {
     }
   } catch (err) {
     console.error("Failed to load markets:", err);
+  } finally {
+    state.loadingMarkets = false;
   }
 };
 
@@ -920,6 +927,28 @@ const loadArchiveIndex = async (): Promise<void> => {
     console.warn(error);
     setArchiveStatus("Archive unavailable");
   }
+};
+
+const ensureArchiveIndexLoaded = (): void => {
+  if (archiveIndexRequested) return;
+  archiveIndexRequested = true;
+  void loadArchiveIndex();
+};
+
+const ensureFeedLoaded = (category: Category = state.activeCategory, isBackground = false): void => {
+  if (state.hasLoadedFeed && category === state.activeCategory && !state.activeArchiveDate) return;
+  void loadFeed(category, isBackground);
+};
+
+const warmFeedAfterFirstPaint = (): void => {
+  if (feedWarmupRequested) return;
+  feedWarmupRequested = true;
+  window.setTimeout(() => {
+    if (state.activeSurface !== "feed" && !state.hasLoadedFeed) {
+      ensureFeedLoaded(state.activeCategory, true);
+    }
+    ensureArchiveIndexLoaded();
+  }, 8000);
 };
 
 const getCategoryLabel = (category: Category): string =>
@@ -2616,7 +2645,11 @@ const renderMarkets = (): void => {
   topNewsButton?.classList.remove("active");
   topPortfolioButton?.classList.remove("active");
   marketPreviews.forEach((market) => void loadMarketSnapshot(market));
-  marketPreviews.forEach((market) => void loadMarketEvidence(market));
+  window.setTimeout(() => {
+    if (state.activeSurface === "markets") {
+      marketPreviews.forEach((market) => void loadMarketEvidence(market));
+    }
+  }, 750);
 
   if (state.selectedMarketId) {
     const market = marketPreviews.find((item) => item.id === state.selectedMarketId);
@@ -2658,6 +2691,35 @@ const renderMarkets = (): void => {
       }).join("")}
     </nav>
   `;
+
+  if (state.loadingMarkets && marketPreviews.length === 0) {
+    storyList.innerHTML = `
+      <header class="markets-header" style="box-sizing: border-box; width: 100%; display: block; padding-top: 18px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 12px; flex-wrap: wrap;">
+          <h1 style="margin: 0;">Markets</h1>
+          <a class="arc-faucet-button" href="${ARC_TESTNET_FAUCET}" target="_blank" rel="noreferrer" style="flex-shrink: 0;">Get testnet USDC</a>
+        </div>
+        <p style="margin: 10px 0 0; color: #647089; font-size: 0.95rem; font-weight: 600; line-height: 1.4; width: 100%;">
+          Trade daily prediction markets. Winning shares split the final pool, and Daily winners earn leaderboard points.
+        </p>
+      </header>
+      ${timeframeTabsHtml}
+      <div class="markets-container">
+        <section class="markets-grid" aria-label="Loading prediction markets">
+          ${Array.from({ length: 3 }).map(() => `
+            <article class="market-card skeleton-market-card">
+              <div class="skeleton skeleton-line sm"></div>
+              <div class="skeleton skeleton-line xl" style="height: 22px;"></div>
+              <div class="skeleton skeleton-line lg"></div>
+              <div class="skeleton skeleton-line md"></div>
+              <div class="skeleton skeleton-line xl" style="height: 8px; margin-top: 18px;"></div>
+            </article>
+          `).join("")}
+        </section>
+      </div>
+    `;
+    return;
+  }
 
   let marketsGridHtml = "";
   
@@ -3394,7 +3456,8 @@ categoryTabs?.addEventListener("click", (event) => {
   window.history.pushState({}, "", "#feed");
   resetFeedScroll();
   render();
-  void loadFeed(state.activeCategory);
+  ensureArchiveIndexLoaded();
+  ensureFeedLoaded(state.activeCategory);
 });
 
 topMarketsButton?.addEventListener("click", () => {
@@ -3414,6 +3477,8 @@ topNewsButton?.addEventListener("click", () => {
   window.history.pushState({}, "", "#feed");
   resetFeedScroll();
   render();
+  ensureArchiveIndexLoaded();
+  ensureFeedLoaded(state.activeCategory);
 });
 
 topPortfolioButton?.addEventListener("click", () => {
@@ -3483,6 +3548,8 @@ bottomNavButtons.forEach((button) => {
     } else {
       state.activeSurface = "feed";
       window.history.pushState({}, "", "#feed");
+      ensureArchiveIndexLoaded();
+      ensureFeedLoaded(state.activeCategory);
       if (target === "saved") {
         clearLegacyMarketCache();
         loadSavedFromStorage();
@@ -3499,7 +3566,7 @@ archiveDateSelect?.addEventListener("change", () => {
   window.history.pushState({}, "", "#feed");
   resetFeedScroll();
   render();
-  void loadFeed(state.activeCategory);
+  ensureFeedLoaded(state.activeCategory);
 });
 
 todayButton?.addEventListener("click", () => {
@@ -3508,7 +3575,7 @@ todayButton?.addEventListener("click", () => {
   window.history.pushState({}, "", "#feed");
   resetFeedScroll();
   render();
-  void loadFeed(state.activeCategory);
+  ensureFeedLoaded(state.activeCategory);
 });
 
 storyList?.addEventListener("click", async (event) => {
@@ -3803,7 +3870,8 @@ document.addEventListener("click", (event) => {
     state.activeArchiveDate = null;
     if (archiveDateSelect) archiveDateSelect.value = "";
     resetFeedScroll();
-    void loadFeed(state.activeCategory);
+    ensureArchiveIndexLoaded();
+    ensureFeedLoaded(state.activeCategory);
   }
 
   if (button.dataset.menuAction === "saved") {
@@ -3822,12 +3890,11 @@ document.addEventListener("click", (event) => {
 
 render();
 renderWalletState();
-void loadArchiveIndex();
-void loadFeed(state.activeCategory, true);
 void loadMarkets().then(() => {
   reportStoredLocalMarketTraders();
   render();
   renderWalletState();
+  warmFeedAfterFirstPaint();
 });
 
 // Mobile archive card: toggle the archive controls via class (safe for desktop)
