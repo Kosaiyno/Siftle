@@ -16,9 +16,9 @@ contract DeployTonightWorldCupMarkets {
     function run()
         external
         returns (
-            address ivoryCoastNorway,
-            address haalandMbappe,
-            address franceSweden
+            address englandBothHalves,
+            address deBruyneGoalAssist,
+            address usaEarlyGoal
         )
     {
         uint256 privateKey = vm.envUint("ARC_DEPLOYER_PRIVATE_KEY");
@@ -26,25 +26,25 @@ contract DeployTonightWorldCupMarkets {
 
         vm.startBroadcast(privateKey);
 
-        ivoryCoastNorway = factory.createMarket(
-            1782838800,
-            "Will Ivory Coast eliminate Norway from the World Cup?",
-            "wc-ivory-coast-eliminate-norway",
-            "Resolves Yes if Ivory Coast advances and Norway is eliminated from the 2026 World Cup as a result of their knockout match, whether in regular time, extra time, or penalties. Resolves No if Norway advances. If the match is abandoned without an official advancing team, the market remains open until the fixture is completed or officially ruled unresolved."
+        englandBothHalves = factory.createMarket(
+            1782920400,
+            "Will England score in both halves against DR Congo?",
+            "wc-england-score-both-halves-drc",
+            "Resolves Yes if England are officially credited with at least one goal in the first half and at least one goal in the second half against DR Congo in their July 1, 2026 World Cup knockout match. Extra-time goals and penalty shootout goals do not count. Own goals count only if the official match record credits the goal to England's score in that half. Otherwise resolves No."
         );
 
-        haalandMbappe = factory.createMarket(
-            1782838800,
-            "Will Haaland outscore Mbappe in today's World Cup matches?",
-            "wc-haaland-outscore-mbappe",
-            "Resolves Yes if Erling Haaland is officially credited with more goals for Norway against Ivory Coast than Kylian Mbappe is officially credited with for France against Sweden in their June 30, 2026 World Cup matches. Resolves No if Mbappe scores the same number of goals or more. Own goals and penalty shootout goals do not count. If either player does not play, that player's goal total is zero."
+        deBruyneGoalAssist = factory.createMarket(
+            1782934800,
+            "Will Kevin De Bruyne score or assist against Senegal?",
+            "wc-de-bruyne-score-assist-senegal",
+            "Resolves Yes if Kevin De Bruyne is officially credited with at least one goal or at least one assist for Belgium against Senegal in their July 1, 2026 World Cup knockout match, including regular time and extra time. Penalty shootout goals do not count. If he does not play or is not officially credited with a goal or assist, resolves No."
         );
 
-        franceSweden = factory.createMarket(
-            1782849600,
-            "Will France beat Sweden by 2 or more goals?",
-            "wc-france-sweden-spread",
-            "Resolves Yes if France defeats Sweden by a margin of 2 or more goals in their June 30, 2026 World Cup knockout match, including extra time if played. Resolves No if France wins by exactly 1 goal, Sweden advances, or the match is decided by penalties after a draw. Penalty shootout goals do not count toward the margin."
+        usaEarlyGoal = factory.createMarket(
+            1782949200,
+            "Will the United States score before the 20th minute against Bosnia?",
+            "wc-usa-score-before-20-bosnia",
+            "Resolves Yes if the United States are officially credited with a goal before the match clock reaches 20:00 against Bosnia and Herzegovina in their July 1, 2026 World Cup knockout match. Own goals count only if the official match record adds the goal to the United States score before 20:00. Extra-time and penalty shootout goals do not count. Otherwise resolves No."
         );
 
         vm.stopBroadcast();

@@ -19,6 +19,9 @@ const reownProjectId = publicValue("REOWN_PROJECT_ID") || publicValue("WALLETCON
 const circleAppId = publicValue("CIRCLE_APP_ID");
 const arcUsdcAddress = publicValue("ARC_TESTNET_USDC_ADDRESS");
 const marketAddresses = {
+  "wc-england-score-both-halves-drc": publicValue("SIFTLE_MARKET_ENGLAND_DRC_BOTH_HALVES_ADDRESS") || "0x226BfF2b5A5e4F5686cfB37FaD7Dd345CfD68e01",
+  "wc-de-bruyne-score-assist-senegal": publicValue("SIFTLE_MARKET_DE_BRUYNE_SENEGAL_ADDRESS") || "0x3603A839044Cc187A5B564C1b413BB764E8dA4E1",
+  "wc-usa-score-before-20-bosnia": publicValue("SIFTLE_MARKET_USA_BOSNIA_EARLY_GOAL_ADDRESS") || "0x1B890c4F066BC260cE3F0a8266303052080a0FB4",
   "wc-ivory-coast-eliminate-norway": publicValue("SIFTLE_MARKET_IVORY_COAST_NORWAY_ADDRESS") || "0xA9ba7b00F60dc541c1C73917Aba92577F3d1A252",
   "wc-haaland-outscore-mbappe": publicValue("SIFTLE_MARKET_HAALAND_MBAPPE_ADDRESS") || "0x74f77d841d1a3e664Ba6C70f13a6E93E95dEA9D9",
   "wc-france-sweden-spread": publicValue("SIFTLE_MARKET_FRANCE_SWEDEN_ADDRESS") || "0x18EF2D26ec18a4cd2835216E736a6655fFB8136D",

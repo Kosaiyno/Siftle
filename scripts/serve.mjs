@@ -87,6 +87,9 @@ const leaderboardProvider = new JsonRpcProvider(ARC_TESTNET_RPC_URL, ARC_TESTNET
 const LOCAL_TEST_MARKET_ADDRESS = "0x0000000000000000000000000000000000000101";
 const isLocalTestMarketAddress = (address) => /^0x0{36}01[0-9a-f]{2}$/i.test(String(address || ""));
 const marketAddresses = {
+  "wc-england-score-both-halves-drc": process.env.SIFTLE_MARKET_ENGLAND_DRC_BOTH_HALVES_ADDRESS || "0x226BfF2b5A5e4F5686cfB37FaD7Dd345CfD68e01",
+  "wc-de-bruyne-score-assist-senegal": process.env.SIFTLE_MARKET_DE_BRUYNE_SENEGAL_ADDRESS || "0x3603A839044Cc187A5B564C1b413BB764E8dA4E1",
+  "wc-usa-score-before-20-bosnia": process.env.SIFTLE_MARKET_USA_BOSNIA_EARLY_GOAL_ADDRESS || "0x1B890c4F066BC260cE3F0a8266303052080a0FB4",
   "wc-ivory-coast-eliminate-norway": process.env.SIFTLE_MARKET_IVORY_COAST_NORWAY_ADDRESS || "0xA9ba7b00F60dc541c1C73917Aba92577F3d1A252",
   "wc-haaland-outscore-mbappe": process.env.SIFTLE_MARKET_HAALAND_MBAPPE_ADDRESS || "0x74f77d841d1a3e664Ba6C70f13a6E93E95dEA9D9",
   "wc-france-sweden-spread": process.env.SIFTLE_MARKET_FRANCE_SWEDEN_ADDRESS || "0x18EF2D26ec18a4cd2835216E736a6655fFB8136D",
@@ -3205,6 +3208,9 @@ const getActiveMarketQueriesStr = (category) => {
       : markets.filter(m => m.category === category);
     
     const phrases = categoryMarkets.map(m => {
+      if (m.id === "wc-england-score-both-halves-drc") return `"England" "DR Congo" "World Cup"`;
+      if (m.id === "wc-de-bruyne-score-assist-senegal") return `"Kevin De Bruyne" "Senegal" "World Cup"`;
+      if (m.id === "wc-usa-score-before-20-bosnia") return `"United States" "Bosnia" "World Cup"`;
       if (m.id === "wc-ivory-coast-eliminate-norway") return `"Ivory Coast" "Norway" "World Cup"`;
       if (m.id === "wc-haaland-outscore-mbappe") return `"Haaland" "Mbappe" "World Cup"`;
       if (m.id === "wc-france-sweden-spread") return `"France" "Sweden" "World Cup"`;

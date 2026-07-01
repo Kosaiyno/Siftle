@@ -18,15 +18,18 @@ contract ResolveTonightWorldCupMarkets {
     function run() external {
         uint256 privateKey = vm.envUint("ARC_DEPLOYER_PRIVATE_KEY");
 
-        ISiftleMarket ivoryCoastNorway = ISiftleMarket(vm.envAddress("SIFTLE_MARKET_IVORY_COAST_NORWAY_ADDRESS"));
-        ISiftleMarket haalandMbappe = ISiftleMarket(vm.envAddress("SIFTLE_MARKET_HAALAND_MBAPPE_ADDRESS"));
-        ISiftleMarket franceSweden = ISiftleMarket(vm.envAddress("SIFTLE_MARKET_FRANCE_SWEDEN_ADDRESS"));
+        ISiftleMarket englandBothHalves = ISiftleMarket(vm.envAddress("SIFTLE_MARKET_ENGLAND_DRC_BOTH_HALVES_ADDRESS"));
+        ISiftleMarket deBruyneGoalAssist = ISiftleMarket(vm.envAddress("SIFTLE_MARKET_DE_BRUYNE_SENEGAL_ADDRESS"));
+        ISiftleMarket usaEarlyGoal = ISiftleMarket(vm.envAddress("SIFTLE_MARKET_USA_BOSNIA_EARLY_GOAL_ADDRESS"));
+        uint8 englandResult = uint8(vm.envUint("SIFTLE_MARKET_ENGLAND_DRC_BOTH_HALVES_RESULT"));
+        uint8 deBruyneResult = uint8(vm.envUint("SIFTLE_MARKET_DE_BRUYNE_SENEGAL_RESULT"));
+        uint8 usaResult = uint8(vm.envUint("SIFTLE_MARKET_USA_BOSNIA_EARLY_GOAL_RESULT"));
 
         vm.startBroadcast(privateKey);
 
-        ivoryCoastNorway.resolve(2);
-        haalandMbappe.resolve(2);
-        franceSweden.resolve(1);
+        englandBothHalves.resolve(englandResult);
+        deBruyneGoalAssist.resolve(deBruyneResult);
+        usaEarlyGoal.resolve(usaResult);
 
         vm.stopBroadcast();
     }
