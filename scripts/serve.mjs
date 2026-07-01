@@ -4663,21 +4663,84 @@ const callCircleApi = async (path, method, body, userToken = null) => {
 };
 
 const ANALYTICS_FILE = join(root, ".siftle", "analytics.json");
+const analyticsEventKeys = [
+  "app_open",
+  "wallet_connect_start",
+  "wallet_connect_success",
+  "wallet_connect_failed",
+  "sign_up",
+  "market_view",
+  "trade_drawer_open",
+  "trade_attempt",
+  "trade_buy_success",
+  "trade_sell_success",
+  "trade_failed",
+  "claim_attempt",
+  "claim_success",
+  "claim_failed",
+  "ai_unlock_attempt",
+  "ai_unlock_success",
+  "ai_unlock_failed",
+  "view_summary",
+  "open_source"
+];
+
+function createEmptyAnalyticsCounts() {
+  return Object.fromEntries(analyticsEventKeys.map((key) => [key, 0]));
+}
+
+function getAnalyticsTotalsFromDaily(daily = {}) {
+  const totals = createEmptyAnalyticsCounts();
+  Object.values(daily || {}).forEach((row) => {
+    analyticsEventKeys.forEach((key) => {
+      totals[key] += Number(row?.[key]) || 0;
+    });
+  });
+  return totals;
+}
+
+function normalizeAnalytics(data = {}) {
+  const daily = data.daily && typeof data.daily === "object" ? data.daily : {};
+  Object.keys(daily).forEach((dateKey) => {
+    daily[dateKey] = {
+      ...createEmptyAnalyticsCounts(),
+      ...(daily[dateKey] || {})
+    };
+  });
+
+  const dailyTotals = getAnalyticsTotalsFromDaily(daily);
+  const storedTotals = {
+    ...createEmptyAnalyticsCounts(),
+    ...(data.totals || {})
+  };
+  const hasDailyRows = Object.keys(daily).length > 0;
+  const totals = { ...storedTotals };
+  analyticsEventKeys.forEach((key) => {
+    totals[key] = hasDailyRows ? (Number(dailyTotals[key]) || 0) : (Number(storedTotals[key]) || 0);
+  });
+
+  return {
+    ...data,
+    totals,
+    daily,
+    emails: Array.isArray(data.emails) ? data.emails : []
+  };
+}
 
 function loadAnalytics() {
   try {
     if (existsSync(ANALYTICS_FILE)) {
       const content = readFileSync(ANALYTICS_FILE, "utf8").replace(/^\uFEFF/, "");
-      return JSON.parse(content);
+      return normalizeAnalytics(JSON.parse(content));
     }
   } catch (err) {
     console.error("Failed to load analytics:", err);
   }
-  return {
-    totals: { app_open: 0, view_summary: 0, open_source: 0, sign_up: 0 },
+  return normalizeAnalytics({
+    totals: createEmptyAnalyticsCounts(),
     daily: {},
     emails: []
-  };
+  });
 }
 
 function saveAnalytics(data) {
@@ -5367,13 +5430,11 @@ async function getLeaderboardAnalyticsFresh() {
 }
 
 function trackAnalyticsEvent(event, email = null) {
-  const data = loadAnalytics();
+  const cleanEvent = String(event || "").trim();
+  if (!cleanEvent) return;
+  const data = normalizeAnalytics(loadAnalytics());
   
-  if (!data.totals) data.totals = { app_open: 0, view_summary: 0, open_source: 0, sign_up: 0 };
-  if (!data.daily) data.daily = {};
-  if (!data.emails) data.emails = [];
-  
-  if (event === "sign_up") {
+  if (cleanEvent === "sign_up") {
     if (email) {
       const cleanEmail = email.toLowerCase().trim();
       if (data.emails.includes(cleanEmail)) {
@@ -5383,13 +5444,13 @@ function trackAnalyticsEvent(event, email = null) {
     }
   }
 
-  data.totals[event] = (data.totals[event] || 0) + 1;
+  data.totals[cleanEvent] = (data.totals[cleanEvent] || 0) + 1;
 
   const dateKey = getTodayKey();
   if (!data.daily[dateKey]) {
-    data.daily[dateKey] = { app_open: 0, view_summary: 0, open_source: 0, sign_up: 0 };
+    data.daily[dateKey] = createEmptyAnalyticsCounts();
   }
-  data.daily[dateKey][event] = (data.daily[dateKey][event] || 0) + 1;
+  data.daily[dateKey][cleanEvent] = (data.daily[dateKey][cleanEvent] || 0) + 1;
 
   saveAnalytics(data);
 }
@@ -5755,14 +5816,14 @@ function getAnalyticsHtml() {
         <span class="card-footer">Total page views loaded</span>
       </div>
       <div class="card summaries">
-        <span class="card-label">AI Summaries</span>
+        <span class="card-label">Market Views</span>
         <span class="card-value" id="valSummaries">-</span>
-        <span class="card-footer">Summaries generated/viewed</span>
+        <span class="card-footer">Market detail pages opened</span>
       </div>
       <div class="card clicks">
-        <span class="card-label">Source Clicks</span>
+        <span class="card-label">Trades</span>
         <span class="card-value" id="valClicks">-</span>
-        <span class="card-footer">Clicks to original articles</span>
+        <span class="card-footer">Successful buys and exits</span>
       </div>
       <div class="card signups">
         <span class="card-label">USDC Signups</span>
@@ -5784,23 +5845,23 @@ function getAnalyticsHtml() {
       </div>
       <div class="ratio-card">
         <div class="ratio-header">
-          <span class="ratio-title">AI Briefing Rate</span>
+          <span class="ratio-title">AI Briefing Completion</span>
           <span class="ratio-value" id="ratioSummary">-</span>
         </div>
         <div class="progress-bar-container">
           <div class="progress-bar" id="barSummary"></div>
         </div>
-        <span class="ratio-desc">Percentage of page views where users engage with the AI briefing helper.</span>
+        <span class="ratio-desc">Percentage of successful unlocks that become viewed AI briefings.</span>
       </div>
       <div class="ratio-card">
         <div class="ratio-header">
-          <span class="ratio-title">Source Click CTR</span>
+          <span class="ratio-title">Trade Success Rate</span>
           <span class="ratio-value" id="ratioClick">-</span>
         </div>
         <div class="progress-bar-container">
           <div class="progress-bar" id="barClick"></div>
         </div>
-        <span class="ratio-desc">Click-through rate of users opening the original publisher sources.</span>
+        <span class="ratio-desc">Percentage of submitted trades that confirm successfully.</span>
       </div>
     </div>
 
@@ -5815,9 +5876,16 @@ function getAnalyticsHtml() {
           <tr>
             <th>Date</th>
             <th>App Opens</th>
-            <th>AI Summaries</th>
+            <th>Market Views</th>
+            <th>Trade Drawer</th>
+            <th>Trade Attempts</th>
+            <th>Trades</th>
+            <th>Claims</th>
+            <th>AI Unlocks</th>
+            <th>AI Views</th>
             <th>Source Clicks</th>
             <th>Signups</th>
+            <th>Errors</th>
           </tr>
         </thead>
         <tbody id="breakdownBody"></tbody>
@@ -5835,17 +5903,53 @@ function getAnalyticsHtml() {
         if (!res.ok) throw new Error('API request failed');
         const data = await res.json();
         
-        const totals = data.totals || { app_open: 0, view_summary: 0, open_source: 0, sign_up: 0 };
+        const daily = data.daily || {};
+        const eventKeys = [
+          'app_open',
+          'wallet_connect_start',
+          'wallet_connect_success',
+          'wallet_connect_failed',
+          'sign_up',
+          'market_view',
+          'trade_drawer_open',
+          'trade_attempt',
+          'trade_buy_success',
+          'trade_sell_success',
+          'trade_failed',
+          'claim_attempt',
+          'claim_success',
+          'claim_failed',
+          'ai_unlock_attempt',
+          'ai_unlock_success',
+          'ai_unlock_failed',
+          'view_summary',
+          'open_source'
+        ];
+        const dailyTotals = Object.values(daily).reduce((acc, row) => {
+          eventKeys.forEach((key) => {
+            acc[key] = (acc[key] || 0) + (Number(row?.[key]) || 0);
+          });
+          return acc;
+        }, {});
+        const rawTotals = data.totals || {};
+        const hasDailyRows = Object.keys(daily).length > 0;
+        const totals = eventKeys.reduce((acc, key) => {
+          acc[key] = hasDailyRows ? (Number(dailyTotals[key]) || 0) : (Number(rawTotals[key]) || 0);
+          return acc;
+        }, {});
+        const tradeSuccesses = (totals.trade_buy_success || 0) + (totals.trade_sell_success || 0);
+        const aiUnlocks = totals.ai_unlock_success || 0;
+        const claims = totals.claim_success || 0;
         
         document.getElementById('valOpens').textContent = (totals.app_open || 0).toLocaleString();
-        document.getElementById('valSummaries').textContent = (totals.view_summary || 0).toLocaleString();
-        document.getElementById('valClicks').textContent = (totals.open_source || 0).toLocaleString();
+        document.getElementById('valSummaries').textContent = (totals.market_view || 0).toLocaleString();
+        document.getElementById('valClicks').textContent = tradeSuccesses.toLocaleString();
         document.getElementById('valSignups').textContent = (totals.sign_up || 0).toLocaleString();
         
         const opens = totals.app_open || 1;
         const signupRate = ((totals.sign_up || 0) / opens) * 100;
-        const summaryRate = ((totals.view_summary || 0) / opens) * 100;
-        const clickRate = ((totals.open_source || 0) / opens) * 100;
+        const summaryRate = ((totals.view_summary || 0) / Math.max(1, aiUnlocks || totals.ai_unlock_attempt || 0)) * 100;
+        const clickRate = ((tradeSuccesses || 0) / Math.max(1, totals.trade_attempt || 0)) * 100;
         
         document.getElementById('ratioSignup').textContent = signupRate.toFixed(1) + '%';
         document.getElementById('ratioSummary').textContent = summaryRate.toFixed(1) + '%';
@@ -5855,24 +5959,57 @@ function getAnalyticsHtml() {
         document.getElementById('barSummary').style.width = Math.min(summaryRate, 100) + '%';
         document.getElementById('barClick').style.width = Math.min(clickRate, 100) + '%';
         
+        const extraMetrics = [
+          ['Wallet Starts', totals.wallet_connect_start],
+          ['Wallet Success', totals.wallet_connect_success],
+          ['Market Views', totals.market_view],
+          ['Trade Drawer', totals.trade_drawer_open],
+          ['Trade Attempts', totals.trade_attempt],
+          ['Trade Success', tradeSuccesses],
+          ['Trade Fails', totals.trade_failed],
+          ['Claim Attempts', totals.claim_attempt],
+          ['Claims', claims],
+          ['AI Unlock Attempts', totals.ai_unlock_attempt],
+          ['AI Unlocks', aiUnlocks],
+          ['AI Views', totals.view_summary],
+          ['Source Clicks', totals.open_source],
+          ['Wallet Fails', totals.wallet_connect_failed],
+          ['Claim Fails', totals.claim_failed],
+          ['AI Fails', totals.ai_unlock_failed]
+        ];
+        const cards = document.querySelector('.stats-grid');
+        document.querySelectorAll('.analytics-extra-card').forEach((node) => node.remove());
+        extraMetrics.forEach(([label, value]) => {
+          const card = document.createElement('div');
+          card.className = 'card analytics-extra-card';
+          card.innerHTML = '<span class="card-label">' + label + '</span><span class="card-value">' + (Number(value) || 0).toLocaleString() + '</span><span class="card-footer">Tracked product event</span>';
+          cards.appendChild(card);
+        });
+
         const tbody = document.getElementById('breakdownBody');
         tbody.innerHTML = '';
-        
-        const daily = data.daily || {};
         const sortedDates = Object.keys(daily).sort((a, b) => b.localeCompare(a));
         
         if (sortedDates.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">No entries logged yet.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; color: var(--text-muted); padding: 2rem;">No entries logged yet.</td></tr>';
         } else {
           sortedDates.forEach(date => {
             const row = daily[date];
+            const rowTradeSuccesses = (row.trade_buy_success || 0) + (row.trade_sell_success || 0);
             const tr = document.createElement('tr');
             tr.innerHTML = \`
               <td><strong>\${date}</strong></td>
               <td>\${(row.app_open || 0).toLocaleString()}</td>
+              <td>\${(row.market_view || 0).toLocaleString()}</td>
+              <td>\${(row.trade_drawer_open || 0).toLocaleString()}</td>
+              <td>\${(row.trade_attempt || 0).toLocaleString()}</td>
+              <td>\${rowTradeSuccesses.toLocaleString()}</td>
+              <td>\${(row.claim_success || 0).toLocaleString()}</td>
+              <td>\${(row.ai_unlock_success || 0).toLocaleString()}</td>
               <td>\${(row.view_summary || 0).toLocaleString()}</td>
               <td>\${(row.open_source || 0).toLocaleString()}</td>
               <td>\${(row.sign_up || 0).toLocaleString()}</td>
+              <td>\${((row.wallet_connect_failed || 0) + (row.trade_failed || 0) + (row.claim_failed || 0) + (row.ai_unlock_failed || 0)).toLocaleString()}</td>
             \`;
             tbody.appendChild(tr);
           });
