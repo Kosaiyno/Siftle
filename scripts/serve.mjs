@@ -4616,7 +4616,68 @@ if (isMain) {
   setInterval(() => void refreshPublishedFeeds("scheduled"), Math.max(1, refreshIntervalMinutes) * 60 * 1000);
 }
 
+const OTP_FILE = join(root, ".siftle", "otp.json");
+const otpTtlMs = Math.max(10, Number(process.env.OTP_TTL_MINUTES ?? 30)) * 60 * 1000;
 const otpStore = new Map();
+
+function normalizeEmail(email = "") {
+  return String(email || "").toLowerCase().trim();
+}
+
+function normalizeOtpCode(otp = "") {
+  return String(otp || "").replace(/\D/g, "").slice(0, 6);
+}
+
+function loadOtpStore() {
+  try {
+    if (!existsSync(OTP_FILE)) return;
+    const raw = JSON.parse(readFileSync(OTP_FILE, "utf8"));
+    const now = Date.now();
+    Object.entries(raw || {}).forEach(([email, entry]) => {
+      const cleanEmail = normalizeEmail(email);
+      const cleanOtp = normalizeOtpCode(entry?.otp);
+      const expiresAt = Number(entry?.expiresAt) || 0;
+      if (cleanEmail && cleanOtp.length === 6 && expiresAt > now) {
+        otpStore.set(cleanEmail, { otp: cleanOtp, expiresAt });
+      }
+    });
+  } catch (err) {
+    console.warn("Failed to load OTP store:", err.message);
+  }
+}
+
+function saveOtpStore() {
+  try {
+    const dir = join(root, ".siftle");
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    const now = Date.now();
+    const payload = {};
+    otpStore.forEach((entry, email) => {
+      if ((Number(entry?.expiresAt) || 0) > now) {
+        payload[email] = entry;
+      }
+    });
+    writeFileSync(OTP_FILE, JSON.stringify(payload, null, 2), "utf8");
+  } catch (err) {
+    console.warn("Failed to save OTP store:", err.message);
+  }
+}
+
+function setOtp(email, otp) {
+  const cleanEmail = normalizeEmail(email);
+  otpStore.set(cleanEmail, {
+    otp: normalizeOtpCode(otp),
+    expiresAt: Date.now() + otpTtlMs
+  });
+  saveOtpStore();
+}
+
+function consumeOtp(email) {
+  otpStore.delete(normalizeEmail(email));
+  saveOtpStore();
+}
+
+loadOtpStore();
 
 const getCircleUserId = (email) => {
   const hash = createHash("sha256").update(email.toLowerCase().trim()).digest("hex");
@@ -6241,19 +6302,17 @@ const server = createServer(async (request, response) => {
   if (requestUrl.pathname === "/api/circle/auth/otp" && request.method === "POST") {
     try {
       const body = await readJsonBody(request);
-      const email = body.email;
+      const email = normalizeEmail(body.email);
       if (!email || typeof email !== "string" || !email.includes("@")) {
         sendJson(response, 400, { error: "Valid email address is required" });
         return;
       }
       
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      otpStore.set(email.toLowerCase().trim(), {
-        otp,
-        expiresAt: Date.now() + 10 * 60 * 1000
-      });
+      setOtp(email, otp);
 
       const formattedOtp = otp.slice(0, 3) + " " + otp.slice(3);
+      const expiryMinutes = Math.round(otpTtlMs / 60000);
       const htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -6351,7 +6410,7 @@ const server = createServer(async (request, response) => {
                 <span class="code" style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 700; letter-spacing: 4px; color: #a5b4fc;">${formattedOtp}</span>
               </div>
               
-              <div class="expiry" style="font-size: 12px; color: #f87171; font-weight: 500;">Expires in 10 minutes</div>
+              <div class="expiry" style="font-size: 12px; color: #f87171; font-weight: 500;">Expires in ${expiryMinutes} minutes</div>
             </div>
             <div class="footer" style="padding: 24px; background-color: #0d121f; border-top: 1px solid #1f2937; text-align: center; font-size: 11px; color: #64748b; line-height: 1.6;">
               <p style="margin: 0 0 8px 0;">This code was requested for a sign-in attempt on Siftle. If you did not request this code, you can safely ignore this email.</p>
@@ -6436,7 +6495,7 @@ const server = createServer(async (request, response) => {
               to: email,
               replyTo: smtpUser,
               subject: `Siftle Security Code: ${otp}`,
-              text: `Verify Your Email\n\nPlease enter the verification code below to authorize your session and sign in to Siftle.\n\nVerification Code: ${formattedOtp}\n\nThis code will expire in 10 minutes.\n\nThis code was requested for a sign-in attempt on Siftle. If you did not request this code, you can safely ignore this email.`,
+              text: `Verify Your Email\n\nPlease enter the verification code below to authorize your session and sign in to Siftle.\n\nVerification Code: ${formattedOtp}\n\nThis code will expire in ${expiryMinutes} minutes.\n\nThis code was requested for a sign-in attempt on Siftle. If you did not request this code, you can safely ignore this email.`,
               html: htmlContent,
               headers: {
                 "X-Priority": "1",
@@ -6484,23 +6543,20 @@ const server = createServer(async (request, response) => {
   if (requestUrl.pathname === "/api/circle/auth/verify" && request.method === "POST") {
     try {
       const body = await readJsonBody(request);
-      const email = body.email;
-      const otp = body.otp;
+      const email = normalizeEmail(body.email);
+      const otp = normalizeOtpCode(body.otp);
 
       if (!email || !otp) {
         sendJson(response, 400, { error: "Email and OTP code are required" });
         return;
       }
 
-      const cleanEmail = email.toLowerCase().trim();
+      const cleanEmail = normalizeEmail(email);
       const stored = otpStore.get(cleanEmail);
       if (!stored || stored.otp !== otp || Date.now() > stored.expiresAt) {
         sendJson(response, 400, { error: "Invalid or expired verification code" });
         return;
       }
-
-      // Valid OTP, consume it
-      otpStore.delete(cleanEmail);
 
       const isMock = !process.env.CIRCLE_API_KEY;
       if (isMock) {
@@ -6519,6 +6575,7 @@ const server = createServer(async (request, response) => {
           walletAddress,
           initialized: true
         });
+        consumeOtp(cleanEmail);
         return;
       }
 
@@ -6548,6 +6605,7 @@ const server = createServer(async (request, response) => {
             walletAddress: arcWallet.address,
             initialized: true
           });
+          consumeOtp(cleanEmail);
           return;
         }
 
@@ -6572,6 +6630,7 @@ const server = createServer(async (request, response) => {
             challengeId,
             initialized: false
           });
+          consumeOtp(cleanEmail);
         } catch (err) {
           if (err.code === 155106) {
             const walletIdempotencyKey = randomUUID();
@@ -6588,6 +6647,7 @@ const server = createServer(async (request, response) => {
               challengeId,
               initialized: false
             });
+            consumeOtp(cleanEmail);
           } else {
             throw err;
           }

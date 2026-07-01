@@ -428,11 +428,12 @@ export const connectArcWallet = async (): Promise<string> => {
     });
 
     verifyBtn.addEventListener("click", async () => {
-      const otp = otpInput.value.trim();
+      const otp = otpInput.value.replace(/\D/g, "").slice(0, 6);
       if (otp.length !== 6 || !/^\d+$/.test(otp)) {
         showStatus("Please enter a 6-digit number.", true);
         return;
       }
+      otpInput.value = otp;
 
       verifyBtn.disabled = true;
       verifyBtn.textContent = "Verifying...";
