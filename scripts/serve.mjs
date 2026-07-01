@@ -118,6 +118,8 @@ const leaderboardLogChunkSize = Math.min(2000, Math.max(100, Number(process.env.
 const leaderboardLogLookbackBlocks = Math.min(100000, Math.max(leaderboardLogChunkSize, Number(process.env.LEADERBOARD_LOG_LOOKBACK_BLOCKS ?? 50000)));
 const leaderboardPositionBatchSize = Math.min(100, Math.max(5, Number(process.env.LEADERBOARD_POSITION_BATCH_SIZE ?? 20)));
 const enableMemoryDebugLogs = process.env.ENABLE_MEMORY_DEBUG_LOGS === "true";
+const leaderboardMarketSignalCacheMs = Number(process.env.LEADERBOARD_MARKET_SIGNAL_CACHE_MS ?? 120000);
+const marketListCacheMs = Number(process.env.MARKET_LIST_CACHE_MS ?? 120000);
 
 const LEADERBOARD_MARKET_ABI = [
   "function outcome() view returns (uint8)",
@@ -134,6 +136,13 @@ const redeemedTopic = leaderboardMarketInterface.getEvent("Redeemed").topicHash;
 let leaderboardCache = {
   expiresAt: 0,
   analytics: null
+};
+let leaderboardRefreshPromise = null;
+const leaderboardMarketSignalCache = new Map();
+let marketListCache = {
+  expiresAt: 0,
+  markets: null,
+  refreshPromise: null
 };
 
 const leaderboardMode = String(process.env.LEADERBOARD_MODE || "server").toLowerCase();
@@ -5118,7 +5127,22 @@ async function mapInBatches(items, batchSize, iteratee) {
   return results;
 }
 
-async function collectMarketTradeSignals(marketAddress) {
+function cloneTradeSignals(signals) {
+  return {
+    traders: new Set(signals.traders || []),
+    switched: new Set(signals.switched || []),
+    redeemed: new Set(signals.redeemed || []),
+    firstActivityBlocks: new Map(signals.firstActivityBlocks || [])
+  };
+}
+
+async function collectMarketTradeSignals(marketAddress, fromBlockHint = null) {
+  const cacheKey = `${normalizeWalletAddress(marketAddress) || marketAddress}:${Number(fromBlockHint) || 0}`;
+  const cached = leaderboardMarketSignalCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cloneTradeSignals(cached.signals);
+  }
+
   const traders = new Set();
   const boughtYes = new Set();
   const boughtNo = new Set();
@@ -5129,7 +5153,10 @@ async function collectMarketTradeSignals(marketAddress) {
     const latest = await leaderboardProvider.getBlockNumber();
     const safeChunk = leaderboardLogChunkSize;
     const lookback = leaderboardLogLookbackBlocks;
-    const start = Math.max(0, latest - lookback);
+    const hintedStart = Number(fromBlockHint);
+    const start = Number.isFinite(hintedStart) && hintedStart > 0
+      ? Math.max(0, hintedStart)
+      : Math.max(0, latest - lookback);
 
     for (let fromBlock = start; fromBlock <= latest; fromBlock += safeChunk) {
       const toBlock = Math.min(fromBlock + safeChunk - 1, latest);
@@ -5185,7 +5212,67 @@ async function collectMarketTradeSignals(marketAddress) {
     if (boughtNo.has(address)) switched.add(address);
   });
 
-  return { traders, switched, redeemed, firstActivityBlocks };
+  const signals = { traders, switched, redeemed, firstActivityBlocks };
+  leaderboardMarketSignalCache.set(cacheKey, {
+    expiresAt: Date.now() + leaderboardMarketSignalCacheMs,
+    signals: cloneTradeSignals(signals)
+  });
+  return signals;
+}
+
+function getFastMarketsWithCachedCounts() {
+  const cachedById = new Map((marketListCache.markets || []).map((market) => [market.id, market]));
+  return getActiveMarkets().map((market) => {
+    const marketAddress = normalizeWalletAddress(market.marketAddress) || getConfiguredMarketAddress(market.id);
+    const cached = cachedById.get(market.id);
+    return {
+      ...market,
+      ...(marketAddress ? { marketAddress } : {}),
+      ...(cached?.traderCount !== undefined ? {
+        traderCount: cached.traderCount,
+        traders: cached.traders
+      } : {})
+    };
+  });
+}
+
+async function refreshMarketListCache() {
+  if (marketListCache.refreshPromise) return marketListCache.refreshPromise;
+
+  marketListCache.refreshPromise = (async () => {
+    const enrichedMarkets = [];
+    for (const market of getActiveMarkets()) {
+      const marketAddress = normalizeWalletAddress(market.marketAddress) || getConfiguredMarketAddress(market.id);
+      if (!marketAddress || isLocalTestMarketAddress(marketAddress)) {
+        enrichedMarkets.push(market);
+        continue;
+      }
+
+      try {
+        const { traders } = await collectMarketTradeSignals(marketAddress, market.deploymentBlock);
+        const traderCount = traders.size;
+        enrichedMarkets.push({
+          ...market,
+          marketAddress,
+          traderCount,
+          traders: traderCount > 0 ? String(traderCount) : String(market.traders || "0")
+        });
+      } catch {
+        enrichedMarkets.push({
+          ...market,
+          marketAddress
+        });
+      }
+    }
+
+    marketListCache.markets = enrichedMarkets;
+    marketListCache.expiresAt = Date.now() + marketListCacheMs;
+    return enrichedMarkets;
+  })().finally(() => {
+    marketListCache.refreshPromise = null;
+  });
+
+  return marketListCache.refreshPromise;
 }
 
 async function recomputeLeaderboardFromChain(data) {
@@ -5216,7 +5303,7 @@ async function recomputeLeaderboardFromChain(data) {
     if (!marketId) continue;
 
     logMemoryUsage(`before trade signals ${marketId}`);
-    const { traders, switched, redeemed, firstActivityBlocks } = await collectMarketTradeSignals(marketAddress);
+    const { traders, switched, redeemed, firstActivityBlocks } = await collectMarketTradeSignals(marketAddress, market.deploymentBlock);
     allTraders.forEach((address) => traders.add(address));
     traders.forEach((address) => allTraders.add(address));
 
@@ -5364,22 +5451,32 @@ async function getLeaderboardAnalyticsFresh() {
     return leaderboardCache.analytics;
   }
 
-  const data = loadAnalytics();
-  await loadLeaderboardFromSupabase(data);
-  try {
-    await recomputeLeaderboardFromChain(data);
-    saveAnalytics(data);
-    await saveLeaderboardToSupabase(data);
-  } catch (err) {
-    console.error("[LEADERBOARD] Recompute failed:", err);
+  if (leaderboardRefreshPromise) {
+    return leaderboardRefreshPromise;
   }
 
-  leaderboardCache = {
-    analytics: data,
-    expiresAt: now + 30_000
-  };
+  leaderboardRefreshPromise = (async () => {
+    const data = loadAnalytics();
+    await loadLeaderboardFromSupabase(data);
+    try {
+      await recomputeLeaderboardFromChain(data);
+      saveAnalytics(data);
+      await saveLeaderboardToSupabase(data);
+    } catch (err) {
+      console.error("[LEADERBOARD] Recompute failed:", err);
+    }
 
-  return data;
+    leaderboardCache = {
+      analytics: data,
+      expiresAt: now + 30_000
+    };
+
+    return data;
+  })().finally(() => {
+    leaderboardRefreshPromise = null;
+  });
+
+  return leaderboardRefreshPromise;
 }
 
 function trackAnalyticsEvent(event, email = null) {
@@ -6566,30 +6663,16 @@ const server = createServer(async (request, response) => {
 
   if (requestUrl.pathname === "/api/markets" && request.method === "GET") {
     try {
-      const markets = getActiveMarkets();
-      const enrichedMarkets = await Promise.all(markets.map(async (market) => {
-        const marketAddress = normalizeWalletAddress(market.marketAddress) || getConfiguredMarketAddress(market.id);
-        if (!marketAddress || isLocalTestMarketAddress(marketAddress)) {
-          return market;
-        }
+      if (marketListCache.markets && marketListCache.expiresAt > Date.now()) {
+        sendJson(response, 200, marketListCache.markets);
+        return;
+      }
 
-        try {
-          const { traders } = await collectMarketTradeSignals(marketAddress);
-          const traderCount = traders.size;
-          return {
-            ...market,
-            marketAddress,
-            traderCount,
-            traders: traderCount > 0 ? String(traderCount) : String(market.traders || "0")
-          };
-        } catch {
-          return {
-            ...market,
-            marketAddress
-          };
-        }
-      }));
-      sendJson(response, 200, enrichedMarkets);
+      const fastMarkets = getFastMarketsWithCachedCounts();
+      sendJson(response, 200, fastMarkets);
+      void refreshMarketListCache().catch((error) => {
+        console.warn("[MARKETS] Background trader-count refresh failed:", error.message);
+      });
     } catch (error) {
       sendJson(response, 500, { error: error.message });
     }
