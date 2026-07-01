@@ -1,157 +1,152 @@
 # Siftle
 
-Siftle is a thread-first news and prediction market app for fast-moving internet categories. It pulls fresh stories, groups meaningful rolling developments into strict story threads, archives short-lived testnet snapshots on Shelby, uses 0G Compute where deeper AI judgment is worth the cost, and turns selected verified threads into Arc testnet USDC prediction markets.
+Siftle is a live news and prediction app where readers pay tiny USDC amounts to unlock AI briefings, then use those briefings and source threads to make Arc testnet prediction-market calls.
 
-Current categories:
+The core product loop is simple:
 
-- Crypto
-- Sports
-- Anime
-- Tech
+1. Siftle finds fast-moving stories.
+2. Readers open a market or story thread.
+3. A locked AI briefing can be unlocked with a small Arc testnet USDC payment.
+4. The briefing explains the story in three parts: **What happened**, **Key points**, and **Takeaway**.
+5. Readers use that context to trade Yes/No markets, follow outcomes, claim payouts, and climb the leaderboard.
 
-## What It Does
+Siftle is built around the idea that news context can be sold in tiny units. Instead of a subscription or a large paywall, a reader can pay only when they want a specific AI briefing.
 
-Siftle publishes a daily feed for each category and keeps the live feed fresh on a schedule.
+## What Siftle Does Now
 
-The app supports:
+Siftle currently combines:
 
-- Fresh category feeds
-- Today-only live feeds with older stories moved into archive
-- Saved and archived story views
-- Source links for every story
-- On-demand AI summaries
-- 48-hour rolling story threads aligned with Shelby testnet retention
-- Thread-backed prediction markets with clear resolution rules
-- Shelby-backed daily archive snapshots
-- 0G Compute-backed AI work with local fallbacks
-- Arc Testnet wallet connection and USDC-backed prediction markets
+- Live sports/news feeds
+- Threaded source updates for developing stories
+- Paid AI briefings unlocked with USDC
+- Arc testnet prediction markets
+- Circle wallet onboarding
+- Yes/No shares with resolution and claiming
+- Seasonal and global leaderboards
+- Product analytics for opens, wallets, trades, claims, AI unlocks, and source clicks
 
-## Arc Testnet Markets
+The product is focused on high-interest sports markets first because they create clear, time-bound questions and natural user behavior: read, decide, predict, win or lose, come back.
 
-Siftle uses prediction markets where verified news threads provide the evidence layer and Arc Testnet USDC provides collateral, gas, and settlement.
+## Paid AI Briefings
 
-Current Arc integration:
+The AI briefing is Siftle's nanopayment layer.
 
-- Arc Testnet chain ID `5042002`
-- Arc RPC and explorer configuration
-- WalletConnect support through Reown AppKit
-- Arc Testnet USDC balance display
-- Real Foundry contracts for market creation, Yes/No collateral, sellback, resolution, and redemption
-- Per-market Arc contract addresses exposed to the browser through `dist/client-config.js`
-- Frontend approve + buy flow for Arc Testnet USDC
-- Frontend sell flow for open Yes/No shares before resolution
-- On-chain market probability and volume reads from market pools
+Each locked briefing is a compact, structured explanation of a story or market context. A user pays a small USDC amount to unlock the briefing, and Siftle returns the same clean format every time:
 
-Arc Testnet USDC has no real financial value. These markets are testnet contracts for validating the product loop: thread evidence, wallet connection, USDC approval, buy/sell shares, and later resolution/redemption.
+### What Happened
 
-Create a public project ID at [Reown Cloud](https://cloud.reown.com/) and set `REOWN_PROJECT_ID` in `.env` to enable the wallet modal locally and in production.
+A short explanation of the core event or market-moving update.
 
-The grant thesis is straightforward: Siftle turns verified rolling news threads into transparent evidence for stablecoin-settled prediction markets. Arc is a strong fit because it explicitly supports prediction markets, uses USDC for gas, and provides deterministic sub-second finality.
+### Key Points
 
-See [`contracts/README.md`](contracts/README.md) for the official Arc deployment flow.
+The facts that matter most: team news, player status, market context, recent updates, source signals, or anything else that changes how a user might think about the question.
 
-Required market env variables:
+### Takeaway
+
+A direct final read on what the information means for the user.
+
+This makes the AI output useful inside the prediction flow. The briefing is not generic summarization; it is paid decision support around a live event.
+
+## Nanopayments
+
+Siftle uses small USDC payments to unlock specific pieces of AI-generated context.
+
+Why this matters:
+
+- Readers do not need to subscribe before getting value.
+- Each briefing can be priced independently.
+- The app can monetize long-tail news context.
+- AI-generated analysis becomes a pay-per-use product.
+- The same pattern can later support publishers, creators, analysts, and source attribution.
+
+The current implementation uses Arc testnet USDC for product validation. Testnet funds have no real financial value.
+
+## Prediction Markets
+
+Siftle markets are simple Yes/No questions tied to real events.
+
+Users can:
+
+- Connect a Circle wallet
+- Claim testnet USDC
+- Buy Yes or No shares
+- Exit shares before resolution when the market is still open
+- Claim after the market resolves if they are on the winning side
+- Earn leaderboard points from resolved Daily markets
+
+Markets are designed to be easy to understand:
+
+- Winning side splits the final pool.
+- Losing side funds the winning side.
+- Resolved markets cannot be traded.
+- Payout is shown as projected payout while the market is open.
+
+## Leaderboard
+
+Siftle turns prediction into a game layer.
+
+The leaderboard tracks:
+
+- Points
+- Wins
+- Losses
+- Division ranking
+- Global ranking
+
+Daily market winners earn points only after the market resolves. This keeps leaderboard points tied to real outcomes, not just activity.
+
+## Arc and Circle Usage
+
+Siftle uses Circle and Arc for:
+
+- Circle email wallet onboarding
+- Arc testnet USDC balance display
+- USDC approval and market trades
+- Market resolution and claiming
+- Paid AI briefing unlocks
+- Testnet usage analytics around real product behavior
+
+Current Arc configuration:
 
 ```txt
 ARC_TESTNET_RPC_URL=https://rpc.testnet.arc.network
 ARC_TESTNET_USDC_ADDRESS=0x3600000000000000000000000000000000000000
 REOWN_PROJECT_ID=
-SIFTLE_MARKET_FACTORY_ADDRESS=
-SIFTLE_MARKET_NEW_GLENN_ADDRESS=
-SIFTLE_MARKET_STRATEGY_BTC_SALE_ADDRESS=
-SIFTLE_MARKET_NBA_FINALS_ADDRESS=
-SIFTLE_MARKET_ENGLAND_WORLD_CUP_OPENER_ADDRESS=
-SIFTLE_MARKET_NEYMAR_WORLD_CUP_OPENER_ADDRESS=
-SIFTLE_MARKET_IRAN_WORLD_CUP_VISAS_ADDRESS=
-SIFTLE_MARKET_RESOLVER=
 ARC_DEPLOYER_PRIVATE_KEY=
 ```
 
-Only public values are written into `dist/client-config.js`: the Reown project ID, USDC address, and market contract addresses. The deployer private key and resolver stay server/local only.
-
-After changing market addresses, rebuild so the browser config updates:
+Market addresses are exposed through `dist/client-config.js` after running:
 
 ```bash
 npm run build
 ```
 
-## Threads
+Private keys and service-role secrets must stay server-side only.
 
-Threads connect a current story to recent related updates so readers can see how a topic has unfolded inside the active testnet retention window.
+## AI and Source Threads
 
-Thread behavior:
+Siftle keeps source context attached to each story and market.
 
-- A thread button appears when a story has at least one related past update.
-- Threads are ordered newest first, with the latest/current update on top and older updates below.
-- On Shelby testnet, Siftle intentionally limits thread history to the last 48 hours by default through `THREAD_HISTORY_WINDOW_HOURS=48`.
-- Thread topics are generated to describe the shared story, not just copied from one headline.
-- Thread matching uses local candidate search first, then 0G Compute for stricter review when budget allows.
-- Threads must not group duplicate same-news coverage from multiple sources as if it were a developing timeline. Multiple outlets reporting the same event on the same day should be treated as duplicate coverage, not separate thread updates, unless a later article adds a real new development.
-- Broad keyword overlap is not enough. Stories must share a specific actor, product, event, team, launch, dispute, outage, market catalyst, or direct continuation.
-- Market threads must mirror prepared Siftle threads. A market should pull the latest exact matching story plus older verified updates from the original thread, not rebuild evidence with broad keyword matching.
-- Active market threads also have a local persistence layer. When a valid market thread is prepared, Siftle saves it under `.siftle/market-threads`; if the next live RSS batch does not include a fresh exact match, the market still shows the saved evidence instead of disappearing.
-- Curated market thread seeds can live in `data/marketThreads`. These are for high-value prototype markets where the evidence must remain stable while Shelby testnet retention is limited.
+The app uses:
 
-This is especially important for future prediction markets, where noisy or unrelated threads would create bad market context.
+- RSS and configured news APIs for fresh stories
+- Thread matching for related updates
+- Local fallbacks when AI or external services are unavailable
+- 0G Compute where deeper AI work is useful
+- Cached summaries so repeat reads do not regenerate unnecessarily
 
-## 0G Compute Usage
+The goal is not to flood users with AI text. The goal is to unlock one useful briefing at the moment the user needs context.
 
-Siftle is currently configured to use 0G in conserve mode.
+## Storage and Persistence
 
-Conserve mode is designed to manage compute spend:
+Siftle uses multiple layers:
 
-- Automatic feed refresh does not summarize every article with 0G.
-- Basic feed summaries use local fallback text by default.
-- 0G summaries are generated on demand when the user opens or requests an AI summary.
-- Thread review is capped per refresh so grouping cannot burn unlimited compute.
-- 0G decisions and summaries are cached locally so repeated requests do not pay twice.
+- Supabase for leaderboard/profile persistence
+- Local `.siftle` files for development caches and analytics fallback
+- Shelby testnet archive support for feed snapshots
+- Browser storage for wallet/session hints and local UI state
 
-Useful defaults:
-
-```txt
-OG_USAGE_MODE=conserve
-THREAD_REVIEW_BUDGET_PER_REFRESH=12
-THREAD_HISTORY_WINDOW_HOURS=48
-SUMMARY_TIMEOUT_MS=45000
-REFRESH_INTERVAL_MINUTES=60
-ALLOW_MOCK_FEEDS=false
-```
-
-Set `OG_USAGE_MODE=full` only if you want automatic 0G summaries during feed generation.
-
-## Shelby Testnet Archive
-
-Shelby is the rolling testnet archive layer for Siftle.
-
-Shelbynet currently has a 48-hour maximum blob expiration. Siftle aligns with that limit instead of adding renewal complexity during testnet: daily category snapshots are uploaded as short-lived Shelby blobs, and thread discovery uses a 48-hour rolling history window.
-
-This keeps the prototype stable, reduces moving parts, and helps control 0G Compute spend because fewer older candidates need review. If longer-retention testnet access becomes available, Siftle can expand the window and add selective renewal logic for high-value thread and market evidence.
-
-During testnet, market threads may keep local curated seeds for important markets. That local layer is not a replacement for Shelby; it is a prototype safety net so active markets keep consistent evidence while the public archive stays aligned with the 48-hour Shelby window.
-
-Archived snapshots include:
-
-- Date
-- Category
-- Stories
-- Source links
-- Local or 0G summaries
-- Archive metadata
-
-If Shelby is not configured or a testnet blob expires, Siftle writes and reads local archive files under `.siftle/archive` during development so the app degrades gracefully.
-
-## News Sources
-
-Siftle uses RSS feeds first, with NewsData.io and The Guardian available when API keys are configured.
-
-Current source direction:
-
-- Crypto: CoinDesk, Cointelegraph, Decrypt, The Block, CryptoSlate, Bitcoin Magazine, DL News, Blockworks, CryptoPotato, NewsBTC, Bitcoinist, CoinSpeaker
-- Sports: football and NBA only for now, including ESPN soccer/NBA, BBC Football, The Guardian Football, UEFA, Sky Sports football, NBA RSS
-- Anime: anime and manga news sources, including Anime News Network and related feeds
-- Tech: company, product, AI, cloud, startup, platform, security, and major tech company news from sources such as The Verge, TechCrunch, Wired, Engadget, Ars Technica, ZDNet, InfoQ, GitHub Blog, VentureBeat, MIT Technology Review, and Bloomberg Technology
-
-Sports is intentionally narrowed to football and NBA. The first football markets focus on World Cup storylines where the evidence naturally develops over multiple updates: England opener preparation, Neymar's Brazil fitness watch, and Iran's visa dispute. Tech is intentionally filtered away from tutorials, personal dev posts, coupons, reviews, and low-value how-to content so it can produce better threads and future market candidates.
+Supabase is the durable source for leaderboard data. Shelby is not used for critical leaderboard or market state because testnet storage can be wiped or expire.
 
 ## Local Development
 
@@ -167,7 +162,7 @@ Build:
 npm run build
 ```
 
-Run regression checks:
+Run tests:
 
 ```bash
 npm test
@@ -187,101 +182,76 @@ http://localhost:5173
 
 ## Environment
 
-Create a `.env` file from `.env.example` and configure only the services you need.
+Create `.env` from `.env.example`.
 
 Common variables:
 
 ```txt
 PORT=5173
-REFRESH_INTERVAL_MINUTES=60
-MAX_ARTICLE_AGE_HOURS=36
-RSS_ITEMS_PER_FEED=30
+PUBLIC_API_BASE_URL=
+SIFTLE_API_BASE=
 
-NEWSDATA_API_KEY=
-GUARDIAN_API_KEY=
+SUPABASE_URL=
+SUPABASE_ANON_PUBLIC_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+
+CIRCLE_API_KEY=
+CIRCLE_APP_ID=
+RESEND_API_KEY=
+RESEND_FROM=
+
+ARC_TESTNET_RPC_URL=https://rpc.testnet.arc.network
+ARC_TESTNET_USDC_ADDRESS=0x3600000000000000000000000000000000000000
+ARC_DEPLOYER_PRIVATE_KEY=
+REOWN_PROJECT_ID=
+
+AI_BRIEFING_TREASURY_ADDRESS=
+AI_BRIEFING_UNLOCK_USDC=0.05
 
 OG_RPC_URL=https://evmrpc.0g.ai
 OG_COMPUTE_PROVIDER=
 OG_COMPUTE_ENDPOINT=
 OG_COMPUTE_API_KEY=
-OG_COMPUTE_MODEL=zai-org/GLM-5-FP8
-THREAD_OG_COMPUTE_PROVIDER=
-THREAD_OG_COMPUTE_ENDPOINT=
-THREAD_OG_COMPUTE_API_KEY=
-THREAD_OG_COMPUTE_MODEL=deepseek-v4-flash
 OG_USAGE_MODE=conserve
-THREAD_REVIEW_BUDGET_PER_REFRESH=12
-SUMMARY_TIMEOUT_MS=45000
-THREAD_REVIEW_TIMEOUT_MS=90000
-THREAD_PREP_CONCURRENCY=1
-THREAD_REVIEW_CANDIDATE_LIMIT=5
-THREAD_REVIEW_SAME_DAY_CANDIDATE_LIMIT=1
-THREAD_REVIEW_CANDIDATES_PER_DAY=3
-THREAD_HISTORY_WINDOW_HOURS=48
-ALLOW_MOCK_FEEDS=false
 
+NEWSDATA_API_KEY=
+GUARDIAN_API_KEY=
 SHELBY_UPLOAD_URL=
 SHELBY_API_KEY=
-REQUIRE_SHELBY_UPLOAD=false
-
-ARC_TESTNET_RPC_URL=https://rpc.testnet.arc.network
-ARC_TESTNET_USDC_ADDRESS=0x3600000000000000000000000000000000000000
-REOWN_PROJECT_ID=
-SIFTLE_MARKET_FACTORY_ADDRESS=
-SIFTLE_MARKET_NEW_GLENN_ADDRESS=
-SIFTLE_MARKET_STRATEGY_BTC_SALE_ADDRESS=
-SIFTLE_MARKET_NBA_FINALS_ADDRESS=
-SIFTLE_MARKET_ENGLAND_WORLD_CUP_OPENER_ADDRESS=
-SIFTLE_MARKET_NEYMAR_WORLD_CUP_OPENER_ADDRESS=
-SIFTLE_MARKET_IRAN_WORLD_CUP_VISAS_ADDRESS=
-SIFTLE_MARKET_RESOLVER=
-ARC_DEPLOYER_PRIVATE_KEY=
 ```
 
-Fallback behavior:
-
-- If news API keys are missing, RSS feeds still run.
-- If real sources fail or return no fresh articles, Siftle returns an empty category by default. Mock stories are opt-in for local demos with `ALLOW_MOCK_FEEDS=true`.
-- If 0G is unavailable, Siftle falls back to local summaries and strict local thread matching.
-- If Shelby is unavailable, snapshots are archived locally.
-
-## API Endpoints
-
-Useful local endpoints:
+## Useful Endpoints
 
 ```txt
 GET  /api/status
-GET  /api/0g/status
-GET  /api/feed?category=All
-GET  /api/feed?category=Crypto
+GET  /api/markets
 GET  /api/feed?category=Sports
-GET  /api/feed?category=Anime
-GET  /api/feed?category=Tech
-GET  /api/thread?category=Crypto&sourceUrl=...
-GET  /api/market-thread?id=strategy-bitcoin-sale
-GET  /api/feed-health
-GET  /api/archive
-GET  /api/archive?date=YYYY-MM-DD&category=Crypto
-GET  /api/publish/status
-POST /api/publish/refresh
+GET  /api/market-thread?id=...
+GET  /api/leaderboard/global
+GET  /api/leaderboard/division
+GET  /api/analytics/report
+GET  /api/summary/unlock-config
+
+POST /api/analytics
+POST /api/summary/unlock
 POST /api/summary
-POST /api/archive
+POST /api/leaderboard/report
+POST /api/circle/auth/otp
+POST /api/circle/auth/verify
+POST /api/circle/tx/contract-call
 ```
-
-Feed health is the first place to check when a category looks stale. It reports generated time, story counts, real-vs-fallback counts, newest story age, source counts, thread counts, and warnings such as `fallback-mixed-with-real`, `not-newest-first`, or `published-snapshot-stale`.
-
-`/api/0g/status` shows whether 0G is configured, whether it has succeeded recently, fallback counts, usage mode, and remaining thread-review budget.
 
 ## Product Direction
 
-Siftle is becoming a news app built around developing storylines.
+Siftle is moving toward a paid-context marketplace for live events.
 
-Near-term focus:
+Near-term priorities:
 
-- Keep feeds fresh and credible
-- Improve source quality per category
-- Keep thread matching strict
-- Use 0G Compute for high-value judgment, not wasteful background work
-- Keep Shelby usage aligned with the 48-hour testnet retention window
+- Make paid AI briefings fast and reliable
+- Improve market creation and resolution workflow
+- Keep onboarding simple for first-time wallet users
+- Grow real user activity around daily markets
+- Show clear analytics for signups, AI unlocks, trades, claims, and retention
+- Package the product as a nanopayment use case for AI-generated news context
 
-Prediction markets are live on Arc testnet for the current prototype markets. The next product step is market creation rules: deciding which verified 48-hour threads deserve a market, generating clear resolution rules, and keeping market evidence synced to the original Siftle thread.
+The thesis: if the smallest useful unit of news context can be priced, unlocked, and used immediately, AI briefings become a real product instead of a generic feature.

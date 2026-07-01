@@ -3028,9 +3028,11 @@ const renderLeaderboard = (): void => {
     setLeaderboardView("global");
     renderLeaderboardSkeleton(10);
     const listContainer = document.getElementById("leaderboardListContainer");
-    const walletQuery = state.walletAddress ? `&walletAddress=${encodeURIComponent(state.walletAddress)}` : "";
+    const params = new URLSearchParams();
+    if (state.walletAddress) params.set("walletAddress", state.walletAddress);
+    const query = params.toString();
 
-    fetch(apiUrl(`/api/leaderboard/global?nocache=1${walletQuery}`))
+    fetch(apiUrl(`/api/leaderboard/global${query ? `?${query}` : ""}`))
       .then(res => res.json())
       .then((data: any) => {
         const players = data.players || [];
@@ -3086,10 +3088,12 @@ const renderLeaderboard = (): void => {
       `;
     }
 
-    const walletQuery = state.walletAddress ? `&walletAddress=${encodeURIComponent(state.walletAddress)}` : "";
-    const divQuery = targetDivNum ? `&division=${targetDivNum}` : "";
+    const params = new URLSearchParams();
+    if (state.walletAddress) params.set("walletAddress", state.walletAddress);
+    if (targetDivNum) params.set("division", String(targetDivNum));
+    const query = params.toString();
 
-    fetch(apiUrl(`/api/leaderboard/division?nocache=1${walletQuery}${divQuery}`))
+    fetch(apiUrl(`/api/leaderboard/division${query ? `?${query}` : ""}`))
       .then(res => res.json())
       .then((data: any) => {
         const divisionNumber = data.divisionNumber || 1;

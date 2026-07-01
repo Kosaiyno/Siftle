@@ -154,7 +154,9 @@ const supabaseServiceRoleKey =
   process.env.service_role ||
   "";
 const isSupabaseConfigured = Boolean(supabaseUrl && supabaseServiceRoleKey);
-const supabaseRequestTimeoutMs = Number(process.env.SUPABASE_REQUEST_TIMEOUT_MS ?? 8000);
+const supabaseRequestTimeoutMs = Number(process.env.SUPABASE_REQUEST_TIMEOUT_MS ?? 3000);
+const leaderboardCacheMs = Number(process.env.LEADERBOARD_CACHE_MS ?? 120000);
+const leaderboardBrowserCacheSeconds = Number(process.env.LEADERBOARD_BROWSER_CACHE_SECONDS ?? 15);
 
 const isAdminWallet = (address) => {
   const clean = (address || "").toLowerCase();
@@ -2050,10 +2052,11 @@ const getMarketThread = (marketId) => {
   return null;
 };
 
-const sendJson = (response, statusCode, payload) => {
+const sendJson = (response, statusCode, payload, headers = {}) => {
   response.writeHead(statusCode, {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
+    ...headers,
     ...getCorsHeaders()
   });
   response.end(JSON.stringify(payload));
@@ -5609,7 +5612,7 @@ async function getLeaderboardAnalyticsFresh() {
 
     leaderboardCache = {
       analytics: data,
-      expiresAt: now + 30_000
+      expiresAt: Date.now() + leaderboardCacheMs
     };
 
     return data;
@@ -7010,6 +7013,8 @@ const server = createServer(async (request, response) => {
       players: targetDivisionList,
       totalDivisions: Math.max(1, divisions.length),
       seasonEndsAt
+    }, {
+      "Cache-Control": `public, max-age=${leaderboardBrowserCacheSeconds}, stale-while-revalidate=60`
     });
     return;
   }
@@ -7038,6 +7043,8 @@ const server = createServer(async (request, response) => {
       nextSeasonDivisionOneCount: 6,
       nextSeasonDivisionTwoCount: 6,
       seasonEndsAt: "2026-07-19T23:59:59.000Z"
+    }, {
+      "Cache-Control": `public, max-age=${leaderboardBrowserCacheSeconds}, stale-while-revalidate=60`
     });
     return;
   }
