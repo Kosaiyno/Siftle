@@ -122,6 +122,7 @@ const leaderboardLogLookbackBlocks = Number(process.env.LEADERBOARD_LOG_LOOKBACK
 const leaderboardRpcDelayMs = Number(process.env.LEADERBOARD_RPC_DELAY_MS ?? 250);
 const leaderboardRpcRetries = Number(process.env.LEADERBOARD_RPC_RETRIES ?? 4);
 const leaderboardMarketSignalCacheMs = Number(process.env.LEADERBOARD_MARKET_SIGNAL_CACHE_MS ?? 120000);
+const marketListCacheMs = Number(process.env.MARKET_LIST_CACHE_MS ?? 120000);
 
 const LEADERBOARD_MARKET_ABI = [
   "function outcome() view returns (uint8)",
@@ -141,6 +142,11 @@ let leaderboardCache = {
 };
 let leaderboardRefreshPromise = null;
 const leaderboardMarketSignalCache = new Map();
+let marketListCache = {
+  expiresAt: 0,
+  markets: null,
+  refreshPromise: null
+};
 
 const leaderboardMode = String(process.env.LEADERBOARD_MODE || "server").toLowerCase();
 const allowClientLeaderboardFallback = leaderboardMode !== "server";
@@ -5103,6 +5109,61 @@ function getConfiguredMarketAddress(marketId) {
   return normalizeWalletAddress(marketAddresses[marketId] || "");
 }
 
+function getFastMarketsWithCachedCounts() {
+  const cachedById = new Map((marketListCache.markets || []).map((market) => [market.id, market]));
+  return getActiveMarkets().map((market) => {
+    const marketAddress = normalizeWalletAddress(market.marketAddress) || getConfiguredMarketAddress(market.id);
+    const cached = cachedById.get(market.id);
+    return {
+      ...market,
+      ...(marketAddress ? { marketAddress } : {}),
+      ...(cached?.traderCount !== undefined ? {
+        traderCount: cached.traderCount,
+        traders: cached.traders
+      } : {})
+    };
+  });
+}
+
+async function refreshMarketListCache() {
+  if (marketListCache.refreshPromise) return marketListCache.refreshPromise;
+
+  marketListCache.refreshPromise = (async () => {
+    const enrichedMarkets = [];
+    for (const market of getActiveMarkets()) {
+      const marketAddress = normalizeWalletAddress(market.marketAddress) || getConfiguredMarketAddress(market.id);
+      if (!marketAddress || isLocalTestMarketAddress(marketAddress)) {
+        enrichedMarkets.push(market);
+        continue;
+      }
+
+      try {
+        const { traders } = await collectMarketTradeSignals(marketAddress, market.deploymentBlock);
+        const traderCount = traders.size;
+        enrichedMarkets.push({
+          ...market,
+          marketAddress,
+          traderCount,
+          traders: traderCount > 0 ? String(traderCount) : String(market.traders || "0")
+        });
+      } catch {
+        enrichedMarkets.push({
+          ...market,
+          marketAddress
+        });
+      }
+    }
+
+    marketListCache.markets = enrichedMarkets;
+    marketListCache.expiresAt = Date.now() + marketListCacheMs;
+    return enrichedMarkets;
+  })().finally(() => {
+    marketListCache.refreshPromise = null;
+  });
+
+  return marketListCache.refreshPromise;
+}
+
 function getSeasonId() {
   return "season-1-world-cup-2026";
 }
@@ -6769,32 +6830,16 @@ const server = createServer(async (request, response) => {
 
   if (requestUrl.pathname === "/api/markets" && request.method === "GET") {
     try {
-      const markets = getActiveMarkets();
-      const enrichedMarkets = [];
-      for (const market of markets) {
-        const marketAddress = normalizeWalletAddress(market.marketAddress) || getConfiguredMarketAddress(market.id);
-        if (!marketAddress || isLocalTestMarketAddress(marketAddress)) {
-          enrichedMarkets.push(market);
-          continue;
-        }
-
-        try {
-          const { traders } = await collectMarketTradeSignals(marketAddress, market.deploymentBlock);
-          const traderCount = traders.size;
-          enrichedMarkets.push({
-            ...market,
-            marketAddress,
-            traderCount,
-            traders: traderCount > 0 ? String(traderCount) : String(market.traders || "0")
-          });
-        } catch {
-          enrichedMarkets.push({
-            ...market,
-            marketAddress
-          });
-        }
+      if (marketListCache.markets && marketListCache.expiresAt > Date.now()) {
+        sendJson(response, 200, marketListCache.markets);
+        return;
       }
-      sendJson(response, 200, enrichedMarkets);
+
+      const fastMarkets = getFastMarketsWithCachedCounts();
+      sendJson(response, 200, fastMarkets);
+      void refreshMarketListCache().catch((error) => {
+        console.warn("[MARKETS] Background trader-count refresh failed:", error.message);
+      });
     } catch (error) {
       sendJson(response, 500, { error: error.message });
     }
