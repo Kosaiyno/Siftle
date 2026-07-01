@@ -116,6 +116,9 @@ const erc20TransferInterface = new Interface([
 const erc20TransferTopic = erc20TransferInterface.getEvent("Transfer").topicHash;
 const leaderboardLogChunkSize = Number(process.env.LEADERBOARD_LOG_CHUNK_SIZE ?? 9000);
 const leaderboardLogLookbackBlocks = Number(process.env.LEADERBOARD_LOG_LOOKBACK_BLOCKS ?? 500000);
+const leaderboardRpcDelayMs = Number(process.env.LEADERBOARD_RPC_DELAY_MS ?? 250);
+const leaderboardRpcRetries = Number(process.env.LEADERBOARD_RPC_RETRIES ?? 4);
+const leaderboardMarketSignalCacheMs = Number(process.env.LEADERBOARD_MARKET_SIGNAL_CACHE_MS ?? 120000);
 
 const LEADERBOARD_MARKET_ABI = [
   "function outcome() view returns (uint8)",
@@ -133,6 +136,8 @@ let leaderboardCache = {
   expiresAt: 0,
   analytics: null
 };
+let leaderboardRefreshPromise = null;
+const leaderboardMarketSignalCache = new Map();
 
 const leaderboardMode = String(process.env.LEADERBOARD_MODE || "server").toLowerCase();
 const allowClientLeaderboardFallback = leaderboardMode !== "server";
@@ -5162,7 +5167,48 @@ function ensureLeaderboardState(data) {
   return data.leaderboard;
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
+}
+
+function isRateLimitError(error) {
+  const message = String(error?.message || error || "");
+  return /rate limit|too many requests|429|request limit/i.test(message);
+}
+
+async function retryLeaderboardRpc(operation, label) {
+  let lastError = null;
+  for (let attempt = 0; attempt <= leaderboardRpcRetries; attempt += 1) {
+    try {
+      if (leaderboardRpcDelayMs > 0) await sleep(leaderboardRpcDelayMs);
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (!isRateLimitError(error) || attempt >= leaderboardRpcRetries) break;
+      const backoff = leaderboardRpcDelayMs * Math.pow(2, attempt + 1);
+      console.warn(`[LEADERBOARD] RPC rate limited while reading ${label}; retrying in ${backoff}ms`);
+      await sleep(backoff);
+    }
+  }
+  throw lastError;
+}
+
+function cloneTradeSignals(signals) {
+  return {
+    traders: new Set(signals.traders || []),
+    switched: new Set(signals.switched || []),
+    redeemed: new Set(signals.redeemed || []),
+    firstActivityBlocks: new Map(signals.firstActivityBlocks || [])
+  };
+}
+
 async function collectMarketTradeSignals(marketAddress, fromBlockHint = null) {
+  const cacheKey = `${normalizeWalletAddress(marketAddress) || marketAddress}:${Number(fromBlockHint) || 0}`;
+  const cached = leaderboardMarketSignalCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cloneTradeSignals(cached.signals);
+  }
+
   const traders = new Set();
   const boughtYes = new Set();
   const boughtNo = new Set();
@@ -5170,7 +5216,10 @@ async function collectMarketTradeSignals(marketAddress, fromBlockHint = null) {
   const firstActivityBlocks = new Map();
 
   const fetchLogsChunked = async (topic) => {
-    const latest = await leaderboardProvider.getBlockNumber();
+    const latest = await retryLeaderboardRpc(
+      () => leaderboardProvider.getBlockNumber(),
+      "latest block"
+    );
     const safeChunk = Math.max(100, leaderboardLogChunkSize);
     const lookback = Math.max(safeChunk, leaderboardLogLookbackBlocks);
     const hintedStart = Number(fromBlockHint);
@@ -5181,12 +5230,15 @@ async function collectMarketTradeSignals(marketAddress, fromBlockHint = null) {
 
     for (let fromBlock = start; fromBlock <= latest; fromBlock += safeChunk) {
       const toBlock = Math.min(fromBlock + safeChunk - 1, latest);
-      const logs = await leaderboardProvider.getLogs({
-        address: marketAddress,
-        topics: [topic],
-        fromBlock,
-        toBlock
-      });
+      const logs = await retryLeaderboardRpc(
+        () => leaderboardProvider.getLogs({
+          address: marketAddress,
+          topics: [topic],
+          fromBlock,
+          toBlock
+        }),
+        `${marketAddress} ${fromBlock}-${toBlock}`
+      );
       allLogs.push(...logs);
     }
 
@@ -5235,7 +5287,12 @@ async function collectMarketTradeSignals(marketAddress, fromBlockHint = null) {
     if (boughtNo.has(address)) switched.add(address);
   });
 
-  return { traders, switched, redeemed, firstActivityBlocks };
+  const signals = { traders, switched, redeemed, firstActivityBlocks };
+  leaderboardMarketSignalCache.set(cacheKey, {
+    expiresAt: Date.now() + leaderboardMarketSignalCacheMs,
+    signals: cloneTradeSignals(signals)
+  });
+  return signals;
 }
 
 async function recomputeLeaderboardFromChain(data) {
@@ -5271,7 +5328,10 @@ async function recomputeLeaderboardFromChain(data) {
     let outcome = 0;
     try {
       const contract = new Contract(marketAddress, LEADERBOARD_MARKET_ABI, leaderboardProvider);
-      outcome = Number(await contract.outcome()) || 0;
+      outcome = Number(await retryLeaderboardRpc(
+        () => contract.outcome(),
+        `${marketId} outcome`
+      )) || 0;
 
       if (outcome === 0) continue;
 
@@ -5279,12 +5339,15 @@ async function recomputeLeaderboardFromChain(data) {
       if (firstActivityEntries.length > 0) {
         const blockNumbers = Array.from(new Set(firstActivityEntries.map(([, blockNumber]) => blockNumber).filter(Boolean)));
         const blockTimes = new Map();
-        await Promise.all(blockNumbers.map(async (blockNumber) => {
+        for (const blockNumber of blockNumbers) {
           try {
-            const block = await leaderboardProvider.getBlock(blockNumber);
+            const block = await retryLeaderboardRpc(
+              () => leaderboardProvider.getBlock(blockNumber),
+              `block ${blockNumber}`
+            );
             if (block?.timestamp) blockTimes.set(blockNumber, new Date(Number(block.timestamp) * 1000).toISOString());
           } catch {}
-        }));
+        }
         firstActivityEntries.forEach(([address, blockNumber]) => {
           const firstActivityAt = blockTimes.get(blockNumber);
           if (!firstActivityAt) return;
@@ -5301,23 +5364,26 @@ async function recomputeLeaderboardFromChain(data) {
       }
 
       const traderList = Array.from(traders);
-      const positions = await Promise.all(
-        traderList.map(async (address) => {
-          try {
-            const [yesRaw, noRaw] = await Promise.all([
-              contract.yesShares(address),
-              contract.noShares(address)
-            ]);
-            return {
-              address,
-              yesSharesUsdc: Number(formatUnits(yesRaw, 6)),
-              noSharesUsdc: Number(formatUnits(noRaw, 6))
-            };
-          } catch {
-            return { address, yesSharesUsdc: 0, noSharesUsdc: 0 };
-          }
-        })
-      );
+      const positions = [];
+      for (const address of traderList) {
+        try {
+          const yesRaw = await retryLeaderboardRpc(
+            () => contract.yesShares(address),
+            `${marketId} yesShares ${address}`
+          );
+          const noRaw = await retryLeaderboardRpc(
+            () => contract.noShares(address),
+            `${marketId} noShares ${address}`
+          );
+          positions.push({
+            address,
+            yesSharesUsdc: Number(formatUnits(yesRaw, 6)),
+            noSharesUsdc: Number(formatUnits(noRaw, 6))
+          });
+        } catch {
+          positions.push({ address, yesSharesUsdc: 0, noSharesUsdc: 0 });
+        }
+      }
 
       for (const position of positions) {
         const address = position.address;
@@ -5411,22 +5477,32 @@ async function getLeaderboardAnalyticsFresh() {
     return leaderboardCache.analytics;
   }
 
-  const data = loadAnalytics();
-  await loadLeaderboardFromSupabase(data);
-  try {
-    await recomputeLeaderboardFromChain(data);
-    saveAnalytics(data);
-    await saveLeaderboardToSupabase(data);
-  } catch (err) {
-    console.error("[LEADERBOARD] Recompute failed:", err);
+  if (leaderboardRefreshPromise) {
+    return leaderboardRefreshPromise;
   }
 
-  leaderboardCache = {
-    analytics: data,
-    expiresAt: now + 30_000
-  };
+  leaderboardRefreshPromise = (async () => {
+    const data = loadAnalytics();
+    await loadLeaderboardFromSupabase(data);
+    try {
+      await recomputeLeaderboardFromChain(data);
+      saveAnalytics(data);
+      await saveLeaderboardToSupabase(data);
+    } catch (err) {
+      console.error("[LEADERBOARD] Recompute failed:", err);
+    }
 
-  return data;
+    leaderboardCache = {
+      analytics: data,
+      expiresAt: now + 30_000
+    };
+
+    return data;
+  })().finally(() => {
+    leaderboardRefreshPromise = null;
+  });
+
+  return leaderboardRefreshPromise;
 }
 
 function trackAnalyticsEvent(event, email = null) {
@@ -6688,28 +6764,30 @@ const server = createServer(async (request, response) => {
   if (requestUrl.pathname === "/api/markets" && request.method === "GET") {
     try {
       const markets = getActiveMarkets();
-      const enrichedMarkets = await Promise.all(markets.map(async (market) => {
+      const enrichedMarkets = [];
+      for (const market of markets) {
         const marketAddress = normalizeWalletAddress(market.marketAddress) || getConfiguredMarketAddress(market.id);
         if (!marketAddress || isLocalTestMarketAddress(marketAddress)) {
-          return market;
+          enrichedMarkets.push(market);
+          continue;
         }
 
         try {
           const { traders } = await collectMarketTradeSignals(marketAddress, market.deploymentBlock);
           const traderCount = traders.size;
-          return {
+          enrichedMarkets.push({
             ...market,
             marketAddress,
             traderCount,
             traders: traderCount > 0 ? String(traderCount) : String(market.traders || "0")
-          };
+          });
         } catch {
-          return {
+          enrichedMarkets.push({
             ...market,
             marketAddress
-          };
+          });
         }
-      }));
+      }
       sendJson(response, 200, enrichedMarkets);
     } catch (error) {
       sendJson(response, 500, { error: error.message });
