@@ -2115,7 +2115,7 @@ const drawShareCard = async (story: NewsStory, includeRemoteImage = true): Promi
   context.fill();
   context.shadowColor = "transparent";
 
-  const logo = await loadCanvasImage("./assets/siftle logo.png").catch(() => null);
+  const logo = await loadCanvasImage("./assets/siftle-logo-small.png").catch(() => null);
   if (logo) {
     context.drawImage(logo, 784, 106, 54, 54);
   }
@@ -2362,24 +2362,17 @@ const renderDetail = (): void => {
 };
 
 const renderMarketCard = (market: MarketPreview): string => {
-  const isCheckingEvidence = !state.checkedMarketEvidence[market.id];
   const snapshot = state.marketSnapshots[market.id];
   const marketAddress = getMarketAddress(market);
-  const isLoadingSnapshot = Boolean(marketAddress && !snapshot);
-
-  if (isCheckingEvidence || isLoadingSnapshot) {
-    return `
-      <div class="market-card skeleton-market-card" aria-busy="true">
-        ${renderMarketCardSkeletonInner()}
-        ${renderSkeletonAria("Loading market data")}
-      </div>
-    `;
-  }
 
   const yesPrice = snapshot?.yesPriceCents;
-  const probabilityLabel = yesPrice === undefined ? "--" : `${yesPrice}%`;
+  const displayProbability = yesPrice ?? market.probability;
+  const probabilityLabel = `${displayProbability}%`;
   const shareLabel =
     yesPrice === undefined ? (marketAddress ? "Loading Arc pools" : "Arc setup required") : `Yes ${yesPrice}¢ · No ${100 - yesPrice}¢`;
+  const displayShareLabel = yesPrice === undefined
+    ? `Yes ${market.probability}c - No ${100 - market.probability}c`
+    : shareLabel;
   const view = getMarketView(market);
 
   return `
@@ -2397,16 +2390,16 @@ const renderMarketCard = (market: MarketPreview): string => {
         </div>
         ${view.imageUrl ? `
         <div class="market-card-image-frame" style="width: 72px; height: 72px; min-width: 72px; border-radius: 12px; overflow: hidden; border: 1px solid var(--market-border); flex-shrink: 0;">
-          <img src="${view.imageUrl}" alt="" style="width: 100%; height: 100%; object-fit: cover;" />
+          <img src="${view.imageUrl}" alt="" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover;" />
         </div>
         ` : ""}
       </div>
       <div class="market-probability-row">
         <strong>${probabilityLabel}</strong>
         <span>${marketAddress ? "market probability" : "pending deployment"}</span>
-        <span class="market-share-prices">${shareLabel}</span>
+        <span class="market-share-prices">${displayShareLabel}</span>
       </div>
-      <div class="market-meter" aria-hidden="true"><span style="width: ${yesPrice ?? 0}%"></span></div>
+      <div class="market-meter" aria-hidden="true"><span style="width: ${displayProbability}%"></span></div>
       <div class="market-card-footer">
         <span>${view.evidence.length} thread updates</span>
         <span>${snapshot ? `$${Math.round(snapshot.volumeUsdc).toLocaleString()} volume` : `Closes ${market.closes}`}</span>

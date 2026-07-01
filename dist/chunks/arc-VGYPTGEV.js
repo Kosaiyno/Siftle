@@ -173,7 +173,7 @@ import{a as Vp,b as v,c as jp,d as n5,e as jo,f as b,g as d,h as A,i as g,j as T
       <div class="circle-auth-card">
         <button class="circle-auth-close" id="circleAuthClose" type="button">&times;</button>
         <div class="circle-auth-logo">
-          <img src="./assets/siftle logo.png" alt="Siftle logo" />
+          <img src="./assets/siftle-logo-small.png" alt="Siftle logo" />
           <h2>Sign In to Siftle</h2>
         </div>
         <p class="circle-auth-subtitle">Verify your email to manage predictions and trade</p>
