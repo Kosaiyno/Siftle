@@ -809,7 +809,7 @@ Trade and discuss here: ${a}`},yK=r=>{if(!ve||!Ie)return;let e=Um(r),t=!p.checke
       <div class="division-title-container">
         <div class="division-title-left" style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap !important; flex-shrink: 0 !important;">
           <h2 id="divisionTitleText" style="margin: 0; white-space: nowrap !important;">Division 1</h2>
-          <button class="how-it-works-btn" id="howItWorksBtn" type="button" style="background: rgba(255,255,255,0.06) !important; border: 1px solid #1e1f2b !important; color: #ffffff !important; border-radius: 6px !important; padding: 4px 10px !important; font-size: 0.82rem !important; font-weight: 600 !important; cursor: pointer !important; font-family: 'Space Grotesk', sans-serif !important; white-space: nowrap !important; flex-shrink: 0 !important;">How it works</button>
+          <button class="how-it-works-btn" id="howItWorksBtn" type="button" style="background: var(--market-pill-bg) !important; border: 1px solid var(--market-border) !important; color: var(--market-text-main) !important; border-radius: 6px !important; padding: 4px 10px !important; font-size: 0.82rem !important; font-weight: 600 !important; cursor: pointer !important; font-family: 'Space Grotesk', sans-serif !important; white-space: nowrap !important; flex-shrink: 0 !important;">How it works</button>
         </div>
         <select id="divisionSelector" class="division-select-menu">
           <option value="1">Division 1</option>
@@ -880,11 +880,11 @@ Trade and discuss here: ${a}`},yK=r=>{if(!ve||!Ie)return;let e=Um(r),t=!p.checke
                   <div style="flex: 1.5; display: flex; align-items: center; gap: 8px; min-width: 0;">
                     ${xe}
                     <span class="leaderboard-rank rank-${O}" style="flex-shrink: 0; margin-right: 4px;">${O}</span>
-                    <span class="leaderboard-username" style="font-weight: 600; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${ee}</span>
+                    <span class="leaderboard-username" style="font-weight: 600; color: var(--market-text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${ee}</span>
                   </div>
                   <!-- Center Side: Points -->
                   <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
-                    <span style="color: #ffffff; font-weight: 750; font-size: 0.95rem; white-space: nowrap;">${L.points} pts</span>
+                    <span style="color: var(--market-text-main); font-weight: 750; font-size: 0.95rem; white-space: nowrap;">${L.points} pts</span>
                   </div>
                   <!-- Right Side: Status -->
                   <div style="flex: 1.5; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; text-align: right; min-width: 0;">
