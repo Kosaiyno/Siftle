@@ -37,7 +37,39 @@ create index if not exists leaderboard_entries_points_idx
 create index if not exists resolved_results_market_idx
   on resolved_results (market_id);
 
+create table if not exists analytics_daily (
+  date_key text primary key,
+  app_open integer default 0,
+  wallet_connect_start integer default 0,
+  wallet_connect_success integer default 0,
+  wallet_connect_failed integer default 0,
+  sign_up integer default 0,
+  market_view integer default 0,
+  trade_drawer_open integer default 0,
+  trade_attempt integer default 0,
+  trade_buy_success integer default 0,
+  trade_sell_success integer default 0,
+  trade_failed integer default 0,
+  claim_attempt integer default 0,
+  claim_success integer default 0,
+  claim_failed integer default 0,
+  ai_unlock_attempt integer default 0,
+  ai_unlock_success integer default 0,
+  ai_unlock_failed integer default 0,
+  view_summary integer default 0,
+  open_source integer default 0,
+  updated_at timestamptz default now()
+);
+
+create table if not exists analytics_signups (
+  email_hash text primary key,
+  date_key text not null,
+  created_at timestamptz default now()
+);
+
 grant usage on schema public to service_role;
 grant select, insert, update, delete on table profiles to service_role;
 grant select, insert, update, delete on table leaderboard_entries to service_role;
 grant select, insert, update, delete on table resolved_results to service_role;
+grant select, insert, update, delete on table analytics_daily to service_role;
+grant select, insert, update, delete on table analytics_signups to service_role;

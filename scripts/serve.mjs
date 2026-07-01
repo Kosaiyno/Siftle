@@ -4820,6 +4820,10 @@ function saveAnalytics(data) {
   }
 }
 
+const analyticsSupabaseSelect = ["date_key", ...analyticsEventKeys, "updated_at"].join(",");
+
+const emailHash = (email) => createHash("sha256").update(String(email || "").trim().toLowerCase()).digest("hex");
+
 function mergeLeaderboardTraders(localTraders = {}, remoteTraders = {}) {
   const merged = {};
   const addresses = new Set([
@@ -4929,6 +4933,77 @@ async function supabaseRequest(path, options = {}) {
     throw new Error(`Supabase ${options.method || "GET"} ${path} failed: ${text || response.statusText}`);
   }
   return data;
+}
+
+async function loadAnalyticsFromSupabase(localData = loadAnalytics()) {
+  const data = normalizeAnalytics(localData);
+  if (!isSupabaseConfigured) return data;
+
+  try {
+    const rows = await supabaseRequest(`analytics_daily?select=${analyticsSupabaseSelect}&order=date_key.desc&limit=120`);
+    (rows || []).forEach((row) => {
+      const dateKey = String(row.date_key || "").trim();
+      if (!dateKey) return;
+
+      const existing = data.daily[dateKey] || createEmptyAnalyticsCounts();
+      const merged = { ...createEmptyAnalyticsCounts(), ...existing };
+      analyticsEventKeys.forEach((key) => {
+        merged[key] = Math.max(Number(existing[key]) || 0, Number(row[key]) || 0);
+      });
+      data.daily[dateKey] = merged;
+    });
+    return normalizeAnalytics(data);
+  } catch (err) {
+    console.warn("[SUPABASE] Analytics read failed; using local fallback:", err.message);
+    return data;
+  }
+}
+
+async function incrementAnalyticsEventInSupabase(event, email = null) {
+  const cleanEvent = String(event || "").trim();
+  if (!isSupabaseConfigured || !analyticsEventKeys.includes(cleanEvent)) {
+    return { saved: false, skipped: true };
+  }
+
+  try {
+    if (cleanEvent === "sign_up" && email) {
+      const inserted = await supabaseRequest("analytics_signups?on_conflict=email_hash", {
+        method: "POST",
+        prefer: "resolution=ignore-duplicates,return=representation",
+        body: [{
+          email_hash: emailHash(email),
+          date_key: getTodayKey()
+        }]
+      });
+      if (Array.isArray(inserted) && inserted.length === 0) {
+        return { saved: true, duplicate: true };
+      }
+    }
+
+    const dateKey = getTodayKey();
+    const encodedDate = encodeURIComponent(dateKey);
+    const existingRows = await supabaseRequest(`analytics_daily?date_key=eq.${encodedDate}&select=${analyticsSupabaseSelect}`);
+    const existing = existingRows?.[0] || {};
+    const nextRow = {
+      date_key: dateKey,
+      updated_at: new Date().toISOString()
+    };
+
+    analyticsEventKeys.forEach((key) => {
+      nextRow[key] = Number(existing[key]) || 0;
+    });
+    nextRow[cleanEvent] += 1;
+
+    await supabaseRequest("analytics_daily?on_conflict=date_key", {
+      method: "POST",
+      prefer: "resolution=merge-duplicates,return=minimal",
+      body: [nextRow]
+    });
+    return { saved: true };
+  } catch (err) {
+    console.warn("[SUPABASE] Analytics write failed; local JSON fallback kept:", err.message);
+    return { saved: false, error: err.message };
+  }
 }
 
 function parseLeaderboardStatus(status = "") {
@@ -5625,7 +5700,9 @@ async function getLeaderboardAnalyticsFresh() {
 
 function trackAnalyticsEvent(event, email = null) {
   const cleanEvent = String(event || "").trim();
-  if (!cleanEvent) return;
+  if (!analyticsEventKeys.includes(cleanEvent)) {
+    return Promise.resolve({ saved: false, skipped: true });
+  }
 
   const data = normalizeAnalytics(loadAnalytics());
 
@@ -5633,7 +5710,7 @@ function trackAnalyticsEvent(event, email = null) {
     if (email) {
       const cleanEmail = email.toLowerCase().trim();
       if (data.emails.includes(cleanEmail)) {
-        return; // Already signed up
+        return Promise.resolve({ saved: false, duplicate: true }); // Already signed up
       }
       data.emails.push(cleanEmail);
     }
@@ -5648,6 +5725,7 @@ function trackAnalyticsEvent(event, email = null) {
   data.daily[dateKey][cleanEvent] = (data.daily[dateKey][cleanEvent] || 0) + 1;
 
   saveAnalytics(data);
+  return incrementAnalyticsEventInSupabase(cleanEvent, email);
 }
 
 function getAnalyticsHtml() {
@@ -6251,7 +6329,11 @@ const server = createServer(async (request, response) => {
   }
 
   if (requestUrl.pathname === "/api/analytics/report" && request.method === "GET") {
-    sendJson(response, 200, loadAnalytics());
+    const data = await loadAnalyticsFromSupabase(loadAnalytics());
+    sendJson(response, 200, {
+      ...data,
+      supabaseConfigured: isSupabaseConfigured
+    });
     return;
   }
 
@@ -6259,8 +6341,13 @@ const server = createServer(async (request, response) => {
     try {
       const body = await readJsonBody(request);
       if (body && body.event) {
-        trackAnalyticsEvent(body.event);
-        sendJson(response, 200, { success: true });
+        const supabaseResult = await trackAnalyticsEvent(body.event);
+        sendJson(response, 200, {
+          success: true,
+          supabaseConfigured: isSupabaseConfigured,
+          supabaseSaved: Boolean(supabaseResult?.saved),
+          supabaseError: supabaseResult?.error || ""
+        });
       } else {
         sendJson(response, 400, { error: "Event name is required" });
       }
