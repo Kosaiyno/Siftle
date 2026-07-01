@@ -87,18 +87,11 @@ const leaderboardProvider = new JsonRpcProvider(ARC_TESTNET_RPC_URL, ARC_TESTNET
 const LOCAL_TEST_MARKET_ADDRESS = "0x0000000000000000000000000000000000000101";
 const isLocalTestMarketAddress = (address) => /^0x0{36}01[0-9a-f]{2}$/i.test(String(address || ""));
 const marketAddresses = {
-  "wc-ivory-coast-eliminate-norway": process.env.SIFTLE_MARKET_IVORY_COAST_NORWAY_ADDRESS || "0xA9ba7b00F60dc541c1C73917Aba92577F3d1A252",
-  "wc-haaland-outscore-mbappe": process.env.SIFTLE_MARKET_HAALAND_MBAPPE_ADDRESS || "0x74f77d841d1a3e664Ba6C70f13a6E93E95dEA9D9",
-  "wc-france-sweden-spread": process.env.SIFTLE_MARKET_FRANCE_SWEDEN_ADDRESS || "0x18EF2D26ec18a4cd2835216E736a6655fFB8136D",
-  "transfer-davies-realmadrid": process.env.SIFTLE_MARKET_DAVIES_ADDRESS || "0xa8D7bd361e33aE4dd9638D3afA9f1f01f0018423",
+  "wc-england-score-both-halves-drc": process.env.SIFTLE_MARKET_ENGLAND_DRC_BOTH_HALVES_ADDRESS || "0x226BfF2b5A5e4F5686cfB37FaD7Dd345CfD68e01",
+  "wc-de-bruyne-score-assist-senegal": process.env.SIFTLE_MARKET_DE_BRUYNE_SENEGAL_ADDRESS || "0x3603A839044Cc187A5B564C1b413BB764E8dA4E1",
+  "wc-usa-score-before-20-bosnia": process.env.SIFTLE_MARKET_USA_BOSNIA_EARLY_GOAL_ADDRESS || "0x1B890c4F066BC260cE3F0a8266303052080a0FB4",
   "transfer-tonali-spurs": process.env.SIFTLE_MARKET_TONALI_ADDRESS || "0xB4F9E7a45aB1B4D26D71e32b67565cE875220615",
-  "transfer-guimaraes-arsenal": process.env.SIFTLE_MARKET_GUIMARAES_ADDRESS || "0xc83F2feA4b9cF25d074c4a8F26D13f26156b496B",
-  "wc-mbappe-haaland-goals": process.env.SIFTLE_MARKET_MBAPPE_HAALAND_ADDRESS || "0x1a88012C4a397085FB49cD00185Ce4E9cb0bB768",
-  "wc-england-panama-spread": process.env.SIFTLE_MARKET_ENGLAND_PANAMA_ADDRESS || "0x0e7a9A2D2e9D7ef96E967bd89816d138829Cb73c",
-  "wc-croatia-ghana-spread": process.env.SIFTLE_MARKET_CROATIA_GHANA_ADDRESS || "0x6e7A9A2D2e9D7ef96E967bd89816d138829Cb73c",
-  "wc-scotland-qualification": process.env.SIFTLE_MARKET_SCOTLAND_ADDRESS || "0xb7315D790Ab4FbED3bD7B50477984F7aE6Eabf14",
-  "manga-onepiece-1200": process.env.SIFTLE_MARKET_ONE_PIECE_ADDRESS || "0x6AC2CFa9112C40b9D4A2Bd9d49aC82859889057c",
-  "wc-messi-ronaldo-16": process.env.SIFTLE_MARKET_MESSI_RONALDO_ADDRESS || "0x4aBc5E6Adcf26E35d70A2b38506896CEd8170a09"
+  "transfer-guimaraes-arsenal": process.env.SIFTLE_MARKET_GUIMARAES_ADDRESS || "0xc83F2feA4b9cF25d074c4a8F26D13f26156b496B"
 };
 const ARC_TESTNET_USDC = process.env.ARC_TESTNET_USDC_ADDRESS || "0x3600000000000000000000000000000000000000";
 const aiBriefingUnlockUsdc = Number(process.env.AI_BRIEFING_UNLOCK_USDC ?? 0.05);
@@ -3211,17 +3204,12 @@ const getActiveMarketQueriesStr = (category) => {
       : markets.filter(m => m.category === category);
     
     const phrases = categoryMarkets.map(m => {
-      if (m.id === "wc-ivory-coast-eliminate-norway") return `"Ivory Coast" "Norway" "World Cup"`;
-      if (m.id === "wc-haaland-outscore-mbappe") return `"Haaland" "Mbappe" "World Cup"`;
-      if (m.id === "wc-france-sweden-spread") return `"France" "Sweden" "World Cup"`;
-      if (m.id === "transfer-davies-realmadrid") return `"Alphonso Davies" "Real Madrid"`;
+      if (m.id === "wc-england-score-both-halves-drc") return `"England" "DR Congo" "World Cup"`;
+      if (m.id === "wc-de-bruyne-score-assist-senegal") return `"Kevin De Bruyne" "Senegal" "World Cup"`;
+      if (m.id === "wc-usa-score-before-20-bosnia") return `"United States" "Bosnia" "World Cup"`;
       if (m.id === "transfer-tonali-spurs") return `"Sandro Tonali" "Tottenham"`;
       if (m.id === "transfer-guimaraes-arsenal") return `"Bruno Guimarães" "Arsenal"`;
       if (m.id === "wc-mbappe-haaland-goals") return `"Mbappé" "Haaland"`;
-      if (m.id === "wc-england-panama-spread") return `"England" "Panama"`;
-      if (m.id === "wc-scotland-qualification") return `"Scotland" "World Cup"`;
-      if (m.id === "manga-onepiece-1200") return `"One Piece" "Manga"`;
-      if (m.id === "wc-messi-ronaldo-16") return `"Messi" "Ronaldo"`;
       return m.threadTopic;
     });
 
@@ -5168,6 +5156,33 @@ function compareLeaderboardPlayers(a, b) {
   return String(a.username || "").localeCompare(String(b.username || ""));
 }
 
+function buildLeaderboardPlayers(data, walletAddress = "") {
+  const tradersMap = data.leaderboard?.traders || {};
+  const players = Object.entries(tradersMap)
+    .filter(([address]) => !isAdminWallet(address))
+    .map(([address, info]) => ({
+      username: address,
+      displayName: String(info.username || ""),
+      points: Number(info.points) || 0,
+      status: String(info.status || ""),
+      first_activity_at: info.first_activity_at,
+      updated_at: info.updated_at
+    }));
+
+  if (walletAddress && !isAdminWallet(walletAddress) && !players.some((player) => player.username === walletAddress)) {
+    players.push({
+      username: walletAddress,
+      displayName: "",
+      points: 0,
+      status: "0 wins, 0 losses",
+      first_activity_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+  }
+
+  return players.sort(compareLeaderboardPlayers);
+}
+
 function ensureLeaderboardState(data) {
   if (!data.leaderboard) data.leaderboard = {};
   if (!data.leaderboard.traders) data.leaderboard.traders = {};
@@ -6910,31 +6925,7 @@ const server = createServer(async (request, response) => {
     const reqDivisionNumber = divisionParam ? Number(divisionParam) : null;
 
     const data = await getLeaderboardAnalyticsFresh();
-    const tradersMap = data.leaderboard?.traders || {};
-    
-    const tradersList = Object.entries(tradersMap)
-      .filter(([address]) => !isAdminWallet(address))
-      .map(([address, info]) => ({
-        username: address,
-        displayName: String(info.username || ""),
-        points: Number(info.points) || 0,
-        status: String(info.status || ""),
-        first_activity_at: info.first_activity_at,
-        updated_at: info.updated_at
-      }));
-    
-    tradersList.sort(compareLeaderboardPlayers);
-    
-    if (walletAddress && !isAdminWallet(walletAddress) && !tradersList.some(t => t.username === walletAddress)) {
-      tradersList.push({
-        username: walletAddress,
-        displayName: "",
-        points: 0,
-        status: "0 wins, 0 losses",
-        first_activity_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
-    }
+    const tradersList = buildLeaderboardPlayers(data, walletAddress);
     
     const seasonId = getSeasonId();
     const { divisions, assignments } = buildSeasonDivisions(data, tradersList, seasonId);
@@ -6959,6 +6950,34 @@ const server = createServer(async (request, response) => {
       players: targetDivisionList,
       totalDivisions: Math.max(1, divisions.length),
       seasonEndsAt
+    });
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/leaderboard/global" && request.method === "GET") {
+    const walletAddress = normalizeWalletAddress(requestUrl.searchParams.get("walletAddress") || "");
+    const data = await getLeaderboardAnalyticsFresh();
+    const players = buildLeaderboardPlayers(data, walletAddress).map((player, index) => {
+      const rank = index + 1;
+      let nextSeasonDivision = null;
+      if (rank <= 6) nextSeasonDivision = 1;
+      else if (rank <= 12) nextSeasonDivision = 2;
+
+      return {
+        ...player,
+        globalRank: rank,
+        prizeEligible: rank <= 10,
+        nextSeasonDivision
+      };
+    });
+
+    sendJson(response, 200, {
+      players,
+      prizePoolUsdc: 150,
+      prizeEligibleCount: 10,
+      nextSeasonDivisionOneCount: 6,
+      nextSeasonDivisionTwoCount: 6,
+      seasonEndsAt: "2026-07-19T23:59:59.000Z"
     });
     return;
   }
