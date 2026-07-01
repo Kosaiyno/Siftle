@@ -1,4 +1,5 @@
 import type { ArchiveDate, Category, NewsStory, StoryThread } from "./types.js";
+import { fallbackMarketPreviews } from "./fallbackMarkets.js";
 import type { ArcMarketPosition, ArcMarketSnapshot } from "./arc.js";
 
 const ARC_TESTNET_FAUCET = "https://faucet.circle.com/";
@@ -228,14 +229,21 @@ type BriefingTarget = NewsStory;
 
 const DAILY_TRADE_LOCK_MINUTES = 20;
 
-let marketPreviews: MarketPreview[] = [];
+let marketPreviews: MarketPreview[] = fallbackMarketPreviews;
 
 const loadMarkets = async (): Promise<void> => {
   state.loadingMarkets = true;
+  if (marketPreviews.length === 0) marketPreviews = fallbackMarketPreviews;
   try {
-    const res = await fetch(apiUrl("/api/markets"));
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 3500);
+    const res = await fetch(apiUrl("/api/markets"), { signal: controller.signal });
+    window.clearTimeout(timeout);
     if (res.ok) {
-      marketPreviews = await res.json();
+      const markets = await res.json();
+      if (Array.isArray(markets) && markets.length > 0) {
+        marketPreviews = markets;
+      }
     }
   } catch (err) {
     console.error("Failed to load markets:", err);
@@ -2672,7 +2680,6 @@ const renderMarkets = (): void => {
   topMarketsButton?.classList.add("active");
   topNewsButton?.classList.remove("active");
   topPortfolioButton?.classList.remove("active");
-  marketPreviews.forEach((market) => void loadMarketSnapshot(market));
   window.setTimeout(() => {
     if (state.activeSurface === "markets") {
       marketPreviews.forEach((market) => void loadMarketEvidence(market));
