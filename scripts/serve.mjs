@@ -87,9 +87,6 @@ const leaderboardProvider = new JsonRpcProvider(ARC_TESTNET_RPC_URL, ARC_TESTNET
 const LOCAL_TEST_MARKET_ADDRESS = "0x0000000000000000000000000000000000000101";
 const isLocalTestMarketAddress = (address) => /^0x0{36}01[0-9a-f]{2}$/i.test(String(address || ""));
 const marketAddresses = {
-  "wc-england-score-both-halves-drc": process.env.SIFTLE_MARKET_ENGLAND_DRC_BOTH_HALVES_ADDRESS || "0x226BfF2b5A5e4F5686cfB37FaD7Dd345CfD68e01",
-  "wc-de-bruyne-score-assist-senegal": process.env.SIFTLE_MARKET_DE_BRUYNE_SENEGAL_ADDRESS || "0x3603A839044Cc187A5B564C1b413BB764E8dA4E1",
-  "wc-usa-score-before-20-bosnia": process.env.SIFTLE_MARKET_USA_BOSNIA_EARLY_GOAL_ADDRESS || "0x1B890c4F066BC260cE3F0a8266303052080a0FB4",
   "wc-ivory-coast-eliminate-norway": process.env.SIFTLE_MARKET_IVORY_COAST_NORWAY_ADDRESS || "0xA9ba7b00F60dc541c1C73917Aba92577F3d1A252",
   "wc-haaland-outscore-mbappe": process.env.SIFTLE_MARKET_HAALAND_MBAPPE_ADDRESS || "0x74f77d841d1a3e664Ba6C70f13a6E93E95dEA9D9",
   "wc-france-sweden-spread": process.env.SIFTLE_MARKET_FRANCE_SWEDEN_ADDRESS || "0x18EF2D26ec18a4cd2835216E736a6655fFB8136D",
@@ -117,12 +114,10 @@ const erc20TransferInterface = new Interface([
   "event Transfer(address indexed from, address indexed to, uint256 value)"
 ]);
 const erc20TransferTopic = erc20TransferInterface.getEvent("Transfer").topicHash;
-const leaderboardLogChunkSize = Number(process.env.LEADERBOARD_LOG_CHUNK_SIZE ?? 9000);
-const leaderboardLogLookbackBlocks = Number(process.env.LEADERBOARD_LOG_LOOKBACK_BLOCKS ?? 500000);
-const leaderboardRpcDelayMs = Number(process.env.LEADERBOARD_RPC_DELAY_MS ?? 250);
-const leaderboardRpcRetries = Number(process.env.LEADERBOARD_RPC_RETRIES ?? 4);
-const leaderboardMarketSignalCacheMs = Number(process.env.LEADERBOARD_MARKET_SIGNAL_CACHE_MS ?? 120000);
-const marketListCacheMs = Number(process.env.MARKET_LIST_CACHE_MS ?? 120000);
+const leaderboardLogChunkSize = Math.min(2000, Math.max(100, Number(process.env.LEADERBOARD_LOG_CHUNK_SIZE ?? 1000)));
+const leaderboardLogLookbackBlocks = Math.min(100000, Math.max(leaderboardLogChunkSize, Number(process.env.LEADERBOARD_LOG_LOOKBACK_BLOCKS ?? 50000)));
+const leaderboardPositionBatchSize = Math.min(100, Math.max(5, Number(process.env.LEADERBOARD_POSITION_BATCH_SIZE ?? 20)));
+const enableMemoryDebugLogs = process.env.ENABLE_MEMORY_DEBUG_LOGS === "true";
 
 const LEADERBOARD_MARKET_ABI = [
   "function outcome() view returns (uint8)",
@@ -139,13 +134,6 @@ const redeemedTopic = leaderboardMarketInterface.getEvent("Redeemed").topicHash;
 let leaderboardCache = {
   expiresAt: 0,
   analytics: null
-};
-let leaderboardRefreshPromise = null;
-const leaderboardMarketSignalCache = new Map();
-let marketListCache = {
-  expiresAt: 0,
-  markets: null,
-  refreshPromise: null
 };
 
 const leaderboardMode = String(process.env.LEADERBOARD_MODE || "server").toLowerCase();
@@ -3214,9 +3202,6 @@ const getActiveMarketQueriesStr = (category) => {
       : markets.filter(m => m.category === category);
     
     const phrases = categoryMarkets.map(m => {
-      if (m.id === "wc-england-score-both-halves-drc") return `"England" "DR Congo" "World Cup"`;
-      if (m.id === "wc-de-bruyne-score-assist-senegal") return `"Kevin De Bruyne" "Senegal" "World Cup"`;
-      if (m.id === "wc-usa-score-before-20-bosnia") return `"United States" "Bosnia" "World Cup"`;
       if (m.id === "wc-ivory-coast-eliminate-norway") return `"Ivory Coast" "Norway" "World Cup"`;
       if (m.id === "wc-haaland-outscore-mbappe") return `"Haaland" "Mbappe" "World Cup"`;
       if (m.id === "wc-france-sweden-spread") return `"France" "Sweden" "World Cup"`;
@@ -4680,84 +4665,21 @@ const callCircleApi = async (path, method, body, userToken = null) => {
 };
 
 const ANALYTICS_FILE = join(root, ".siftle", "analytics.json");
-const analyticsEventKeys = [
-  "app_open",
-  "wallet_connect_start",
-  "wallet_connect_success",
-  "wallet_connect_failed",
-  "sign_up",
-  "market_view",
-  "trade_drawer_open",
-  "trade_attempt",
-  "trade_buy_success",
-  "trade_sell_success",
-  "trade_failed",
-  "claim_attempt",
-  "claim_success",
-  "claim_failed",
-  "ai_unlock_attempt",
-  "ai_unlock_success",
-  "ai_unlock_failed",
-  "view_summary",
-  "open_source"
-];
-
-function createEmptyAnalyticsCounts() {
-  return Object.fromEntries(analyticsEventKeys.map((key) => [key, 0]));
-}
-
-function getAnalyticsTotalsFromDaily(daily = {}) {
-  const totals = createEmptyAnalyticsCounts();
-  Object.values(daily || {}).forEach((row) => {
-    analyticsEventKeys.forEach((key) => {
-      totals[key] += Number(row?.[key]) || 0;
-    });
-  });
-  return totals;
-}
-
-function normalizeAnalytics(data = {}) {
-  const daily = data.daily && typeof data.daily === "object" ? data.daily : {};
-  Object.keys(daily).forEach((dateKey) => {
-    daily[dateKey] = {
-      ...createEmptyAnalyticsCounts(),
-      ...(daily[dateKey] || {})
-    };
-  });
-
-  const dailyTotals = getAnalyticsTotalsFromDaily(daily);
-  const storedTotals = {
-    ...createEmptyAnalyticsCounts(),
-    ...(data.totals || {})
-  };
-  const hasDailyRows = Object.keys(daily).length > 0;
-  const totals = { ...storedTotals };
-  analyticsEventKeys.forEach((key) => {
-    totals[key] = hasDailyRows ? (Number(dailyTotals[key]) || 0) : (Number(storedTotals[key]) || 0);
-  });
-
-  return {
-    ...data,
-    totals,
-    daily,
-    emails: Array.isArray(data.emails) ? data.emails : []
-  };
-}
 
 function loadAnalytics() {
   try {
     if (existsSync(ANALYTICS_FILE)) {
       const content = readFileSync(ANALYTICS_FILE, "utf8").replace(/^\uFEFF/, "");
-      return normalizeAnalytics(JSON.parse(content));
+      return JSON.parse(content);
     }
   } catch (err) {
     console.error("Failed to load analytics:", err);
   }
-  return normalizeAnalytics({
-    totals: createEmptyAnalyticsCounts(),
+  return {
+    totals: { app_open: 0, view_summary: 0, open_source: 0, sign_up: 0 },
     daily: {},
     emails: []
-  });
+  };
 }
 
 function saveAnalytics(data) {
@@ -5109,61 +5031,6 @@ function getConfiguredMarketAddress(marketId) {
   return normalizeWalletAddress(marketAddresses[marketId] || "");
 }
 
-function getFastMarketsWithCachedCounts() {
-  const cachedById = new Map((marketListCache.markets || []).map((market) => [market.id, market]));
-  return getActiveMarkets().map((market) => {
-    const marketAddress = normalizeWalletAddress(market.marketAddress) || getConfiguredMarketAddress(market.id);
-    const cached = cachedById.get(market.id);
-    return {
-      ...market,
-      ...(marketAddress ? { marketAddress } : {}),
-      ...(cached?.traderCount !== undefined ? {
-        traderCount: cached.traderCount,
-        traders: cached.traders
-      } : {})
-    };
-  });
-}
-
-async function refreshMarketListCache() {
-  if (marketListCache.refreshPromise) return marketListCache.refreshPromise;
-
-  marketListCache.refreshPromise = (async () => {
-    const enrichedMarkets = [];
-    for (const market of getActiveMarkets()) {
-      const marketAddress = normalizeWalletAddress(market.marketAddress) || getConfiguredMarketAddress(market.id);
-      if (!marketAddress || isLocalTestMarketAddress(marketAddress)) {
-        enrichedMarkets.push(market);
-        continue;
-      }
-
-      try {
-        const { traders } = await collectMarketTradeSignals(marketAddress, market.deploymentBlock);
-        const traderCount = traders.size;
-        enrichedMarkets.push({
-          ...market,
-          marketAddress,
-          traderCount,
-          traders: traderCount > 0 ? String(traderCount) : String(market.traders || "0")
-        });
-      } catch {
-        enrichedMarkets.push({
-          ...market,
-          marketAddress
-        });
-      }
-    }
-
-    marketListCache.markets = enrichedMarkets;
-    marketListCache.expiresAt = Date.now() + marketListCacheMs;
-    return enrichedMarkets;
-  })().finally(() => {
-    marketListCache.refreshPromise = null;
-  });
-
-  return marketListCache.refreshPromise;
-}
-
 function getSeasonId() {
   return "season-1-world-cup-2026";
 }
@@ -5234,91 +5101,56 @@ function ensureLeaderboardState(data) {
   return data.leaderboard;
 }
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
+function logMemoryUsage(label) {
+  if (!enableMemoryDebugLogs) return;
+  const usage = process.memoryUsage();
+  const formatMb = (value) => `${Math.round((Number(value) / 1024 / 1024) * 10) / 10}MB`;
+  console.log(`[MEMORY] ${label} heapUsed=${formatMb(usage.heapUsed)} rss=${formatMb(usage.rss)} ext=${formatMb(usage.external)}`);
 }
 
-function isRateLimitError(error) {
-  const message = String(error?.message || error || "");
-  return /rate limit|too many requests|429|request limit/i.test(message);
-}
-
-async function retryLeaderboardRpc(operation, label) {
-  let lastError = null;
-  for (let attempt = 0; attempt <= leaderboardRpcRetries; attempt += 1) {
-    try {
-      if (leaderboardRpcDelayMs > 0) await sleep(leaderboardRpcDelayMs);
-      return await operation();
-    } catch (error) {
-      lastError = error;
-      if (!isRateLimitError(error) || attempt >= leaderboardRpcRetries) break;
-      const backoff = leaderboardRpcDelayMs * Math.pow(2, attempt + 1);
-      console.warn(`[LEADERBOARD] RPC rate limited while reading ${label}; retrying in ${backoff}ms`);
-      await sleep(backoff);
-    }
+async function mapInBatches(items, batchSize, iteratee) {
+  const results = [];
+  for (let index = 0; index < items.length; index += batchSize) {
+    const batch = items.slice(index, index + batchSize);
+    const batchResults = await Promise.all(batch.map(iteratee));
+    results.push(...batchResults);
   }
-  throw lastError;
+  return results;
 }
 
-function cloneTradeSignals(signals) {
-  return {
-    traders: new Set(signals.traders || []),
-    switched: new Set(signals.switched || []),
-    redeemed: new Set(signals.redeemed || []),
-    firstActivityBlocks: new Map(signals.firstActivityBlocks || [])
-  };
-}
-
-async function collectMarketTradeSignals(marketAddress, fromBlockHint = null) {
-  const cacheKey = `${normalizeWalletAddress(marketAddress) || marketAddress}:${Number(fromBlockHint) || 0}`;
-  const cached = leaderboardMarketSignalCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cloneTradeSignals(cached.signals);
-  }
-
+async function collectMarketTradeSignals(marketAddress) {
   const traders = new Set();
   const boughtYes = new Set();
   const boughtNo = new Set();
   const redeemed = new Set();
   const firstActivityBlocks = new Map();
 
-  const fetchLogsChunked = async (topic) => {
-    const latest = await retryLeaderboardRpc(
-      () => leaderboardProvider.getBlockNumber(),
-      "latest block"
-    );
-    const safeChunk = Math.max(100, leaderboardLogChunkSize);
-    const lookback = Math.max(safeChunk, leaderboardLogLookbackBlocks);
-    const hintedStart = Number(fromBlockHint);
-    const start = Number.isFinite(hintedStart) && hintedStart > 0
-      ? Math.max(0, hintedStart)
-      : Math.max(0, latest - lookback);
-    const allLogs = [];
+  const processLogsChunked = async (topic, onLog) => {
+    const latest = await leaderboardProvider.getBlockNumber();
+    const safeChunk = leaderboardLogChunkSize;
+    const lookback = leaderboardLogLookbackBlocks;
+    const start = Math.max(0, latest - lookback);
 
     for (let fromBlock = start; fromBlock <= latest; fromBlock += safeChunk) {
       const toBlock = Math.min(fromBlock + safeChunk - 1, latest);
-      const logs = await retryLeaderboardRpc(
-        () => leaderboardProvider.getLogs({
-          address: marketAddress,
-          topics: [topic],
-          fromBlock,
-          toBlock
-        }),
-        `${marketAddress} ${fromBlock}-${toBlock}`
-      );
-      allLogs.push(...logs);
+      const logs = await leaderboardProvider.getLogs({
+        address: marketAddress,
+        topics: [topic],
+        fromBlock,
+        toBlock
+      });
+      for (const log of logs) {
+        onLog(log);
+      }
     }
-
-    return allLogs;
   };
 
   try {
-    const buyLogs = await fetchLogsChunked(sharesBoughtTopic);
-    for (const log of buyLogs) {
+    await processLogsChunked(sharesBoughtTopic, (log) => {
       try {
         const parsed = leaderboardMarketInterface.parseLog(log);
         const buyer = normalizeWalletAddress(parsed.args.buyer);
-        if (!buyer) continue;
+        if (!buyer) return;
         traders.add(buyer);
         const blockNumber = Number(log.blockNumber) || 0;
         if (blockNumber > 0) {
@@ -5329,22 +5161,21 @@ async function collectMarketTradeSignals(marketAddress, fromBlockHint = null) {
         if (isYes) boughtYes.add(buyer);
         else boughtNo.add(buyer);
       } catch {}
-    }
+    });
   } catch (err) {
     console.warn(`[LEADERBOARD] Failed to read SharesBought logs for ${marketAddress}:`, err.message);
   }
 
   try {
-    const redeemedLogs = await fetchLogsChunked(redeemedTopic);
-    for (const log of redeemedLogs) {
+    await processLogsChunked(redeemedTopic, (log) => {
       try {
         const parsed = leaderboardMarketInterface.parseLog(log);
         const account = normalizeWalletAddress(parsed.args.account);
-        if (!account) continue;
+        if (!account) return;
         traders.add(account);
         redeemed.add(account);
       } catch {}
-    }
+    });
   } catch (err) {
     console.warn(`[LEADERBOARD] Failed to read Redeemed logs for ${marketAddress}:`, err.message);
   }
@@ -5354,15 +5185,11 @@ async function collectMarketTradeSignals(marketAddress, fromBlockHint = null) {
     if (boughtNo.has(address)) switched.add(address);
   });
 
-  const signals = { traders, switched, redeemed, firstActivityBlocks };
-  leaderboardMarketSignalCache.set(cacheKey, {
-    expiresAt: Date.now() + leaderboardMarketSignalCacheMs,
-    signals: cloneTradeSignals(signals)
-  });
-  return signals;
+  return { traders, switched, redeemed, firstActivityBlocks };
 }
 
 async function recomputeLeaderboardFromChain(data) {
+  logMemoryUsage("leaderboard recompute start");
   const leaderboard = ensureLeaderboardState(data);
   const tradersMap = leaderboard.traders;
   const resolvedResults = leaderboard.resolvedResults;
@@ -5388,17 +5215,15 @@ async function recomputeLeaderboardFromChain(data) {
     const marketId = String(market.id || "").trim();
     if (!marketId) continue;
 
-    const { traders, switched, redeemed, firstActivityBlocks } = await collectMarketTradeSignals(marketAddress, market.deploymentBlock);
+    logMemoryUsage(`before trade signals ${marketId}`);
+    const { traders, switched, redeemed, firstActivityBlocks } = await collectMarketTradeSignals(marketAddress);
     allTraders.forEach((address) => traders.add(address));
     traders.forEach((address) => allTraders.add(address));
 
     let outcome = 0;
     try {
       const contract = new Contract(marketAddress, LEADERBOARD_MARKET_ABI, leaderboardProvider);
-      outcome = Number(await retryLeaderboardRpc(
-        () => contract.outcome(),
-        `${marketId} outcome`
-      )) || 0;
+      outcome = Number(await contract.outcome()) || 0;
 
       if (outcome === 0) continue;
 
@@ -5406,15 +5231,12 @@ async function recomputeLeaderboardFromChain(data) {
       if (firstActivityEntries.length > 0) {
         const blockNumbers = Array.from(new Set(firstActivityEntries.map(([, blockNumber]) => blockNumber).filter(Boolean)));
         const blockTimes = new Map();
-        for (const blockNumber of blockNumbers) {
+        await Promise.all(blockNumbers.map(async (blockNumber) => {
           try {
-            const block = await retryLeaderboardRpc(
-              () => leaderboardProvider.getBlock(blockNumber),
-              `block ${blockNumber}`
-            );
+            const block = await leaderboardProvider.getBlock(blockNumber);
             if (block?.timestamp) blockTimes.set(blockNumber, new Date(Number(block.timestamp) * 1000).toISOString());
           } catch {}
-        }
+        }));
         firstActivityEntries.forEach(([address, blockNumber]) => {
           const firstActivityAt = blockTimes.get(blockNumber);
           if (!firstActivityAt) return;
@@ -5431,26 +5253,22 @@ async function recomputeLeaderboardFromChain(data) {
       }
 
       const traderList = Array.from(traders);
-      const positions = [];
-      for (const address of traderList) {
-        try {
-          const yesRaw = await retryLeaderboardRpc(
-            () => contract.yesShares(address),
-            `${marketId} yesShares ${address}`
-          );
-          const noRaw = await retryLeaderboardRpc(
-            () => contract.noShares(address),
-            `${marketId} noShares ${address}`
-          );
-          positions.push({
-            address,
-            yesSharesUsdc: Number(formatUnits(yesRaw, 6)),
-            noSharesUsdc: Number(formatUnits(noRaw, 6))
-          });
-        } catch {
-          positions.push({ address, yesSharesUsdc: 0, noSharesUsdc: 0 });
+      const positions = await mapInBatches(traderList, leaderboardPositionBatchSize, async (address) => {
+          try {
+            const [yesRaw, noRaw] = await Promise.all([
+              contract.yesShares(address),
+              contract.noShares(address)
+            ]);
+            return {
+              address,
+              yesSharesUsdc: Number(formatUnits(yesRaw, 6)),
+              noSharesUsdc: Number(formatUnits(noRaw, 6))
+            };
+          } catch {
+            return { address, yesSharesUsdc: 0, noSharesUsdc: 0 };
+          }
         }
-      }
+      );
 
       for (const position of positions) {
         const address = position.address;
@@ -5490,6 +5308,7 @@ async function recomputeLeaderboardFromChain(data) {
       }
       console.warn(`[LEADERBOARD] Failed to recompute market ${marketId}:`, message);
     }
+    logMemoryUsage(`after market ${marketId}`);
   }
 
   Object.keys(resolvedResults).forEach((address) => {
@@ -5536,6 +5355,7 @@ async function recomputeLeaderboardFromChain(data) {
   });
 
   leaderboard.lastComputedAt = nowIso;
+  logMemoryUsage("leaderboard recompute end");
 }
 
 async function getLeaderboardAnalyticsFresh() {
@@ -5544,40 +5364,32 @@ async function getLeaderboardAnalyticsFresh() {
     return leaderboardCache.analytics;
   }
 
-  if (leaderboardRefreshPromise) {
-    return leaderboardRefreshPromise;
+  const data = loadAnalytics();
+  await loadLeaderboardFromSupabase(data);
+  try {
+    await recomputeLeaderboardFromChain(data);
+    saveAnalytics(data);
+    await saveLeaderboardToSupabase(data);
+  } catch (err) {
+    console.error("[LEADERBOARD] Recompute failed:", err);
   }
 
-  leaderboardRefreshPromise = (async () => {
-    const data = loadAnalytics();
-    await loadLeaderboardFromSupabase(data);
-    try {
-      await recomputeLeaderboardFromChain(data);
-      saveAnalytics(data);
-      await saveLeaderboardToSupabase(data);
-    } catch (err) {
-      console.error("[LEADERBOARD] Recompute failed:", err);
-    }
+  leaderboardCache = {
+    analytics: data,
+    expiresAt: now + 30_000
+  };
 
-    leaderboardCache = {
-      analytics: data,
-      expiresAt: now + 30_000
-    };
-
-    return data;
-  })().finally(() => {
-    leaderboardRefreshPromise = null;
-  });
-
-  return leaderboardRefreshPromise;
+  return data;
 }
 
 function trackAnalyticsEvent(event, email = null) {
-  const cleanEvent = String(event || "").trim();
-  if (!cleanEvent) return;
-  const data = normalizeAnalytics(loadAnalytics());
+  const data = loadAnalytics();
   
-  if (cleanEvent === "sign_up") {
+  if (!data.totals) data.totals = { app_open: 0, view_summary: 0, open_source: 0, sign_up: 0 };
+  if (!data.daily) data.daily = {};
+  if (!data.emails) data.emails = [];
+  
+  if (event === "sign_up") {
     if (email) {
       const cleanEmail = email.toLowerCase().trim();
       if (data.emails.includes(cleanEmail)) {
@@ -5587,13 +5399,13 @@ function trackAnalyticsEvent(event, email = null) {
     }
   }
 
-  data.totals[cleanEvent] = (data.totals[cleanEvent] || 0) + 1;
+  data.totals[event] = (data.totals[event] || 0) + 1;
 
   const dateKey = getTodayKey();
   if (!data.daily[dateKey]) {
-    data.daily[dateKey] = createEmptyAnalyticsCounts();
+    data.daily[dateKey] = { app_open: 0, view_summary: 0, open_source: 0, sign_up: 0 };
   }
-  data.daily[dateKey][cleanEvent] = (data.daily[dateKey][cleanEvent] || 0) + 1;
+  data.daily[dateKey][event] = (data.daily[dateKey][event] || 0) + 1;
 
   saveAnalytics(data);
 }
@@ -5959,14 +5771,14 @@ function getAnalyticsHtml() {
         <span class="card-footer">Total page views loaded</span>
       </div>
       <div class="card summaries">
-        <span class="card-label">Market Views</span>
+        <span class="card-label">AI Summaries</span>
         <span class="card-value" id="valSummaries">-</span>
-        <span class="card-footer">Market detail pages opened</span>
+        <span class="card-footer">Summaries generated/viewed</span>
       </div>
       <div class="card clicks">
-        <span class="card-label">Trades</span>
+        <span class="card-label">Source Clicks</span>
         <span class="card-value" id="valClicks">-</span>
-        <span class="card-footer">Successful buys and exits</span>
+        <span class="card-footer">Clicks to original articles</span>
       </div>
       <div class="card signups">
         <span class="card-label">USDC Signups</span>
@@ -5988,23 +5800,23 @@ function getAnalyticsHtml() {
       </div>
       <div class="ratio-card">
         <div class="ratio-header">
-          <span class="ratio-title">AI Briefing Completion</span>
+          <span class="ratio-title">AI Briefing Rate</span>
           <span class="ratio-value" id="ratioSummary">-</span>
         </div>
         <div class="progress-bar-container">
           <div class="progress-bar" id="barSummary"></div>
         </div>
-        <span class="ratio-desc">Percentage of successful unlocks that become viewed AI briefings.</span>
+        <span class="ratio-desc">Percentage of page views where users engage with the AI briefing helper.</span>
       </div>
       <div class="ratio-card">
         <div class="ratio-header">
-          <span class="ratio-title">Trade Success Rate</span>
+          <span class="ratio-title">Source Click CTR</span>
           <span class="ratio-value" id="ratioClick">-</span>
         </div>
         <div class="progress-bar-container">
           <div class="progress-bar" id="barClick"></div>
         </div>
-        <span class="ratio-desc">Percentage of submitted trades that confirm successfully.</span>
+        <span class="ratio-desc">Click-through rate of users opening the original publisher sources.</span>
       </div>
     </div>
 
@@ -6019,16 +5831,9 @@ function getAnalyticsHtml() {
           <tr>
             <th>Date</th>
             <th>App Opens</th>
-            <th>Market Views</th>
-            <th>Trade Drawer</th>
-            <th>Trade Attempts</th>
-            <th>Trades</th>
-            <th>Claims</th>
-            <th>AI Unlocks</th>
-            <th>AI Views</th>
+            <th>AI Summaries</th>
             <th>Source Clicks</th>
             <th>Signups</th>
-            <th>Errors</th>
           </tr>
         </thead>
         <tbody id="breakdownBody"></tbody>
@@ -6046,53 +5851,17 @@ function getAnalyticsHtml() {
         if (!res.ok) throw new Error('API request failed');
         const data = await res.json();
         
-        const daily = data.daily || {};
-        const eventKeys = [
-          'app_open',
-          'wallet_connect_start',
-          'wallet_connect_success',
-          'wallet_connect_failed',
-          'sign_up',
-          'market_view',
-          'trade_drawer_open',
-          'trade_attempt',
-          'trade_buy_success',
-          'trade_sell_success',
-          'trade_failed',
-          'claim_attempt',
-          'claim_success',
-          'claim_failed',
-          'ai_unlock_attempt',
-          'ai_unlock_success',
-          'ai_unlock_failed',
-          'view_summary',
-          'open_source'
-        ];
-        const dailyTotals = Object.values(daily).reduce((acc, row) => {
-          eventKeys.forEach((key) => {
-            acc[key] = (acc[key] || 0) + (Number(row?.[key]) || 0);
-          });
-          return acc;
-        }, {});
-        const rawTotals = data.totals || {};
-        const hasDailyRows = Object.keys(daily).length > 0;
-        const totals = eventKeys.reduce((acc, key) => {
-          acc[key] = hasDailyRows ? (Number(dailyTotals[key]) || 0) : (Number(rawTotals[key]) || 0);
-          return acc;
-        }, {});
-        const tradeSuccesses = (totals.trade_buy_success || 0) + (totals.trade_sell_success || 0);
-        const aiUnlocks = totals.ai_unlock_success || 0;
-        const claims = totals.claim_success || 0;
+        const totals = data.totals || { app_open: 0, view_summary: 0, open_source: 0, sign_up: 0 };
         
         document.getElementById('valOpens').textContent = (totals.app_open || 0).toLocaleString();
-        document.getElementById('valSummaries').textContent = (totals.market_view || 0).toLocaleString();
-        document.getElementById('valClicks').textContent = tradeSuccesses.toLocaleString();
+        document.getElementById('valSummaries').textContent = (totals.view_summary || 0).toLocaleString();
+        document.getElementById('valClicks').textContent = (totals.open_source || 0).toLocaleString();
         document.getElementById('valSignups').textContent = (totals.sign_up || 0).toLocaleString();
         
         const opens = totals.app_open || 1;
         const signupRate = ((totals.sign_up || 0) / opens) * 100;
-        const summaryRate = ((totals.view_summary || 0) / Math.max(1, aiUnlocks || totals.ai_unlock_attempt || 0)) * 100;
-        const clickRate = ((tradeSuccesses || 0) / Math.max(1, totals.trade_attempt || 0)) * 100;
+        const summaryRate = ((totals.view_summary || 0) / opens) * 100;
+        const clickRate = ((totals.open_source || 0) / opens) * 100;
         
         document.getElementById('ratioSignup').textContent = signupRate.toFixed(1) + '%';
         document.getElementById('ratioSummary').textContent = summaryRate.toFixed(1) + '%';
@@ -6102,57 +5871,24 @@ function getAnalyticsHtml() {
         document.getElementById('barSummary').style.width = Math.min(summaryRate, 100) + '%';
         document.getElementById('barClick').style.width = Math.min(clickRate, 100) + '%';
         
-        const extraMetrics = [
-          ['Wallet Starts', totals.wallet_connect_start],
-          ['Wallet Success', totals.wallet_connect_success],
-          ['Market Views', totals.market_view],
-          ['Trade Drawer', totals.trade_drawer_open],
-          ['Trade Attempts', totals.trade_attempt],
-          ['Trade Success', tradeSuccesses],
-          ['Trade Fails', totals.trade_failed],
-          ['Claim Attempts', totals.claim_attempt],
-          ['Claims', claims],
-          ['AI Unlock Attempts', totals.ai_unlock_attempt],
-          ['AI Unlocks', aiUnlocks],
-          ['AI Views', totals.view_summary],
-          ['Source Clicks', totals.open_source],
-          ['Wallet Fails', totals.wallet_connect_failed],
-          ['Claim Fails', totals.claim_failed],
-          ['AI Fails', totals.ai_unlock_failed]
-        ];
-        const cards = document.querySelector('.stats-grid');
-        document.querySelectorAll('.analytics-extra-card').forEach((node) => node.remove());
-        extraMetrics.forEach(([label, value]) => {
-          const card = document.createElement('div');
-          card.className = 'card analytics-extra-card';
-          card.innerHTML = '<span class="card-label">' + label + '</span><span class="card-value">' + (Number(value) || 0).toLocaleString() + '</span><span class="card-footer">Tracked product event</span>';
-          cards.appendChild(card);
-        });
-
         const tbody = document.getElementById('breakdownBody');
         tbody.innerHTML = '';
+        
+        const daily = data.daily || {};
         const sortedDates = Object.keys(daily).sort((a, b) => b.localeCompare(a));
         
         if (sortedDates.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; color: var(--text-muted); padding: 2rem;">No entries logged yet.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">No entries logged yet.</td></tr>';
         } else {
           sortedDates.forEach(date => {
             const row = daily[date];
-            const rowTradeSuccesses = (row.trade_buy_success || 0) + (row.trade_sell_success || 0);
             const tr = document.createElement('tr');
             tr.innerHTML = \`
               <td><strong>\${date}</strong></td>
               <td>\${(row.app_open || 0).toLocaleString()}</td>
-              <td>\${(row.market_view || 0).toLocaleString()}</td>
-              <td>\${(row.trade_drawer_open || 0).toLocaleString()}</td>
-              <td>\${(row.trade_attempt || 0).toLocaleString()}</td>
-              <td>\${rowTradeSuccesses.toLocaleString()}</td>
-              <td>\${(row.claim_success || 0).toLocaleString()}</td>
-              <td>\${(row.ai_unlock_success || 0).toLocaleString()}</td>
               <td>\${(row.view_summary || 0).toLocaleString()}</td>
               <td>\${(row.open_source || 0).toLocaleString()}</td>
               <td>\${(row.sign_up || 0).toLocaleString()}</td>
-              <td>\${((row.wallet_connect_failed || 0) + (row.trade_failed || 0) + (row.claim_failed || 0) + (row.ai_unlock_failed || 0)).toLocaleString()}</td>
             \`;
             tbody.appendChild(tr);
           });
@@ -6830,16 +6566,30 @@ const server = createServer(async (request, response) => {
 
   if (requestUrl.pathname === "/api/markets" && request.method === "GET") {
     try {
-      if (marketListCache.markets && marketListCache.expiresAt > Date.now()) {
-        sendJson(response, 200, marketListCache.markets);
-        return;
-      }
+      const markets = getActiveMarkets();
+      const enrichedMarkets = await Promise.all(markets.map(async (market) => {
+        const marketAddress = normalizeWalletAddress(market.marketAddress) || getConfiguredMarketAddress(market.id);
+        if (!marketAddress || isLocalTestMarketAddress(marketAddress)) {
+          return market;
+        }
 
-      const fastMarkets = getFastMarketsWithCachedCounts();
-      sendJson(response, 200, fastMarkets);
-      void refreshMarketListCache().catch((error) => {
-        console.warn("[MARKETS] Background trader-count refresh failed:", error.message);
-      });
+        try {
+          const { traders } = await collectMarketTradeSignals(marketAddress);
+          const traderCount = traders.size;
+          return {
+            ...market,
+            marketAddress,
+            traderCount,
+            traders: traderCount > 0 ? String(traderCount) : String(market.traders || "0")
+          };
+        } catch {
+          return {
+            ...market,
+            marketAddress
+          };
+        }
+      }));
+      sendJson(response, 200, enrichedMarkets);
     } catch (error) {
       sendJson(response, 500, { error: error.message });
     }
