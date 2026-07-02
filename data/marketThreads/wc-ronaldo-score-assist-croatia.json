@@ -1,0 +1,52 @@
+{
+  "topic": "Cristiano Ronaldo Portugal Croatia",
+  "reviewed_by": "curated-local-market-thread",
+  "current": {
+    "id": "market-ronaldo-croatia-current",
+    "category": "Sports",
+    "headline": "Ronaldo's goal involvement is the sharpest Portugal-Croatia question",
+    "summary": "Portugal's knockout tie with Croatia puts Cristiano Ronaldo's finishing, minutes and service under the spotlight. The market hinges on whether he is officially credited with either a goal or an assist.",
+    "source": "Siftle Desk",
+    "sourceUrl": "https://example.com/ronaldo-portugal-croatia-goal-assist-preview",
+    "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
+    "publishedAt": "Thu, 02 Jul 2026 11:15:00 GMT",
+    "readTime": "2 min read",
+    "postedAt": "Latest",
+    "accent": "blue",
+    "saved": false
+  },
+  "items": [
+    {
+      "id": "market-ronaldo-croatia-01",
+      "category": "Sports",
+      "headline": "Portugal need service into Ronaldo against an experienced Croatia block",
+      "summary": "A Yes result likely depends on Portugal creating high-quality box touches for Ronaldo or turning set pieces into chances where the final touch or final pass is officially credited to him.",
+      "source": "Siftle Desk",
+      "sourceUrl": "https://example.com/portugal-ronaldo-service-croatia",
+      "imageUrl": "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Thu, 02 Jul 2026 10:40:00 GMT",
+      "readTime": "1 min read",
+      "postedAt": "Jul 2",
+      "accent": "blue",
+      "saved": false
+    },
+    {
+      "id": "market-ronaldo-croatia-02",
+      "category": "Sports",
+      "headline": "Croatia's control can reduce Ronaldo touches in dangerous zones",
+      "summary": "The No side is strongest if Croatia slow the game, deny transition space and force Portugal's creators into low-percentage crosses instead of clear central chances.",
+      "source": "Siftle Desk",
+      "sourceUrl": "https://example.com/croatia-portugal-ronaldo-control",
+      "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Thu, 02 Jul 2026 09:50:00 GMT",
+      "readTime": "1 min read",
+      "postedAt": "Jul 2",
+      "accent": "blue",
+      "saved": false
+    }
+  ],
+  "count": 2,
+  "market_id": "wc-ronaldo-score-assist-croatia",
+  "saved_market_thread": true,
+  "saved_at": "2026-07-02T11:15:00.000Z"
+}

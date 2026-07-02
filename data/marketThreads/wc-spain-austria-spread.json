@@ -1,0 +1,52 @@
+{
+  "topic": "Spain Austria World Cup Knockout",
+  "reviewed_by": "curated-local-market-thread",
+  "current": {
+    "id": "market-spain-austria-current",
+    "category": "Sports",
+    "headline": "Spain face Austria with two-goal margin in focus",
+    "summary": "Spain's knockout meeting with Austria turns on whether their midfield control and wide attackers can create enough separation, while Austria's pressing and set-piece threat keep the two-goal margin difficult to call.",
+    "source": "Siftle Desk",
+    "sourceUrl": "https://example.com/spain-austria-world-cup-knockout-preview",
+    "imageUrl": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80",
+    "publishedAt": "Thu, 02 Jul 2026 10:30:00 GMT",
+    "readTime": "2 min read",
+    "postedAt": "Latest",
+    "accent": "blue",
+    "saved": false
+  },
+  "items": [
+    {
+      "id": "market-spain-austria-01",
+      "category": "Sports",
+      "headline": "Spain's attacking depth makes the margin question live",
+      "summary": "The case for Spain covering a two-goal margin rests on sustained possession, early pressure and whether their forwards turn territory into clear chances before Austria settle into the match.",
+      "source": "Siftle Desk",
+      "sourceUrl": "https://example.com/spain-austria-margin-watch",
+      "imageUrl": "https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Thu, 02 Jul 2026 09:45:00 GMT",
+      "readTime": "1 min read",
+      "postedAt": "Jul 2",
+      "accent": "blue",
+      "saved": false
+    },
+    {
+      "id": "market-spain-austria-02",
+      "category": "Sports",
+      "headline": "Austria's press can keep the tie tighter than the market expects",
+      "summary": "Austria's path to a No result is simple: disrupt Spain's build-up, avoid conceding early and keep the match within one goal deep into the second half.",
+      "source": "Siftle Desk",
+      "sourceUrl": "https://example.com/austria-spain-knockout-press",
+      "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Thu, 02 Jul 2026 08:55:00 GMT",
+      "readTime": "1 min read",
+      "postedAt": "Jul 2",
+      "accent": "blue",
+      "saved": false
+    }
+  ],
+  "count": 2,
+  "market_id": "wc-spain-austria-spread",
+  "saved_market_thread": true,
+  "saved_at": "2026-07-02T10:30:00.000Z"
+}
