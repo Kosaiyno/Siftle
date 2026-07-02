@@ -6947,15 +6947,11 @@ const server = createServer(async (request, response) => {
               letter-spacing: 2px;
               color: #a5b4fc;
             }
-            .copy-code {
-              display: inline-block;
+            .copy-hint {
               margin-top: 12px;
-              padding: 10px 16px;
-              border-radius: 999px;
-              background-color: #ffffff;
-              color: #111827;
+              color: #94a3b8;
               font-size: 13px;
-              font-weight: 700;
+              line-height: 1.4;
             }
             .expiry {
               font-size: 12px;
@@ -6985,9 +6981,7 @@ const server = createServer(async (request, response) => {
               
               <div class="code-container" style="background-color: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 8px; padding: 18px 28px; display: inline-block; margin-bottom: 24px;">
                 <span class="code" style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 700; letter-spacing: 2px; color: #a5b4fc;">${formattedOtp}</span>
-                <div>
-                  <span class="copy-code" style="display: inline-block; margin-top: 12px; padding: 10px 16px; border-radius: 999px; background-color: #ffffff; color: #111827; font-size: 13px; font-weight: 700;">Copy code: ${formattedOtp}</span>
-                </div>
+                <div class="copy-hint" style="margin-top: 12px; color: #94a3b8; font-size: 13px; line-height: 1.4;">Tap and hold the code to copy it.</div>
               </div>
               
               <div class="expiry" style="font-size: 12px; color: #f87171; font-weight: 500;">Expires in ${expiryMinutes} minutes</div>
@@ -7075,7 +7069,7 @@ const server = createServer(async (request, response) => {
               to: email,
               replyTo: smtpUser,
               subject: `Siftle Security Code: ${otp}`,
-              text: `Verify Your Email\n\nEnter this 6-digit code to authorize your session and sign in to Siftle.\n\nVerification Code: ${formattedOtp}\n\nThis code has no spaces and will expire in ${expiryMinutes} minutes.\n\nThis code was requested for a sign-in attempt on Siftle. If you did not request this code, you can safely ignore this email.`,
+              text: `Verify Your Email\n\nEnter this 6-digit code to authorize your session and sign in to Siftle.\n\nVerification Code: ${formattedOtp}\n\nThis code has no spaces. Tap and hold the code to copy it. It will expire in ${expiryMinutes} minutes.\n\nThis code was requested for a sign-in attempt on Siftle. If you did not request this code, you can safely ignore this email.`,
               html: htmlContent,
               headers: {
                 "X-Priority": "1",
