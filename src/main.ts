@@ -410,9 +410,9 @@ const bindPendingReferral = async (walletAddress: string): Promise<void> => {
       body: JSON.stringify({ walletAddress, referralCode })
     });
     const data = await res.json().catch(() => ({}));
-    if (res.ok && data.bound) {
+    if (res.ok && (data.bound || data.reason === "already_bound" || data.reason === "invalid_code")) {
       localStorage.removeItem("siftle_pending_referral_code");
-      showActionToast("Referral connected");
+      if (data.bound) showActionToast("Referral connected");
     }
   } catch (error) {
     console.warn(error);

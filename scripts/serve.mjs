@@ -5285,7 +5285,7 @@ async function ensureReferralCode(walletAddress) {
 
 async function bindReferralCode(walletAddress, referralCode) {
   const referredWallet = normalizeWalletAddress(walletAddress);
-  const code = String(referralCode || "").trim().toUpperCase();
+  const code = String(referralCode || "").replace(/[^a-z0-9]/gi, "").toUpperCase();
   if (!referredWallet || !code) return { bound: false, reason: "missing" };
   if (!isSupabaseConfigured) return { bound: false, reason: "supabase_unconfigured" };
 
@@ -6836,7 +6836,7 @@ const server = createServer(async (request, response) => {
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       setOtp(email, otp);
 
-      const formattedOtp = otp.slice(0, 3) + " " + otp.slice(3);
+      const formattedOtp = otp;
       const expiryMinutes = Math.round(otpTtlMs / 60000);
       const htmlContent = `
         <!DOCTYPE html>
@@ -6902,8 +6902,18 @@ const server = createServer(async (request, response) => {
               font-family: 'Courier New', Courier, monospace;
               font-size: 36px;
               font-weight: 700;
-              letter-spacing: 4px;
+              letter-spacing: 2px;
               color: #a5b4fc;
+            }
+            .copy-code {
+              display: inline-block;
+              margin-top: 12px;
+              padding: 10px 16px;
+              border-radius: 999px;
+              background-color: #ffffff;
+              color: #111827;
+              font-size: 13px;
+              font-weight: 700;
             }
             .expiry {
               font-size: 12px;
@@ -6929,10 +6939,13 @@ const server = createServer(async (request, response) => {
             </div>
             <div class="content" style="padding: 36px 24px; text-align: center; color: #f1f5f9;">
               <div class="title" style="font-size: 20px; font-weight: 600; margin-bottom: 12px; color: #ffffff;">Verify Your Email</div>
-              <p class="subtitle" style="font-size: 14px; color: #94a3b8; margin-bottom: 28px; line-height: 1.5; max-width: 380px; margin-left: auto; margin-right: auto;">Please enter the verification code below to authorize your session and sign in to Siftle.</p>
+              <p class="subtitle" style="font-size: 14px; color: #94a3b8; margin-bottom: 28px; line-height: 1.5; max-width: 380px; margin-left: auto; margin-right: auto;">Enter this 6-digit code to sign in to Siftle. It has no spaces.</p>
               
               <div class="code-container" style="background-color: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 8px; padding: 18px 28px; display: inline-block; margin-bottom: 24px;">
-                <span class="code" style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 700; letter-spacing: 4px; color: #a5b4fc;">${formattedOtp}</span>
+                <span class="code" style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 700; letter-spacing: 2px; color: #a5b4fc;">${formattedOtp}</span>
+                <div>
+                  <span class="copy-code" style="display: inline-block; margin-top: 12px; padding: 10px 16px; border-radius: 999px; background-color: #ffffff; color: #111827; font-size: 13px; font-weight: 700;">Copy code: ${formattedOtp}</span>
+                </div>
               </div>
               
               <div class="expiry" style="font-size: 12px; color: #f87171; font-weight: 500;">Expires in ${expiryMinutes} minutes</div>
@@ -7020,7 +7033,7 @@ const server = createServer(async (request, response) => {
               to: email,
               replyTo: smtpUser,
               subject: `Siftle Security Code: ${otp}`,
-              text: `Verify Your Email\n\nPlease enter the verification code below to authorize your session and sign in to Siftle.\n\nVerification Code: ${formattedOtp}\n\nThis code will expire in ${expiryMinutes} minutes.\n\nThis code was requested for a sign-in attempt on Siftle. If you did not request this code, you can safely ignore this email.`,
+              text: `Verify Your Email\n\nEnter this 6-digit code to authorize your session and sign in to Siftle.\n\nVerification Code: ${formattedOtp}\n\nThis code has no spaces and will expire in ${expiryMinutes} minutes.\n\nThis code was requested for a sign-in attempt on Siftle. If you did not request this code, you can safely ignore this email.`,
               html: htmlContent,
               headers: {
                 "X-Priority": "1",

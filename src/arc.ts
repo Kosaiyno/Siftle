@@ -330,13 +330,20 @@ export const connectArcWallet = async (): Promise<string> => {
             <label for="circleAuthEmail">Email Address</label>
             <input type="email" id="circleAuthEmail" placeholder="name@domain.com" required />
           </div>
+          <details id="circleReferralDetails" style="text-align: left;">
+            <summary style="cursor: pointer; color: #a5b4fc; font-size: 13px; font-weight: 650; list-style: none;">Have an invite code?</summary>
+            <div class="circle-auth-field" style="margin-top: 10px;">
+              <label for="circleReferralCode">Invite Code</label>
+              <input type="text" id="circleReferralCode" placeholder="Optional" autocomplete="off" autocapitalize="characters" />
+            </div>
+          </details>
           <button id="circleAuthSendBtn" class="circle-auth-btn" type="button">Send Verification Code</button>
         </div>
 
         <div id="circleAuthStepOtp" class="circle-auth-step" style="display: none;">
           <div class="circle-auth-field">
             <label for="circleAuthOtp">6-Digit Verification Code</label>
-            <input type="text" id="circleAuthOtp" placeholder="123456" maxlength="6" />
+            <input type="text" id="circleAuthOtp" placeholder="123456" maxlength="12" inputmode="numeric" autocomplete="one-time-code" />
           </div>
           <button id="circleAuthVerifyBtn" class="circle-auth-btn" type="button">Verify & Sign In</button>
           <p class="circle-auth-spam-note" style="font-size: 11px; color: #a5b4fc; margin: 12px 0; text-align: center; line-height: 1.4; opacity: 0.85;">
@@ -357,6 +364,8 @@ export const connectArcWallet = async (): Promise<string> => {
     document.body.appendChild(overlay);
 
     const emailInput = overlay.querySelector("#circleAuthEmail") as HTMLInputElement;
+    const referralDetails = overlay.querySelector("#circleReferralDetails") as HTMLDetailsElement;
+    const referralInput = overlay.querySelector("#circleReferralCode") as HTMLInputElement;
     const otpInput = overlay.querySelector("#circleAuthOtp") as HTMLInputElement;
     const sendBtn = overlay.querySelector("#circleAuthSendBtn") as HTMLButtonElement;
     const verifyBtn = overlay.querySelector("#circleAuthVerifyBtn") as HTMLButtonElement;
@@ -373,6 +382,11 @@ export const connectArcWallet = async (): Promise<string> => {
     let userToken = "";
     let encryptionKey = "";
     let challengeId = "";
+    const existingReferralCode = localStorage.getItem("siftle_pending_referral_code") || "";
+    if (existingReferralCode) {
+      referralInput.value = existingReferralCode;
+      referralDetails.open = true;
+    }
 
     const showStatus = (msg: string, isError = false) => {
       statusDiv.textContent = msg;
@@ -389,12 +403,23 @@ export const connectArcWallet = async (): Promise<string> => {
       reject(new Error("Login cancelled by user"));
     });
 
+    referralInput.addEventListener("input", () => {
+      referralInput.value = referralInput.value.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 16);
+    });
+
+    otpInput.addEventListener("input", () => {
+      const cleanOtp = otpInput.value.replace(/\D/g, "").slice(0, 6);
+      if (cleanOtp.length === 6) otpInput.value = cleanOtp;
+    });
+
     sendBtn.addEventListener("click", async () => {
       email = emailInput.value.trim();
       if (!email || !email.includes("@")) {
         showStatus("Please enter a valid email address.", true);
         return;
       }
+      const referralCode = referralInput.value.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 16);
+      if (referralCode) localStorage.setItem("siftle_pending_referral_code", referralCode);
 
       sendBtn.disabled = true;
       sendBtn.textContent = "Sending...";
