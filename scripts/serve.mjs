@@ -6083,15 +6083,8 @@ async function recomputeLeaderboardFromChain(data) {
   logMemoryUsage("leaderboard recompute end");
 }
 
-async function getLeaderboardAnalyticsFresh() {
-  const now = Date.now();
-  if (leaderboardCache.analytics && leaderboardCache.expiresAt > now) {
-    return leaderboardCache.analytics;
-  }
-
-  if (leaderboardRefreshPromise) {
-    return leaderboardRefreshPromise;
-  }
+async function refreshLeaderboardAnalyticsInBackground() {
+  if (leaderboardRefreshPromise) return leaderboardRefreshPromise;
 
   leaderboardRefreshPromise = (async () => {
     const data = loadAnalytics();
@@ -6116,6 +6109,28 @@ async function getLeaderboardAnalyticsFresh() {
   });
 
   return leaderboardRefreshPromise;
+}
+
+async function getLeaderboardAnalyticsFresh() {
+  const now = Date.now();
+  if (leaderboardCache.analytics && leaderboardCache.expiresAt > now) {
+    return leaderboardCache.analytics;
+  }
+
+  const data = loadAnalytics();
+  await loadLeaderboardFromSupabase(data);
+  await loadReferralRelationshipsFromSupabase(data);
+
+  leaderboardCache = {
+    analytics: data,
+    expiresAt: Date.now() + leaderboardCacheMs
+  };
+
+  void refreshLeaderboardAnalyticsInBackground().catch((err) => {
+    console.error("[LEADERBOARD] Background refresh failed:", err);
+  });
+
+  return data;
 }
 
 function trackAnalyticsEvent(event, email = null) {

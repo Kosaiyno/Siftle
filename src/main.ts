@@ -2948,10 +2948,6 @@ const renderLeaderboard = (): void => {
   storyDetail.hidden = true;
   storyList.hidden = false;
   storyList.classList.add("markets-list");
-  if (state.walletAddress && !state.hasLoadedPortfolioPositions && !state.loadingPortfolioPositions) {
-    void loadPortfolioPositions();
-  }
-
   const score = state.walletAddress && state.hasLoadedPortfolioPositions ? calculateLeaderboardScore() : null;
 
   // Sync user score with backend
@@ -3074,6 +3070,29 @@ const renderLeaderboard = (): void => {
     </div>
   `;
 
+  const startSeasonTimer = (seasonEndsAt = "2026-07-19T23:59:59.000Z") => {
+    const seasonTimer = document.getElementById("seasonTimer");
+    if (seasonTimerInterval) clearInterval(seasonTimerInterval);
+    const updateTimer = () => {
+      const targetTime = new Date(seasonEndsAt).getTime();
+      const diff = targetTime - new Date().getTime();
+      if (diff <= 0) {
+        if (seasonTimer) seasonTimer.innerText = "Season Finished!";
+        if (seasonTimerInterval) clearInterval(seasonTimerInterval);
+        return;
+      }
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      if (seasonTimer) seasonTimer.innerText = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    };
+    updateTimer();
+    seasonTimerInterval = setInterval(updateTimer, 1000);
+  };
+
+  startSeasonTimer();
+
   const renderGlobalLeaderboardRows = (players: any[]) => players.map((player: any, idx: number) => {
     const rank = Number(player.globalRank) || idx + 1;
     const wallet = String(player.username || "");
@@ -3156,24 +3175,7 @@ const renderLeaderboard = (): void => {
             : renderGlobalLeaderboardRows(players);
         }
 
-        const seasonTimer = document.getElementById("seasonTimer");
-        if (seasonTimerInterval) clearInterval(seasonTimerInterval);
-        const updateTimer = () => {
-          const targetTime = new Date(data.seasonEndsAt).getTime();
-          const diff = targetTime - new Date().getTime();
-          if (diff <= 0) {
-            if (seasonTimer) seasonTimer.innerText = "Season Finished!";
-            if (seasonTimerInterval) clearInterval(seasonTimerInterval);
-            return;
-          }
-          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-          const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-          if (seasonTimer) seasonTimer.innerText = `${days}d ${hours}h ${minutes}m ${seconds}s`;
-        };
-        updateTimer();
-        seasonTimerInterval = setInterval(updateTimer, 1000);
+        startSeasonTimer(data.seasonEndsAt);
       })
       .catch(err => {
         console.error("Failed to load global leaderboard:", err);
@@ -3275,32 +3277,7 @@ const renderLeaderboard = (): void => {
           }
         }
 
-        const seasonTimer = document.getElementById("seasonTimer");
-        if (seasonTimerInterval) clearInterval(seasonTimerInterval);
-
-        const updateTimer = () => {
-          const nowTime = new Date().getTime();
-          const targetTime = new Date(seasonEndsAt).getTime();
-          const diff = targetTime - nowTime;
-
-          if (diff <= 0) {
-            if (seasonTimer) seasonTimer.innerText = "Season Finished!";
-            if (seasonTimerInterval) clearInterval(seasonTimerInterval);
-            return;
-          }
-
-          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-          const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-          if (seasonTimer) {
-            seasonTimer.innerText = `${days}d ${hours}h ${minutes}m ${seconds}s`;
-          }
-        };
-
-        updateTimer();
-        seasonTimerInterval = setInterval(updateTimer, 1000);
+        startSeasonTimer(seasonEndsAt);
       })
       .catch(err => {
         console.error("Failed to load division leaderboard:", err);
