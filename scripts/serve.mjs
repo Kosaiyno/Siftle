@@ -5109,6 +5109,32 @@ async function loadLeaderboardFromSupabase(data) {
         created_at: row.created_at || new Date().toISOString()
       };
     }
+
+    Object.entries(leaderboard.traders || {}).forEach(([address, entry]) => {
+      const normalized = normalizeWalletAddress(address);
+      if (!normalized) return;
+      const resultsByMarket = leaderboard.resolvedResults?.[normalized] || {};
+      const resolvedEntries = Object.values(resultsByMarket);
+      const bonusPoints = getLeaderboardBonusPoints(data, normalized);
+      if (resolvedEntries.length > 0) {
+        let points = 0;
+        let wins = 0;
+        let losses = 0;
+        resolvedEntries.forEach((result) => {
+          if (result?.result === "win") {
+            wins += 1;
+            points += Number(result.points) || 0;
+          } else if (result?.result === "loss") {
+            losses += 1;
+          }
+        });
+        entry.points = points + bonusPoints;
+        entry.status = `${wins} win${wins === 1 ? "" : "s"}, ${losses} loss${losses === 1 ? "" : "es"}`;
+      } else if ((Number(entry.points) || 0) === 0 && (Number(entry.reported_points) || 0) > 0) {
+        entry.points = Number(entry.reported_points) || 0;
+        entry.status = String(entry.reported_status || entry.status || "0 wins, 0 losses");
+      }
+    });
   } catch (err) {
     console.warn("[SUPABASE] Leaderboard read failed; using local fallback:", err.message);
   }
@@ -7581,13 +7607,18 @@ const server = createServer(async (request, response) => {
         const cleanedUsername = String(username || "").trim().replace(/\s+/g, " ").slice(0, 15);
         const reportedPoints = hasPoints ? Number(points) || 0 : Number(existing.reported_points) || Number(existing.points) || 0;
         const reportedStatus = hasStatus ? String(status || "") : String(existing.reported_status || existing.status || "0 wins, 0 losses");
+        const existingPoints = Number(existing.points) || 0;
+        const nextPoints = Math.max(existingPoints, reportedPoints);
+        const existingStatus = String(existing.status || "0 wins, 0 losses");
+        const nextStatus = existingPoints > 0 ? existingStatus : reportedStatus;
         
         data.leaderboard.traders[key] = {
-          points: Number(existing.points) || 0,
-          status: String(existing.status || "0 wins, 0 losses"),
-          username: hasUsername ? cleanedUsername : existing.username || "",
+          points: nextPoints,
+          status: nextStatus,
+          username: hasUsername && cleanedUsername ? cleanedUsername : existing.username || "",
           reported_points: reportedPoints,
           reported_status: reportedStatus,
+          first_activity_at: existing.first_activity_at || existing.updated_at || new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
         if (!leaderboard.resolvedResults[key]) leaderboard.resolvedResults[key] = {};
