@@ -5024,11 +5024,18 @@ async function loadLeaderboardFromSupabase(data) {
       supabaseRequest("resolved_results?select=wallet_address,market_id,result,points,switched")
     ]);
     let entries = [];
+    let divisionRows = [];
     try {
       entries = await supabaseRequest("leaderboard_entries?select=wallet_address,points,status,reported_points,reported_status,first_activity_at,updated_at");
     } catch (err) {
       if (!/first_activity_at|column/i.test(String(err.message || ""))) throw err;
       entries = await supabaseRequest("leaderboard_entries?select=wallet_address,points,status,reported_points,reported_status,updated_at");
+    }
+    try {
+      divisionRows = await supabaseRequest("season_division_assignments?select=season_id,wallet_address,division_number,updated_at");
+    } catch (err) {
+      if (!/season_division_assignments|relation|table/i.test(String(err.message || ""))) throw err;
+      divisionRows = [];
     }
 
     const leaderboard = ensureLeaderboardState(data);
@@ -5059,6 +5066,15 @@ async function loadLeaderboardFromSupabase(data) {
         points: Number(result.points) || 0,
         switched: Boolean(result.switched)
       };
+    }
+
+    for (const row of divisionRows || []) {
+      const seasonId = String(row.season_id || "");
+      const address = normalizeWalletAddress(row.wallet_address);
+      const divisionNumber = Math.max(1, Number(row.division_number) || 1);
+      if (!seasonId || !address) continue;
+      const assignments = getStoredDivisionAssignments(data, seasonId);
+      assignments[address] = divisionNumber;
     }
   } catch (err) {
     console.warn("[SUPABASE] Leaderboard read failed; using local fallback:", err.message);
@@ -5144,6 +5160,28 @@ async function saveLeaderboardToSupabase(data) {
         method: "POST",
         prefer: "resolution=merge-duplicates",
         body: resolvedRows
+      });
+    }
+
+    const divisionRows = [];
+    Object.entries(leaderboard.divisionAssignments || {}).forEach(([seasonId, assignments]) => {
+      Object.entries(assignments || {}).forEach(([address, divisionNumber]) => {
+        const walletAddress = normalizeWalletAddress(address);
+        if (!seasonId || !walletAddress || isAdminWallet(walletAddress)) return;
+        divisionRows.push({
+          season_id: String(seasonId),
+          wallet_address: walletAddress,
+          division_number: Math.max(1, Number(divisionNumber) || 1),
+          updated_at: nowIso
+        });
+      });
+    });
+
+    if (divisionRows.length > 0) {
+      await supabaseRequest("season_division_assignments?on_conflict=season_id,wallet_address", {
+        method: "POST",
+        prefer: "resolution=merge-duplicates",
+        body: divisionRows
       });
     }
     return { saved: true, error: "" };
@@ -5248,16 +5286,13 @@ function buildSeasonDivisions(data, tradersList, seasonId = getSeasonId()) {
   const eligibleTraders = tradersList.filter((trader) => !isAdminWallet(trader.username));
   const activeAddresses = new Set(eligibleTraders.map((trader) => trader.username));
 
-  Object.keys(assignments).forEach((address) => {
-    if (!activeAddresses.has(address)) delete assignments[address];
-  });
-
   const assignedCounts = new Map();
   Object.entries(assignments).forEach(([address, divisionNumber]) => {
-    if (!activeAddresses.has(address)) return;
     const division = Math.max(1, Number(divisionNumber) || 1);
     assignments[address] = division;
-    assignedCounts.set(division, (assignedCounts.get(division) || 0) + 1);
+    if (activeAddresses.has(address)) {
+      assignedCounts.set(division, (assignedCounts.get(division) || 0) + 1);
+    }
   });
 
   const unassigned = eligibleTraders.filter((trader) => !assignments[trader.username]);
@@ -5275,10 +5310,11 @@ function buildSeasonDivisions(data, tradersList, seasonId = getSeasonId()) {
     grouped.get(divisionNumber).push(trader);
   });
 
-  const divisionNumbers = Array.from(grouped.keys()).sort((a, b) => a - b);
-  const divisions = divisionNumbers.map((divisionNumber) =>
-    grouped.get(divisionNumber).slice().sort(compareLeaderboardPlayers)
-  );
+  const maxDivisionNumber = Math.max(1, ...Object.values(assignments).map((divisionNumber) => Math.max(1, Number(divisionNumber) || 1)));
+  const divisions = Array.from({ length: maxDivisionNumber }, (_, index) => {
+    const divisionNumber = index + 1;
+    return (grouped.get(divisionNumber) || []).slice().sort(compareLeaderboardPlayers);
+  });
 
   return { divisions, assignments };
 }
@@ -7080,6 +7116,9 @@ const server = createServer(async (request, response) => {
     const seasonId = getSeasonId();
     const { divisions, assignments } = buildSeasonDivisions(data, tradersList, seasonId);
     saveAnalytics(data);
+    void saveLeaderboardToSupabase(data).catch((error) => {
+      console.warn("[SUPABASE] Failed to persist division assignments:", error.message);
+    });
     
     let userDivisionNumber = 1;
     if (walletAddress) {

@@ -37,6 +37,18 @@ create index if not exists leaderboard_entries_points_idx
 create index if not exists resolved_results_market_idx
   on resolved_results (market_id);
 
+create table if not exists season_division_assignments (
+  season_id text not null,
+  wallet_address text not null references profiles(wallet_address) on delete cascade,
+  division_number integer not null default 1,
+  assigned_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  primary key (season_id, wallet_address)
+);
+
+create index if not exists season_division_assignments_season_idx
+  on season_division_assignments (season_id, division_number);
+
 create table if not exists analytics_daily (
   date_key text primary key,
   app_open integer default 0,
@@ -71,5 +83,6 @@ grant usage on schema public to service_role;
 grant select, insert, update, delete on table profiles to service_role;
 grant select, insert, update, delete on table leaderboard_entries to service_role;
 grant select, insert, update, delete on table resolved_results to service_role;
+grant select, insert, update, delete on table season_division_assignments to service_role;
 grant select, insert, update, delete on table analytics_daily to service_role;
 grant select, insert, update, delete on table analytics_signups to service_role;
