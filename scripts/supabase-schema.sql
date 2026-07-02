@@ -37,6 +37,32 @@ create index if not exists leaderboard_entries_points_idx
 create index if not exists resolved_results_market_idx
   on resolved_results (market_id);
 
+create table if not exists leaderboard_bonus_events (
+  wallet_address text references profiles(wallet_address) on delete cascade,
+  season_id text not null,
+  bonus_type text not null,
+  bonus_key text not null,
+  points integer not null default 0,
+  metadata jsonb default '{}'::jsonb,
+  created_at timestamptz default now(),
+  primary key (wallet_address, bonus_key)
+);
+
+create index if not exists leaderboard_bonus_events_season_idx
+  on leaderboard_bonus_events (season_id, bonus_type);
+
+create table if not exists ai_briefing_unlocks (
+  wallet_address text references profiles(wallet_address) on delete cascade,
+  date_key text not null,
+  source_hash text not null,
+  tx_hash text,
+  created_at timestamptz default now(),
+  primary key (wallet_address, date_key, source_hash)
+);
+
+create index if not exists ai_briefing_unlocks_daily_idx
+  on ai_briefing_unlocks (date_key, wallet_address);
+
 create table if not exists season_division_assignments (
   season_id text not null,
   wallet_address text not null references profiles(wallet_address) on delete cascade,
@@ -83,6 +109,8 @@ grant usage on schema public to service_role;
 grant select, insert, update, delete on table profiles to service_role;
 grant select, insert, update, delete on table leaderboard_entries to service_role;
 grant select, insert, update, delete on table resolved_results to service_role;
+grant select, insert, update, delete on table leaderboard_bonus_events to service_role;
+grant select, insert, update, delete on table ai_briefing_unlocks to service_role;
 grant select, insert, update, delete on table season_division_assignments to service_role;
 grant select, insert, update, delete on table analytics_daily to service_role;
 grant select, insert, update, delete on table analytics_signups to service_role;

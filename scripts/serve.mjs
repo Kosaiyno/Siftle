@@ -113,6 +113,15 @@ const leaderboardPositionBatchSize = Math.min(100, Math.max(5, Number(process.en
 const enableMemoryDebugLogs = process.env.ENABLE_MEMORY_DEBUG_LOGS === "true";
 const leaderboardMarketSignalCacheMs = Number(process.env.LEADERBOARD_MARKET_SIGNAL_CACHE_MS ?? 120000);
 const marketListCacheMs = Number(process.env.MARKET_LIST_CACHE_MS ?? 120000);
+const aiBriefingDailyBonusUnlocks = Math.max(1, Number(process.env.AI_BRIEFING_DAILY_BONUS_UNLOCKS ?? 3));
+const aiBriefingDailyBonusPoints = Math.max(0, Number(process.env.AI_BRIEFING_DAILY_BONUS_POINTS ?? 10));
+const compensationChallengeKey = process.env.COMPENSATION_CHALLENGE_KEY || "2026-07-02-daily-compensation";
+const compensationChallengeMarketIds = (
+  process.env.COMPENSATION_CHALLENGE_MARKET_IDS ||
+  "wc-spain-austria-spread,wc-ronaldo-score-assist-croatia,wc-portugal-croatia-extra-time"
+).split(",").map((id) => id.trim()).filter(Boolean);
+const compensationChallengeTwoOfThreePoints = Math.max(0, Number(process.env.COMPENSATION_CHALLENGE_TWO_OF_THREE_POINTS ?? 50));
+const compensationChallengeThreeOfThreePoints = Math.max(0, Number(process.env.COMPENSATION_CHALLENGE_THREE_OF_THREE_POINTS ?? 100));
 
 const LEADERBOARD_MARKET_ABI = [
   "function outcome() view returns (uint8)",
@@ -5025,6 +5034,7 @@ async function loadLeaderboardFromSupabase(data) {
     ]);
     let entries = [];
     let divisionRows = [];
+    let bonusRows = [];
     try {
       entries = await supabaseRequest("leaderboard_entries?select=wallet_address,points,status,reported_points,reported_status,first_activity_at,updated_at");
     } catch (err) {
@@ -5036,6 +5046,12 @@ async function loadLeaderboardFromSupabase(data) {
     } catch (err) {
       if (!/season_division_assignments|relation|table/i.test(String(err.message || ""))) throw err;
       divisionRows = [];
+    }
+    try {
+      bonusRows = await supabaseRequest("leaderboard_bonus_events?select=wallet_address,season_id,bonus_type,bonus_key,points,metadata,created_at");
+    } catch (err) {
+      if (!/leaderboard_bonus_events|relation|table/i.test(String(err.message || ""))) throw err;
+      bonusRows = [];
     }
 
     const leaderboard = ensureLeaderboardState(data);
@@ -5075,6 +5091,20 @@ async function loadLeaderboardFromSupabase(data) {
       if (!seasonId || !address) continue;
       const assignments = getStoredDivisionAssignments(data, seasonId);
       assignments[address] = divisionNumber;
+    }
+
+    for (const row of bonusRows || []) {
+      const address = normalizeWalletAddress(row.wallet_address);
+      const bonusKey = String(row.bonus_key || "");
+      if (!address || !bonusKey) continue;
+      if (!leaderboard.bonusEvents[address]) leaderboard.bonusEvents[address] = {};
+      leaderboard.bonusEvents[address][bonusKey] = {
+        season_id: String(row.season_id || getSeasonId()),
+        bonus_type: String(row.bonus_type || "bonus"),
+        points: Number(row.points) || 0,
+        metadata: row.metadata || {},
+        created_at: row.created_at || new Date().toISOString()
+      };
     }
   } catch (err) {
     console.warn("[SUPABASE] Leaderboard read failed; using local fallback:", err.message);
@@ -5184,6 +5214,32 @@ async function saveLeaderboardToSupabase(data) {
         body: divisionRows
       });
     }
+
+    const bonusRows = [];
+    Object.entries(leaderboard.bonusEvents || {}).forEach(([address, events]) => {
+      const walletAddress = normalizeWalletAddress(address);
+      if (!walletAddress || isAdminWallet(walletAddress)) return;
+      Object.entries(events || {}).forEach(([bonusKey, event]) => {
+        if (!bonusKey || !event) return;
+        bonusRows.push({
+          wallet_address: walletAddress,
+          season_id: String(event.season_id || getSeasonId()),
+          bonus_type: String(event.bonus_type || "bonus"),
+          bonus_key: String(bonusKey),
+          points: Number(event.points) || 0,
+          metadata: event.metadata || {},
+          created_at: event.created_at || nowIso
+        });
+      });
+    });
+
+    if (bonusRows.length > 0) {
+      await supabaseRequest("leaderboard_bonus_events?on_conflict=wallet_address,bonus_key", {
+        method: "POST",
+        prefer: "resolution=merge-duplicates",
+        body: bonusRows
+      });
+    }
     return { saved: true, error: "" };
   } catch (err) {
     console.warn("[SUPABASE] Leaderboard write failed; local JSON fallback kept:", err.message);
@@ -5251,6 +5307,96 @@ async function verifyAiBriefingUnlockPayment({ sourceUrl, walletAddress, txHash 
 
   if (!paid) throw new Error("Unlock payment was not found in the transaction");
   return createSummaryUnlockToken(sourceUrl, cleanWallet);
+}
+
+async function recordAiBriefingUnlockBonus(walletAddress, sourceUrl, txHash = "") {
+  const cleanWallet = normalizeWalletAddress(walletAddress);
+  if (!cleanWallet || !sourceUrl || aiBriefingDailyBonusPoints <= 0) {
+    return { awarded: false, points: 0, unlockCount: 0 };
+  }
+
+  const dateKey = getTodayKey();
+  const sourceHash = getSummaryUnlockKey(sourceUrl);
+  const bonusKey = `ai-briefing-${dateKey}`;
+
+  const data = await loadLeaderboardFromSupabase(loadAnalytics());
+  const leaderboard = ensureLeaderboardState(data);
+  if (!leaderboard.traders[cleanWallet]) {
+    leaderboard.traders[cleanWallet] = {
+      points: 0,
+      status: "0 wins, 0 losses",
+      username: "",
+      reported_points: 0,
+      reported_status: "0 wins, 0 losses",
+      first_activity_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+  }
+
+  if (isSupabaseConfigured) {
+    await supabaseRequest("profiles?on_conflict=wallet_address", {
+      method: "POST",
+      prefer: "resolution=merge-duplicates",
+      body: [{
+        wallet_address: cleanWallet,
+        updated_at: new Date().toISOString()
+      }]
+    });
+
+    await supabaseRequest("ai_briefing_unlocks?on_conflict=wallet_address,date_key,source_hash", {
+      method: "POST",
+      prefer: "resolution=ignore-duplicates",
+      body: [{
+        wallet_address: cleanWallet,
+        date_key: dateKey,
+        source_hash: sourceHash,
+        tx_hash: String(txHash || "")
+      }]
+    });
+
+    const unlockRows = await supabaseRequest(
+      `ai_briefing_unlocks?wallet_address=eq.${encodeURIComponent(cleanWallet)}&date_key=eq.${encodeURIComponent(dateKey)}&select=source_hash`
+    );
+    const unlockCount = new Set((unlockRows || []).map((row) => row.source_hash)).size;
+    const alreadyAwarded = Boolean(leaderboard.bonusEvents?.[cleanWallet]?.[bonusKey]);
+
+    if (unlockCount >= aiBriefingDailyBonusUnlocks && !alreadyAwarded) {
+      setLeaderboardBonus(data, cleanWallet, bonusKey, "ai_briefing_daily", aiBriefingDailyBonusPoints, {
+        date_key: dateKey,
+        unlock_count: unlockCount,
+        required_unlocks: aiBriefingDailyBonusUnlocks
+      });
+      leaderboard.traders[cleanWallet].points = (Number(leaderboard.traders[cleanWallet].points) || 0) + aiBriefingDailyBonusPoints;
+      leaderboard.traders[cleanWallet].updated_at = new Date().toISOString();
+      await saveLeaderboardToSupabase(data);
+      leaderboardCache.expiresAt = 0;
+      leaderboardCache.analytics = null;
+      return { awarded: true, points: aiBriefingDailyBonusPoints, unlockCount };
+    }
+
+    await saveLeaderboardToSupabase(data);
+    return { awarded: false, points: 0, unlockCount };
+  }
+
+  const localUnlocks = data.leaderboard.aiBriefingUnlocks || {};
+  data.leaderboard.aiBriefingUnlocks = localUnlocks;
+  const localKey = `${cleanWallet}:${dateKey}`;
+  localUnlocks[localKey] = Array.from(new Set([...(localUnlocks[localKey] || []), sourceHash]));
+  const unlockCount = localUnlocks[localKey].length;
+  const awarded = unlockCount >= aiBriefingDailyBonusUnlocks
+    && setLeaderboardBonus(data, cleanWallet, bonusKey, "ai_briefing_daily", aiBriefingDailyBonusPoints, {
+      date_key: dateKey,
+      unlock_count: unlockCount,
+      required_unlocks: aiBriefingDailyBonusUnlocks
+    });
+  if (awarded) {
+    leaderboard.traders[cleanWallet].points = (Number(leaderboard.traders[cleanWallet].points) || 0) + aiBriefingDailyBonusPoints;
+    leaderboard.traders[cleanWallet].updated_at = new Date().toISOString();
+  }
+  saveAnalytics(data);
+  leaderboardCache.expiresAt = 0;
+  leaderboardCache.analytics = null;
+  return { awarded, points: awarded ? aiBriefingDailyBonusPoints : 0, unlockCount };
 }
 
 function getActiveMarkets() {
@@ -5362,7 +5508,58 @@ function ensureLeaderboardState(data) {
   if (!data.leaderboard) data.leaderboard = {};
   if (!data.leaderboard.traders) data.leaderboard.traders = {};
   if (!data.leaderboard.resolvedResults) data.leaderboard.resolvedResults = {};
+  if (!data.leaderboard.bonusEvents) data.leaderboard.bonusEvents = {};
   return data.leaderboard;
+}
+
+function setLeaderboardBonus(data, walletAddress, bonusKey, bonusType, points, metadata = {}) {
+  const address = normalizeWalletAddress(walletAddress);
+  if (!address || isAdminWallet(address) || !bonusKey || points <= 0) return false;
+  const leaderboard = ensureLeaderboardState(data);
+  if (!leaderboard.bonusEvents[address]) leaderboard.bonusEvents[address] = {};
+  if (leaderboard.bonusEvents[address][bonusKey]) return false;
+  leaderboard.bonusEvents[address][bonusKey] = {
+    season_id: getSeasonId(),
+    bonus_type: String(bonusType || "bonus"),
+    points: Math.max(0, Number(points) || 0),
+    metadata,
+    created_at: new Date().toISOString()
+  };
+  return true;
+}
+
+function getLeaderboardBonusPoints(data, walletAddress) {
+  const address = normalizeWalletAddress(walletAddress);
+  const events = data.leaderboard?.bonusEvents?.[address] || {};
+  return Object.values(events).reduce((sum, event) => sum + (Number(event?.points) || 0), 0);
+}
+
+function applyCompensationChallengeBonuses(data) {
+  if (compensationChallengeMarketIds.length === 0) return;
+  const leaderboard = ensureLeaderboardState(data);
+
+  Object.entries(leaderboard.resolvedResults || {}).forEach(([address, resultsByMarket]) => {
+    const normalized = normalizeWalletAddress(address);
+    if (!normalized || isAdminWallet(normalized)) return;
+    const entries = compensationChallengeMarketIds
+      .map((marketId) => resultsByMarket?.[marketId])
+      .filter(Boolean);
+    if (entries.length < compensationChallengeMarketIds.length) return;
+
+    const wins = entries.filter((entry) => entry.result === "win").length;
+    const points = wins >= 3
+      ? compensationChallengeThreeOfThreePoints
+      : wins >= 2
+        ? compensationChallengeTwoOfThreePoints
+        : 0;
+    if (points <= 0) return;
+
+    setLeaderboardBonus(data, normalized, compensationChallengeKey, "compensation_challenge", points, {
+      wins,
+      total: compensationChallengeMarketIds.length,
+      market_ids: compensationChallengeMarketIds
+    });
+  });
 }
 
 function logMemoryUsage(label) {
@@ -5658,6 +5855,12 @@ async function recomputeLeaderboardFromChain(data) {
     if (normalized) allTraders.add(normalized);
   });
 
+  applyCompensationChallengeBonuses(data);
+  Object.keys(leaderboard.bonusEvents || {}).forEach((address) => {
+    const normalized = normalizeWalletAddress(address);
+    if (normalized) allTraders.add(normalized);
+  });
+
   const nowIso = new Date().toISOString();
   allTraders.forEach((address) => {
     if (isAdminWallet(address)) return;
@@ -5682,9 +5885,10 @@ async function recomputeLeaderboardFromChain(data) {
     const fallbackPoints = Number(existing.reported_points) || 0;
     const fallbackStatus = String(existing.reported_status || existing.status || "0 wins, 0 losses");
     const useFallback = allowClientLeaderboardFallback && resolvedCount === 0;
+    const bonusPoints = getLeaderboardBonusPoints(data, address);
 
     tradersMap[address] = {
-      points: useFallback ? fallbackPoints : points,
+      points: useFallback ? fallbackPoints : points + bonusPoints,
       status: useFallback
         ? fallbackStatus
         : `${wins} win${wins === 1 ? "" : "s"}, ${losses} loss${losses === 1 ? "" : "es"}`,
@@ -7229,8 +7433,17 @@ const server = createServer(async (request, response) => {
 
   if (requestUrl.pathname === "/api/summary/unlock" && request.method === "POST") {
     readJsonBody(request)
-      .then((body) => verifyAiBriefingUnlockPayment(body))
-      .then((unlockToken) => sendJson(response, 200, { success: true, unlockToken }))
+      .then(async (body) => {
+        const unlockToken = await verifyAiBriefingUnlockPayment(body);
+        let bonus = { awarded: false, points: 0, unlockCount: 0 };
+        try {
+          bonus = await recordAiBriefingUnlockBonus(body?.walletAddress, body?.sourceUrl, body?.txHash);
+        } catch (err) {
+          console.warn("[LEADERBOARD] AI briefing bonus tracking failed:", err.message);
+        }
+        return { unlockToken, bonus };
+      })
+      .then(({ unlockToken, bonus }) => sendJson(response, 200, { success: true, unlockToken, bonus }))
       .catch((error) => sendJson(response, 400, { error: error.message }));
     return;
   }

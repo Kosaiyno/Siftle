@@ -688,7 +688,11 @@ const unlockAndLoadStorySummary = async (story: BriefingTarget): Promise<void> =
 
     localStorage.setItem(briefingUnlockKey(story), unlockData.unlockToken);
     trackEvent("ai_unlock_success");
-    showActionToast("AI briefing unlocked");
+    const bonusPoints = Number(unlockData?.bonus?.points) || 0;
+    showActionToast(bonusPoints > 0 ? `AI briefing unlocked. +${bonusPoints} leaderboard pts` : "AI briefing unlocked");
+    if (bonusPoints > 0) {
+      void reportLeaderboardEntry(false).catch(err => console.error("Failed to refresh leaderboard bonus:", err));
+    }
     await loadStorySummary(story);
   } catch (error) {
     trackEvent("ai_unlock_failed");
