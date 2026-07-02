@@ -141,6 +141,10 @@ const state: {
   activeMarketTimeframe: "All" | "Daily" | "Weekly" | "Sagas";
   profileUsername: string | null;
   profileNotice: ProfileNotice | null;
+  portfolioMarketPreviews: MarketPreview[];
+  referralPanelOpen: boolean;
+  referralData: ReferralData | null;
+  loadingReferralData: boolean;
 } = {
   activeSurface: "markets",
   profileUsername: null,
@@ -180,7 +184,11 @@ const state: {
   showSaved: false,
   tradeDrawerOpen: false,
   activeMarketTimeframe: "All",
-  profileNotice: null
+  profileNotice: null,
+  portfolioMarketPreviews: [],
+  referralPanelOpen: false,
+  referralData: null,
+  loadingReferralData: false
 };
 
 let selectedLeaderboardDivision: number | null = null;
@@ -188,6 +196,8 @@ let selectedLeaderboardView: "division" | "global" = "global";
 let seasonTimerInterval: any = null;
 let archiveIndexRequested = false;
 let feedWarmupRequested = false;
+const pendingReferralCode = new URLSearchParams(window.location.search).get("ref") || localStorage.getItem("siftle_pending_referral_code") || "";
+if (pendingReferralCode) localStorage.setItem("siftle_pending_referral_code", pendingReferralCode.trim().toUpperCase());
 
 interface MarketPreview {
   id: string;
@@ -219,6 +229,20 @@ interface MarketPreview {
   }[];
 }
 
+interface ReferralData {
+  code: string;
+  inviteLink: string;
+  activeReferralCount: number;
+  totalEarned: number;
+  referrals: {
+    walletAddress: string;
+    displayName: string;
+    used: number;
+    remaining: number;
+    maxUses: number;
+  }[];
+}
+
 interface MarketEvidenceOverride {
   threadTopic: string;
   evidence: MarketPreview["evidence"];
@@ -230,6 +254,17 @@ type BriefingTarget = NewsStory;
 const DAILY_TRADE_LOCK_MINUTES = 20;
 
 let marketPreviews: MarketPreview[] = fallbackMarketPreviews;
+
+const mergeMarketsById = (...groups: MarketPreview[][]): MarketPreview[] => {
+  const merged = new Map<string, MarketPreview>();
+  groups.flat().forEach((market) => {
+    if (market?.id) merged.set(market.id, { ...(merged.get(market.id) || {}), ...market });
+  });
+  return Array.from(merged.values());
+};
+
+const getPortfolioMarkets = (): MarketPreview[] =>
+  mergeMarketsById(state.portfolioMarketPreviews, marketPreviews, fallbackMarketPreviews);
 
 const loadMarkets = async (): Promise<void> => {
   state.loadingMarkets = true;
@@ -249,6 +284,25 @@ const loadMarkets = async (): Promise<void> => {
     console.error("Failed to load markets:", err);
   } finally {
     state.loadingMarkets = false;
+  }
+};
+
+const loadPortfolioMarkets = async (): Promise<void> => {
+  try {
+    const res = await fetch(apiUrl("/api/portfolio/markets"));
+    if (!res.ok) return;
+    const markets = await res.json();
+    if (Array.isArray(markets)) {
+      state.portfolioMarketPreviews = markets.map((market) => ({
+        threadStoryId: 0,
+        updates: 0,
+        movement: 0,
+        evidence: [],
+        ...market
+      }));
+    }
+  } catch (error) {
+    console.warn(error);
   }
 };
 
@@ -346,6 +400,40 @@ themeToggleButton?.addEventListener("click", () => {
   applyTheme(currentTheme === "light" ? "dark" : "light");
 });
 
+const bindPendingReferral = async (walletAddress: string): Promise<void> => {
+  const referralCode = localStorage.getItem("siftle_pending_referral_code");
+  if (!referralCode) return;
+  try {
+    const res = await fetch(apiUrl("/api/referrals/bind"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ walletAddress, referralCode })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.bound) {
+      localStorage.removeItem("siftle_pending_referral_code");
+      showActionToast("Referral connected");
+    }
+  } catch (error) {
+    console.warn(error);
+  }
+};
+
+const loadReferralData = async (): Promise<void> => {
+  if (!state.walletAddress || state.loadingReferralData) return;
+  state.loadingReferralData = true;
+  try {
+    const res = await fetch(apiUrl(`/api/referrals?walletAddress=${encodeURIComponent(state.walletAddress)}`));
+    const data = await res.json();
+    if (res.ok) state.referralData = data;
+  } catch (error) {
+    console.warn(error);
+  } finally {
+    state.loadingReferralData = false;
+    if (state.activeSurface === "portfolio") renderPortfolio();
+  }
+};
+
 const connectWallet = async (): Promise<void> => {
   if (state.walletConnecting) return;
   state.walletConnecting = true;
@@ -358,6 +446,8 @@ const connectWallet = async (): Promise<void> => {
       state.walletAddress = account;
       syncProfileUsernameForWallet();
       state.walletBalance = await readArcUsdcBalance(account);
+      await bindPendingReferral(account);
+      void loadReferralData();
       await loadPortfolioPositions();
       void reportLeaderboardEntry(true).catch(err => console.error("Failed to report leaderboard entry:", err));
       showActionToast("Connected to Arc Testnet");
@@ -1220,6 +1310,24 @@ const getHeldSide = (position: ArcMarketPosition | undefined): "yes" | "no" | nu
   return null;
 };
 
+const claimedMarketKey = (walletAddress: string): string => `siftle_claimed_markets_${walletAddress.toLowerCase()}`;
+
+const readClaimedMarkets = (): Set<string> => {
+  if (!state.walletAddress) return new Set();
+  try {
+    return new Set(JSON.parse(localStorage.getItem(claimedMarketKey(state.walletAddress)) || "[]"));
+  } catch {
+    return new Set();
+  }
+};
+
+const markMarketClaimed = (marketId: string): void => {
+  if (!state.walletAddress) return;
+  const claimed = readClaimedMarkets();
+  claimed.add(marketId);
+  localStorage.setItem(claimedMarketKey(state.walletAddress), JSON.stringify(Array.from(claimed)));
+};
+
 const isMarketResolved = (market: MarketPreview, snapshot: ArcMarketSnapshot | undefined): boolean => {
   if ((snapshot?.outcome ?? 0) !== 0) return true;
   return /^resolved$/i.test(String(market.closes || "").trim());
@@ -1479,8 +1587,10 @@ const loadPortfolioPositions = async (): Promise<void> => {
 
   state.loadingPortfolioPositions = true;
   try {
+    if (state.portfolioMarketPreviews.length === 0) await loadPortfolioMarkets();
+    const marketsForPortfolio = getPortfolioMarkets();
     const entries = await Promise.all(
-      marketPreviews.map(async (market) => {
+      marketsForPortfolio.map(async (market) => {
         const marketAddress = getMarketAddress(market);
         if (!marketAddress) return [market.id, { yesSharesUsdc: 0, noSharesUsdc: 0 }] as const;
         const [position, snapshot] = await Promise.all([
@@ -1509,7 +1619,7 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
     return;
   }
 
-  const market = marketPreviews.find((item) => item.id === marketId);
+  const market = getPortfolioMarkets().find((item) => item.id === marketId);
   if (!market) return;
 
   state.marketTradeSide = side;
@@ -3289,15 +3399,18 @@ const renderPortfolioPositionCard = (market: MarketPreview): string => {
   const bestPotentialPayout = heldRows.reduce((best, row) => Math.max(best, row.payout), 0);
   const totalShares = position.yesSharesUsdc + position.noSharesUsdc;
   const resolvedOutcome = snapshot?.outcome ?? 0;
+  const isClaimed = readClaimedMarkets().has(market.id);
   const winningShares = resolvedOutcome === 1 ? position.yesSharesUsdc : resolvedOutcome === 2 ? position.noSharesUsdc : 0;
   const winningPool = resolvedOutcome === 1 ? snapshot?.yesSharesUsdc ?? 0 : resolvedOutcome === 2 ? snapshot?.noSharesUsdc ?? 0 : 0;
   const totalPool = snapshot?.volumeUsdc ?? 0;
   const claimAmount = winningShares > 0 && winningPool > 0 ? (winningShares / winningPool) * totalPool : 0;
   const claimHtml = resolvedOutcome === 0
     ? ""
-    : claimAmount > 0
+    : isClaimed
+      ? `<span style="color: #34d399; font-size: 0.82rem; font-weight: 800;">Claimed</span>`
+      : claimAmount > 0
       ? `<button type="button" class="connect-wallet-btn" data-claim-market="${market.id}" style="background: #ffffff !important; color: #000000 !important; border: 1px solid #ffffff !important; border-radius: 6px !important; padding: 8px 14px !important; font-size: 0.82rem !important; font-weight: 700 !important; cursor: pointer !important;">Claim $${formatMoney(claimAmount)}</button>`
-      : `<span style="color: #8e8e93; font-size: 0.82rem; font-weight: 700;">No payout</span>`;
+      : `<span style="color: #ef4444; font-size: 0.82rem; font-weight: 800;">Lost</span>`;
 
   return `
     <article class="portfolio-position-card">
@@ -3326,7 +3439,7 @@ const claimPortfolioMarket = async (marketId: string): Promise<void> => {
     return;
   }
 
-  const market = marketPreviews.find((item) => item.id === marketId);
+  const market = getPortfolioMarkets().find((item) => item.id === marketId);
   const marketAddress = market ? getMarketAddress(market) : "";
   if (!market || !marketAddress) {
     showActionToast("Market is not available.");
@@ -3338,6 +3451,7 @@ const claimPortfolioMarket = async (marketId: string): Promise<void> => {
     calculateLeaderboardScore();
     const result = await claimArcMarketPayout(marketAddress, state.walletAddress);
     trackEvent("claim_success");
+    if (result.won) markMarketClaimed(market.id);
     delete state.marketPositions[market.id];
     delete state.marketSnapshots[market.id];
     state.hasLoadedPortfolioPositions = false;
@@ -3350,6 +3464,65 @@ const claimPortfolioMarket = async (marketId: string): Promise<void> => {
     trackEvent("claim_failed");
     showActionToast(error instanceof Error ? error.message : "Claim failed");
   }
+};
+
+const renderReferralPanel = (): string => {
+  if (!state.referralPanelOpen) return "";
+  const data = state.referralData;
+  const referralRows = data?.referrals?.length
+    ? data.referrals.map((referral) => {
+      const name = referral.displayName || shortenAddress(referral.walletAddress);
+      const isExpired = referral.remaining <= 0;
+      return `
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--market-border);">
+          <div style="min-width: 0;">
+            <strong style="display: block; color: var(--market-text-main); font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(name)}</strong>
+            <span style="color: var(--market-text-muted); font-size: 0.76rem;">${shortenAddress(referral.walletAddress)}</span>
+          </div>
+          <div style="text-align: right; flex-shrink: 0;">
+            <strong style="color: ${isExpired ? "#ef4444" : "var(--market-text-main)"}; font-size: 0.86rem;">${referral.used}/${referral.maxUses} used</strong>
+            <span style="display: block; color: var(--market-text-muted); font-size: 0.74rem;">${isExpired ? "Expired" : `${referral.remaining} left`}</span>
+          </div>
+        </div>
+      `;
+    }).join("")
+    : `<div class="portfolio-empty compact">No referrals yet.</div>`;
+
+  return `
+    <div class="trade-modal-backdrop active">
+      <div class="trade-modal-card" style="max-width: 430px;">
+        <div class="trade-modal-header">
+          <h2>Your Referrals</h2>
+          <button type="button" class="trade-modal-close" data-close-referrals>&times;</button>
+        </div>
+        ${state.loadingReferralData || !data
+          ? `<div class="portfolio-empty compact">Loading referral details...</div>`
+          : `
+            <div style="display: grid; gap: 12px;">
+              <div style="border: 1px solid var(--market-border); border-radius: 10px; padding: 14px; background: var(--market-bg);">
+                <span style="display: block; color: var(--market-text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;">Invite code</span>
+                <strong style="display: block; color: var(--market-text-main); font-size: 1.25rem; margin-top: 4px;">${escapeHtml(data.code)}</strong>
+              </div>
+              <button type="button" class="connect-wallet-btn" data-copy-referral-link="${escapeHtml(data.inviteLink)}" style="background: #ffffff !important; color: #000000 !important; border: 1px solid #ffffff !important; border-radius: 8px !important; padding: 10px 14px !important; font-weight: 800 !important;">Copy invite link</button>
+              <div style="display: flex; gap: 10px;">
+                <div style="flex: 1; border: 1px solid var(--market-border); border-radius: 10px; padding: 12px;">
+                  <span style="display: block; color: var(--market-text-muted); font-size: 0.72rem;">Active referrals</span>
+                  <strong style="color: var(--market-text-main); font-size: 1.05rem;">${data.activeReferralCount}</strong>
+                </div>
+                <div style="flex: 1; border: 1px solid var(--market-border); border-radius: 10px; padding: 12px;">
+                  <span style="display: block; color: var(--market-text-muted); font-size: 0.72rem;">Bonus earned</span>
+                  <strong style="color: var(--market-text-main); font-size: 1.05rem;">+${data.totalEarned} pts</strong>
+                </div>
+              </div>
+              <div style="padding-top: 4px;">
+                ${referralRows}
+              </div>
+              <p style="color: var(--market-text-muted); font-size: 0.78rem; line-height: 1.45; margin: 0;">When you and a direct referral both win the same Daily market, you earn +10 pts. Max 3 referrals per market. Each referral can help on 5 winning markets.</p>
+            </div>
+          `}
+      </div>
+    </div>
+  `;
 };
 
 const renderPortfolio = (): void => {
@@ -3365,11 +3538,14 @@ const renderPortfolio = (): void => {
   storyList.hidden = false;
   storyList.classList.add("markets-list");
   if (state.walletAddress && !state.hasLoadedPortfolioPositions && !state.loadingPortfolioPositions) {
+    if (state.portfolioMarketPreviews.length === 0) void loadPortfolioMarkets();
+    if (state.referralPanelOpen && !state.referralData && !state.loadingReferralData) void loadReferralData();
     void loadPortfolioPositions();
   }
-  const portfolioMarkets = marketPreviews.filter((market) => {
+  const claimedMarkets = readClaimedMarkets();
+  const portfolioMarkets = getPortfolioMarkets().filter((market) => {
     const position = state.marketPositions[market.id];
-    return position && position.yesSharesUsdc + position.noSharesUsdc > 0;
+    return claimedMarkets.has(market.id) || (position && position.yesSharesUsdc + position.noSharesUsdc > 0);
   });
   const openPositions = portfolioMarkets.filter((market) => (state.marketSnapshots[market.id]?.outcome ?? 0) === 0);
   const finalizedPositions = portfolioMarkets.filter((market) => (state.marketSnapshots[market.id]?.outcome ?? 0) !== 0);
@@ -3444,6 +3620,12 @@ const renderPortfolio = (): void => {
           </div>
         </div>
       </div>
+      ${walletConnected ? `
+        <button type="button" class="connect-wallet-btn" data-open-referrals style="width: 100% !important; margin-bottom: 16px !important; background: var(--market-card-bg) !important; color: var(--market-text-main) !important; border: 1px solid var(--market-border) !important; border-radius: 10px !important; padding: 13px 16px !important; font-size: 0.92rem !important; font-weight: 800 !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+          <span>Your referrals</span>
+          <span style="color: var(--market-text-muted); font-size: 0.8rem;">Invite & track bonus</span>
+        </button>
+      ` : ""}
       <div class="portfolio-section-tabs">
         <span>Open ${openPositions.length}</span>
         <span>Finalized ${finalizedPositions.length}</span>
@@ -3464,6 +3646,7 @@ const renderPortfolio = (): void => {
                 ${finalizedPositions.length ? finalizedPositions.map(renderPortfolioPositionCard).join("") : `<div class="portfolio-empty compact">No finalized positions yet.</div>`}
               </section>
             `}
+      ${renderReferralPanel()}
     </section>
   `;
 };
@@ -3566,6 +3749,25 @@ document.addEventListener("click", (event) => {
   if (claimBtn) {
     const marketId = claimBtn.getAttribute("data-claim-market");
     if (marketId) void claimPortfolioMarket(marketId);
+    return;
+  }
+  if (target.closest("[data-open-referrals]")) {
+    state.referralPanelOpen = true;
+    void loadReferralData();
+    renderPortfolio();
+    return;
+  }
+  if (target.closest("[data-close-referrals]")) {
+    state.referralPanelOpen = false;
+    renderPortfolio();
+    return;
+  }
+  const referralCopyBtn = target.closest<HTMLElement>("[data-copy-referral-link]");
+  if (referralCopyBtn) {
+    const link = referralCopyBtn.getAttribute("data-copy-referral-link") || "";
+    if (link) {
+      void navigator.clipboard.writeText(link).then(() => showActionToast("Invite link copied"));
+    }
     return;
   }
   if (target.closest("[data-connect-wallet]")) {

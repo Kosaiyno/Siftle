@@ -63,6 +63,23 @@ create table if not exists ai_briefing_unlocks (
 create index if not exists ai_briefing_unlocks_daily_idx
   on ai_briefing_unlocks (date_key, wallet_address);
 
+create table if not exists referral_codes (
+  wallet_address text primary key references profiles(wallet_address) on delete cascade,
+  code text unique not null,
+  created_at timestamptz default now()
+);
+
+create table if not exists referral_relationships (
+  referred_wallet text primary key references profiles(wallet_address) on delete cascade,
+  referrer_wallet text not null references profiles(wallet_address) on delete cascade,
+  referral_code text not null,
+  created_at timestamptz default now(),
+  check (referred_wallet <> referrer_wallet)
+);
+
+create index if not exists referral_relationships_referrer_idx
+  on referral_relationships (referrer_wallet);
+
 create table if not exists season_division_assignments (
   season_id text not null,
   wallet_address text not null references profiles(wallet_address) on delete cascade,
@@ -111,6 +128,8 @@ grant select, insert, update, delete on table leaderboard_entries to service_rol
 grant select, insert, update, delete on table resolved_results to service_role;
 grant select, insert, update, delete on table leaderboard_bonus_events to service_role;
 grant select, insert, update, delete on table ai_briefing_unlocks to service_role;
+grant select, insert, update, delete on table referral_codes to service_role;
+grant select, insert, update, delete on table referral_relationships to service_role;
 grant select, insert, update, delete on table season_division_assignments to service_role;
 grant select, insert, update, delete on table analytics_daily to service_role;
 grant select, insert, update, delete on table analytics_signups to service_role;

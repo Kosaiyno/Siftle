@@ -122,6 +122,9 @@ const compensationChallengeMarketIds = (
 ).split(",").map((id) => id.trim()).filter(Boolean);
 const compensationChallengeTwoOfThreePoints = Math.max(0, Number(process.env.COMPENSATION_CHALLENGE_TWO_OF_THREE_POINTS ?? 50));
 const compensationChallengeThreeOfThreePoints = Math.max(0, Number(process.env.COMPENSATION_CHALLENGE_THREE_OF_THREE_POINTS ?? 100));
+const referralWinBonusPoints = Math.max(0, Number(process.env.REFERRAL_WIN_BONUS_POINTS ?? 10));
+const referralWinBonusMaxRefsPerMarket = Math.max(0, Number(process.env.REFERRAL_WIN_BONUS_MAX_REFS_PER_MARKET ?? 3));
+const referralWinBonusMaxUsesPerReferral = Math.max(0, Number(process.env.REFERRAL_WIN_BONUS_MAX_USES_PER_REFERRAL ?? 5));
 
 const LEADERBOARD_MARKET_ABI = [
   "function outcome() view returns (uint8)",
@@ -5252,6 +5255,102 @@ function normalizeWalletAddress(value) {
   return /^0x[a-f0-9]{40}$/.test(clean) ? clean : "";
 }
 
+const makeReferralCode = (walletAddress) =>
+  createHash("sha256").update(normalizeWalletAddress(walletAddress)).digest("hex").slice(0, 8).toUpperCase();
+
+async function ensureReferralCode(walletAddress) {
+  const address = normalizeWalletAddress(walletAddress);
+  if (!address) throw new Error("Missing wallet address");
+  const fallbackCode = makeReferralCode(address);
+
+  if (!isSupabaseConfigured) return fallbackCode;
+
+  await supabaseRequest("profiles?on_conflict=wallet_address", {
+    method: "POST",
+    prefer: "resolution=merge-duplicates",
+    body: [{ wallet_address: address, updated_at: new Date().toISOString() }]
+  });
+
+  let rows = await supabaseRequest(`referral_codes?wallet_address=eq.${encodeURIComponent(address)}&select=code`);
+  if (rows?.[0]?.code) return String(rows[0].code);
+
+  await supabaseRequest("referral_codes?on_conflict=wallet_address", {
+    method: "POST",
+    prefer: "resolution=merge-duplicates",
+    body: [{ wallet_address: address, code: fallbackCode }]
+  });
+  rows = await supabaseRequest(`referral_codes?wallet_address=eq.${encodeURIComponent(address)}&select=code`);
+  return String(rows?.[0]?.code || fallbackCode);
+}
+
+async function bindReferralCode(walletAddress, referralCode) {
+  const referredWallet = normalizeWalletAddress(walletAddress);
+  const code = String(referralCode || "").trim().toUpperCase();
+  if (!referredWallet || !code) return { bound: false, reason: "missing" };
+  if (!isSupabaseConfigured) return { bound: false, reason: "supabase_unconfigured" };
+
+  const codeRows = await supabaseRequest(`referral_codes?code=eq.${encodeURIComponent(code)}&select=wallet_address,code`);
+  const referrerWallet = normalizeWalletAddress(codeRows?.[0]?.wallet_address);
+  if (!referrerWallet || referrerWallet === referredWallet) {
+    return { bound: false, reason: "invalid_code" };
+  }
+
+  await supabaseRequest("profiles?on_conflict=wallet_address", {
+    method: "POST",
+    prefer: "resolution=merge-duplicates",
+    body: [
+      { wallet_address: referredWallet, updated_at: new Date().toISOString() },
+      { wallet_address: referrerWallet, updated_at: new Date().toISOString() }
+    ]
+  });
+
+  const existing = await supabaseRequest(`referral_relationships?referred_wallet=eq.${encodeURIComponent(referredWallet)}&select=referrer_wallet`);
+  if (existing?.[0]?.referrer_wallet) {
+    return {
+      bound: normalizeWalletAddress(existing[0].referrer_wallet) === referrerWallet,
+      reason: "already_bound"
+    };
+  }
+
+  await supabaseRequest("referral_relationships", {
+    method: "POST",
+    prefer: "return=minimal",
+    body: [{
+      referred_wallet: referredWallet,
+      referrer_wallet: referrerWallet,
+      referral_code: code
+    }]
+  });
+
+  leaderboardCache.expiresAt = 0;
+  leaderboardCache.analytics = null;
+  return { bound: true, referrerWallet };
+}
+
+async function loadReferralRelationshipsFromSupabase(data) {
+  if (!isSupabaseConfigured) return data;
+  const leaderboard = ensureLeaderboardState(data);
+  leaderboard.referrals = {};
+
+  try {
+    const rows = await supabaseRequest("referral_relationships?select=referred_wallet,referrer_wallet,referral_code,created_at");
+    (rows || []).forEach((row) => {
+      const referred = normalizeWalletAddress(row.referred_wallet);
+      const referrer = normalizeWalletAddress(row.referrer_wallet);
+      if (!referred || !referrer || referred === referrer) return;
+      if (!leaderboard.referrals[referrer]) leaderboard.referrals[referrer] = {};
+      leaderboard.referrals[referrer][referred] = {
+        referral_code: String(row.referral_code || ""),
+        created_at: row.created_at || new Date().toISOString()
+      };
+    });
+  } catch (err) {
+    if (!/referral_relationships|relation|table/i.test(String(err.message || ""))) throw err;
+  }
+
+  return data;
+}
+
 const getSummaryUnlockKey = (sourceUrl = "") =>
   createHash("sha256").update(String(sourceUrl || "").trim()).digest("hex");
 
@@ -5412,6 +5511,27 @@ function getActiveMarkets() {
   }
 }
 
+function getMarketHistory() {
+  const filePath = join(root, "data", "market_history.json");
+  if (!existsSync(filePath)) return [];
+  try {
+    const content = readFileSync(filePath, "utf8");
+    const parsed = JSON.parse(content);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    console.error("Failed to parse market history:", err);
+    return [];
+  }
+}
+
+function getKnownMarkets() {
+  const byId = new Map();
+  [...getMarketHistory(), ...getActiveMarkets()].forEach((market) => {
+    if (market?.id) byId.set(market.id, market);
+  });
+  return Array.from(byId.values());
+}
+
 function getConfiguredMarketAddress(marketId) {
   return normalizeWalletAddress(marketAddresses[marketId] || "");
 }
@@ -5509,6 +5629,7 @@ function ensureLeaderboardState(data) {
   if (!data.leaderboard.traders) data.leaderboard.traders = {};
   if (!data.leaderboard.resolvedResults) data.leaderboard.resolvedResults = {};
   if (!data.leaderboard.bonusEvents) data.leaderboard.bonusEvents = {};
+  if (!data.leaderboard.referrals) data.leaderboard.referrals = {};
   return data.leaderboard;
 }
 
@@ -5558,6 +5679,63 @@ function applyCompensationChallengeBonuses(data) {
       wins,
       total: compensationChallengeMarketIds.length,
       market_ids: compensationChallengeMarketIds
+    });
+  });
+}
+
+function getReferralBonusUses(data, referrerWallet, referredWallet) {
+  const referrer = normalizeWalletAddress(referrerWallet);
+  const referred = normalizeWalletAddress(referredWallet);
+  const events = data.leaderboard?.bonusEvents?.[referrer] || {};
+  return Object.entries(events).filter(([bonusKey, event]) =>
+    String(event?.bonus_type || "") === "referral_win"
+    && (event?.metadata?.referred_wallet === referred || bonusKey.endsWith(`:${referred}`))
+  ).length;
+}
+
+function marketLockCutoffMs(market) {
+  const kickoffMs = Date.parse(market?.kickoffAt || "");
+  if (Number.isFinite(kickoffMs)) return kickoffMs - 20 * 60 * 1000;
+  return Number.POSITIVE_INFINITY;
+}
+
+function applyReferralWinBonuses(data) {
+  if (referralWinBonusPoints <= 0 || referralWinBonusMaxRefsPerMarket <= 0 || referralWinBonusMaxUsesPerReferral <= 0) return;
+  const leaderboard = ensureLeaderboardState(data);
+  const dailyMarkets = getKnownMarkets().filter((market) => market?.timeframe === "Daily" && market?.id);
+
+  Object.entries(leaderboard.referrals || {}).forEach(([referrerWallet, referrals]) => {
+    const referrer = normalizeWalletAddress(referrerWallet);
+    if (!referrer || isAdminWallet(referrer)) return;
+    const referrerResults = leaderboard.resolvedResults?.[referrer] || {};
+
+    dailyMarkets.forEach((market) => {
+      const referrerResult = referrerResults[market.id];
+      if (referrerResult?.result !== "win") return;
+
+      const cutoffMs = marketLockCutoffMs(market);
+      const qualifyingReferrals = Object.entries(referrals || {}).filter(([referredWallet, relationship]) => {
+        const referred = normalizeWalletAddress(referredWallet);
+        if (!referred || referred === referrer || isAdminWallet(referred)) return false;
+        const joinedMs = Date.parse(relationship?.created_at || "") || Date.now();
+        if (joinedMs > cutoffMs) return false;
+        if ((leaderboard.resolvedResults?.[referred] || {})[market.id]?.result !== "win") return false;
+        return getReferralBonusUses(data, referrer, referred) < referralWinBonusMaxUsesPerReferral;
+      }).sort(([, a], [, b]) => {
+        const aJoined = Date.parse(a?.created_at || "") || Number.MAX_SAFE_INTEGER;
+        const bJoined = Date.parse(b?.created_at || "") || Number.MAX_SAFE_INTEGER;
+        return aJoined - bJoined;
+      }).slice(0, referralWinBonusMaxRefsPerMarket);
+
+      qualifyingReferrals.forEach(([referredWallet]) => {
+        const referred = normalizeWalletAddress(referredWallet);
+        const bonusKey = `referral-win:${market.id}:${referred}`;
+        setLeaderboardBonus(data, referrer, bonusKey, "referral_win", referralWinBonusPoints, {
+          market_id: market.id,
+          referred_wallet: referred,
+          max_uses: referralWinBonusMaxUsesPerReferral
+        });
+      });
     });
   });
 }
@@ -5733,7 +5911,7 @@ async function recomputeLeaderboardFromChain(data) {
   const tradersMap = leaderboard.traders;
   const resolvedResults = leaderboard.resolvedResults;
 
-  const dailyMarkets = getActiveMarkets().filter((market) => {
+  const dailyMarkets = getKnownMarkets().filter((market) => {
     const marketAddress = normalizeWalletAddress(market.marketAddress) || getConfiguredMarketAddress(market.id);
     return market.timeframe === "Daily" && Boolean(marketAddress);
   });
@@ -5856,6 +6034,7 @@ async function recomputeLeaderboardFromChain(data) {
   });
 
   applyCompensationChallengeBonuses(data);
+  applyReferralWinBonuses(data);
   Object.keys(leaderboard.bonusEvents || {}).forEach((address) => {
     const normalized = normalizeWalletAddress(address);
     if (normalized) allTraders.add(normalized);
@@ -5917,6 +6096,7 @@ async function getLeaderboardAnalyticsFresh() {
   leaderboardRefreshPromise = (async () => {
     const data = loadAnalytics();
     await loadLeaderboardFromSupabase(data);
+    await loadReferralRelationshipsFromSupabase(data);
     try {
       await recomputeLeaderboardFromChain(data);
       saveAnalytics(data);
@@ -7221,6 +7401,74 @@ const server = createServer(async (request, response) => {
     } catch (error) {
       sendJson(response, 500, { error: error.message });
     }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/portfolio/markets" && request.method === "GET") {
+    sendJson(response, 200, getKnownMarkets());
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/referrals" && request.method === "GET") {
+    try {
+      const walletAddress = normalizeWalletAddress(requestUrl.searchParams.get("walletAddress") || "");
+      if (!walletAddress) {
+        sendJson(response, 400, { error: "Missing walletAddress" });
+        return;
+      }
+
+      const code = await ensureReferralCode(walletAddress);
+      const data = await loadReferralRelationshipsFromSupabase(await loadLeaderboardFromSupabase(loadAnalytics()));
+      const leaderboard = ensureLeaderboardState(data);
+      const referrals = leaderboard.referrals?.[walletAddress] || {};
+      const profiles = isSupabaseConfigured
+        ? await supabaseRequest("profiles?select=wallet_address,username")
+        : [];
+      const profileMap = new Map((profiles || []).map((profile) => [normalizeWalletAddress(profile.wallet_address), String(profile.username || "")]));
+      const referralRows = Object.entries(referrals).sort(([, a], [, b]) => {
+        const aJoined = Date.parse(a?.created_at || "") || Number.MAX_SAFE_INTEGER;
+        const bJoined = Date.parse(b?.created_at || "") || Number.MAX_SAFE_INTEGER;
+        return aJoined - bJoined;
+      }).map(([referredWallet, relationship]) => {
+        const used = getReferralBonusUses(data, walletAddress, referredWallet);
+        return {
+          walletAddress: referredWallet,
+          displayName: profileMap.get(normalizeWalletAddress(referredWallet)) || "",
+          used,
+          remaining: Math.max(0, referralWinBonusMaxUsesPerReferral - used),
+          maxUses: referralWinBonusMaxUsesPerReferral,
+          joinedAt: relationship?.created_at || null
+        };
+      });
+      const totalEarned = Object.values(leaderboard.bonusEvents?.[walletAddress] || {})
+        .filter((event) => event?.bonus_type === "referral_win")
+        .reduce((sum, event) => sum + (Number(event?.points) || 0), 0);
+      const origin = request.headers.origin || process.env.PUBLIC_APP_URL || "https://siftle.xyz";
+
+      sendJson(response, 200, {
+        walletAddress,
+        code,
+        inviteLink: `${String(origin).replace(/\/$/, "")}/?ref=${encodeURIComponent(code)}`,
+        referrals: referralRows,
+        activeReferralCount: referralRows.length,
+        totalEarned,
+        rules: {
+          pointsPerReferralWin: referralWinBonusPoints,
+          maxReferralsPerMarket: referralWinBonusMaxRefsPerMarket,
+          maxUsesPerReferral: referralWinBonusMaxUsesPerReferral
+        }
+      });
+    } catch (error) {
+      sendJson(response, 500, { error: error.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/referrals/bind" && request.method === "POST") {
+    readJsonBody(request)
+      .then((body) => bindReferralCode(body?.walletAddress, body?.referralCode))
+      .then((payload) => sendJson(response, 200, { success: true, ...payload }))
+      .catch((error) => sendJson(response, 500, { error: error.message }));
     return;
   }
 
