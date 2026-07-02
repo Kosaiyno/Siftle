@@ -1,33 +1,33 @@
 export const marketThreadRules = {
-  "wc-england-score-both-halves-drc": {
+  "wc-spain-austria-spread": {
     category: "Sports",
-    topic: "England DR Congo Team News",
+    topic: "Spain Austria World Cup Knockout",
     includeAnySets: [
-      ["england", "tuchel", "kane", "bellingham", "saka", "madueke", "rice", "quansah", "reece james"],
-      ["dr congo", "drc", "congo", "wissa", "mbemba", "bakambu", "tuanzebe"],
-      ["world cup", "fifa", "2026", "round of 32", "knockout", "team news", "injury", "lineup", "score", "goal", "goals", "preview", "match"]
+      ["spain", "spanish", "yamal", "pedri", "rodri", "oyarzabal", "fabian ruiz", "nico williams"],
+      ["austria", "austrian", "alaba", "sabitzer", "arnautovic", "rangnick"],
+      ["world cup", "fifa", "2026", "round of 32", "knockout", "team news", "injury", "lineup", "score", "goal", "goals", "preview", "match", "margin", "spread"]
     ],
-    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "mexico", "ecuador", "belgium", "senegal", "united states", "bosnia"]
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "portugal", "croatia", "ronaldo", "modric"]
   },
-  "wc-de-bruyne-score-assist-senegal": {
+  "wc-ronaldo-score-assist-croatia": {
     category: "Sports",
-    topic: "Kevin De Bruyne Belgium Senegal",
+    topic: "Cristiano Ronaldo Portugal Croatia",
     includeAnySets: [
-      ["de bruyne", "kevin de bruyne", "belgium", "belgian", "lukaku", "doku", "trossard"],
-      ["senegal", "sadio mane", "mane", "ismaila sarr", "nicolas jackson", "mendy"],
+      ["ronaldo", "cristiano ronaldo", "cr7", "portugal", "portuguese", "bruno fernandes", "bernardo silva"],
+      ["croatia", "croatian", "modric", "stanisic", "stanisic", "kovacic", "gvaridiol"],
       ["world cup", "fifa", "2026", "round of 32", "knockout", "goal", "assist", "score", "team news", "preview", "match"]
     ],
-    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "england", "dr congo", "united states", "bosnia"]
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "spain", "austria"]
   },
-  "wc-usa-score-before-20-bosnia": {
+  "wc-portugal-croatia-extra-time": {
     category: "Sports",
-    topic: "United States Bosnia Team News",
+    topic: "Portugal Croatia World Cup Knockout",
     includeAnySets: [
-      ["united states", "usa", "usmnt", "pulisic", "pochettino", "reyna", "mckennie", "adams", "dest"],
-      ["bosnia", "bosnia and herzegovina", "herzegovina", "dzeko", "pjanic", "barbarez"],
-      ["world cup", "fifa", "2026", "round of 32", "knockout", "goal", "score", "early", "team news", "preview", "match", "santa clara"]
+      ["portugal", "portuguese", "ronaldo", "cristiano ronaldo", "bruno fernandes", "bernardo silva"],
+      ["croatia", "croatian", "modric", "stanisic", "kovacic", "gvaridiol"],
+      ["world cup", "fifa", "2026", "round of 32", "knockout", "extra time", "penalties", "draw", "level", "preview", "match", "toronto"]
     ],
-    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "england", "dr congo", "belgium", "senegal"]
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "spain", "austria"]
   },
   "wc-ivory-coast-eliminate-norway": {
     category: "Sports",

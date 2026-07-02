@@ -87,9 +87,9 @@ const leaderboardProvider = new JsonRpcProvider(ARC_TESTNET_RPC_URL, ARC_TESTNET
 const LOCAL_TEST_MARKET_ADDRESS = "0x0000000000000000000000000000000000000101";
 const isLocalTestMarketAddress = (address) => /^0x0{36}01[0-9a-f]{2}$/i.test(String(address || ""));
 const marketAddresses = {
-  "wc-england-score-both-halves-drc": process.env.SIFTLE_MARKET_ENGLAND_DRC_BOTH_HALVES_ADDRESS || "0x226BfF2b5A5e4F5686cfB37FaD7Dd345CfD68e01",
-  "wc-de-bruyne-score-assist-senegal": process.env.SIFTLE_MARKET_DE_BRUYNE_SENEGAL_ADDRESS || "0x3603A839044Cc187A5B564C1b413BB764E8dA4E1",
-  "wc-usa-score-before-20-bosnia": process.env.SIFTLE_MARKET_USA_BOSNIA_EARLY_GOAL_ADDRESS || "0x1B890c4F066BC260cE3F0a8266303052080a0FB4",
+  "wc-spain-austria-spread": process.env.SIFTLE_MARKET_SPAIN_AUSTRIA_SPREAD_ADDRESS || "0x123580A3Af7E22a591a460E249346a3beeCEd930",
+  "wc-ronaldo-score-assist-croatia": process.env.SIFTLE_MARKET_RONALDO_CROATIA_ADDRESS || "0xBccb9DC161C1260F3074752f4D1579a74bD86490",
+  "wc-portugal-croatia-extra-time": process.env.SIFTLE_MARKET_PORTUGAL_CROATIA_EXTRA_TIME_ADDRESS || "0x18de1CD95b5c34cc5189e31510AD0C71123345cE",
   "transfer-tonali-spurs": process.env.SIFTLE_MARKET_TONALI_ADDRESS || "0xB4F9E7a45aB1B4D26D71e32b67565cE875220615",
   "transfer-guimaraes-arsenal": process.env.SIFTLE_MARKET_GUIMARAES_ADDRESS || "0xc83F2feA4b9cF25d074c4a8F26D13f26156b496B"
 };
@@ -3207,9 +3207,9 @@ const getActiveMarketQueriesStr = (category) => {
       : markets.filter(m => m.category === category);
     
     const phrases = categoryMarkets.map(m => {
-      if (m.id === "wc-england-score-both-halves-drc") return `"England" "DR Congo" "World Cup"`;
-      if (m.id === "wc-de-bruyne-score-assist-senegal") return `"Kevin De Bruyne" "Senegal" "World Cup"`;
-      if (m.id === "wc-usa-score-before-20-bosnia") return `"United States" "Bosnia" "World Cup"`;
+      if (m.id === "wc-spain-austria-spread") return `"Spain" "Austria" "World Cup"`;
+      if (m.id === "wc-ronaldo-score-assist-croatia") return `"Cristiano Ronaldo" "Croatia" "World Cup"`;
+      if (m.id === "wc-portugal-croatia-extra-time") return `"Portugal" "Croatia" "World Cup"`;
       if (m.id === "transfer-tonali-spurs") return `"Sandro Tonali" "Tottenham"`;
       if (m.id === "transfer-guimaraes-arsenal") return `"Bruno Guimarães" "Arsenal"`;
       if (m.id === "wc-mbappe-haaland-goals") return `"Mbappé" "Haaland"`;

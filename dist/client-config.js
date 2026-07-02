@@ -2,4 +2,4 @@ window.SIFTLE_API_BASE = "";
 window.REOWN_PROJECT_ID = "f68400f44ed1ff1bfb6f1fb1b6f89731";
 window.CIRCLE_APP_ID = "670877ac-ddd0-5447-a301-7c23fe04566a";
 window.ARC_TESTNET_USDC_ADDRESS = "0x3600000000000000000000000000000000000000";
-window.SIFTLE_MARKET_ADDRESSES = {"wc-england-score-both-halves-drc":"0x226BfF2b5A5e4F5686cfB37FaD7Dd345CfD68e01","wc-de-bruyne-score-assist-senegal":"0x3603A839044Cc187A5B564C1b413BB764E8dA4E1","wc-usa-score-before-20-bosnia":"0x1B890c4F066BC260cE3F0a8266303052080a0FB4","transfer-tonali-spurs":"0xB4F9E7a45aB1B4D26D71e32b67565cE875220615","transfer-guimaraes-arsenal":"0xc83F2feA4b9cF25d074c4a8F26D13f26156b496B"};
+window.SIFTLE_MARKET_ADDRESSES = {"wc-spain-austria-spread":"0x123580A3Af7E22a591a460E249346a3beeCEd930","wc-ronaldo-score-assist-croatia":"0xBccb9DC161C1260F3074752f4D1579a74bD86490","wc-portugal-croatia-extra-time":"0x18de1CD95b5c34cc5189e31510AD0C71123345cE","transfer-tonali-spurs":"0xB4F9E7a45aB1B4D26D71e32b67565cE875220615","transfer-guimaraes-arsenal":"0xc83F2feA4b9cF25d074c4a8F26D13f26156b496B"};

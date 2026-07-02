@@ -141,41 +141,41 @@ test("Ivory Coast Norway market accepts real knockout preview context", () => {
   );
 });
 
-test("England DR Congo market accepts team-specific scoring context", () => {
+test("Spain Austria market accepts team-specific margin context", () => {
   assert.equal(
     storyMatchesMarketThreadRule(
-      story("Sports", "England right-backs Quansah and James out of DR Congo game", "Thomas Tuchel must adjust England's World Cup lineup before the knockout match against DR Congo."),
-      marketThreadRules["wc-england-score-both-halves-drc"]
+      story("Sports", "Spain vs Austria World Cup team news", "Spain are missing Nico Williams while Austria bring Alaba and Sabitzer into a knockout match where the winning margin is in focus."),
+      marketThreadRules["wc-spain-austria-spread"]
     ),
     true
   );
 });
 
-test("England DR Congo market rejects broad schedule involving other matches", () => {
+test("Spain Austria market rejects Portugal Croatia context", () => {
   assert.equal(
     storyMatchesMarketThreadRule(
-      story("Sports", "World Cup today: England, Belgium and USA all in action", "Belgium face Senegal and the United States play Bosnia after England's fixture."),
-      marketThreadRules["wc-england-score-both-halves-drc"]
+      story("Sports", "Portugal and Croatia prepare for knockout clash", "Cristiano Ronaldo and Luka Modric headline the late World Cup match in Toronto."),
+      marketThreadRules["wc-spain-austria-spread"]
     ),
     false
   );
 });
 
-test("De Bruyne Senegal market accepts Belgium player goal involvement context", () => {
+test("Ronaldo Croatia market accepts goal involvement context", () => {
   assert.equal(
     storyMatchesMarketThreadRule(
-      story("Sports", "Kevin De Bruyne can decide Belgium vs Senegal", "Belgium need De Bruyne's passing, goals and assists in their 2026 World Cup knockout match against Senegal."),
-      marketThreadRules["wc-de-bruyne-score-assist-senegal"]
+      story("Sports", "Cristiano Ronaldo can decide Portugal vs Croatia", "Portugal need Ronaldo's finishing and chance creation in their 2026 World Cup knockout match against Croatia."),
+      marketThreadRules["wc-ronaldo-score-assist-croatia"]
     ),
     true
   );
 });
 
-test("USA Bosnia market accepts early attacking context", () => {
+test("Portugal Croatia extra-time market accepts knockout context", () => {
   assert.equal(
     storyMatchesMarketThreadRule(
-      story("Sports", "USMNT face Bosnia in Santa Clara", "Pulisic and Pochettino want the United States to start fast and score early in the World Cup knockout match."),
-      marketThreadRules["wc-usa-score-before-20-bosnia"]
+      story("Sports", "Portugal and Croatia ready for tense knockout match", "Modric and Ronaldo meet in a World Cup match that could go to extra time or penalties."),
+      marketThreadRules["wc-portugal-croatia-extra-time"]
     ),
     true
   );

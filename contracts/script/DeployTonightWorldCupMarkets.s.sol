@@ -16,9 +16,9 @@ contract DeployTonightWorldCupMarkets {
     function run()
         external
         returns (
-            address englandBothHalves,
-            address deBruyneGoalAssist,
-            address usaEarlyGoal
+            address spainSpread,
+            address ronaldoGoalAssist,
+            address portugalCroatiaExtraTime
         )
     {
         uint256 privateKey = vm.envUint("ARC_DEPLOYER_PRIVATE_KEY");
@@ -26,25 +26,25 @@ contract DeployTonightWorldCupMarkets {
 
         vm.startBroadcast(privateKey);
 
-        englandBothHalves = factory.createMarket(
-            1782920400,
-            "Will England score in both halves against DR Congo?",
-            "wc-england-score-both-halves-drc",
-            "Resolves Yes if England are officially credited with at least one goal in the first half and at least one goal in the second half against DR Congo in their July 1, 2026 World Cup knockout match. Extra-time goals and penalty shootout goals do not count. Own goals count only if the official match record credits the goal to England's score in that half. Otherwise resolves No."
+        spainSpread = factory.createMarket(
+            1783017600,
+            "Will Spain beat Austria by a margin of 2 or more goals?",
+            "wc-spain-austria-spread",
+            "Resolves Yes if Spain defeat Austria by a margin of 2 or more goals in their July 2, 2026 World Cup knockout match, including extra time if played. Resolves No if Spain win by exactly 1 goal, Austria advance, or the match is decided by penalties after a draw. Penalty shootout goals do not count toward the margin."
         );
 
-        deBruyneGoalAssist = factory.createMarket(
-            1782934800,
-            "Will Kevin De Bruyne score or assist against Senegal?",
-            "wc-de-bruyne-score-assist-senegal",
-            "Resolves Yes if Kevin De Bruyne is officially credited with at least one goal or at least one assist for Belgium against Senegal in their July 1, 2026 World Cup knockout match, including regular time and extra time. Penalty shootout goals do not count. If he does not play or is not officially credited with a goal or assist, resolves No."
+        ronaldoGoalAssist = factory.createMarket(
+            1783032000,
+            "Will Cristiano Ronaldo score or assist against Croatia?",
+            "wc-ronaldo-score-assist-croatia",
+            "Resolves Yes if Cristiano Ronaldo is officially credited with at least one goal or assist for Portugal against Croatia in their July 2, 2026 World Cup knockout match, including regular time and extra time. Penalty shootout goals do not count. Resolves No if he does not play or is not officially credited with a goal or assist."
         );
 
-        usaEarlyGoal = factory.createMarket(
-            1782949200,
-            "Will the United States score before the 20th minute against Bosnia?",
-            "wc-usa-score-before-20-bosnia",
-            "Resolves Yes if the United States are officially credited with a goal before the match clock reaches 20:00 against Bosnia and Herzegovina in their July 1, 2026 World Cup knockout match. Own goals count only if the official match record adds the goal to the United States score before 20:00. Extra-time and penalty shootout goals do not count. Otherwise resolves No."
+        portugalCroatiaExtraTime = factory.createMarket(
+            1783032000,
+            "Will Portugal vs Croatia go to extra time?",
+            "wc-portugal-croatia-extra-time",
+            "Resolves Yes if Portugal vs Croatia is level after 90 minutes plus stoppage time and goes to extra time in their July 2, 2026 World Cup knockout match. Resolves No if either team wins in regulation. Penalty shootouts are only relevant if the match has already gone to extra time."
         );
 
         vm.stopBroadcast();

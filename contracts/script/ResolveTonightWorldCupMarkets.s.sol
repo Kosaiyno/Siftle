@@ -18,18 +18,18 @@ contract ResolveTonightWorldCupMarkets {
     function run() external {
         uint256 privateKey = vm.envUint("ARC_DEPLOYER_PRIVATE_KEY");
 
-        ISiftleMarket englandBothHalves = ISiftleMarket(vm.envAddress("SIFTLE_MARKET_ENGLAND_DRC_BOTH_HALVES_ADDRESS"));
-        ISiftleMarket deBruyneGoalAssist = ISiftleMarket(vm.envAddress("SIFTLE_MARKET_DE_BRUYNE_SENEGAL_ADDRESS"));
-        ISiftleMarket usaEarlyGoal = ISiftleMarket(vm.envAddress("SIFTLE_MARKET_USA_BOSNIA_EARLY_GOAL_ADDRESS"));
-        uint8 englandResult = uint8(vm.envUint("SIFTLE_MARKET_ENGLAND_DRC_BOTH_HALVES_RESULT"));
-        uint8 deBruyneResult = uint8(vm.envUint("SIFTLE_MARKET_DE_BRUYNE_SENEGAL_RESULT"));
-        uint8 usaResult = uint8(vm.envUint("SIFTLE_MARKET_USA_BOSNIA_EARLY_GOAL_RESULT"));
+        ISiftleMarket spainSpread = ISiftleMarket(vm.envAddress("SIFTLE_MARKET_SPAIN_AUSTRIA_SPREAD_ADDRESS"));
+        ISiftleMarket ronaldoGoalAssist = ISiftleMarket(vm.envAddress("SIFTLE_MARKET_RONALDO_CROATIA_ADDRESS"));
+        ISiftleMarket portugalCroatiaExtraTime = ISiftleMarket(vm.envAddress("SIFTLE_MARKET_PORTUGAL_CROATIA_EXTRA_TIME_ADDRESS"));
+        uint8 spainResult = uint8(vm.envUint("SIFTLE_MARKET_SPAIN_AUSTRIA_SPREAD_RESULT"));
+        uint8 ronaldoResult = uint8(vm.envUint("SIFTLE_MARKET_RONALDO_CROATIA_RESULT"));
+        uint8 extraTimeResult = uint8(vm.envUint("SIFTLE_MARKET_PORTUGAL_CROATIA_EXTRA_TIME_RESULT"));
 
         vm.startBroadcast(privateKey);
 
-        englandBothHalves.resolve(englandResult);
-        deBruyneGoalAssist.resolve(deBruyneResult);
-        usaEarlyGoal.resolve(usaResult);
+        spainSpread.resolve(spainResult);
+        ronaldoGoalAssist.resolve(ronaldoResult);
+        portugalCroatiaExtraTime.resolve(extraTimeResult);
 
         vm.stopBroadcast();
     }
