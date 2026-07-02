@@ -5333,7 +5333,24 @@ async function bindReferralCode(walletAddress, referralCode) {
     throw err;
   }
   const referrerWallet = normalizeWalletAddress(codeRows?.[0]?.wallet_address);
-  if (!referrerWallet || referrerWallet === referredWallet) {
+  let resolvedReferrerWallet = referrerWallet;
+  if (!resolvedReferrerWallet && isSupabaseConfigured) {
+    try {
+      const profiles = await supabaseRequest("profiles?select=wallet_address");
+      const fallbackProfile = (profiles || []).find((profile) => makeReferralCode(profile.wallet_address) === code);
+      resolvedReferrerWallet = normalizeWalletAddress(fallbackProfile?.wallet_address);
+      if (resolvedReferrerWallet) {
+        await supabaseRequest("referral_codes?on_conflict=wallet_address", {
+          method: "POST",
+          prefer: "resolution=merge-duplicates",
+          body: [{ wallet_address: resolvedReferrerWallet, code }]
+        });
+      }
+    } catch (err) {
+      console.warn("[REFERRALS] Deterministic code fallback failed:", err.message);
+    }
+  }
+  if (!resolvedReferrerWallet || resolvedReferrerWallet === referredWallet) {
     return { bound: false, reason: "invalid_code" };
   }
 
@@ -5342,14 +5359,14 @@ async function bindReferralCode(walletAddress, referralCode) {
     prefer: "resolution=merge-duplicates",
     body: [
       { wallet_address: referredWallet, updated_at: new Date().toISOString() },
-      { wallet_address: referrerWallet, updated_at: new Date().toISOString() }
+      { wallet_address: resolvedReferrerWallet, updated_at: new Date().toISOString() }
     ]
   });
 
   const existing = await supabaseRequest(`referral_relationships?referred_wallet=eq.${encodeURIComponent(referredWallet)}&select=referrer_wallet`);
   if (existing?.[0]?.referrer_wallet) {
     return {
-      bound: normalizeWalletAddress(existing[0].referrer_wallet) === referrerWallet,
+      bound: normalizeWalletAddress(existing[0].referrer_wallet) === resolvedReferrerWallet,
       reason: "already_bound"
     };
   }
@@ -5359,14 +5376,14 @@ async function bindReferralCode(walletAddress, referralCode) {
     prefer: "return=minimal",
     body: [{
       referred_wallet: referredWallet,
-      referrer_wallet: referrerWallet,
+      referrer_wallet: resolvedReferrerWallet,
       referral_code: code
     }]
   });
 
   leaderboardCache.expiresAt = 0;
   leaderboardCache.analytics = null;
-  return { bound: true, referrerWallet };
+  return { bound: true, referrerWallet: resolvedReferrerWallet };
 }
 
 async function loadReferralRelationshipsFromSupabase(data) {

@@ -3636,7 +3636,7 @@ const renderReferralPanel = (walletConnected: boolean): string => {
             </button>
           </div>
           <div class="portfolio-referral-metrics">
-            <div><span>Active referrals</span><strong>${data.activeReferralCount}</strong></div>
+            <div><span>Joined referrals</span><strong>${data.activeReferralCount}</strong></div>
             <div><span>Bonus earned</span><strong>+${data.totalEarned} pts</strong></div>
           </div>
           <button type="button" class="portfolio-referral-toggle" data-open-referrals>
@@ -3703,7 +3703,8 @@ const renderPortfolio = (): void => {
 
   storyList.innerHTML = `
     <section class="portfolio-surface">
-      ${renderReferralPanel(walletConnected)}
+      <div class="portfolio-top-grid">
+        ${renderReferralPanel(walletConnected)}
       <div class="profile-card" style="background: var(--market-card-bg) !important; border: 1px solid var(--market-border) !important; border-radius: 12px !important; padding: 14px !important; margin-bottom: 12px !important; box-sizing: border-box !important;">
         <div class="profile-avatar-container" style="display: flex !important; align-items: center !important; gap: 16px !important;">
           <div class="profile-avatar-gradient" style="width: 44px !important; height: 44px !important; border-radius: 50% !important; background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important; display: flex !important; align-items: center !important; justify-content: center !important; flex-shrink: 0 !important; border: 1px solid rgba(255, 255, 255, 0.1) !important;">
@@ -3763,6 +3764,7 @@ const renderPortfolio = (): void => {
             </button>
           </div>
         </div>
+      </div>
       </div>
       <div class="portfolio-section-tabs">
         <span>Open ${openPositions.length}</span>

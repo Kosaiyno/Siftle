@@ -801,7 +801,7 @@ Trade and discuss here: ${l}`},nr=e=>{if(!y||!w)return;let a=Pe(e),r=!t.checkedM
             </button>
           </div>
           <div class="portfolio-referral-metrics">
-            <div><span>Active referrals</span><strong>${a.activeReferralCount}</strong></div>
+            <div><span>Joined referrals</span><strong>${a.activeReferralCount}</strong></div>
             <div><span>Bonus earned</span><strong>+${a.totalEarned} pts</strong></div>
           </div>
           <button type="button" class="portfolio-referral-toggle" data-open-referrals>
@@ -827,7 +827,8 @@ Trade and discuss here: ${l}`},nr=e=>{if(!y||!w)return;let a=Pe(e),r=!t.checkedM
     </section>
   `},W=()=>{if(!y||!w)return;Me?.toggleAttribute("hidden",!0),Le?.toggleAttribute("hidden",!0),ee?.toggleAttribute("hidden",!0),ve?.classList.remove("active"),be?.classList.remove("active"),ye?.classList.add("active"),document.body.classList.remove("detail-mode"),w.hidden=!0,y.hidden=!1,y.classList.add("markets-list"),t.walletAddress&&!t.referralData&&!t.referralError&&!t.loadingReferralData&&ge(),t.walletAddress&&!t.hasLoadedPortfolioPositions&&!t.loadingPortfolioPositions&&(t.portfolioMarketPreviews.length===0&&At(),q());let e=Ve(),a=Ae().filter(f=>{let u=t.marketPositions[f.id];return e.has(f.id)||u&&u.yesSharesUsdc+u.noSharesUsdc>0}),r=a.filter(f=>(t.marketSnapshots[f.id]?.outcome??0)===0),o=a.filter(f=>(t.marketSnapshots[f.id]?.outcome??0)!==0),s=!!t.walletAddress,n=t.profileUsername||(t.walletAddress?B(t.walletAddress):"Anonymous"),i=U(n),l=U(t.profileUsername||""),d=t.profileNotice?`<div style="margin-top: 14px !important; padding: 10px 12px !important; border-radius: 8px !important; border: 1px solid ${t.profileNotice.type==="error"?"rgba(239, 68, 68, 0.28)":"rgba(16, 185, 129, 0.24)"} !important; background: ${t.profileNotice.type==="error"?"rgba(127, 29, 29, 0.22)":"rgba(6, 95, 70, 0.18)"} !important; color: ${t.profileNotice.type==="error"?"#fca5a5":"#86efac"} !important; font-size: 0.8rem !important; font-weight: 650 !important;">${U(t.profileNotice.message)}</div>`:"",p=n.charAt(0).toUpperCase();y.innerHTML=`
     <section class="portfolio-surface">
-      ${dr(s)}
+      <div class="portfolio-top-grid">
+        ${dr(s)}
       <div class="profile-card" style="background: var(--market-card-bg) !important; border: 1px solid var(--market-border) !important; border-radius: 12px !important; padding: 14px !important; margin-bottom: 12px !important; box-sizing: border-box !important;">
         <div class="profile-avatar-container" style="display: flex !important; align-items: center !important; gap: 16px !important;">
           <div class="profile-avatar-gradient" style="width: 44px !important; height: 44px !important; border-radius: 50% !important; background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important; display: flex !important; align-items: center !important; justify-content: center !important; flex-shrink: 0 !important; border: 1px solid rgba(255, 255, 255, 0.1) !important;">
@@ -883,6 +884,7 @@ Trade and discuss here: ${l}`},nr=e=>{if(!y||!w)return;let a=Pe(e),r=!t.checkedM
             </button>
           </div>
         </div>
+      </div>
       </div>
       <div class="portfolio-section-tabs">
         <span>Open ${r.length}</span>
