@@ -144,6 +144,7 @@ const state: {
   portfolioMarketPreviews: MarketPreview[];
   referralPanelOpen: boolean;
   referralData: ReferralData | null;
+  referralError: string | null;
   loadingReferralData: boolean;
 } = {
   activeSurface: "markets",
@@ -188,6 +189,7 @@ const state: {
   portfolioMarketPreviews: [],
   referralPanelOpen: false,
   referralData: null,
+  referralError: null,
   loadingReferralData: false
 };
 
@@ -422,12 +424,18 @@ const bindPendingReferral = async (walletAddress: string): Promise<void> => {
 const loadReferralData = async (): Promise<void> => {
   if (!state.walletAddress || state.loadingReferralData) return;
   state.loadingReferralData = true;
+  state.referralError = null;
   try {
     const res = await fetch(apiUrl(`/api/referrals?walletAddress=${encodeURIComponent(state.walletAddress)}`));
-    const data = await res.json();
-    if (res.ok) state.referralData = data;
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      state.referralData = data;
+    } else {
+      state.referralError = data?.error || "Referral tools are temporarily unavailable.";
+    }
   } catch (error) {
     console.warn(error);
+    state.referralError = "Referral tools are temporarily unavailable.";
   } finally {
     state.loadingReferralData = false;
     if (state.activeSurface === "portfolio") renderPortfolio();
@@ -444,6 +452,9 @@ const connectWallet = async (): Promise<void> => {
     if (account) {
       trackEvent("wallet_connect_success");
       state.walletAddress = account;
+      state.referralData = null;
+      state.referralError = null;
+      state.referralPanelOpen = false;
       syncProfileUsernameForWallet();
       state.walletBalance = await readArcUsdcBalance(account);
       await bindPendingReferral(account);
@@ -1763,6 +1774,9 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
       disconnectArcWallet();
       state.walletAddress = null;
       state.walletBalance = null;
+      state.referralData = null;
+      state.referralError = null;
+      state.referralPanelOpen = false;
       syncProfileUsernameForWallet();
       showActionToast("Session expired. Please sign in again.");
     } else {
@@ -3443,62 +3457,77 @@ const claimPortfolioMarket = async (marketId: string): Promise<void> => {
   }
 };
 
-const renderReferralPanel = (): string => {
-  if (!state.referralPanelOpen) return "";
+const renderReferralPanel = (walletConnected: boolean): string => {
+  if (!walletConnected) return "";
   const data = state.referralData;
   const referralRows = data?.referrals?.length
     ? data.referrals.map((referral) => {
       const name = referral.displayName || shortenAddress(referral.walletAddress);
       const isExpired = referral.remaining <= 0;
       return `
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--market-border);">
-          <div style="min-width: 0;">
-            <strong style="display: block; color: var(--market-text-main); font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(name)}</strong>
-            <span style="color: var(--market-text-muted); font-size: 0.76rem;">${shortenAddress(referral.walletAddress)}</span>
+        <div class="portfolio-referral-row">
+          <div class="portfolio-referral-person">
+            <strong>${escapeHtml(name)}</strong>
+            <span>${shortenAddress(referral.walletAddress)}</span>
           </div>
-          <div style="text-align: right; flex-shrink: 0;">
-            <strong style="color: ${isExpired ? "#ef4444" : "var(--market-text-main)"}; font-size: 0.86rem;">${referral.used}/${referral.maxUses} used</strong>
-            <span style="display: block; color: var(--market-text-muted); font-size: 0.74rem;">${isExpired ? "Expired" : `${referral.remaining} left`}</span>
+          <div class="portfolio-referral-usage ${isExpired ? "expired" : ""}">
+            <strong>${referral.used}/${referral.maxUses}</strong>
+            <span>${isExpired ? "Expired" : `${referral.remaining} left`}</span>
           </div>
         </div>
       `;
     }).join("")
     : `<div class="portfolio-empty compact">No referrals yet.</div>`;
 
-  return `
-    <div class="trade-modal-backdrop active">
-      <div class="trade-modal-card" style="max-width: 430px;">
-        <div class="trade-modal-header">
-          <h2>Your Referrals</h2>
-          <button type="button" class="trade-modal-close" data-close-referrals>&times;</button>
+  const bodyHtml = state.loadingReferralData && !data
+    ? `<div class="portfolio-referral-message">Loading invite tools...</div>`
+    : state.referralError && !data
+      ? `
+        <div class="portfolio-referral-message">
+          <span>${escapeHtml(state.referralError)}</span>
+          <button type="button" data-refresh-referrals>Retry</button>
         </div>
-        ${state.loadingReferralData || !data
-          ? `<div class="portfolio-empty compact">Loading referral details...</div>`
-          : `
-            <div style="display: grid; gap: 12px;">
-              <div style="border: 1px solid var(--market-border); border-radius: 10px; padding: 14px; background: var(--market-bg);">
-                <span style="display: block; color: var(--market-text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;">Invite code</span>
-                <strong style="display: block; color: var(--market-text-main); font-size: 1.25rem; margin-top: 4px;">${escapeHtml(data.code)}</strong>
-              </div>
-              <button type="button" class="connect-wallet-btn" data-copy-referral-link="${escapeHtml(data.inviteLink)}" style="background: #ffffff !important; color: #000000 !important; border: 1px solid #ffffff !important; border-radius: 8px !important; padding: 10px 14px !important; font-weight: 800 !important;">Copy invite link</button>
-              <div style="display: flex; gap: 10px;">
-                <div style="flex: 1; border: 1px solid var(--market-border); border-radius: 10px; padding: 12px;">
-                  <span style="display: block; color: var(--market-text-muted); font-size: 0.72rem;">Active referrals</span>
-                  <strong style="color: var(--market-text-main); font-size: 1.05rem;">${data.activeReferralCount}</strong>
-                </div>
-                <div style="flex: 1; border: 1px solid var(--market-border); border-radius: 10px; padding: 12px;">
-                  <span style="display: block; color: var(--market-text-muted); font-size: 0.72rem;">Bonus earned</span>
-                  <strong style="color: var(--market-text-main); font-size: 1.05rem;">+${data.totalEarned} pts</strong>
-                </div>
-              </div>
-              <div style="padding-top: 4px;">
-                ${referralRows}
-              </div>
-              <p style="color: var(--market-text-muted); font-size: 0.78rem; line-height: 1.45; margin: 0;">When you and a direct referral both win the same Daily market, you earn +10 pts. Max 3 referrals per market. Each referral can help on 5 winning markets.</p>
+      `
+      : data
+        ? `
+          <div class="portfolio-referral-copy-grid">
+            <button type="button" class="portfolio-referral-copy" data-copy-referral-code="${escapeHtml(data.code)}">
+              <span>Invite code</span>
+              <strong>${escapeHtml(data.code)}</strong>
+            </button>
+            <button type="button" class="portfolio-referral-copy" data-copy-referral-link="${escapeHtml(data.inviteLink)}">
+              <span>Invite link</span>
+              <strong>Copy link</strong>
+            </button>
+          </div>
+          <div class="portfolio-referral-metrics">
+            <div><span>Active referrals</span><strong>${data.activeReferralCount}</strong></div>
+            <div><span>Bonus earned</span><strong>+${data.totalEarned} pts</strong></div>
+          </div>
+          <button type="button" class="portfolio-referral-toggle" data-open-referrals>
+            ${state.referralPanelOpen ? "Hide referral details" : "View referral details"}
+          </button>
+          ${state.referralPanelOpen ? `
+            <div class="portfolio-referral-details">
+              ${referralRows}
+              <p>When you and a direct referral both win the same Daily market, you earn +10 pts. Max 3 referrals per market. Each referral can help on 5 winning markets.</p>
             </div>
-          `}
+          ` : ""}
+        `
+        : `<div class="portfolio-referral-message">Preparing your invite tools...</div>`;
+
+  return `
+    <section class="portfolio-referral-card">
+      <div class="portfolio-referral-head">
+        <div>
+          <span>Referral hub</span>
+          <h2>Invite friends. Win together.</h2>
+        </div>
+        <button type="button" data-refresh-referrals ${state.loadingReferralData ? "disabled" : ""}>Refresh</button>
       </div>
-    </div>
+      <p>Earn bonus points only when you and your direct referrals win the same Daily market.</p>
+      ${bodyHtml}
+    </section>
   `;
 };
 
@@ -3514,9 +3543,11 @@ const renderPortfolio = (): void => {
   storyDetail.hidden = true;
   storyList.hidden = false;
   storyList.classList.add("markets-list");
+  if (state.walletAddress && !state.referralData && !state.referralError && !state.loadingReferralData) {
+    void loadReferralData();
+  }
   if (state.walletAddress && !state.hasLoadedPortfolioPositions && !state.loadingPortfolioPositions) {
     if (state.portfolioMarketPreviews.length === 0) void loadPortfolioMarkets();
-    if (state.referralPanelOpen && !state.referralData && !state.loadingReferralData) void loadReferralData();
     void loadPortfolioPositions();
   }
   const claimedMarkets = readClaimedMarkets();
@@ -3537,14 +3568,15 @@ const renderPortfolio = (): void => {
 
   storyList.innerHTML = `
     <section class="portfolio-surface">
-      <div class="profile-card" style="background: var(--market-card-bg) !important; border: 1px solid var(--market-border) !important; border-radius: 12px !important; padding: 24px !important; margin-bottom: 24px !important; box-sizing: border-box !important;">
+      ${renderReferralPanel(walletConnected)}
+      <div class="profile-card" style="background: var(--market-card-bg) !important; border: 1px solid var(--market-border) !important; border-radius: 12px !important; padding: 14px !important; margin-bottom: 12px !important; box-sizing: border-box !important;">
         <div class="profile-avatar-container" style="display: flex !important; align-items: center !important; gap: 16px !important;">
-          <div class="profile-avatar-gradient" style="width: 54px !important; height: 54px !important; border-radius: 50% !important; background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important; display: flex !important; align-items: center !important; justify-content: center !important; flex-shrink: 0 !important; border: 1px solid rgba(255, 255, 255, 0.1) !important;">
-            <span class="avatar-letter" style="color: #ffffff !important; font-family: 'Space Grotesk', sans-serif !important; font-size: 1.45rem !important; font-weight: 750 !important;">${avatarLetter}</span>
+          <div class="profile-avatar-gradient" style="width: 44px !important; height: 44px !important; border-radius: 50% !important; background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important; display: flex !important; align-items: center !important; justify-content: center !important; flex-shrink: 0 !important; border: 1px solid rgba(255, 255, 255, 0.1) !important;">
+            <span class="avatar-letter" style="color: #ffffff !important; font-family: 'Space Grotesk', sans-serif !important; font-size: 1.2rem !important; font-weight: 750 !important;">${avatarLetter}</span>
           </div>
           <div class="profile-details" style="display: flex !important; flex-direction: column !important; min-width: 0 !important;">
             <div class="username-display-row" style="display: flex !important; align-items: center !important; gap: 8px !important;">
-              <span class="profile-username" style="font-family: 'Space Grotesk', sans-serif !important; font-size: 1.35rem !important; font-weight: 750 !important; color: var(--market-text-main) !important; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis !important; max-width: 180px !important;">${safeUsernameDisplay}</span>
+              <span class="profile-username" style="font-family: 'Space Grotesk', sans-serif !important; font-size: 1.08rem !important; font-weight: 750 !important; color: var(--market-text-main) !important; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis !important; max-width: 180px !important;">${safeUsernameDisplay}</span>
               ${walletConnected ? `
                 <button type="button" class="edit-username-btn" id="editUsernameBtn" style="background: transparent !important; border: none !important; color: var(--market-text-muted) !important; cursor: pointer !important; padding: 4px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; transition: color 0.2s ease !important; outline: none !important;">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none !important;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path></svg>
@@ -3573,7 +3605,7 @@ const renderPortfolio = (): void => {
 
         ${profileNoticeHtml}
 
-        <div class="portfolio-wallet-balance-row" style="margin-top: 24px !important; padding-top: 16px !important; border-top: 1px solid var(--market-border) !important; display: flex !important; justify-content: space-between !important; align-items: center !important; flex-wrap: wrap !important; gap: 12px !important;">
+        <div class="portfolio-wallet-balance-row" style="margin-top: 12px !important; padding-top: 12px !important; border-top: 1px solid var(--market-border) !important; display: flex !important; justify-content: space-between !important; align-items: center !important; flex-wrap: wrap !important; gap: 12px !important;">
           <div>
             <span style="font-size: 0.72rem !important; color: var(--market-text-muted) !important; display: block !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; margin-bottom: 2px !important;">Available Balance</span>
             <strong style="font-size: 1.25rem !important; color: var(--market-text-main) !important; font-family: 'Space Grotesk', sans-serif !important;">
@@ -3597,12 +3629,6 @@ const renderPortfolio = (): void => {
           </div>
         </div>
       </div>
-      ${walletConnected ? `
-        <button type="button" class="connect-wallet-btn" data-open-referrals style="width: 100% !important; margin-bottom: 16px !important; background: var(--market-card-bg) !important; color: var(--market-text-main) !important; border: 1px solid var(--market-border) !important; border-radius: 10px !important; padding: 13px 16px !important; font-size: 0.92rem !important; font-weight: 800 !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
-          <span>Your referrals</span>
-          <span style="color: var(--market-text-muted); font-size: 0.8rem;">Invite & track bonus</span>
-        </button>
-      ` : ""}
       <div class="portfolio-section-tabs">
         <span>Open ${openPositions.length}</span>
         <span>Finalized ${finalizedPositions.length}</span>
@@ -3623,7 +3649,6 @@ const renderPortfolio = (): void => {
                 ${finalizedPositions.length ? finalizedPositions.map(renderPortfolioPositionCard).join("") : `<div class="portfolio-empty compact">No finalized positions yet.</div>`}
               </section>
             `}
-      ${renderReferralPanel()}
     </section>
   `;
 };
@@ -3729,14 +3754,28 @@ document.addEventListener("click", (event) => {
     return;
   }
   if (target.closest("[data-open-referrals]")) {
-    state.referralPanelOpen = true;
-    void loadReferralData();
+    state.referralPanelOpen = !state.referralPanelOpen;
+    if (!state.referralData && !state.loadingReferralData) void loadReferralData();
     renderPortfolio();
     return;
   }
   if (target.closest("[data-close-referrals]")) {
     state.referralPanelOpen = false;
     renderPortfolio();
+    return;
+  }
+  if (target.closest("[data-refresh-referrals]")) {
+    state.referralError = null;
+    void loadReferralData();
+    renderPortfolio();
+    return;
+  }
+  const referralCodeBtn = target.closest<HTMLElement>("[data-copy-referral-code]");
+  if (referralCodeBtn) {
+    const code = referralCodeBtn.getAttribute("data-copy-referral-code") || "";
+    if (code) {
+      void navigator.clipboard.writeText(code).then(() => showActionToast("Invite code copied"));
+    }
     return;
   }
   const referralCopyBtn = target.closest<HTMLElement>("[data-copy-referral-link]");
@@ -4167,6 +4206,9 @@ const initializeWalletSession = (): void => {
         if (!isValid) {
           state.walletAddress = null;
           state.walletBalance = null;
+          state.referralData = null;
+          state.referralError = null;
+          state.referralPanelOpen = false;
           syncProfileUsernameForWallet();
           showActionToast("Session expired. Please sign in again.");
           renderWalletState();
@@ -4187,6 +4229,9 @@ const initializeWalletSession = (): void => {
         state.walletConnecting = false;
         state.walletAddress = null;
         state.walletBalance = null;
+        state.referralData = null;
+        state.referralError = null;
+        state.referralPanelOpen = false;
         syncProfileUsernameForWallet();
         showActionToast("Session expired. Please sign in again.");
         renderWalletState();
@@ -4198,12 +4243,16 @@ const initializeWalletSession = (): void => {
       if (isRestoringWalletSession) return;
       state.walletAddress = address;
       state.walletBalance = null;
+      state.referralData = null;
+      state.referralError = null;
+      state.referralPanelOpen = false;
       syncProfileUsernameForWallet();
       if (address) void reportLeaderboardEntry(false).catch(err => console.error("Failed to report leaderboard entry:", err));
       state.marketPositions = {};
       state.hasLoadedPortfolioPositions = false;
       renderWalletState();
       if (address) {
+        void loadReferralData();
         void readArcUsdcBalance(address).then((balance) => {
           state.walletBalance = balance;
           renderWalletState();

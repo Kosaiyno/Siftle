@@ -5265,22 +5265,30 @@ async function ensureReferralCode(walletAddress) {
 
   if (!isSupabaseConfigured) return fallbackCode;
 
-  await supabaseRequest("profiles?on_conflict=wallet_address", {
-    method: "POST",
-    prefer: "resolution=merge-duplicates",
-    body: [{ wallet_address: address, updated_at: new Date().toISOString() }]
-  });
+  try {
+    await supabaseRequest("profiles?on_conflict=wallet_address", {
+      method: "POST",
+      prefer: "resolution=merge-duplicates",
+      body: [{ wallet_address: address, updated_at: new Date().toISOString() }]
+    });
 
-  let rows = await supabaseRequest(`referral_codes?wallet_address=eq.${encodeURIComponent(address)}&select=code`);
-  if (rows?.[0]?.code) return String(rows[0].code);
+    let rows = await supabaseRequest(`referral_codes?wallet_address=eq.${encodeURIComponent(address)}&select=code`);
+    if (rows?.[0]?.code) return String(rows[0].code);
 
-  await supabaseRequest("referral_codes?on_conflict=wallet_address", {
-    method: "POST",
-    prefer: "resolution=merge-duplicates",
-    body: [{ wallet_address: address, code: fallbackCode }]
-  });
-  rows = await supabaseRequest(`referral_codes?wallet_address=eq.${encodeURIComponent(address)}&select=code`);
-  return String(rows?.[0]?.code || fallbackCode);
+    await supabaseRequest("referral_codes?on_conflict=wallet_address", {
+      method: "POST",
+      prefer: "resolution=merge-duplicates",
+      body: [{ wallet_address: address, code: fallbackCode }]
+    });
+    rows = await supabaseRequest(`referral_codes?wallet_address=eq.${encodeURIComponent(address)}&select=code`);
+    return String(rows?.[0]?.code || fallbackCode);
+  } catch (err) {
+    if (/referral_codes|profiles|relation|table/i.test(String(err.message || ""))) {
+      console.warn("[REFERRALS] Falling back to deterministic invite code:", err.message);
+      return fallbackCode;
+    }
+    throw err;
+  }
 }
 
 async function bindReferralCode(walletAddress, referralCode) {
@@ -5289,7 +5297,15 @@ async function bindReferralCode(walletAddress, referralCode) {
   if (!referredWallet || !code) return { bound: false, reason: "missing" };
   if (!isSupabaseConfigured) return { bound: false, reason: "supabase_unconfigured" };
 
-  const codeRows = await supabaseRequest(`referral_codes?code=eq.${encodeURIComponent(code)}&select=wallet_address,code`);
+  let codeRows = [];
+  try {
+    codeRows = await supabaseRequest(`referral_codes?code=eq.${encodeURIComponent(code)}&select=wallet_address,code`);
+  } catch (err) {
+    if (/referral_codes|relation|table/i.test(String(err.message || ""))) {
+      return { bound: false, reason: "referrals_unavailable" };
+    }
+    throw err;
+  }
   const referrerWallet = normalizeWalletAddress(codeRows?.[0]?.wallet_address);
   if (!referrerWallet || referrerWallet === referredWallet) {
     return { bound: false, reason: "invalid_code" };
@@ -7449,9 +7465,14 @@ const server = createServer(async (request, response) => {
       const data = await loadReferralRelationshipsFromSupabase(await loadLeaderboardFromSupabase(loadAnalytics()));
       const leaderboard = ensureLeaderboardState(data);
       const referrals = leaderboard.referrals?.[walletAddress] || {};
-      const profiles = isSupabaseConfigured
-        ? await supabaseRequest("profiles?select=wallet_address,username")
-        : [];
+      let profiles = [];
+      if (isSupabaseConfigured) {
+        try {
+          profiles = await supabaseRequest("profiles?select=wallet_address,username");
+        } catch (err) {
+          console.warn("[REFERRALS] Profile names unavailable:", err.message);
+        }
+      }
       const profileMap = new Map((profiles || []).map((profile) => [normalizeWalletAddress(profile.wallet_address), String(profile.username || "")]));
       const referralRows = Object.entries(referrals).sort(([, a], [, b]) => {
         const aJoined = Date.parse(a?.created_at || "") || Number.MAX_SAFE_INTEGER;
