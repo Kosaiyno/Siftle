@@ -260,6 +260,18 @@ body {
   box-shadow: none;
 }
 
+.leaderboard-sync-note {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(96, 165, 250, 0.26);
+  border-radius: 10px;
+  color: #93c5fd;
+  background: rgba(37, 99, 235, 0.08);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+}
+
 .portfolio-referral-card {
   display: grid;
   gap: 12px;
@@ -9498,6 +9510,12 @@ html, body, .app-shell, main {
 :root[data-theme="light"] .portfolio-referral-details,
 :root[data-theme="light"] .portfolio-referral-row {
   border-color: #d9deea !important;
+}
+
+:root[data-theme="light"] .leaderboard-sync-note {
+  background: #eff6ff !important;
+  border-color: #bfdbfe !important;
+  color: #1d4ed8 !important;
 }
 
 :root[data-theme="light"] .thread-timeline::before,

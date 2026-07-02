@@ -1393,6 +1393,75 @@ const formatLeaderboardStatus = (status: string): string => {
   return /\bloss/i.test(normalized) ? normalized : `${normalized}, 0 losses`;
 };
 
+const LEADERBOARD_CACHE_PREFIX = "siftle_leaderboard_cache_";
+
+const parseLeaderboardNumbers = (status: string): { wins: number; losses: number } => {
+  const winsMatch = String(status || "").match(/(\d+)\s+wins?/i);
+  const lossesMatch = String(status || "").match(/(\d+)\s+loss(?:es)?/i);
+  return {
+    wins: winsMatch ? Number(winsMatch[1]) || 0 : 0,
+    losses: lossesMatch ? Number(lossesMatch[1]) || 0 : 0
+  };
+};
+
+const getLeaderboardCache = (key: string): any | null => {
+  try {
+    const cached = JSON.parse(localStorage.getItem(`${LEADERBOARD_CACHE_PREFIX}${key}`) || "null");
+    return Array.isArray(cached?.players) && cached.players.length ? cached : null;
+  } catch {
+    return null;
+  }
+};
+
+const setLeaderboardCache = (key: string, payload: any): void => {
+  if (!Array.isArray(payload?.players) || payload.players.length === 0) return;
+  try {
+    localStorage.setItem(`${LEADERBOARD_CACHE_PREFIX}${key}`, JSON.stringify({
+      ...payload,
+      cachedAt: Date.now()
+    }));
+  } catch {}
+};
+
+const compareLeaderboardLikePlayers = (a: any, b: any): number => {
+  const aStatus = parseLeaderboardNumbers(a?.status || "");
+  const bStatus = parseLeaderboardNumbers(b?.status || "");
+  const pointDiff = (Number(b?.points) || 0) - (Number(a?.points) || 0);
+  if (pointDiff) return pointDiff;
+  if (bStatus.wins !== aStatus.wins) return bStatus.wins - aStatus.wins;
+  if (aStatus.losses !== bStatus.losses) return aStatus.losses - bStatus.losses;
+  return String(a?.username || "").localeCompare(String(b?.username || ""));
+};
+
+const stabilizeLeaderboardPlayers = (freshPlayers: any[], cachedPlayers: any[] = [], isGlobal = false): any[] => {
+  const cacheByWallet = new Map(cachedPlayers.map((player) => [String(player?.username || "").toLowerCase(), player]));
+  const seen = new Set<string>();
+  const merged = freshPlayers.map((player) => {
+    const wallet = String(player?.username || "").toLowerCase();
+    seen.add(wallet);
+    const cached = cacheByWallet.get(wallet);
+    return cached && (Number(cached.points) || 0) > (Number(player.points) || 0)
+      ? { ...player, ...cached }
+      : player;
+  });
+
+  cachedPlayers.forEach((player) => {
+    const wallet = String(player?.username || "").toLowerCase();
+    if (wallet && !seen.has(wallet) && (Number(player?.points) || 0) > 0) merged.push(player);
+  });
+
+  const sorted = merged.slice().sort(compareLeaderboardLikePlayers);
+  return isGlobal
+    ? sorted.map((player, index) => ({ ...player, globalRank: index + 1 }))
+    : sorted;
+};
+
+const renderLeaderboardSyncNote = (): string => `
+  <div class="leaderboard-sync-note" role="status">
+    Showing saved standings while Siftle refreshes live scores...
+  </div>
+`;
+
 const calculateLeaderboardScore = (): { points: number; status: string } => {
   let points = 0;
   let wins = 0;
@@ -3143,6 +3212,46 @@ const renderLeaderboard = (): void => {
     `;
   }).join("");
 
+  const renderDivisionLeaderboardRows = (players: any[]) => players.map((player: any, idx: number) => {
+    const rank = idx + 1;
+    const wallet = String(player.username || "");
+    const isUser = Boolean(state.walletAddress && wallet.toLowerCase() === state.walletAddress.toLowerCase());
+    const resolvedUsername = isUser && state.profileUsername
+      ? state.profileUsername
+      : (player.displayName || wallet);
+    const playerStatus = escapeHtml(formatLeaderboardStatus(player.status));
+    const displayName = isUser
+      ? `${state.profileUsername ? resolvedUsername : shortenAddress(wallet)} (You)`
+      : (resolvedUsername.startsWith("0x") && resolvedUsername.length === 42 ? shortenAddress(resolvedUsername) : resolvedUsername);
+    const safeDisplayName = escapeHtml(displayName);
+
+    let zoneClass = "safety-zone";
+    let arrowHtml = '<span style="color: transparent; font-weight: bold; font-size: 0.85rem; margin-right: 4px; display: inline-block; width: 10px;">•</span>';
+    if (rank <= 2) {
+      zoneClass = "promotion-zone";
+      arrowHtml = '<span style="color: #34d399; font-weight: bold; font-size: 0.85rem; margin-right: 4px; display: inline-block; width: 10px;">▲</span>';
+    } else if (rank >= 5) {
+      zoneClass = "relegation-zone";
+      arrowHtml = '<span style="color: #ef4444; font-weight: bold; font-size: 0.85rem; margin-right: 4px; display: inline-block; width: 10px;">▼</span>';
+    }
+
+    return `
+      <div class="leaderboard-row ${isUser ? 'user-highlight' : ''} ${zoneClass}" role="listitem" style="display: flex !important; align-items: center !important; justify-content: space-between !important; padding: 12px 16px !important; border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important; margin-bottom: 0 !important; background: transparent !important; font-family: 'Space Grotesk', sans-serif !important;">
+        <div style="flex: 1.5; display: flex; align-items: center; gap: 8px; min-width: 0;">
+          ${arrowHtml}
+          <span class="leaderboard-rank rank-${rank}" style="flex-shrink: 0; margin-right: 4px;">${rank}</span>
+          <span class="leaderboard-username" style="font-weight: 600; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${safeDisplayName}</span>
+        </div>
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
+          <span style="color: #ffffff; font-weight: 750; font-size: 0.95rem; white-space: nowrap;">${Number(player.points) || 0} pts</span>
+        </div>
+        <div style="flex: 1.5; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; text-align: right; min-width: 0;">
+          <span style="font-size: 0.78rem; color: #8e8e93; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${playerStatus}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+
   const setLeaderboardView = (view: "division" | "global") => {
     selectedLeaderboardView = view;
     document.querySelectorAll<HTMLElement>("[data-leaderboard-view]").forEach((button) => {
@@ -3173,8 +3282,15 @@ const renderLeaderboard = (): void => {
 
   const fetchAndRenderGlobal = () => {
     setLeaderboardView("global");
-    renderLeaderboardSkeleton(10);
     const listContainer = document.getElementById("leaderboardListContainer");
+    const cacheKey = "global";
+    const cached = getLeaderboardCache(cacheKey);
+    if (cached && listContainer) {
+      listContainer.innerHTML = renderLeaderboardSyncNote() + renderGlobalLeaderboardRows(cached.players);
+      if (cached.seasonEndsAt) startSeasonTimer(cached.seasonEndsAt);
+    } else {
+      renderLeaderboardSkeleton(10);
+    }
     const params = new URLSearchParams();
     if (state.walletAddress) params.set("walletAddress", state.walletAddress);
     const query = params.toString();
@@ -3182,13 +3298,14 @@ const renderLeaderboard = (): void => {
     fetch(apiUrl(`/api/leaderboard/global${query ? `?${query}` : ""}`))
       .then(res => res.json())
       .then((data: any) => {
-        const players = data.players || [];
+        const players = stabilizeLeaderboardPlayers(data.players || [], cached?.players || [], true);
         if (listContainer) {
           listContainer.innerHTML = players.length === 0
             ? `<p style="color: var(--market-text-muted); text-align: center; padding: 24px 0; font-family: 'Space Grotesk', sans-serif;">No players on the global leaderboard yet.</p>`
             : renderGlobalLeaderboardRows(players);
         }
 
+        setLeaderboardCache(cacheKey, { players, seasonEndsAt: data.seasonEndsAt });
         startSeasonTimer(data.seasonEndsAt);
       })
       .catch(err => {
@@ -3202,7 +3319,13 @@ const renderLeaderboard = (): void => {
   const fetchAndRenderDivision = (targetDivNum?: number) => {
     setLeaderboardView("division");
     const listContainer = document.getElementById("leaderboardListContainer");
-    if (listContainer && targetDivNum !== undefined) {
+    const cacheKey = `division_${targetDivNum || selectedLeaderboardDivision || "current"}`;
+    const cached = getLeaderboardCache(cacheKey);
+    if (cached && listContainer) {
+      listContainer.innerHTML = renderLeaderboardSyncNote() + renderDivisionLeaderboardRows(cached.players);
+      if (cached.divisionNumber) selectedLeaderboardDivision = cached.divisionNumber;
+      if (cached.seasonEndsAt) startSeasonTimer(cached.seasonEndsAt);
+    } else if (listContainer && targetDivNum !== undefined) {
       listContainer.innerHTML = `
         <div class="leaderboard-skeleton" style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
           ${Array.from({ length: 6 }).map(() => `
@@ -3227,7 +3350,7 @@ const renderLeaderboard = (): void => {
       .then(res => res.json())
       .then((data: any) => {
         const divisionNumber = data.divisionNumber || 1;
-        const players = data.players || [];
+        const players = stabilizeLeaderboardPlayers(data.players || [], cached?.players || [], false);
         const totalDivisions = data.totalDivisions || 1;
         const seasonEndsAt = data.seasonEndsAt;
 
@@ -3291,6 +3414,18 @@ const renderLeaderboard = (): void => {
           }
         }
 
+        setLeaderboardCache(cacheKey, {
+          players,
+          divisionNumber,
+          totalDivisions,
+          seasonEndsAt
+        });
+        setLeaderboardCache(`division_${divisionNumber}`, {
+          players,
+          divisionNumber,
+          totalDivisions,
+          seasonEndsAt
+        });
         startSeasonTimer(seasonEndsAt);
       })
       .catch(err => {

@@ -323,7 +323,7 @@ export const connectArcWallet = async (): Promise<string> => {
           <img src="./assets/siftle-logo-small.png" alt="Siftle logo" />
           <h2>Sign In to Siftle</h2>
         </div>
-        <p class="circle-auth-subtitle">Verify your email to manage predictions and trade</p>
+        <p class="circle-auth-subtitle">No password needed. We send a 6-digit code to your email so you can manage predictions and trade.</p>
         
         <div id="circleAuthStepEmail" class="circle-auth-step">
           <div class="circle-auth-field">
@@ -347,7 +347,7 @@ export const connectArcWallet = async (): Promise<string> => {
           </div>
           <button id="circleAuthVerifyBtn" class="circle-auth-btn" type="button">Verify & Sign In</button>
           <p class="circle-auth-spam-note" style="font-size: 11px; color: #a5b4fc; margin: 12px 0; text-align: center; line-height: 1.4; opacity: 0.85;">
-            * If you don't receive the email, please check your <strong>Spam</strong> or <strong>Junk</strong> folder.
+            Paste the 6 digits from your email. Spaces are okay. If you don't receive it, check <strong>Spam</strong> or <strong>Junk</strong>.
           </p>
           <button id="circleAuthBackBtn" class="circle-auth-back" type="button">Back</button>
         </div>
@@ -383,6 +383,8 @@ export const connectArcWallet = async (): Promise<string> => {
     let encryptionKey = "";
     let challengeId = "";
     const existingReferralCode = localStorage.getItem("siftle_pending_referral_code") || "";
+    const lastEmail = localStorage.getItem("siftle_circle_last_email") || localStorage.getItem("siftle_circle_email") || "";
+    if (lastEmail) emailInput.value = lastEmail;
     if (existingReferralCode) {
       referralInput.value = existingReferralCode;
       referralDetails.open = true;
@@ -420,6 +422,7 @@ export const connectArcWallet = async (): Promise<string> => {
       }
       const referralCode = referralInput.value.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 16);
       if (referralCode) localStorage.setItem("siftle_pending_referral_code", referralCode);
+      localStorage.setItem("siftle_circle_last_email", email);
 
       sendBtn.disabled = true;
       sendBtn.textContent = "Sending...";
@@ -471,7 +474,9 @@ export const connectArcWallet = async (): Promise<string> => {
           body: JSON.stringify({ email, otp })
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to verify code");
+        if (!res.ok) {
+          throw new Error(data.error || "That code did not work. Request a new code and try again.");
+        }
 
         userToken = data.userToken;
         encryptionKey = data.encryptionKey;
@@ -595,6 +600,7 @@ export const subscribeArcWallet = (callback: (address: string | null) => void): 
 };
 
 export const disconnectArcWallet = () => {
+  if (activeEmail) localStorage.setItem("siftle_circle_last_email", activeEmail);
   activeEmail = null;
   activeUserToken = null;
   activeEncryptionKey = null;
@@ -627,7 +633,15 @@ export const validateArcSession = async (): Promise<boolean> => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userToken: activeUserToken })
     });
-    if (!res.ok) throw new Error("Circle session expired");
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      const message = String(errorData?.error || "");
+      if (res.status === 400 || res.status === 401 || res.status === 403 || /token|session|auth|unauthori[sz]ed|expired/i.test(message)) {
+        throw new Error(message || "Circle session expired");
+      }
+      console.warn("Could not validate Circle session yet; keeping stored session:", message || res.statusText);
+      return true;
+    }
 
     const data = await res.json();
     if (!data.walletAddress || data.walletAddress.toLowerCase() !== activeWalletAddress.toLowerCase()) {
@@ -638,9 +652,14 @@ export const validateArcSession = async (): Promise<boolean> => {
     localStorage.setItem("siftle_circle_wallet_id", activeWalletId!);
     return true;
   } catch (error) {
-    console.warn("Stored Circle session is no longer valid:", error);
-    disconnectArcWallet();
-    return false;
+    const message = error instanceof Error ? error.message : String(error || "");
+    if (/token|session|auth|unauthori[sz]ed|expired|mismatch/i.test(message)) {
+      console.warn("Stored Circle session is no longer valid:", error);
+      disconnectArcWallet();
+      return false;
+    }
+    console.warn("Could not validate Circle session yet; keeping stored session:", error);
+    return true;
   }
 };
 

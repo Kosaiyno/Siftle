@@ -7134,7 +7134,7 @@ const server = createServer(async (request, response) => {
       const cleanEmail = normalizeEmail(email);
       const stored = otpStore.get(cleanEmail);
       if (!stored || stored.otp !== otp || Date.now() > stored.expiresAt) {
-        sendJson(response, 400, { error: "Invalid or expired verification code" });
+        sendJson(response, 400, { error: "That code did not work or has expired. Request a new code and paste the 6 digits from your email." });
         return;
       }
 
@@ -7387,7 +7387,8 @@ const server = createServer(async (request, response) => {
           sendJson(response, 404, { error: "Wallet not found yet" });
         }
       } catch (err) {
-        sendJson(response, 500, { error: err.message });
+        const status = /token|session|auth|unauthori[sz]ed|expired/i.test(String(err.message || "")) ? 401 : 503;
+        sendJson(response, status, { error: err.message });
       }
     } catch (err) {
       sendJson(response, 500, { error: err.message });
