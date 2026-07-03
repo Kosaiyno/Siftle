@@ -6038,12 +6038,17 @@ async function loadReferralRelationshipsFromSupabase(data) {
   if (!isSupabaseConfigured) return data;
   const leaderboard = ensureLeaderboardState(data);
   leaderboard.referrals = {};
+  const migrationMap = getWalletMigrationMap(data);
+  const canonicalReferralWallet = (walletAddress) => {
+    const address = normalizeWalletAddress(walletAddress);
+    return migrationMap.get(address) || address;
+  };
 
   try {
     const rows = await supabaseRequest("referral_relationships?select=referred_wallet,referrer_wallet,referral_code,created_at");
     (rows || []).forEach((row) => {
-      const referred = normalizeWalletAddress(row.referred_wallet);
-      const referrer = normalizeWalletAddress(row.referrer_wallet);
+      const referred = canonicalReferralWallet(row.referred_wallet);
+      const referrer = canonicalReferralWallet(row.referrer_wallet);
       if (!referred || !referrer || referred === referrer) return;
       if (!leaderboard.referrals[referrer]) leaderboard.referrals[referrer] = {};
       leaderboard.referrals[referrer][referred] = {
@@ -8542,10 +8547,11 @@ const server = createServer(async (request, response) => {
         return;
       }
 
-      const code = await ensureReferralCode(walletAddress);
       const data = await loadReferralRelationshipsFromSupabase(await loadLeaderboardFromSupabase(loadAnalytics()));
       const leaderboard = ensureLeaderboardState(data);
-      const referrals = leaderboard.referrals?.[walletAddress] || {};
+      const canonicalWalletAddress = canonicalLeaderboardAddress(data, walletAddress) || walletAddress;
+      const code = await ensureReferralCode(canonicalWalletAddress);
+      const referrals = leaderboard.referrals?.[canonicalWalletAddress] || {};
       let profiles = [];
       if (isSupabaseConfigured) {
         try {
@@ -8560,7 +8566,7 @@ const server = createServer(async (request, response) => {
         const bJoined = Date.parse(b?.created_at || "") || Number.MAX_SAFE_INTEGER;
         return aJoined - bJoined;
       }).map(([referredWallet, relationship]) => {
-        const used = getReferralBonusUses(data, walletAddress, referredWallet);
+        const used = getReferralBonusUses(data, canonicalWalletAddress, referredWallet);
         return {
           walletAddress: referredWallet,
           displayName: profileMap.get(normalizeWalletAddress(referredWallet)) || "",
@@ -8570,13 +8576,13 @@ const server = createServer(async (request, response) => {
           joinedAt: relationship?.created_at || null
         };
       });
-      const totalEarned = Object.values(leaderboard.bonusEvents?.[walletAddress] || {})
+      const totalEarned = Object.values(leaderboard.bonusEvents?.[canonicalWalletAddress] || {})
         .filter((event) => event?.bonus_type === "referral_win")
         .reduce((sum, event) => sum + (Number(event?.points) || 0), 0);
       const origin = request.headers.origin || process.env.PUBLIC_APP_URL || "https://siftle.xyz";
 
       sendJson(response, 200, {
-        walletAddress,
+        walletAddress: canonicalWalletAddress,
         code,
         inviteLink: `${String(origin).replace(/\/$/, "")}/?ref=${encodeURIComponent(code)}`,
         referrals: referralRows,
