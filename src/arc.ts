@@ -366,6 +366,13 @@ export const connectArcWallet = async (): Promise<string> => {
               <label for="backendWalletEmail">Email Address</label>
               <input type="email" id="backendWalletEmail" placeholder="name@domain.com" required />
             </div>
+            <details id="backendReferralDetails" style="text-align: left;">
+              <summary style="cursor: pointer; color: #a5b4fc; font-size: 13px; font-weight: 650; list-style: none;">Have an invite code?</summary>
+              <div class="circle-auth-field" style="margin-top: 10px;">
+                <label for="backendReferralCode">Invite Code</label>
+                <input type="text" id="backendReferralCode" placeholder="Optional" autocomplete="off" autocapitalize="characters" />
+              </div>
+            </details>
             <button id="backendWalletContinue" class="circle-auth-btn" type="button">Continue</button>
           </div>
           <div id="backendWalletStatus" class="circle-auth-status" style="display: none;"></div>
@@ -376,9 +383,16 @@ export const connectArcWallet = async (): Promise<string> => {
       const closeBtn = overlay.querySelector("#backendWalletClose") as HTMLButtonElement;
       const continueBtn = overlay.querySelector("#backendWalletContinue") as HTMLButtonElement;
       const emailInput = overlay.querySelector("#backendWalletEmail") as HTMLInputElement;
+      const referralDetails = overlay.querySelector("#backendReferralDetails") as HTMLDetailsElement;
+      const referralInput = overlay.querySelector("#backendReferralCode") as HTMLInputElement;
       const statusDiv = overlay.querySelector("#backendWalletStatus") as HTMLDivElement;
       const lastEmail = localStorage.getItem(BACKEND_WALLET_EMAIL_KEY) || localStorage.getItem("siftle_circle_last_email") || "";
+      const pendingReferral = localStorage.getItem("siftle_pending_referral_code") || "";
       if (lastEmail) emailInput.value = lastEmail;
+      if (pendingReferral) {
+        referralInput.value = pendingReferral;
+        referralDetails.open = true;
+      }
 
       const showStatus = (message: string, isError = false) => {
         statusDiv.textContent = message;
@@ -391,12 +405,18 @@ export const connectArcWallet = async (): Promise<string> => {
         reject(new Error("Login cancelled by user"));
       });
 
+      referralInput.addEventListener("input", () => {
+        referralInput.value = referralInput.value.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 16);
+      });
+
       continueBtn.addEventListener("click", async () => {
         const email = emailInput.value.trim();
         if (!email || !email.includes("@")) {
           showStatus("Please enter a valid email address.", true);
           return;
         }
+        const referralCode = referralInput.value.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 16);
+        if (referralCode) localStorage.setItem("siftle_pending_referral_code", referralCode);
 
         continueBtn.disabled = true;
         continueBtn.textContent = "Opening wallet...";
@@ -1151,7 +1171,8 @@ const waitForCircleTx = async (txId: string): Promise<string> => {
 export const payAiBriefingUnlock = async (
   treasuryAddress: string,
   amountUsdc: number,
-  onStatus?: (status: string) => void
+  onStatus?: (status: string) => void,
+  briefing?: { sourceUrl?: string; topic?: string }
 ): Promise<string> => {
   if (!activeWalletAddress) throw new Error("Please sign in first");
   if (!treasuryAddress) throw new Error("AI briefing treasury is not configured");
@@ -1171,7 +1192,9 @@ export const payAiBriefingUnlock = async (
         body: JSON.stringify({
           sessionToken: activeBackendWalletSessionToken,
           treasuryAddress,
-          amountUsdc
+          amountUsdc,
+          sourceUrl: briefing?.sourceUrl,
+          topic: briefing?.topic
         })
       });
       const payload = await response.json();

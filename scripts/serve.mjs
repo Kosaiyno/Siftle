@@ -6362,7 +6362,14 @@ function buildLeaderboardPlayers(data, walletAddress = "") {
   const migratedOldWallets = new Set(migrationMap.keys());
   const requestedWallet = canonicalLeaderboardAddress(data, walletAddress);
   const tradersMap = data.leaderboard?.traders || {};
-  const players = Object.entries(tradersMap)
+  const playersByIdentity = new Map();
+  const identityKey = (player) => {
+    const displayName = String(player?.displayName || "").trim().toLowerCase();
+    if (displayName && !/^0x[a-f0-9]{40}$/i.test(displayName)) return `name:${displayName}`;
+    return `wallet:${String(player?.username || "").toLowerCase()}`;
+  };
+  const chooseBetterPlayer = (left, right) => compareLeaderboardPlayers(left, right) <= 0 ? left : right;
+  Object.entries(tradersMap)
     .filter(([address]) => !isAdminWallet(address) && !migratedOldWallets.has(normalizeWalletAddress(address)))
     .map(([address, info]) => ({
       username: address,
@@ -6371,7 +6378,14 @@ function buildLeaderboardPlayers(data, walletAddress = "") {
       status: String(info.status || ""),
       first_activity_at: info.first_activity_at,
       updated_at: info.updated_at
-    }));
+    }))
+    .forEach((player) => {
+      const key = identityKey(player);
+      if (!key || key === "wallet:") return;
+      const existing = playersByIdentity.get(key);
+      playersByIdentity.set(key, existing ? chooseBetterPlayer(existing, player) : player);
+    });
+  const players = Array.from(playersByIdentity.values());
 
   if (requestedWallet && !isAdminWallet(requestedWallet) && !players.some((player) => player.username === requestedWallet)) {
     players.push({
@@ -7869,28 +7883,32 @@ const server = createServer(async (request, response) => {
       }
 
       if (backendWalletUseX402) {
-        const targetUrl = `${x402TargetUrlBase}?topic=${encodeURIComponent(topic)}`;
-        const buyer = new GatewayClient({
-          chain: "arcTestnet",
-          privateKey: user.privateKey
-        });
-        const support = await buyer.supports(targetUrl);
-        if (!support.supported) {
-          throw new Error("Local x402 briefing seller is not available. Start the x402 local server first.");
-        }
+        try {
+          const targetUrl = `${x402TargetUrlBase}?topic=${encodeURIComponent(topic)}`;
+          const buyer = new GatewayClient({
+            chain: "arcTestnet",
+            privateKey: user.privateKey
+          });
+          const support = await buyer.supports(targetUrl);
+          if (!support.supported) {
+            throw new Error("x402 seller did not advertise a compatible payment option");
+          }
 
-        warmGatewayBalanceInBackground(user.privateKey, amountUsdc);
-        await ensureGatewayAvailableBalance(buyer, amountUsdc);
-        const paid = await payWithLocalX402Script(user.privateKey, targetUrl);
-        sendJson(response, 200, {
-          txHash: `0xmockunlockx402${Math.random().toString(16).slice(2)}`,
-          walletAddress: user.address,
-          x402: true,
-          paymentStatus: "paid",
-          paymentAmount: paid.paymentAmount,
-          paymentData: paid.output
-        });
-        return;
+          warmGatewayBalanceInBackground(user.privateKey, amountUsdc);
+          await ensureGatewayAvailableBalance(buyer, amountUsdc);
+          const paid = await payWithLocalX402Script(user.privateKey, targetUrl);
+          sendJson(response, 200, {
+            txHash: `0xmockunlockx402${Math.random().toString(16).slice(2)}`,
+            walletAddress: user.address,
+            x402: true,
+            paymentStatus: "paid",
+            paymentAmount: paid.paymentAmount,
+            paymentData: paid.output
+          });
+          return;
+        } catch (x402Err) {
+          console.warn("[AI BRIEFING] x402 payment unavailable; falling back to USDC transfer:", x402Err.message);
+        }
       }
 
       const signer = new Wallet(user.privateKey, leaderboardProvider);

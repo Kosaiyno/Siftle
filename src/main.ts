@@ -20,8 +20,9 @@ const readArcUsdcBalance = async (address: string): Promise<string> => (await lo
 const payAiBriefingUnlock = async (
   treasuryAddress: string,
   amountUsdc: number,
-  onStatus?: (status: string) => void
-): Promise<string> => (await loadArcModule()).payAiBriefingUnlock(treasuryAddress, amountUsdc, onStatus);
+  onStatus?: (status: string) => void,
+  briefing?: { sourceUrl?: string; topic?: string }
+): Promise<string> => (await loadArcModule()).payAiBriefingUnlock(treasuryAddress, amountUsdc, onStatus, briefing);
 const resolveLocalTestMarketYes = (marketAddress: string): void => {
   void loadArcModule().then((arc) => arc.resolveLocalTestMarketYes(marketAddress));
 };
@@ -778,9 +779,14 @@ const unlockAndLoadStorySummary = async (story: BriefingTarget): Promise<void> =
       throw new Error(config.error || "AI briefing is not configured");
     }
 
-    const txHash = await payAiBriefingUnlock(config.treasuryAddress, Number(config.amountUsdc) || 0.05, (status) => {
-      if (menuStatus) menuStatus.textContent = status;
-    });
+    const txHash = await payAiBriefingUnlock(
+      config.treasuryAddress,
+      Number(config.amountUsdc) || 0.05,
+      (status) => {
+        if (menuStatus) menuStatus.textContent = status;
+      },
+      { sourceUrl: story.sourceUrl, topic: story.headline }
+    );
 
     const unlockRes = await fetch(apiUrl("/api/summary/unlock"), {
       method: "POST",
@@ -861,7 +867,7 @@ const loadStorySummary = async (story: BriefingTarget): Promise<void> => {
   }
 };
 
-const openStory = (storyId: number): void => {
+const openStory = (storyId: number, autoUnlockBriefing = false): void => {
   const story = state.stories.find((item) => item.id === storyId);
   if (!story) return;
 
@@ -871,7 +877,11 @@ const openStory = (storyId: number): void => {
   state.activeThread = null;
   window.history.pushState({}, "", `#story-${story.id}`);
   render();
-  void loadStorySummary(story);
+  if (autoUnlockBriefing && !isBriefingUnlocked(story)) {
+    void unlockAndLoadStorySummary(story);
+  } else if (isBriefingUnlocked(story)) {
+    void loadStorySummary(story);
+  }
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
@@ -1427,7 +1437,7 @@ const formatLeaderboardStatus = (status: string): string => {
   return /\bloss/i.test(normalized) ? normalized : `${normalized}, 0 losses`;
 };
 
-const LEADERBOARD_CACHE_PREFIX = "siftle_leaderboard_cache_";
+const LEADERBOARD_CACHE_PREFIX = "siftle_leaderboard_cache_v3_";
 
 const parseLeaderboardNumbers = (status: string): { wins: number; losses: number } => {
   const winsMatch = String(status || "").match(/(\d+)\s+wins?/i);
@@ -1467,6 +1477,27 @@ const compareLeaderboardLikePlayers = (a: any, b: any): number => {
   return String(a?.username || "").localeCompare(String(b?.username || ""));
 };
 
+const leaderboardIdentityKey = (player: any): string => {
+  const displayName = String(player?.displayName || "").trim().toLowerCase();
+  if (displayName && !/^0x[a-f0-9]{40}$/i.test(displayName)) return `name:${displayName}`;
+  return `wallet:${String(player?.username || "").toLowerCase()}`;
+};
+
+const mergeLeaderboardDuplicates = (players: any[]): any[] => {
+  const byIdentity = new Map<string, any>();
+  players.forEach((player) => {
+    const key = leaderboardIdentityKey(player);
+    if (!key || key === "wallet:") return;
+    const existing = byIdentity.get(key);
+    if (!existing) {
+      byIdentity.set(key, player);
+      return;
+    }
+    byIdentity.set(key, compareLeaderboardLikePlayers(existing, player) <= 0 ? existing : player);
+  });
+  return Array.from(byIdentity.values());
+};
+
 const stabilizeLeaderboardPlayers = (freshPlayers: any[], cachedPlayers: any[] = [], isGlobal = false): any[] => {
   const cacheByWallet = new Map(cachedPlayers.map((player) => [String(player?.username || "").toLowerCase(), player]));
   const seen = new Set<string>();
@@ -1484,7 +1515,7 @@ const stabilizeLeaderboardPlayers = (freshPlayers: any[], cachedPlayers: any[] =
     if (wallet && !seen.has(wallet) && (Number(player?.points) || 0) > 0) merged.push(player);
   });
 
-  const sorted = merged.slice().sort(compareLeaderboardLikePlayers);
+  const sorted = mergeLeaderboardDuplicates(merged).slice().sort(compareLeaderboardLikePlayers);
   return isGlobal
     ? sorted.map((player, index) => ({ ...player, globalRank: index + 1 }))
     : sorted;
@@ -4149,7 +4180,7 @@ storyList?.addEventListener("click", async (event) => {
 
   if (!storyCard) return;
   if (target.closest("a")) return;
-  openStory(Number(storyCard.dataset.storyId));
+  openStory(Number(storyCard.dataset.storyId), Boolean(target.closest(".summary-btn")));
 });
 
 storyList?.addEventListener("keydown", (event) => {
