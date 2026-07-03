@@ -1,13 +1,16 @@
 import { createHash, randomUUID } from "node:crypto";
+import { execFile } from "node:child_process";
 import { createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { setDefaultResultOrder } from "node:dns";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
 setDefaultResultOrder("ipv4first");
 import nodemailer from "nodemailer";
 import { createZGComputeNetworkReadOnlyBroker } from "@0gfoundation/0g-compute-ts-sdk";
+import { GatewayClient } from "@circle-fin/x402-batching/client";
 import { Contract, Interface, JsonRpcProvider, Wallet, formatUnits, parseUnits } from "ethers";
 
 const isMain = process.argv[1] && (
@@ -30,6 +33,7 @@ import { marketThreadRules, storyMatchesMarketThreadRule } from "./marketThreadR
 import { isWithinThreadHistoryWindow } from "./threadWindow.mjs";
 
 const root = resolve(process.cwd());
+const execFileAsync = promisify(execFile);
 const port = Number(process.env.PORT ?? 5173);
 const maxArticleAgeHours = Number(process.env.MAX_ARTICLE_AGE_HOURS ?? 48);
 const rssItemsPerFeed = Number(process.env.RSS_ITEMS_PER_FEED ?? 30);
@@ -114,7 +118,16 @@ const enableMemoryDebugLogs = process.env.ENABLE_MEMORY_DEBUG_LOGS === "true";
 const leaderboardMarketSignalCacheMs = Number(process.env.LEADERBOARD_MARKET_SIGNAL_CACHE_MS ?? 120000);
 const marketListCacheMs = Number(process.env.MARKET_LIST_CACHE_MS ?? 120000);
 const aiBriefingDailyBonusUnlocks = Math.max(1, Number(process.env.AI_BRIEFING_DAILY_BONUS_UNLOCKS ?? 3));
-const aiBriefingDailyBonusPoints = Math.max(0, Number(process.env.AI_BRIEFING_DAILY_BONUS_POINTS ?? 10));
+const aiBriefingDailyBonusPoints = Math.max(0, Number(process.env.AI_BRIEFING_DAILY_BONUS_POINTS ?? 30));
+const backendWalletMode = process.env.BACKEND_WALLET_MODE === "true";
+const backendWalletLocalOnly = process.env.BACKEND_WALLET_LOCAL_ONLY !== "false";
+const backendWalletSessionTtlMs = Math.max(1, Number(process.env.BACKEND_WALLET_SESSION_HOURS ?? 168)) * 60 * 60 * 1000;
+const backendWalletUseX402 = process.env.BACKEND_WALLET_USE_X402 === "true";
+const backendWalletMigrationEnabled = process.env.BACKEND_WALLET_MIGRATION_ENABLED === "true";
+const backendWalletMigrationAutoClaim = process.env.BACKEND_WALLET_MIGRATION_AUTO_CLAIM === "true";
+const x402Port = Number(process.env.X402_PORT ?? 4020);
+const x402TargetUrlBase = process.env.X402_TARGET_URL || `http://127.0.0.1:${x402Port}/x402/ai-briefing`;
+const x402AutoDepositUsdc = String(process.env.X402_AUTO_DEPOSIT_USDC || "").trim();
 const compensationChallengeKey = process.env.COMPENSATION_CHALLENGE_KEY || "2026-07-02-daily-compensation";
 const compensationChallengeMarketIds = (
   process.env.COMPENSATION_CHALLENGE_MARKET_IDS ||
@@ -199,6 +212,9 @@ const publishedDir = join(root, ".siftle", "published");
 const marketThreadStoreDir = join(root, ".siftle", "market-threads");
 const marketThreadSeedDir = join(root, "data", "marketThreads");
 const analyticsBootFile = join(root, ".siftle", "analytics.json");
+const backendWalletUsersFile = join(root, ".siftle", "backend-wallet-users.json");
+const backendWalletSessionsFile = join(root, ".siftle", "backend-wallet-sessions.json");
+const backendWalletMigrationsFile = join(root, ".siftle", "backend-wallet-migrations.json");
 
 const getAppDate = (value = new Date()) => {
   const date = value instanceof Date ? value : new Date(value);
@@ -2065,6 +2081,7 @@ const getMarketThread = (marketId) => {
 };
 
 const sendJson = (response, statusCode, payload, headers = {}) => {
+  if (response.headersSent || response.writableEnded) return;
   response.writeHead(statusCode, {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
@@ -4694,6 +4711,637 @@ function consumeOtp(email) {
 
 loadOtpStore();
 
+const ensureLocalStoreDir = () => {
+  const dir = join(root, ".siftle");
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+};
+
+const loadBackendWalletUsers = () => {
+  try {
+    if (!existsSync(backendWalletUsersFile)) return {};
+    const raw = JSON.parse(readFileSync(backendWalletUsersFile, "utf8"));
+    return raw && typeof raw === "object" ? raw : {};
+  } catch (err) {
+    console.warn("Failed to load backend wallet users:", err.message);
+    return {};
+  }
+};
+
+const saveBackendWalletUsers = (payload) => {
+  try {
+    ensureLocalStoreDir();
+    writeFileSync(backendWalletUsersFile, JSON.stringify(payload, null, 2), "utf8");
+  } catch (err) {
+    console.warn("Failed to save backend wallet users:", err.message);
+  }
+};
+
+const loadBackendWalletSessions = () => {
+  try {
+    if (!existsSync(backendWalletSessionsFile)) return {};
+    const raw = JSON.parse(readFileSync(backendWalletSessionsFile, "utf8"));
+    const now = Date.now();
+    const filtered = Object.fromEntries(
+      Object.entries(raw && typeof raw === "object" ? raw : {}).filter(([, entry]) => Number(entry?.expiresAt) > now)
+    );
+    if (Object.keys(filtered).length !== Object.keys(raw || {}).length) {
+      saveBackendWalletSessions(filtered);
+    }
+    return filtered;
+  } catch (err) {
+    console.warn("Failed to load backend wallet sessions:", err.message);
+    return {};
+  }
+};
+
+const saveBackendWalletSessions = (payload) => {
+  try {
+    ensureLocalStoreDir();
+    writeFileSync(backendWalletSessionsFile, JSON.stringify(payload, null, 2), "utf8");
+  } catch (err) {
+    console.warn("Failed to save backend wallet sessions:", err.message);
+  }
+};
+
+const loadBackendWalletMigrations = () => {
+  try {
+    if (!existsSync(backendWalletMigrationsFile)) return {};
+    const raw = JSON.parse(readFileSync(backendWalletMigrationsFile, "utf8"));
+    return raw && typeof raw === "object" ? raw : {};
+  } catch (err) {
+    console.warn("Failed to load backend wallet migrations:", err.message);
+    return {};
+  }
+};
+
+const saveBackendWalletMigrations = (payload) => {
+  try {
+    ensureLocalStoreDir();
+    writeFileSync(backendWalletMigrationsFile, JSON.stringify(payload, null, 2), "utf8");
+  } catch (err) {
+    console.warn("Failed to save backend wallet migrations:", err.message);
+  }
+};
+
+const getBackendWalletMigrationByNewWallet = (walletAddress) => {
+  const cleanWallet = normalizeWalletAddress(walletAddress);
+  if (!cleanWallet) return null;
+  const migrations = loadBackendWalletMigrations();
+  return Object.values(migrations).find((entry) => normalizeWalletAddress(entry?.newWalletAddress) === cleanWallet) || null;
+};
+
+const normalizeBackendWalletUserRow = (row) => {
+  if (!row) return null;
+  const email = normalizeEmail(row.email);
+  const address = normalizeWalletAddress(row.wallet_address || row.address);
+  const privateKey = String(row.private_key || row.privateKey || "").trim();
+  if (!email || !address || !privateKey) return null;
+  return {
+    email,
+    privateKey,
+    address,
+    createdAt: row.created_at || row.createdAt || new Date().toISOString()
+  };
+};
+
+const loadBackendWalletUserFromSupabase = async (email) => {
+  if (!isSupabaseConfigured) return null;
+  const cleanEmail = normalizeEmail(email);
+  if (!cleanEmail) return null;
+  try {
+    const rows = await supabaseRequest(`backend_wallet_users?email=eq.${encodeURIComponent(cleanEmail)}&select=email,wallet_address,private_key,created_at&limit=1`);
+    return normalizeBackendWalletUserRow(rows?.[0]);
+  } catch (err) {
+    console.warn("[SUPABASE] Backend wallet user read failed; using local fallback:", err.message);
+    return null;
+  }
+};
+
+const saveBackendWalletUserToSupabase = async (record) => {
+  if (!isSupabaseConfigured || !record?.email || !record?.privateKey || !record?.address) {
+    return { saved: false };
+  }
+  try {
+    await supabaseRequest("backend_wallet_users?on_conflict=email", {
+      method: "POST",
+      prefer: "resolution=merge-duplicates,return=minimal",
+      body: [{
+        email: normalizeEmail(record.email),
+        wallet_address: normalizeWalletAddress(record.address),
+        private_key: String(record.privateKey),
+        created_at: record.createdAt || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }]
+    });
+    return { saved: true };
+  } catch (err) {
+    console.warn("[SUPABASE] Backend wallet user save failed; local fallback kept:", err.message);
+    return { saved: false, error: err.message };
+  }
+};
+
+const normalizeBackendWalletSessionRow = (row) => {
+  if (!row) return null;
+  const token = String(row.token || "").trim();
+  const email = normalizeEmail(row.email);
+  const expiresAt = Date.parse(row.expires_at || row.expiresAt || "");
+  const createdAt = Date.parse(row.created_at || row.createdAt || "") || Date.now();
+  if (!token || !email || !Number.isFinite(expiresAt)) return null;
+  return { token, email, createdAt, expiresAt };
+};
+
+const saveBackendWalletSessionToSupabase = async (token, session) => {
+  if (!isSupabaseConfigured || !token || !session?.email) return { saved: false };
+  try {
+    await supabaseRequest("backend_wallet_sessions?on_conflict=token", {
+      method: "POST",
+      prefer: "resolution=merge-duplicates,return=minimal",
+      body: [{
+        token,
+        email: normalizeEmail(session.email),
+        created_at: new Date(Number(session.createdAt) || Date.now()).toISOString(),
+        expires_at: new Date(Number(session.expiresAt) || Date.now()).toISOString(),
+        updated_at: new Date().toISOString()
+      }]
+    });
+    return { saved: true };
+  } catch (err) {
+    console.warn("[SUPABASE] Backend wallet session save failed; local fallback kept:", err.message);
+    return { saved: false, error: err.message };
+  }
+};
+
+const loadBackendWalletSessionFromSupabase = async (token) => {
+  if (!isSupabaseConfigured || !token) return null;
+  try {
+    const rows = await supabaseRequest(`backend_wallet_sessions?token=eq.${encodeURIComponent(token)}&select=token,email,created_at,expires_at&limit=1`);
+    return normalizeBackendWalletSessionRow(rows?.[0]);
+  } catch (err) {
+    console.warn("[SUPABASE] Backend wallet session read failed; using local fallback:", err.message);
+    return null;
+  }
+};
+
+const deleteBackendWalletSessionFromSupabase = async (token) => {
+  if (!isSupabaseConfigured || !token) return;
+  try {
+    await supabaseRequest(`backend_wallet_sessions?token=eq.${encodeURIComponent(token)}`, {
+      method: "DELETE"
+    });
+  } catch (err) {
+    console.warn("[SUPABASE] Backend wallet session delete failed:", err.message);
+  }
+};
+
+const normalizeBackendWalletMigrationRow = (row) => {
+  if (!row) return null;
+  const oldWalletAddress = normalizeWalletAddress(row.old_wallet_address || row.oldWalletAddress);
+  const newWalletAddress = normalizeWalletAddress(row.new_wallet_address || row.newWalletAddress);
+  if (!oldWalletAddress || !newWalletAddress) return null;
+  return {
+    email: normalizeEmail(row.email),
+    oldWalletAddress,
+    newWalletAddress,
+    username: String(row.username || ""),
+    restoredPoints: Number(row.restored_points ?? row.restoredPoints) || 0,
+    claimedAt: row.claimed_at || row.claimedAt || new Date().toISOString()
+  };
+};
+
+const loadBackendWalletMigrationsFromSupabase = async () => {
+  if (!isSupabaseConfigured) return {};
+  try {
+    const rows = await supabaseRequest("backend_wallet_migrations?select=email,old_wallet_address,new_wallet_address,username,restored_points,claimed_at");
+    return Object.fromEntries(
+      (rows || [])
+        .map(normalizeBackendWalletMigrationRow)
+        .filter(Boolean)
+        .map((entry) => [entry.oldWalletAddress, entry])
+    );
+  } catch (err) {
+    console.warn("[SUPABASE] Backend wallet migrations read failed; using local fallback:", err.message);
+    return {};
+  }
+};
+
+const getBackendWalletMigrationByNewWalletFromSupabase = async (walletAddress) => {
+  if (!isSupabaseConfigured) return null;
+  const cleanWallet = normalizeWalletAddress(walletAddress);
+  if (!cleanWallet) return null;
+  try {
+    const rows = await supabaseRequest(`backend_wallet_migrations?new_wallet_address=eq.${encodeURIComponent(cleanWallet)}&select=email,old_wallet_address,new_wallet_address,username,restored_points,claimed_at&limit=1`);
+    return normalizeBackendWalletMigrationRow(rows?.[0]);
+  } catch (err) {
+    console.warn("[SUPABASE] Backend wallet migration lookup failed; using local fallback:", err.message);
+    return null;
+  }
+};
+
+const saveBackendWalletMigrationToSupabase = async (entry) => {
+  if (!isSupabaseConfigured || !entry?.oldWalletAddress || !entry?.newWalletAddress) return { saved: false };
+  try {
+    await supabaseRequest("backend_wallet_migrations?on_conflict=old_wallet_address", {
+      method: "POST",
+      prefer: "resolution=merge-duplicates,return=minimal",
+      body: [{
+        email: normalizeEmail(entry.email),
+        old_wallet_address: normalizeWalletAddress(entry.oldWalletAddress),
+        new_wallet_address: normalizeWalletAddress(entry.newWalletAddress),
+        username: String(entry.username || ""),
+        restored_points: Number(entry.restoredPoints) || 0,
+        claimed_at: entry.claimedAt || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }]
+    });
+    return { saved: true };
+  } catch (err) {
+    console.warn("[SUPABASE] Backend wallet migration save failed; local fallback kept:", err.message);
+    return { saved: false, error: err.message };
+  }
+};
+
+const getLegacyArcWalletForEmail = async (email) => {
+  const cleanEmail = normalizeEmail(email);
+  if (!cleanEmail || !process.env.CIRCLE_API_KEY) return "";
+
+  try {
+    const userId = `siftle_user_${getCircleUserId(cleanEmail)}`;
+    const tokenRes = await callCircleApi("/v1/w3s/users/token", "POST", { userId });
+    const userToken = tokenRes.data?.userToken || tokenRes.userToken;
+    if (!userToken) return "";
+    const walletsRes = await callCircleApi("/v1/w3s/wallets", "GET", null, userToken);
+    const wallets = walletsRes.data?.wallets || walletsRes.wallets || [];
+    const arcWallet = wallets.find((wallet) => wallet.blockchain === "ARC-TESTNET");
+    return normalizeWalletAddress(arcWallet?.address || "");
+  } catch (err) {
+    console.warn("Failed to recover legacy Circle wallet for email:", err.message);
+    return "";
+  }
+};
+
+const buildMigrationPreview = async (email, newWalletAddress) => {
+  const cleanEmail = normalizeEmail(email);
+  const cleanNewWallet = normalizeWalletAddress(newWalletAddress);
+  if (!backendWalletMigrationEnabled || !cleanEmail || !cleanNewWallet) {
+    return { enabled: backendWalletMigrationEnabled, eligible: false, alreadyClaimed: false };
+  }
+
+  const legacyWalletAddress = await getLegacyArcWalletForEmail(cleanEmail);
+  if (!legacyWalletAddress || legacyWalletAddress === cleanNewWallet) {
+    return {
+      enabled: true,
+      eligible: false,
+      alreadyClaimed: false,
+      legacyWalletAddress
+    };
+  }
+
+  const remoteMigrations = await loadBackendWalletMigrationsFromSupabase();
+  const localMigrations = loadBackendWalletMigrations();
+  const migrations = { ...localMigrations, ...remoteMigrations };
+  const existing = migrations[legacyWalletAddress]
+    || await getBackendWalletMigrationByNewWalletFromSupabase(cleanNewWallet)
+    || getBackendWalletMigrationByNewWallet(cleanNewWallet);
+  const data = await loadLeaderboardFromSupabase(loadAnalytics());
+  const leaderboard = ensureLeaderboardState(data);
+  const legacyEntry = leaderboard.traders?.[legacyWalletAddress] || null;
+  const parsedStatus = parseLeaderboardStatus(legacyEntry?.status || legacyEntry?.reported_status || "0 wins, 0 losses");
+  const points = Number(legacyEntry?.points) || Number(legacyEntry?.reported_points) || 0;
+  const restoredPoints = Number(existing?.restoredPoints) || 0;
+  return {
+    enabled: true,
+    eligible: Boolean(legacyEntry && points > 0 && !existing),
+    alreadyClaimed: Boolean(existing),
+    legacyWalletAddress,
+    legacyUsername: String(legacyEntry?.username || ""),
+    legacyPoints: points,
+    legacyWins: parsedStatus.wins,
+    legacyLosses: parsedStatus.losses,
+    migratedToWalletAddress: normalizeWalletAddress(existing?.newWalletAddress || "") || "",
+    restoredPoints
+  };
+};
+
+const applyBackendWalletMigration = async (email, newWalletAddress) => {
+  const cleanEmail = normalizeEmail(email);
+  const cleanNewWallet = normalizeWalletAddress(newWalletAddress);
+  if (!backendWalletMigrationEnabled) {
+    return { migrated: false, reason: "migration_disabled" };
+  }
+  if (!cleanEmail || !cleanNewWallet) {
+    throw new Error("Valid email and wallet address are required for migration");
+  }
+
+  const preview = await buildMigrationPreview(cleanEmail, cleanNewWallet);
+  if (!preview.legacyWalletAddress) return { migrated: false, reason: "legacy_wallet_not_found", preview };
+  if (preview.legacyWalletAddress === cleanNewWallet) return { migrated: false, reason: "same_wallet", preview };
+  if (preview.alreadyClaimed) return { migrated: false, reason: "already_claimed", preview };
+  if (!preview.eligible) return { migrated: false, reason: "no_points", preview };
+
+  const data = await loadLeaderboardFromSupabase(loadAnalytics());
+  const leaderboard = ensureLeaderboardState(data);
+  const oldWallet = preview.legacyWalletAddress;
+  const oldEntry = leaderboard.traders?.[oldWallet];
+  if (!oldEntry) return { migrated: false, reason: "legacy_entry_missing", preview };
+
+  const nowIso = new Date().toISOString();
+  const existingNewEntry = leaderboard.traders?.[cleanNewWallet] || {};
+  const migratedPoints = Math.max(
+    0,
+    Number(preview.legacyPoints) || 0,
+    Number(oldEntry.reported_points) || 0,
+    Number(oldEntry.points) || 0
+  );
+  const oldStatus = {
+    wins: Math.max(0, Number(preview.legacyWins) || 0),
+    losses: Math.max(0, Number(preview.legacyLosses) || 0)
+  };
+  const newStatus = parseLeaderboardStatus(existingNewEntry.status || existingNewEntry.reported_status || "0 wins, 0 losses");
+  const mergedWins = oldStatus.wins + newStatus.wins;
+  const mergedLosses = oldStatus.losses + newStatus.losses;
+  leaderboard.traders[cleanNewWallet] = {
+    ...existingNewEntry,
+    username: String(existingNewEntry.username || oldEntry.username || ""),
+    points: (Number(existingNewEntry.points) || 0) + migratedPoints,
+    reported_points: (Number(existingNewEntry.reported_points) || 0) + migratedPoints,
+    status: `${mergedWins} win${mergedWins === 1 ? "" : "s"}, ${mergedLosses} loss${mergedLosses === 1 ? "" : "es"}`,
+    reported_status: `${mergedWins} win${mergedWins === 1 ? "" : "s"}, ${mergedLosses} loss${mergedLosses === 1 ? "" : "es"}`,
+    first_activity_at: existingNewEntry.first_activity_at || oldEntry.first_activity_at || nowIso,
+    updated_at: nowIso
+  };
+
+  const existingResults = leaderboard.resolvedResults?.[cleanNewWallet] || {};
+  const oldResults = leaderboard.resolvedResults?.[oldWallet] || {};
+  leaderboard.resolvedResults[cleanNewWallet] = {
+    ...oldResults,
+    ...existingResults
+  };
+
+  const existingBonus = leaderboard.bonusEvents?.[cleanNewWallet] || {};
+  const oldBonus = leaderboard.bonusEvents?.[oldWallet] || {};
+  leaderboard.bonusEvents[cleanNewWallet] = {
+    ...oldBonus,
+    ...existingBonus,
+    [`migration:${oldWallet}`]: {
+      season_id: getSeasonId(),
+      bonus_type: "wallet_migration",
+      points: 0,
+      metadata: {
+        old_wallet_address: oldWallet,
+        new_wallet_address: cleanNewWallet,
+        email: cleanEmail
+      },
+      created_at: nowIso
+    }
+  };
+
+  Object.keys(leaderboard.divisionAssignments || {}).forEach((seasonId) => {
+    const assignments = leaderboard.divisionAssignments?.[seasonId];
+    if (!assignments?.[oldWallet]) return;
+    assignments[cleanNewWallet] = assignments[oldWallet];
+    delete assignments[oldWallet];
+  });
+
+  leaderboard.traders[oldWallet] = {
+    ...oldEntry,
+    points: 0,
+    reported_points: 0,
+    status: "0 wins, 0 losses",
+    reported_status: "0 wins, 0 losses",
+    updated_at: nowIso
+  };
+  delete leaderboard.resolvedResults[oldWallet];
+  delete leaderboard.bonusEvents[oldWallet];
+
+  saveAnalytics(data);
+  await saveLeaderboardToSupabase(data);
+
+  const migrations = loadBackendWalletMigrations();
+  const migrationRecord = {
+    email: cleanEmail,
+    oldWalletAddress: oldWallet,
+    newWalletAddress: cleanNewWallet,
+    username: String(oldEntry.username || ""),
+    restoredPoints: migratedPoints,
+    claimedAt: nowIso
+  };
+  migrations[oldWallet] = migrationRecord;
+  saveBackendWalletMigrations(migrations);
+  await saveBackendWalletMigrationToSupabase(migrationRecord);
+
+  return {
+    migrated: true,
+    oldWalletAddress: oldWallet,
+    newWalletAddress: cleanNewWallet,
+    restoredPoints: migrationRecord.restoredPoints,
+    username: migrationRecord.username
+  };
+};
+
+const issueBackendWalletSession = async (email) => {
+  const sessions = loadBackendWalletSessions();
+  const token = randomUUID();
+  sessions[token] = {
+    email,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + backendWalletSessionTtlMs
+  };
+  saveBackendWalletSessions(sessions);
+  await saveBackendWalletSessionToSupabase(token, sessions[token]);
+  return token;
+};
+
+const readBackendWalletSession = async (token) => {
+  if (!token) return null;
+  const sessions = loadBackendWalletSessions();
+  const session = sessions[token];
+  if (session && Number(session.expiresAt) > Date.now()) {
+    return session;
+  }
+
+  if (session) {
+    delete sessions[token];
+    saveBackendWalletSessions(sessions);
+    await deleteBackendWalletSessionFromSupabase(token);
+    return null;
+  }
+
+  const remoteSession = await loadBackendWalletSessionFromSupabase(token);
+  if (!remoteSession || Number(remoteSession.expiresAt) <= Date.now()) {
+    if (remoteSession) await deleteBackendWalletSessionFromSupabase(token);
+    return null;
+  }
+
+  sessions[token] = remoteSession;
+  saveBackendWalletSessions(sessions);
+  return remoteSession;
+};
+
+const getOrCreateBackendWalletUser = async (email) => {
+  const cleanEmail = normalizeEmail(email);
+  if (!cleanEmail) throw new Error("Valid email is required");
+
+  const remoteUser = await loadBackendWalletUserFromSupabase(cleanEmail);
+  if (remoteUser) {
+    const users = loadBackendWalletUsers();
+    users[cleanEmail] = remoteUser;
+    saveBackendWalletUsers(users);
+    return remoteUser;
+  }
+
+  const users = loadBackendWalletUsers();
+  if (users[cleanEmail]?.privateKey && users[cleanEmail]?.address) {
+    await saveBackendWalletUserToSupabase(users[cleanEmail]);
+    return users[cleanEmail];
+  }
+
+  const wallet = Wallet.createRandom();
+  const record = {
+    email: cleanEmail,
+    privateKey: wallet.privateKey,
+    address: wallet.address,
+    createdAt: new Date().toISOString()
+  };
+  users[cleanEmail] = record;
+  saveBackendWalletUsers(users);
+  await saveBackendWalletUserToSupabase(record);
+  return record;
+};
+
+const getBackendWalletUserBySession = async (token) => {
+  const session = await readBackendWalletSession(token);
+  if (!session?.email) return null;
+  const remoteUser = await loadBackendWalletUserFromSupabase(session.email);
+  if (remoteUser) return { ...remoteUser, session };
+  const users = loadBackendWalletUsers();
+  const record = users[session.email];
+  if (!record?.privateKey || !record?.address) return null;
+  await saveBackendWalletUserToSupabase(record);
+  return { ...record, session };
+};
+
+const isLocalRequest = (request) => {
+  const remote = String(request.socket?.remoteAddress || "").toLowerCase();
+  return remote === "::1" || remote === "127.0.0.1" || remote === "::ffff:127.0.0.1";
+};
+
+const requireBackendWalletMode = (request, response) => {
+  if (!backendWalletMode) {
+    sendJson(response, 404, { error: "Backend wallet mode is disabled" });
+    return false;
+  }
+  if (backendWalletLocalOnly && !isLocalRequest(request)) {
+    sendJson(response, 403, { error: "Backend wallet mode is restricted to local requests" });
+    return false;
+  }
+  return true;
+};
+
+const BACKEND_WALLET_MARKET_ABI = [
+  "function buy(bool yes, uint256 amount) external",
+  "function sell(bool yes, uint256 amount) external",
+  "function redeem() external",
+  "function outcome() view returns (uint8)",
+  "function totalYesShares() view returns (uint256)",
+  "function totalNoShares() view returns (uint256)",
+  "function impliedYesProbability() view returns (uint256)",
+  "function closesAt() view returns (uint64)",
+  "function yesShares(address owner) view returns (uint256)",
+  "function noShares(address owner) view returns (uint256)"
+];
+
+const BACKEND_WALLET_ERC20_ABI = [
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function approve(address spender, uint256 amount) returns (bool)",
+  "function transfer(address to, uint256 amount) returns (bool)",
+  "function balanceOf(address owner) view returns (uint256)"
+];
+
+const waitForMs = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const readBackendWalletMarketState = async (walletAddress, marketAddress) => {
+  const market = new Contract(marketAddress, BACKEND_WALLET_MARKET_ABI, leaderboardProvider);
+  const [yesShares, noShares, totalYes, totalNo, probability, outcome, closesAt] = await Promise.all([
+    market.yesShares(walletAddress),
+    market.noShares(walletAddress),
+    market.totalYesShares(),
+    market.totalNoShares(),
+    market.impliedYesProbability(),
+    market.outcome(),
+    market.closesAt()
+  ]);
+  const yesSharesUsdc = Number(formatUnits(yesShares, 6));
+  const noSharesUsdc = Number(formatUnits(noShares, 6));
+  const totalYesUsdc = Number(formatUnits(totalYes, 6));
+  const totalNoUsdc = Number(formatUnits(totalNo, 6));
+  const yesPriceCents = Math.round(Number(probability) / 100);
+  return {
+    position: {
+      yesSharesUsdc,
+      noSharesUsdc
+    },
+    snapshot: {
+      yesPriceCents,
+      noPriceCents: 100 - yesPriceCents,
+      volumeUsdc: totalYesUsdc + totalNoUsdc,
+      yesSharesUsdc: totalYesUsdc,
+      noSharesUsdc: totalNoUsdc,
+      outcome: Number(outcome),
+      closesAtUnix: Number(closesAt)
+    }
+  };
+};
+
+const ensureGatewayAvailableBalance = async (buyer, requiredUsdc) => {
+  const requiredBaseUnits = parseUnits(requiredUsdc.toFixed(6), 6);
+  let balances = await buyer.getBalances();
+  if ((balances.gateway?.available || 0n) >= requiredBaseUnits) {
+    return balances;
+  }
+  throw new Error("Gateway balance is still topping up. Try the AI briefing unlock again in a few seconds.");
+};
+
+const warmGatewayBalanceInBackground = (privateKey, minimumUsdc) => {
+  if (!backendWalletUseX402) return;
+  const depositAmount = x402AutoDepositUsdc || minimumUsdc.toFixed(6);
+  void (async () => {
+    try {
+      const buyer = new GatewayClient({
+        chain: "arcTestnet",
+        privateKey
+      });
+      const balances = await buyer.getBalances();
+      const requiredBaseUnits = parseUnits(minimumUsdc.toFixed(6), 6);
+      if ((balances.gateway?.available || 0n) >= requiredBaseUnits) return;
+      await buyer.deposit(depositAmount);
+    } catch (error) {
+      console.warn("[X402] Gateway warmup failed:", error?.message || error);
+    }
+  })();
+};
+
+const payWithLocalX402Script = async (privateKey, targetUrl) => {
+  const scriptPath = resolve(root, "scripts", "x402-local-pay.mjs");
+  const env = {
+    ...process.env,
+    X402_PRIVATE_KEY: privateKey,
+    X402_TARGET_URL: targetUrl,
+    X402_AUTO_DEPOSIT_USDC: ""
+  };
+  const { stdout, stderr } = await execFileAsync(process.execPath, [scriptPath], {
+    cwd: root,
+    env,
+    timeout: 120000,
+    maxBuffer: 1024 * 1024
+  });
+  const combined = `${stdout || ""}\n${stderr || ""}`;
+  const amountMatch = combined.match(/Paid amount:\s*([^\s]+)\s*USDC/i);
+  return {
+    output: combined,
+    paymentAmount: amountMatch?.[1] || null
+  };
+};
+
 const getCircleUserId = (email) => {
   const hash = createHash("sha256").update(email.toLowerCase().trim()).digest("hex");
   return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
@@ -5657,9 +6305,12 @@ function compareLeaderboardPlayers(a, b) {
 }
 
 function buildLeaderboardPlayers(data, walletAddress = "") {
+  const migrationMap = getWalletMigrationMap(data);
+  const migratedOldWallets = new Set(migrationMap.keys());
+  const requestedWallet = canonicalLeaderboardAddress(data, walletAddress);
   const tradersMap = data.leaderboard?.traders || {};
   const players = Object.entries(tradersMap)
-    .filter(([address]) => !isAdminWallet(address))
+    .filter(([address]) => !isAdminWallet(address) && !migratedOldWallets.has(normalizeWalletAddress(address)))
     .map(([address, info]) => ({
       username: address,
       displayName: String(info.username || ""),
@@ -5669,9 +6320,9 @@ function buildLeaderboardPlayers(data, walletAddress = "") {
       updated_at: info.updated_at
     }));
 
-  if (walletAddress && !isAdminWallet(walletAddress) && !players.some((player) => player.username === walletAddress)) {
+  if (requestedWallet && !isAdminWallet(requestedWallet) && !players.some((player) => player.username === requestedWallet)) {
     players.push({
-      username: walletAddress,
+      username: requestedWallet,
       displayName: "",
       points: 0,
       status: "0 wins, 0 losses",
@@ -5681,6 +6332,72 @@ function buildLeaderboardPlayers(data, walletAddress = "") {
   }
 
   return players.sort(compareLeaderboardPlayers);
+}
+
+function getWalletMigrationMap(data) {
+  const migrationMap = new Map();
+  const addMigration = (oldWalletAddress, newWalletAddress) => {
+    const oldWallet = normalizeWalletAddress(oldWalletAddress);
+    const newWallet = normalizeWalletAddress(newWalletAddress);
+    if (!oldWallet || !newWallet || oldWallet === newWallet) return;
+    migrationMap.set(oldWallet, newWallet);
+  };
+
+  Object.entries(data.leaderboard?.bonusEvents || {}).forEach(([walletAddress, events]) => {
+    const newWallet = normalizeWalletAddress(walletAddress);
+    Object.values(events || {}).forEach((event) => {
+      if (String(event?.bonus_type || "") !== "wallet_migration") return;
+      addMigration(event?.metadata?.old_wallet_address, event?.metadata?.new_wallet_address || newWallet);
+    });
+  });
+
+  Object.values(loadBackendWalletMigrations()).forEach((entry) => {
+    addMigration(entry?.oldWalletAddress, entry?.newWalletAddress);
+  });
+
+  return migrationMap;
+}
+
+function canonicalLeaderboardAddress(data, walletAddress) {
+  const address = normalizeWalletAddress(walletAddress);
+  if (!address) return "";
+  return getWalletMigrationMap(data).get(address) || address;
+}
+
+function applyWalletMigrationAliases(data) {
+  const leaderboard = ensureLeaderboardState(data);
+  const migrationMap = getWalletMigrationMap(data);
+
+  migrationMap.forEach((newWallet, oldWallet) => {
+    const oldEntry = leaderboard.traders?.[oldWallet];
+    const newEntry = leaderboard.traders?.[newWallet] || {};
+    if (oldEntry && !leaderboard.traders[newWallet]) {
+      leaderboard.traders[newWallet] = {
+        ...oldEntry,
+        updated_at: newEntry.updated_at || oldEntry.updated_at || new Date().toISOString()
+      };
+    }
+
+    const oldResults = leaderboard.resolvedResults?.[oldWallet] || {};
+    if (Object.keys(oldResults).length > 0) {
+      leaderboard.resolvedResults[newWallet] = {
+        ...oldResults,
+        ...(leaderboard.resolvedResults?.[newWallet] || {})
+      };
+    }
+
+    const oldBonus = leaderboard.bonusEvents?.[oldWallet] || {};
+    if (Object.keys(oldBonus).length > 0) {
+      leaderboard.bonusEvents[newWallet] = {
+        ...oldBonus,
+        ...(leaderboard.bonusEvents?.[newWallet] || {})
+      };
+    }
+
+    delete leaderboard.traders[oldWallet];
+    delete leaderboard.resolvedResults[oldWallet];
+    delete leaderboard.bonusEvents[oldWallet];
+  });
 }
 
 function ensureLeaderboardState(data) {
@@ -5967,6 +6684,9 @@ async function refreshMarketListCache() {
 async function recomputeLeaderboardFromChain(data) {
   logMemoryUsage("leaderboard recompute start");
   const leaderboard = ensureLeaderboardState(data);
+  applyWalletMigrationAliases(data);
+  const migrationMap = getWalletMigrationMap(data);
+  const canonicalAddress = (address) => migrationMap.get(normalizeWalletAddress(address)) || normalizeWalletAddress(address);
   const tradersMap = leaderboard.traders;
   const resolvedResults = leaderboard.resolvedResults;
 
@@ -5977,7 +6697,7 @@ async function recomputeLeaderboardFromChain(data) {
 
   const allTraders = new Set(
     Object.keys(tradersMap)
-      .map(normalizeWalletAddress)
+      .map(canonicalAddress)
       .filter(Boolean)
   );
 
@@ -5994,7 +6714,7 @@ async function recomputeLeaderboardFromChain(data) {
     logMemoryUsage(`before trade signals ${marketId}`);
     const { traders, switched, redeemed, firstActivityBlocks } = await collectMarketTradeSignals(marketAddress, market.deploymentBlock);
     allTraders.forEach((address) => traders.add(address));
-    traders.forEach((address) => allTraders.add(address));
+    traders.forEach((address) => allTraders.add(canonicalAddress(address)));
 
     let outcome = 0;
     try {
@@ -6014,13 +6734,15 @@ async function recomputeLeaderboardFromChain(data) {
           } catch {}
         }));
         firstActivityEntries.forEach(([address, blockNumber]) => {
+          const canonical = canonicalAddress(address);
+          if (!canonical) return;
           const firstActivityAt = blockTimes.get(blockNumber);
           if (!firstActivityAt) return;
-          const existing = tradersMap[address] || {};
+          const existing = tradersMap[canonical] || {};
           const existingFirst = Date.parse(existing.first_activity_at || "") || Number.MAX_SAFE_INTEGER;
           const candidateFirst = Date.parse(firstActivityAt) || Number.MAX_SAFE_INTEGER;
           if (candidateFirst < existingFirst) {
-            tradersMap[address] = {
+            tradersMap[canonical] = {
               ...existing,
               first_activity_at: firstActivityAt
             };
@@ -6048,29 +6770,33 @@ async function recomputeLeaderboardFromChain(data) {
 
       for (const position of positions) {
         const address = position.address;
-        if (!resolvedResults[address]) resolvedResults[address] = {};
-        if (resolvedResults[address][marketId]) continue;
+        const resultAddress = canonicalAddress(address);
+        if (!resultAddress) continue;
+        if (!resolvedResults[resultAddress]) resolvedResults[resultAddress] = {};
+        if (resolvedResults[resultAddress][marketId]) continue;
 
         const hasPosition = position.yesSharesUsdc > 0 || position.noSharesUsdc > 0;
         const hasSwitched = switched.has(address);
 
         if (outcome === 1 && position.yesSharesUsdc > 0) {
-          resolvedResults[address][marketId] = { result: "win", points: hasSwitched ? 50 : 100 };
+          resolvedResults[resultAddress][marketId] = { result: "win", points: hasSwitched ? 50 : 100 };
         } else if (outcome === 2 && position.noSharesUsdc > 0) {
-          resolvedResults[address][marketId] = { result: "win", points: hasSwitched ? 50 : 100 };
+          resolvedResults[resultAddress][marketId] = { result: "win", points: hasSwitched ? 50 : 100 };
         } else if ((outcome === 1 || outcome === 2) && redeemed.has(address)) {
-          resolvedResults[address][marketId] = { result: "win", points: hasSwitched ? 50 : 100 };
+          resolvedResults[resultAddress][marketId] = { result: "win", points: hasSwitched ? 50 : 100 };
         } else if (hasPosition) {
-          resolvedResults[address][marketId] = { result: "loss", points: 0 };
+          resolvedResults[resultAddress][marketId] = { result: "loss", points: 0 };
         }
       }
 
       // Handle traders who already redeemed winning shares before current position reads.
       if (outcome === 1 || outcome === 2) {
         redeemed.forEach((address) => {
-          if (!resolvedResults[address]) resolvedResults[address] = {};
-          if (!resolvedResults[address][marketId]) {
-            resolvedResults[address][marketId] = {
+          const resultAddress = canonicalAddress(address);
+          if (!resultAddress) return;
+          if (!resolvedResults[resultAddress]) resolvedResults[resultAddress] = {};
+          if (!resolvedResults[resultAddress][marketId]) {
+            resolvedResults[resultAddress][marketId] = {
               result: "win",
               points: switched.has(address) ? 50 : 100
             };
@@ -6088,15 +6814,21 @@ async function recomputeLeaderboardFromChain(data) {
   }
 
   Object.keys(resolvedResults).forEach((address) => {
-    const normalized = normalizeWalletAddress(address);
+    const normalized = canonicalAddress(address);
     if (normalized) allTraders.add(normalized);
   });
 
   applyCompensationChallengeBonuses(data);
   applyReferralWinBonuses(data);
   Object.keys(leaderboard.bonusEvents || {}).forEach((address) => {
-    const normalized = normalizeWalletAddress(address);
+    const normalized = canonicalAddress(address);
     if (normalized) allTraders.add(normalized);
+  });
+
+  applyWalletMigrationAliases(data);
+  migrationMap.forEach((newWallet, oldWallet) => {
+    allTraders.delete(oldWallet);
+    allTraders.add(newWallet);
   });
 
   const nowIso = new Date().toISOString();
@@ -6809,6 +7541,317 @@ const server = createServer(async (request, response) => {
   if (request.method === "OPTIONS") {
     response.writeHead(204, getCorsHeaders());
     response.end();
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/backend-wallet/config" && request.method === "GET") {
+    sendJson(response, 200, {
+      enabled: backendWalletMode,
+      localOnly: backendWalletLocalOnly,
+      manualFundingRequired: !backendWalletUseX402 && !x402AutoDepositUsdc,
+      aiBriefingUnlockUsdc,
+      x402Enabled: backendWalletUseX402,
+      x402TargetUrl: x402TargetUrlBase
+    });
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/backend-wallet/auth" && request.method === "POST") {
+    if (!requireBackendWalletMode(request, response)) return;
+    try {
+      const body = await readJsonBody(request);
+      const email = normalizeEmail(body.email);
+      if (!email || !email.includes("@")) {
+        sendJson(response, 400, { error: "Valid email address is required" });
+        return;
+      }
+
+      const user = await getOrCreateBackendWalletUser(email);
+      const token = await issueBackendWalletSession(email);
+      warmGatewayBalanceInBackground(user.privateKey, aiBriefingUnlockUsdc);
+      const migrationPreview = await buildMigrationPreview(email, user.address);
+      const migration = backendWalletMigrationAutoClaim && migrationPreview.eligible
+        ? await applyBackendWalletMigration(email, user.address)
+        : null;
+      const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, leaderboardProvider);
+      const balanceRaw = await usdc.balanceOf(user.address);
+      sendJson(response, 200, {
+        sessionToken: token,
+        email,
+        walletAddress: user.address,
+        walletBalance: formatUnits(balanceRaw, 6),
+        backendWalletMode: true,
+        requiresManualFunding: true,
+        gatewayWarmupStarted: backendWalletUseX402,
+        migrationEnabled: backendWalletMigrationEnabled,
+        migrationPreview,
+        migration
+      });
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/backend-wallet/session" && request.method === "GET") {
+    if (!requireBackendWalletMode(request, response)) return;
+    try {
+      const token = String(requestUrl.searchParams.get("token") || "");
+      const user = await getBackendWalletUserBySession(token);
+      if (!user) {
+        sendJson(response, 401, { error: "Backend wallet session expired" });
+        return;
+      }
+
+      const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, leaderboardProvider);
+      const balanceRaw = await usdc.balanceOf(user.address);
+      sendJson(response, 200, {
+        email: user.email,
+        walletAddress: user.address,
+        walletBalance: formatUnits(balanceRaw, 6),
+        backendWalletMode: true,
+        migrationEnabled: backendWalletMigrationEnabled
+      });
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/backend-wallet/migration/status" && request.method === "GET") {
+    if (!requireBackendWalletMode(request, response)) return;
+    try {
+      const token = String(requestUrl.searchParams.get("token") || "");
+      const user = await getBackendWalletUserBySession(token);
+      if (!user) {
+        sendJson(response, 401, { error: "Backend wallet session expired" });
+        return;
+      }
+
+      const preview = await buildMigrationPreview(user.email, user.address);
+      sendJson(response, 200, {
+        walletAddress: user.address,
+        email: user.email,
+        ...preview
+      });
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/backend-wallet/migration/claim" && request.method === "POST") {
+    if (!requireBackendWalletMode(request, response)) return;
+    try {
+      const body = await readJsonBody(request);
+      const sessionToken = String(body.sessionToken || "");
+      const user = await getBackendWalletUserBySession(sessionToken);
+      if (!user) {
+        sendJson(response, 401, { error: "Backend wallet session expired" });
+        return;
+      }
+
+      const migration = await applyBackendWalletMigration(user.email, user.address);
+      sendJson(response, 200, migration);
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/backend-wallet/market-state" && request.method === "GET") {
+    if (!requireBackendWalletMode(request, response)) return;
+    try {
+      const token = String(requestUrl.searchParams.get("token") || "");
+      const marketRef = String(requestUrl.searchParams.get("marketAddress") || requestUrl.searchParams.get("marketId") || "").trim();
+      const user = await getBackendWalletUserBySession(token);
+      if (!user) {
+        sendJson(response, 401, { error: "Backend wallet session expired" });
+        return;
+      }
+      if (!marketRef) {
+        sendJson(response, 400, { error: "marketAddress is required" });
+        return;
+      }
+
+      const normalizedRef = normalizeWalletAddress(marketRef);
+      const market = getKnownMarkets().find((entry) => {
+        const entryAddress = normalizeWalletAddress(entry.marketAddress) || getConfiguredMarketAddress(entry.id);
+        return String(entry.id || "").trim() === marketRef || (normalizedRef && entryAddress === normalizedRef);
+      });
+      const marketAddress = normalizeWalletAddress(market?.marketAddress) || getConfiguredMarketAddress(market?.id || marketRef) || normalizedRef;
+      if (!marketAddress || isLocalTestMarketAddress(marketAddress)) {
+        sendJson(response, 400, { error: "This market is not available for backend wallet mode" });
+        return;
+      }
+
+      const state = await readBackendWalletMarketState(user.address, marketAddress);
+      sendJson(response, 200, {
+        walletAddress: user.address,
+        marketAddress,
+        ...state
+      });
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/backend-wallet/trade" && request.method === "POST") {
+    if (!requireBackendWalletMode(request, response)) return;
+    try {
+      const body = await readJsonBody(request);
+      const sessionToken = String(body.sessionToken || "");
+      const marketRef = String(body.marketId || body.marketAddress || "").trim();
+      const mode = body.mode === "sell" ? "sell" : "buy";
+      const side = body.side === "no" ? "no" : "yes";
+      const amountUsdc = Number(body.amountUsdc);
+      const user = await getBackendWalletUserBySession(sessionToken);
+
+      if (!user) {
+        sendJson(response, 401, { error: "Backend wallet session expired" });
+        return;
+      }
+      if (!marketRef || !Number.isFinite(amountUsdc) || amountUsdc <= 0) {
+        sendJson(response, 400, { error: "market reference and amountUsdc are required" });
+        return;
+      }
+
+      const normalizedRef = normalizeWalletAddress(marketRef);
+      const market = getActiveMarkets().find((entry) => {
+        const entryAddress = normalizeWalletAddress(entry.marketAddress) || getConfiguredMarketAddress(entry.id);
+        return String(entry.id || "").trim() === marketRef || (normalizedRef && entryAddress === normalizedRef);
+      });
+      const marketAddress = normalizeWalletAddress(market?.marketAddress) || getConfiguredMarketAddress(market?.id || marketRef) || normalizedRef;
+      if (!marketAddress || isLocalTestMarketAddress(marketAddress)) {
+        sendJson(response, 400, { error: "This market is not available for backend wallet mode" });
+        return;
+      }
+
+      const signer = new Wallet(user.privateKey, leaderboardProvider);
+      const marketContract = new Contract(marketAddress, BACKEND_WALLET_MARKET_ABI, signer);
+      const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
+      const amount = parseUnits(amountUsdc.toFixed(6), 6);
+      const outcome = Number(await marketContract.outcome()) || 0;
+      if (outcome !== 0) {
+        sendJson(response, 400, { error: "This market is resolved and can no longer be traded" });
+        return;
+      }
+
+      if (mode === "buy") {
+        const allowance = await usdc.allowance(user.address, marketAddress);
+        if (allowance < amount) {
+          const approveTx = await usdc.approve(marketAddress, amount);
+          await approveTx.wait();
+        }
+      }
+
+      const tx = mode === "buy"
+        ? await marketContract.buy(side === "yes", amount)
+        : await marketContract.sell(side === "yes", amount);
+      const receipt = await tx.wait();
+      sendJson(response, 200, {
+        txHash: receipt?.hash || tx.hash,
+        walletAddress: user.address
+      });
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/backend-wallet/claim" && request.method === "POST") {
+    if (!requireBackendWalletMode(request, response)) return;
+    try {
+      const body = await readJsonBody(request);
+      const sessionToken = String(body.sessionToken || "");
+      const marketRef = String(body.marketId || body.marketAddress || "").trim();
+      const user = await getBackendWalletUserBySession(sessionToken);
+      if (!user) {
+        sendJson(response, 401, { error: "Backend wallet session expired" });
+        return;
+      }
+
+      const normalizedRef = normalizeWalletAddress(marketRef);
+      const market = getKnownMarkets().find((entry) => {
+        const entryAddress = normalizeWalletAddress(entry.marketAddress) || getConfiguredMarketAddress(entry.id);
+        return String(entry.id || "").trim() === marketRef || (normalizedRef && entryAddress === normalizedRef);
+      });
+      const marketAddress = normalizeWalletAddress(market?.marketAddress) || getConfiguredMarketAddress(market?.id || marketRef) || normalizedRef;
+      if (!marketAddress || isLocalTestMarketAddress(marketAddress)) {
+        sendJson(response, 400, { error: "This market is not available for backend wallet mode" });
+        return;
+      }
+
+      const signer = new Wallet(user.privateKey, leaderboardProvider);
+      const marketContract = new Contract(marketAddress, BACKEND_WALLET_MARKET_ABI, signer);
+      const tx = await marketContract.redeem();
+      const receipt = await tx.wait();
+      sendJson(response, 200, {
+        txHash: receipt?.hash || tx.hash,
+        walletAddress: user.address
+      });
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/backend-wallet/summary/unlock" && request.method === "POST") {
+    if (!requireBackendWalletMode(request, response)) return;
+    try {
+      const body = await readJsonBody(request);
+      const sessionToken = String(body.sessionToken || "");
+      const amountUsdc = aiBriefingUnlockUsdc;
+      const treasuryAddress = normalizeWalletAddress(body.treasuryAddress || aiBriefingTreasuryAddress);
+      const topic = String(body.topic || body.sourceUrl || "Siftle AI briefing").slice(0, 140);
+      const user = await getBackendWalletUserBySession(sessionToken);
+      if (!user) {
+        sendJson(response, 401, { error: "Backend wallet session expired" });
+        return;
+      }
+      if (!treasuryAddress) {
+        sendJson(response, 400, { error: "AI briefing treasury is not configured" });
+        return;
+      }
+
+      if (backendWalletUseX402) {
+        const targetUrl = `${x402TargetUrlBase}?topic=${encodeURIComponent(topic)}`;
+        const buyer = new GatewayClient({
+          chain: "arcTestnet",
+          privateKey: user.privateKey
+        });
+        const support = await buyer.supports(targetUrl);
+        if (!support.supported) {
+          throw new Error("Local x402 briefing seller is not available. Start the x402 local server first.");
+        }
+
+        warmGatewayBalanceInBackground(user.privateKey, amountUsdc);
+        await ensureGatewayAvailableBalance(buyer, amountUsdc);
+        const paid = await payWithLocalX402Script(user.privateKey, targetUrl);
+        sendJson(response, 200, {
+          txHash: `0xmockunlockx402${Math.random().toString(16).slice(2)}`,
+          walletAddress: user.address,
+          x402: true,
+          paymentStatus: "paid",
+          paymentAmount: paid.paymentAmount,
+          paymentData: paid.output
+        });
+        return;
+      }
+
+      const signer = new Wallet(user.privateKey, leaderboardProvider);
+      const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
+      const tx = await usdc.transfer(treasuryAddress, parseUnits(amountUsdc.toFixed(6), 6));
+      const receipt = await tx.wait();
+      sendJson(response, 200, {
+        txHash: receipt?.hash || tx.hash,
+        walletAddress: user.address,
+        x402: false
+      });
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
     return;
   }
 

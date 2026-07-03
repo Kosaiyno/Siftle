@@ -3,6 +3,7 @@ import { fallbackMarketPreviews } from "./fallbackMarkets.js";
 import type { ArcMarketPosition, ArcMarketSnapshot } from "./arc.js";
 
 const ARC_TESTNET_FAUCET = "https://faucet.circle.com/";
+const BACKEND_WALLET_MIGRATION_NOTICE_KEY = "siftle_backend_wallet_migration_notice";
 
 type ArcModule = typeof import("./arc.js");
 let arcModulePromise: Promise<ArcModule> | null = null;
@@ -28,6 +29,8 @@ const readArcMarketSnapshot = async (marketAddress: string): Promise<ArcMarketSn
   (await loadArcModule()).readArcMarketSnapshot(marketAddress);
 const readArcMarketPosition = async (marketAddress: string, account: string): Promise<ArcMarketPosition> =>
   (await loadArcModule()).readArcMarketPosition(marketAddress, account);
+const readArcMarketState = async (marketAddress: string, account: string) =>
+  (await loadArcModule()).readArcMarketState(marketAddress, account);
 const executeArcMarketOrder = async (
   marketAddress: string,
   mode: "buy" | "sell",
@@ -461,7 +464,13 @@ const connectWallet = async (): Promise<void> => {
       void loadReferralData();
       await loadPortfolioPositions();
       void reportLeaderboardEntry(true).catch(err => console.error("Failed to report leaderboard entry:", err));
-      showActionToast("Connected to Arc Testnet");
+      const migrationNotice = localStorage.getItem(BACKEND_WALLET_MIGRATION_NOTICE_KEY);
+      if (migrationNotice) {
+        localStorage.removeItem(BACKEND_WALLET_MIGRATION_NOTICE_KEY);
+        showActionToast(migrationNotice);
+      } else {
+        showActionToast("Connected to Arc Testnet");
+      }
       window.location.hash = "#portfolio";
       syncStoryFromHash();
     }
@@ -743,10 +752,10 @@ const getMarketTradeLockMessage = (market: MarketPreview, snapshot: ArcMarketSna
 
 const renderLockedBriefing = (story: BriefingTarget, isUnlocking: boolean): string => `
   <div class="briefing-section">
-    <h4 class="briefing-title">Locked briefing</h4>
-    <p class="briefing-text">Unlock this AI briefing with a small USDC payment.</p>
+    <h4 class="briefing-title">AI briefing</h4>
+    <p class="briefing-text">Get the key points, what happened, and the takeaway.</p>
     <button type="button" class="source-button" data-unlock-briefing-url="${encodeURIComponent(story.sourceUrl)}" ${isUnlocking ? "disabled" : ""}>
-      ${isUnlocking ? "Unlocking..." : "Unlock AI briefing"}
+      AI briefing
     </button>
   </div>
 `;
@@ -766,7 +775,7 @@ const unlockAndLoadStorySummary = async (story: BriefingTarget): Promise<void> =
     const configRes = await fetch(apiUrl("/api/summary/unlock-config"));
     const config = await configRes.json();
     if (!configRes.ok || !config.treasuryAddress) {
-      throw new Error(config.error || "AI briefing unlock is not configured");
+      throw new Error(config.error || "AI briefing is not configured");
     }
 
     const txHash = await payAiBriefingUnlock(config.treasuryAddress, Number(config.amountUsdc) || 0.05, (status) => {
@@ -784,20 +793,19 @@ const unlockAndLoadStorySummary = async (story: BriefingTarget): Promise<void> =
     });
     const unlockData = await unlockRes.json();
     if (!unlockRes.ok || !unlockData.unlockToken) {
-      throw new Error(unlockData.error || "AI briefing unlock failed");
+      throw new Error(unlockData.error || "AI briefing failed");
     }
 
     localStorage.setItem(briefingUnlockKey(story), unlockData.unlockToken);
     trackEvent("ai_unlock_success");
     const bonusPoints = Number(unlockData?.bonus?.points) || 0;
-    showActionToast(bonusPoints > 0 ? `AI briefing unlocked. +${bonusPoints} leaderboard pts` : "AI briefing unlocked");
     if (bonusPoints > 0) {
       void reportLeaderboardEntry(false).catch(err => console.error("Failed to refresh leaderboard bonus:", err));
     }
     await loadStorySummary(story);
   } catch (error) {
     trackEvent("ai_unlock_failed");
-    showActionToast(error instanceof Error ? error.message : "Unlock failed");
+    showActionToast(error instanceof Error ? error.message : "AI briefing failed");
   } finally {
     state.unlockingSummaryUrl = null;
     render();
@@ -1260,9 +1268,35 @@ const clearLegacyMarketCache = (): void => {
   toRemove.forEach((key) => localStorage.removeItem(key));
 };
 
-const normalizeMarketTradeAmount = (value: number): number => {
-  if (!Number.isFinite(value)) return 5;
-  return Math.min(10, Math.max(5, value));
+const getTradeAmountBounds = (
+  mode: "buy" | "sell",
+  side: "yes" | "no",
+  position: ArcMarketPosition | undefined
+): { min: number; max: number; fallback: number } => {
+  if (mode === "sell") {
+    const heldAmount = side === "yes" ? position?.yesSharesUsdc ?? 0 : position?.noSharesUsdc ?? 0;
+    if (heldAmount <= 0) {
+      return { min: 0.01, max: 0.01, fallback: 0.01 };
+    }
+    return {
+      min: Math.min(0.01, heldAmount),
+      max: heldAmount,
+      fallback: heldAmount
+    };
+  }
+
+  return { min: 5, max: 10, fallback: 5 };
+};
+
+const normalizeMarketTradeAmount = (
+  value: number,
+  mode: "buy" | "sell",
+  side: "yes" | "no",
+  position: ArcMarketPosition | undefined
+): number => {
+  const { min, max, fallback } = getTradeAmountBounds(mode, side, position);
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(max, Math.max(min, value));
 };
 
 const estimatePoolPayout = (
@@ -1673,12 +1707,14 @@ const loadPortfolioPositions = async (): Promise<void> => {
       marketsForPortfolio.map(async (market) => {
         const marketAddress = getMarketAddress(market);
         if (!marketAddress) return [market.id, { yesSharesUsdc: 0, noSharesUsdc: 0 }] as const;
-        const [position, snapshot] = await Promise.all([
-          readArcMarketPosition(marketAddress, state.walletAddress!),
-          readArcMarketSnapshot(marketAddress)
-        ]);
-        state.marketSnapshots[market.id] = snapshot;
-        return [market.id, position] as const;
+        try {
+          const { position, snapshot } = await readArcMarketState(marketAddress, state.walletAddress!);
+          state.marketSnapshots[market.id] = snapshot;
+          return [market.id, position] as const;
+        } catch (error) {
+          console.warn(`Failed to load portfolio market ${market.id}:`, error);
+          return [market.id, { yesSharesUsdc: 0, noSharesUsdc: 0 }] as const;
+        }
       })
     );
     state.marketPositions = Object.fromEntries(entries);
@@ -1747,7 +1783,7 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
     render();
     return;
   }
-  const tradeAmount = normalizeMarketTradeAmount(Number(state.marketTradeAmount) || 0);
+  const tradeAmount = normalizeMarketTradeAmount(Number(state.marketTradeAmount) || 0, state.marketOrderMode, side, currentPosition);
   state.marketTradeAmount = tradeAmount;
   trackEvent("trade_attempt");
 
@@ -2455,7 +2491,7 @@ const renderThreadTimelineItem = (story: NewsStory, label: string): string => `
         ${/example\.com/i.test(story.sourceUrl)
           ? ""
           : `<a class="thread-source-link" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
-        <button type="button" class="thread-source-link" data-unlock-briefing-url="${encodeURIComponent(story.sourceUrl)}">${isBriefingUnlocked(story) ? "AI briefing" : "Unlock AI briefing"}</button>
+        <button type="button" class="thread-source-link" data-unlock-briefing-url="${encodeURIComponent(story.sourceUrl)}">AI briefing</button>
       </div>
       ${isBriefingUnlocked(story)
         ? (state.loadingSummaryUrl === story.sourceUrl
@@ -2639,8 +2675,12 @@ const renderMarketDetail = (market: MarketPreview): void => {
   const noPrice = snapshot?.noPriceCents ?? (marketAddress ? 100 - market.probability : 0);
   const yesPriceLabel = isLoadingSnapshot ? "" : marketAddress ? `${yesPrice}¢` : "--";
   const noPriceLabel = isLoadingSnapshot ? "" : marketAddress ? `${noPrice}¢` : "--";
-  const amount = normalizeMarketTradeAmount(Number(state.marketTradeAmount) || 0);
   const position = state.marketPositions[market.id] || { yesSharesUsdc: 0, noSharesUsdc: 0 };
+  const amount = normalizeMarketTradeAmount(Number(state.marketTradeAmount) || 0, state.marketOrderMode, state.marketTradeSide, position);
+  const amountBounds = getTradeAmountBounds(state.marketOrderMode, state.marketTradeSide, position);
+  const amountHint = state.marketOrderMode === "buy"
+    ? "$5-$10 USDC"
+    : `Up to $${formatMoney(amountBounds.max)} USDC`;
   const positionReady = !state.walletAddress || state.hasLoadedPortfolioPositions;
   const marketResolved = isMarketResolved(market, snapshot);
   const marketTradeLockMessage = getMarketTradeLockMessage(market, snapshot);
@@ -2772,7 +2812,7 @@ const renderMarketDetail = (market: MarketPreview): void => {
                     <p>${item.summary}</p>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
                       ${/example\.com/i.test(item.sourceUrl) ? "" : `<a class="market-thread-source-link" href="${item.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
-                      <button type="button" class="market-thread-source-link" data-unlock-briefing-url="${encodeURIComponent(item.sourceUrl)}">${isBriefingUnlocked(getBriefingTargetFromMarketEvidence(market, item)) ? "AI briefing" : "Unlock AI briefing"}</button>
+                      <button type="button" class="market-thread-source-link" data-unlock-briefing-url="${encodeURIComponent(item.sourceUrl)}">AI briefing</button>
                     </div>
                     ${isBriefingUnlocked(getBriefingTargetFromMarketEvidence(market, item))
                       ? (state.loadingSummaryUrl === item.sourceUrl
@@ -2830,10 +2870,10 @@ const renderMarketDetail = (market: MarketPreview): void => {
           </div>
 
           <div class="market-amount-panel">
-            <label for="marketAmountInput">Trade Amount <span style="color: var(--market-text-muted); font-size: 0.72rem; text-transform: none; letter-spacing: 0;">$5-$10 USDC</span></label>
+            <label for="marketAmountInput">Trade Amount <span style="color: var(--market-text-muted); font-size: 0.72rem; text-transform: none; letter-spacing: 0;">${amountHint}</span></label>
             <div class="market-amount-input-row">
               <span>$</span>
-              <input id="marketAmountInput" type="number" min="5" max="10" step="0.01" inputmode="decimal" value="${amount}" data-market-amount ${marketResolved || marketTradeLocked ? "disabled" : ""} />
+              <input id="marketAmountInput" type="number" min="${amountBounds.min.toFixed(2)}" max="${Math.max(amountBounds.min, amountBounds.max).toFixed(2)}" step="0.01" inputmode="decimal" value="${amount}" data-market-amount ${marketResolved || marketTradeLocked ? "disabled" : ""} />
               <span>USDC</span>
             </div>
           </div>
@@ -4211,6 +4251,12 @@ storyDetail?.addEventListener("click", (event) => {
     const market = marketPreviews.find((item) => item.id === state.selectedMarketId);
     const position = market ? state.marketPositions[market.id] : undefined;
     state.marketTradeSide = normalizeTradeSideForMode(state.marketOrderMode, state.marketTradeSide, position);
+    state.marketTradeAmount = normalizeMarketTradeAmount(
+      Number(state.marketTradeAmount) || 0,
+      state.marketOrderMode,
+      state.marketTradeSide,
+      position
+    );
     render();
     return;
   }
@@ -4221,10 +4267,16 @@ storyDetail?.addEventListener("click", (event) => {
 storyDetail?.addEventListener("input", (event) => {
   const target = event.target as HTMLInputElement;
   if (!target.matches("[data-market-amount]")) return;
-  state.marketTradeAmount = normalizeMarketTradeAmount(Number(target.value) || 0);
   const market = marketPreviews.find((item) => item.id === state.selectedMarketId);
   const snapshot = market ? state.marketSnapshots[market.id] : undefined;
   const position = market ? state.marketPositions[market.id] : undefined;
+  state.marketTradeAmount = normalizeMarketTradeAmount(
+    Number(target.value) || 0,
+    state.marketOrderMode,
+    state.marketTradeSide,
+    position
+  );
+  target.value = String(state.marketTradeAmount);
   const payout = estimatePoolPayout(snapshot, state.marketTradeSide, state.marketTradeAmount, state.marketOrderMode, position);
   const payoutValue = storyDetail.querySelector<HTMLElement>(".market-inline-payout strong");
   if (payoutValue) payoutValue.textContent = `$${formatMoney(payout)}`;

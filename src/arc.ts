@@ -17,6 +17,24 @@ if (!apiBase && typeof window !== "undefined") {
   }
 }
 const apiUrl = (path: string): string => `${apiBase}${path}`;
+const BACKEND_WALLET_MODE_KEY = "siftle_backend_wallet_mode";
+const BACKEND_WALLET_EMAIL_KEY = "siftle_backend_wallet_email";
+const BACKEND_WALLET_SESSION_KEY = "siftle_backend_wallet_session_token";
+const BACKEND_WALLET_MIGRATION_NOTICE_KEY = "siftle_backend_wallet_migration_notice";
+let backendWalletModeConfigPromise: Promise<boolean> | null = null;
+
+const isBackendWalletModeEnabled = async (): Promise<boolean> => {
+  if (!backendWalletModeConfigPromise) {
+    backendWalletModeConfigPromise = fetch(apiUrl("/api/backend-wallet/config"))
+      .then(async (response) => {
+        if (!response.ok) return false;
+        const payload = await response.json();
+        return Boolean(payload?.enabled);
+      })
+      .catch(() => false);
+  }
+  return backendWalletModeConfigPromise;
+};
 
 const BALANCE_OF_SELECTOR = "0x70a08231";
 const publicProvider = new JsonRpcProvider(ARC_TESTNET_RPC_URL, ARC_TESTNET_CHAIN_ID);
@@ -67,6 +85,11 @@ export interface ArcClaimResult {
   won: boolean;
 }
 
+export interface ArcMarketState {
+  position: ArcMarketPosition;
+  snapshot: ArcMarketSnapshot;
+}
+
 const requestRpc = async <T>(method: string, params: unknown[]): Promise<T> => {
   const response = await fetch(ARC_TESTNET_RPC_URL, {
     method: "POST",
@@ -89,6 +112,8 @@ let activeWalletAddress: string | null = null;
 let activeWalletId: string | null = null;
 let activeEmail: string | null = null;
 let isMockSession = false;
+let isBackendWalletMode = false;
+let activeBackendWalletSessionToken: string | null = null;
 
 const walletListeners = new Set<(address: string | null) => void>();
 
@@ -119,6 +144,18 @@ const getCircleSdk = (): W3SSdk => {
 
 // Load session from localStorage on startup
 const loadSession = () => {
+  isBackendWalletMode = localStorage.getItem(BACKEND_WALLET_MODE_KEY) === "true";
+  if (isBackendWalletMode) {
+    activeEmail = localStorage.getItem(BACKEND_WALLET_EMAIL_KEY);
+    activeBackendWalletSessionToken = localStorage.getItem(BACKEND_WALLET_SESSION_KEY);
+    activeWalletAddress = localStorage.getItem("siftle_circle_wallet_address");
+    activeWalletId = null;
+    activeUserToken = null;
+    activeEncryptionKey = null;
+    isMockSession = false;
+    return;
+  }
+
   activeEmail = localStorage.getItem("siftle_circle_email");
   activeUserToken = localStorage.getItem("siftle_circle_user_token");
   activeEncryptionKey = localStorage.getItem("siftle_circle_encryption_key");
@@ -308,6 +345,127 @@ const injectStyles = () => {
 export const connectArcWallet = async (): Promise<string> => {
   if (activeWalletAddress) {
     return activeWalletAddress;
+  }
+
+  if (await isBackendWalletModeEnabled()) {
+    injectStyles();
+
+    return new Promise((resolve, reject) => {
+      const overlay = document.createElement("div");
+      overlay.className = "circle-auth-overlay";
+      overlay.innerHTML = `
+        <div class="circle-auth-card">
+          <button class="circle-auth-close" id="backendWalletClose" type="button">&times;</button>
+          <div class="circle-auth-logo">
+            <img src="./assets/siftle-logo-small.png" alt="Siftle logo" />
+            <h2>Local Test Wallet</h2>
+          </div>
+          <p class="circle-auth-subtitle">Backend wallet mode is enabled locally. Enter your email to create or reopen a local test wallet with no OTP and no PIN.</p>
+          <div class="circle-auth-step">
+            <div class="circle-auth-field">
+              <label for="backendWalletEmail">Email Address</label>
+              <input type="email" id="backendWalletEmail" placeholder="name@domain.com" required />
+            </div>
+            <button id="backendWalletContinue" class="circle-auth-btn" type="button">Continue</button>
+            <p class="circle-auth-spam-note" style="font-size: 11px; color: #a5b4fc; margin: 12px 0 0 0; text-align: center; line-height: 1.4; opacity: 0.85;">This is local-only test mode. Fund the returned wallet address manually before trading.</p>
+          </div>
+          <div id="backendWalletStatus" class="circle-auth-status" style="display: none;"></div>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+      const closeBtn = overlay.querySelector("#backendWalletClose") as HTMLButtonElement;
+      const continueBtn = overlay.querySelector("#backendWalletContinue") as HTMLButtonElement;
+      const emailInput = overlay.querySelector("#backendWalletEmail") as HTMLInputElement;
+      const statusDiv = overlay.querySelector("#backendWalletStatus") as HTMLDivElement;
+      const lastEmail = localStorage.getItem(BACKEND_WALLET_EMAIL_KEY) || localStorage.getItem("siftle_circle_last_email") || "";
+      if (lastEmail) emailInput.value = lastEmail;
+
+      const showStatus = (message: string, isError = false) => {
+        statusDiv.textContent = message;
+        statusDiv.style.display = "block";
+        statusDiv.style.color = isError ? "#ff4a4a" : "#cbd5e1";
+      };
+
+      closeBtn.addEventListener("click", () => {
+        overlay.remove();
+        reject(new Error("Login cancelled by user"));
+      });
+
+      continueBtn.addEventListener("click", async () => {
+        const email = emailInput.value.trim();
+        if (!email || !email.includes("@")) {
+          showStatus("Please enter a valid email address.", true);
+          return;
+        }
+
+        continueBtn.disabled = true;
+        continueBtn.textContent = "Opening wallet...";
+        statusDiv.style.display = "none";
+
+        try {
+          const response = await fetch(apiUrl("/api/backend-wallet/auth"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email })
+          });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error || "Failed to open backend wallet session");
+
+          if (payload.migrationEnabled && payload.migrationPreview?.eligible && !payload.migration?.migrated) {
+            showStatus("Restoring competition points from your previous wallet...");
+            const migrationResponse = await fetch(apiUrl("/api/backend-wallet/migration/claim"), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sessionToken: payload.sessionToken })
+            });
+            const migrationPayload = await migrationResponse.json();
+            if (!migrationResponse.ok) {
+              throw new Error(migrationPayload.error || "Failed to restore competition points");
+            }
+            payload.migration = migrationPayload;
+          }
+
+          isBackendWalletMode = true;
+          isMockSession = false;
+          mockWallet = null;
+          activeEmail = email;
+          activeBackendWalletSessionToken = payload.sessionToken;
+          activeWalletAddress = payload.walletAddress;
+          activeWalletId = null;
+          activeUserToken = null;
+          activeEncryptionKey = null;
+
+          localStorage.setItem(BACKEND_WALLET_MODE_KEY, "true");
+          localStorage.setItem(BACKEND_WALLET_EMAIL_KEY, email);
+          localStorage.setItem(BACKEND_WALLET_SESSION_KEY, payload.sessionToken);
+          localStorage.setItem("siftle_circle_wallet_address", payload.walletAddress);
+          localStorage.removeItem("siftle_circle_user_token");
+          localStorage.removeItem("siftle_circle_encryption_key");
+          localStorage.removeItem("siftle_circle_wallet_id");
+          localStorage.removeItem("siftle_circle_is_mock");
+
+          if (payload.migration?.migrated && Number(payload.migration.restoredPoints) > 0) {
+            const restoredPoints = Number(payload.migration.restoredPoints) || 0;
+            const legacyUsername = String(payload.migration.username || payload.migrationPreview?.legacyUsername || "").trim();
+            const message = legacyUsername
+              ? `${legacyUsername} restored with ${restoredPoints} pts`
+              : `${restoredPoints} leaderboard pts restored`;
+            localStorage.setItem(BACKEND_WALLET_MIGRATION_NOTICE_KEY, message);
+          } else {
+            localStorage.removeItem(BACKEND_WALLET_MIGRATION_NOTICE_KEY);
+          }
+
+          overlay.remove();
+          triggerWalletListeners(activeWalletAddress);
+          resolve(activeWalletAddress!);
+        } catch (error) {
+          showStatus(error instanceof Error ? error.message : "Failed to open backend wallet", true);
+          continueBtn.disabled = false;
+          continueBtn.textContent = "Continue";
+        }
+      });
+    });
   }
 
   injectStyles();
@@ -607,6 +765,8 @@ export const disconnectArcWallet = () => {
   activeWalletAddress = null;
   activeWalletId = null;
   isMockSession = false;
+  isBackendWalletMode = false;
+  activeBackendWalletSessionToken = null;
   mockWallet = null;
 
   localStorage.removeItem("siftle_circle_email");
@@ -615,6 +775,9 @@ export const disconnectArcWallet = () => {
   localStorage.removeItem("siftle_circle_wallet_address");
   localStorage.removeItem("siftle_circle_wallet_id");
   localStorage.removeItem("siftle_circle_is_mock");
+  localStorage.removeItem(BACKEND_WALLET_MODE_KEY);
+  localStorage.removeItem(BACKEND_WALLET_EMAIL_KEY);
+  localStorage.removeItem(BACKEND_WALLET_SESSION_KEY);
 
   triggerWalletListeners(null);
 };
@@ -622,6 +785,27 @@ export const disconnectArcWallet = () => {
 export const validateArcSession = async (): Promise<boolean> => {
   if (!activeWalletAddress) return false;
   if (isMockSession) return true;
+  if (isBackendWalletMode) {
+    if (!activeBackendWalletSessionToken) {
+      disconnectArcWallet();
+      return false;
+    }
+
+    try {
+      const res = await fetch(apiUrl(`/api/backend-wallet/session?token=${encodeURIComponent(activeBackendWalletSessionToken)}`));
+      if (!res.ok) throw new Error("Backend wallet session expired");
+      const data = await res.json();
+      if (!data.walletAddress) throw new Error("Backend wallet session is missing a wallet");
+      activeWalletAddress = data.walletAddress;
+      if (data.email) activeEmail = data.email;
+      localStorage.setItem("siftle_circle_wallet_address", data.walletAddress);
+      return true;
+    } catch (error) {
+      console.warn("Stored backend wallet session is no longer valid:", error);
+      disconnectArcWallet();
+      return false;
+    }
+  }
   if (!activeUserToken) {
     disconnectArcWallet();
     return false;
@@ -772,6 +956,32 @@ export const claimArcMarketPayout = async (marketAddress: string, account: strin
   if (!activeWalletAddress || activeWalletAddress.toLowerCase() !== account.toLowerCase()) {
     throw new Error("Connect the wallet that holds this position first");
   }
+  if (isBackendWalletMode) {
+    const [snapshot, position] = await Promise.all([
+      readArcMarketSnapshot(marketAddress),
+      readArcMarketPosition(marketAddress, account)
+    ]);
+    if (snapshot.outcome === 0) throw new Error("Market is not resolved yet");
+    if (snapshot.outcome === 3) throw new Error("Invalid market claims are not available yet");
+
+    const winningShares = snapshot.outcome === 1 ? position.yesSharesUsdc : position.noSharesUsdc;
+    const totalWinningShares = snapshot.outcome === 1 ? snapshot.yesSharesUsdc : snapshot.noSharesUsdc;
+    const totalPool = snapshot.yesSharesUsdc + snapshot.noSharesUsdc;
+    const amountUsdc = winningShares > 0 && totalWinningShares > 0 ? (winningShares / totalWinningShares) * totalPool : 0;
+    if (amountUsdc <= 0) throw new Error("No winning payout to claim");
+
+    const response = await fetch(apiUrl("/api/backend-wallet/claim"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionToken: activeBackendWalletSessionToken,
+        marketId: marketAddress
+      })
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Failed to submit claim");
+    return { amountUsdc, won: true };
+  }
   if (!activeUserToken || !activeWalletId) {
     throw new Error("Session expired. Please sign in again.");
   }
@@ -828,6 +1038,14 @@ export const readArcMarketSnapshot = async (marketAddress: string): Promise<ArcM
     };
   }
 
+  if (isBackendWalletMode) {
+    if (!activeBackendWalletSessionToken) throw new Error("Backend wallet session expired");
+    const response = await fetch(apiUrl(`/api/backend-wallet/market-state?token=${encodeURIComponent(activeBackendWalletSessionToken)}&marketAddress=${encodeURIComponent(marketAddress)}`));
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Failed to load backend wallet market state");
+    return payload.snapshot;
+  }
+
   const market = new Contract(marketAddress, SIFTLE_MARKET_ABI, publicProvider);
   const [totalYes, totalNo, probability, outcome, closesAt] = await Promise.all([
     market.totalYesShares() as Promise<bigint>,
@@ -861,6 +1079,15 @@ export const readArcMarketPosition = async (marketAddress: string, account: stri
     }
     return { yesSharesUsdc: 0, noSharesUsdc: 0 };
   }
+
+  if (isBackendWalletMode) {
+    if (!activeBackendWalletSessionToken) throw new Error("Backend wallet session expired");
+    const response = await fetch(apiUrl(`/api/backend-wallet/market-state?token=${encodeURIComponent(activeBackendWalletSessionToken)}&marketAddress=${encodeURIComponent(marketAddress)}`));
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Failed to load backend wallet market state");
+    return payload.position;
+  }
+
   const market = new Contract(marketAddress, SIFTLE_MARKET_ABI, publicProvider);
   const [yesShares, noShares] = await Promise.all([
     market.yesShares(account) as Promise<bigint>,
@@ -870,6 +1097,22 @@ export const readArcMarketPosition = async (marketAddress: string, account: stri
     yesSharesUsdc: Number(formatUnits(yesShares, 6)),
     noSharesUsdc: Number(formatUnits(noShares, 6))
   };
+};
+
+export const readArcMarketState = async (marketAddress: string, account: string): Promise<ArcMarketState> => {
+  if (isBackendWalletMode) {
+    if (!activeBackendWalletSessionToken) throw new Error("Backend wallet session expired");
+    const response = await fetch(apiUrl(`/api/backend-wallet/market-state?token=${encodeURIComponent(activeBackendWalletSessionToken)}&marketAddress=${encodeURIComponent(marketAddress)}`));
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Failed to load backend wallet market state");
+    return payload;
+  }
+
+  const [position, snapshot] = await Promise.all([
+    readArcMarketPosition(marketAddress, account),
+    readArcMarketSnapshot(marketAddress)
+  ]);
+  return { position, snapshot };
 };
 
 const runCircleChallenge = (challengeId: string): Promise<void> => {
@@ -919,6 +1162,47 @@ export const payAiBriefingUnlock = async (
     onStatus?.("Processing mock unlock...");
     await new Promise((resolve) => setTimeout(resolve, 500));
     return "0xmockunlock" + Math.random().toString(16).slice(2);
+  }
+
+  if (isBackendWalletMode) {
+    const requestUnlock = async () => {
+      const response = await fetch(apiUrl("/api/backend-wallet/summary/unlock"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionToken: activeBackendWalletSessionToken,
+          treasuryAddress,
+          amountUsdc
+        })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Failed to charge backend wallet balance");
+      return payload.txHash as string;
+    };
+
+    onStatus?.("Preparing AI briefing payment...");
+    try {
+      return await requestUnlock();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error || "");
+      if (!/topping up/i.test(message)) {
+        throw error instanceof Error ? error : new Error(message || "Failed to charge backend wallet balance");
+      }
+
+      onStatus?.("Preparing Gateway balance...");
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+      onStatus?.("Retrying AI briefing payment...");
+
+      try {
+        return await requestUnlock();
+      } catch (retryError) {
+        const retryMessage = retryError instanceof Error ? retryError.message : String(retryError || "");
+        if (!/topping up/i.test(retryMessage)) {
+          throw retryError instanceof Error ? retryError : new Error(retryMessage || "Failed to charge backend wallet balance");
+        }
+        throw new Error("AI briefing payment is still preparing. Please try again in a few seconds.");
+      }
+    }
   }
 
   onStatus?.("Unlocking AI briefing (Awaiting PIN)...");
@@ -1027,6 +1311,24 @@ export const executeArcMarketOrder = async (
     writeMockMarketPool(marketAddress, pool);
 
     return "0xmocktxhash" + Math.random().toString(16).slice(2);
+  }
+
+  if (isBackendWalletMode) {
+    onStatus?.(`Submitting ${mode} order...`);
+    const response = await fetch(apiUrl("/api/backend-wallet/trade"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionToken: activeBackendWalletSessionToken,
+        marketId: marketAddress,
+        mode,
+        side,
+        amountUsdc
+      })
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || `Failed to ${mode} shares`);
+    return payload.txHash;
   }
 
   // Real Circle transaction execution
