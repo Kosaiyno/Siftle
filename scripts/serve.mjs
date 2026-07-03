@@ -128,6 +128,7 @@ const backendWalletMigrationAutoClaim = process.env.BACKEND_WALLET_MIGRATION_AUT
 const x402Port = Number(process.env.X402_PORT ?? 4020);
 const x402TargetUrlBase = process.env.X402_TARGET_URL || `http://127.0.0.1:${x402Port}/x402/ai-briefing`;
 const x402AutoDepositUsdc = String(process.env.X402_AUTO_DEPOSIT_USDC || "").trim();
+const x402PriceUsdc = Math.max(0.000001, Number(String(process.env.X402_PRICE || "0.001").replace(/^\$/, "")) || 0.001);
 const compensationChallengeKey = process.env.COMPENSATION_CHALLENGE_KEY || "2026-07-02-daily-compensation";
 const compensationChallengeMarketIds = (
   process.env.COMPENSATION_CHALLENGE_MARKET_IDS ||
@@ -5326,7 +5327,7 @@ const payWithLocalX402Script = async (privateKey, targetUrl) => {
     ...process.env,
     X402_PRIVATE_KEY: privateKey,
     X402_TARGET_URL: targetUrl,
-    X402_AUTO_DEPOSIT_USDC: ""
+    X402_AUTO_DEPOSIT_USDC: process.env.X402_AUTO_DEPOSIT_USDC || x402PriceUsdc.toFixed(6)
   };
   const { stdout, stderr } = await execFileAsync(process.execPath, [scriptPath], {
     cwd: root,
@@ -7894,8 +7895,8 @@ const server = createServer(async (request, response) => {
             throw new Error("x402 seller did not advertise a compatible payment option");
           }
 
-          warmGatewayBalanceInBackground(user.privateKey, amountUsdc);
-          await ensureGatewayAvailableBalance(buyer, amountUsdc);
+          warmGatewayBalanceInBackground(user.privateKey, x402PriceUsdc);
+          await ensureGatewayAvailableBalance(buyer, x402PriceUsdc);
           const paid = await payWithLocalX402Script(user.privateKey, targetUrl);
           sendJson(response, 200, {
             txHash: `0xmockunlockx402${Math.random().toString(16).slice(2)}`,

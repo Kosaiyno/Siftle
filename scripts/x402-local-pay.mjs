@@ -26,6 +26,8 @@ if (autoDeposit) {
   console.log(`Depositing ${autoDeposit} USDC into Gateway...`);
   const deposit = await client.deposit(autoDeposit);
   console.log(`Deposit tx: ${deposit.depositTxHash}`);
+  const warmed = await client.getBalances();
+  console.log(`Gateway available after deposit: ${warmed.gateway.formattedAvailable}`);
 }
 
 const support = await client.supports(targetUrl);
