@@ -4749,7 +4749,7 @@ const loadBackendWalletSessions = () => {
     }
     return filtered;
   } catch (err) {
-    console.warn("Failed to load backend wallet sessions:", err.message);
+    console.warn("Failed to load Siftle sessions:", err.message);
     return {};
   }
 };
@@ -4759,7 +4759,7 @@ const saveBackendWalletSessions = (payload) => {
     ensureLocalStoreDir();
     writeFileSync(backendWalletSessionsFile, JSON.stringify(payload, null, 2), "utf8");
   } catch (err) {
-    console.warn("Failed to save backend wallet sessions:", err.message);
+    console.warn("Failed to save Siftle sessions:", err.message);
   }
 };
 
@@ -5227,11 +5227,11 @@ const isLocalRequest = (request) => {
 
 const requireBackendWalletMode = (request, response) => {
   if (!backendWalletMode) {
-    sendJson(response, 404, { error: "Backend wallet mode is disabled" });
+    sendJson(response, 404, { error: "Sign in is temporarily unavailable" });
     return false;
   }
   if (backendWalletLocalOnly && !isLocalRequest(request)) {
-    sendJson(response, 403, { error: "Backend wallet mode is restricted to local requests" });
+    sendJson(response, 403, { error: "Sign in is temporarily unavailable" });
     return false;
   }
   return true;
@@ -7604,7 +7604,7 @@ const server = createServer(async (request, response) => {
       const token = String(requestUrl.searchParams.get("token") || "");
       const user = await getBackendWalletUserBySession(token);
       if (!user) {
-        sendJson(response, 401, { error: "Backend wallet session expired" });
+        sendJson(response, 401, { error: "Session expired. Please sign in again." });
         return;
       }
 
@@ -7629,7 +7629,7 @@ const server = createServer(async (request, response) => {
       const token = String(requestUrl.searchParams.get("token") || "");
       const user = await getBackendWalletUserBySession(token);
       if (!user) {
-        sendJson(response, 401, { error: "Backend wallet session expired" });
+        sendJson(response, 401, { error: "Session expired. Please sign in again." });
         return;
       }
 
@@ -7652,7 +7652,7 @@ const server = createServer(async (request, response) => {
       const sessionToken = String(body.sessionToken || "");
       const user = await getBackendWalletUserBySession(sessionToken);
       if (!user) {
-        sendJson(response, 401, { error: "Backend wallet session expired" });
+        sendJson(response, 401, { error: "Session expired. Please sign in again." });
         return;
       }
 
@@ -7671,7 +7671,7 @@ const server = createServer(async (request, response) => {
       const marketRef = String(requestUrl.searchParams.get("marketAddress") || requestUrl.searchParams.get("marketId") || "").trim();
       const user = await getBackendWalletUserBySession(token);
       if (!user) {
-        sendJson(response, 401, { error: "Backend wallet session expired" });
+        sendJson(response, 401, { error: "Session expired. Please sign in again." });
         return;
       }
       if (!marketRef) {
@@ -7686,7 +7686,7 @@ const server = createServer(async (request, response) => {
       });
       const marketAddress = normalizeWalletAddress(market?.marketAddress) || getConfiguredMarketAddress(market?.id || marketRef) || normalizedRef;
       if (!marketAddress || isLocalTestMarketAddress(marketAddress)) {
-        sendJson(response, 400, { error: "This market is not available for backend wallet mode" });
+        sendJson(response, 400, { error: "This market is not available" });
         return;
       }
 
@@ -7714,7 +7714,7 @@ const server = createServer(async (request, response) => {
       const user = await getBackendWalletUserBySession(sessionToken);
 
       if (!user) {
-        sendJson(response, 401, { error: "Backend wallet session expired" });
+        sendJson(response, 401, { error: "Session expired. Please sign in again." });
         return;
       }
       if (!marketRef || !Number.isFinite(amountUsdc) || amountUsdc <= 0) {
@@ -7729,7 +7729,7 @@ const server = createServer(async (request, response) => {
       });
       const marketAddress = normalizeWalletAddress(market?.marketAddress) || getConfiguredMarketAddress(market?.id || marketRef) || normalizedRef;
       if (!marketAddress || isLocalTestMarketAddress(marketAddress)) {
-        sendJson(response, 400, { error: "This market is not available for backend wallet mode" });
+        sendJson(response, 400, { error: "This market is not available" });
         return;
       }
 
@@ -7773,7 +7773,7 @@ const server = createServer(async (request, response) => {
       const marketRef = String(body.marketId || body.marketAddress || "").trim();
       const user = await getBackendWalletUserBySession(sessionToken);
       if (!user) {
-        sendJson(response, 401, { error: "Backend wallet session expired" });
+        sendJson(response, 401, { error: "Session expired. Please sign in again." });
         return;
       }
 
@@ -7784,7 +7784,7 @@ const server = createServer(async (request, response) => {
       });
       const marketAddress = normalizeWalletAddress(market?.marketAddress) || getConfiguredMarketAddress(market?.id || marketRef) || normalizedRef;
       if (!marketAddress || isLocalTestMarketAddress(marketAddress)) {
-        sendJson(response, 400, { error: "This market is not available for backend wallet mode" });
+        sendJson(response, 400, { error: "This market is not available" });
         return;
       }
 
@@ -7812,7 +7812,7 @@ const server = createServer(async (request, response) => {
       const topic = String(body.topic || body.sourceUrl || "Siftle AI briefing").slice(0, 140);
       const user = await getBackendWalletUserBySession(sessionToken);
       if (!user) {
-        sendJson(response, 401, { error: "Backend wallet session expired" });
+        sendJson(response, 401, { error: "Session expired. Please sign in again." });
         return;
       }
       if (!treasuryAddress) {

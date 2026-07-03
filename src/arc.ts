@@ -358,16 +358,15 @@ export const connectArcWallet = async (): Promise<string> => {
           <button class="circle-auth-close" id="backendWalletClose" type="button">&times;</button>
           <div class="circle-auth-logo">
             <img src="./assets/siftle-logo-small.png" alt="Siftle logo" />
-            <h2>Local Test Wallet</h2>
+            <h2>Sign in to Siftle</h2>
           </div>
-          <p class="circle-auth-subtitle">Backend wallet mode is enabled locally. Enter your email to create or reopen a local test wallet with no OTP and no PIN.</p>
+          <p class="circle-auth-subtitle">Enter your email to continue with your Siftle account.</p>
           <div class="circle-auth-step">
             <div class="circle-auth-field">
               <label for="backendWalletEmail">Email Address</label>
               <input type="email" id="backendWalletEmail" placeholder="name@domain.com" required />
             </div>
             <button id="backendWalletContinue" class="circle-auth-btn" type="button">Continue</button>
-            <p class="circle-auth-spam-note" style="font-size: 11px; color: #a5b4fc; margin: 12px 0 0 0; text-align: center; line-height: 1.4; opacity: 0.85;">This is local-only test mode. Fund the returned wallet address manually before trading.</p>
           </div>
           <div id="backendWalletStatus" class="circle-auth-status" style="display: none;"></div>
         </div>
@@ -410,7 +409,7 @@ export const connectArcWallet = async (): Promise<string> => {
             body: JSON.stringify({ email })
           });
           const payload = await response.json();
-          if (!response.ok) throw new Error(payload.error || "Failed to open backend wallet session");
+          if (!response.ok) throw new Error(payload.error || "Failed to sign in");
 
           if (payload.migrationEnabled && payload.migrationPreview?.eligible && !payload.migration?.migrated) {
             showStatus("Restoring competition points from your previous wallet...");
@@ -460,7 +459,7 @@ export const connectArcWallet = async (): Promise<string> => {
           triggerWalletListeners(activeWalletAddress);
           resolve(activeWalletAddress!);
         } catch (error) {
-          showStatus(error instanceof Error ? error.message : "Failed to open backend wallet", true);
+          showStatus(error instanceof Error ? error.message : "Failed to sign in", true);
           continueBtn.disabled = false;
           continueBtn.textContent = "Continue";
         }
@@ -793,15 +792,15 @@ export const validateArcSession = async (): Promise<boolean> => {
 
     try {
       const res = await fetch(apiUrl(`/api/backend-wallet/session?token=${encodeURIComponent(activeBackendWalletSessionToken)}`));
-      if (!res.ok) throw new Error("Backend wallet session expired");
+      if (!res.ok) throw new Error("Session expired");
       const data = await res.json();
-      if (!data.walletAddress) throw new Error("Backend wallet session is missing a wallet");
+      if (!data.walletAddress) throw new Error("Session expired");
       activeWalletAddress = data.walletAddress;
       if (data.email) activeEmail = data.email;
       localStorage.setItem("siftle_circle_wallet_address", data.walletAddress);
       return true;
     } catch (error) {
-      console.warn("Stored backend wallet session is no longer valid:", error);
+      console.warn("Stored Siftle session is no longer valid:", error);
       disconnectArcWallet();
       return false;
     }
@@ -1039,10 +1038,10 @@ export const readArcMarketSnapshot = async (marketAddress: string): Promise<ArcM
   }
 
   if (isBackendWalletMode) {
-    if (!activeBackendWalletSessionToken) throw new Error("Backend wallet session expired");
+    if (!activeBackendWalletSessionToken) throw new Error("Session expired");
     const response = await fetch(apiUrl(`/api/backend-wallet/market-state?token=${encodeURIComponent(activeBackendWalletSessionToken)}&marketAddress=${encodeURIComponent(marketAddress)}`));
     const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error || "Failed to load backend wallet market state");
+    if (!response.ok) throw new Error(payload.error || "Failed to load market state");
     return payload.snapshot;
   }
 
@@ -1081,10 +1080,10 @@ export const readArcMarketPosition = async (marketAddress: string, account: stri
   }
 
   if (isBackendWalletMode) {
-    if (!activeBackendWalletSessionToken) throw new Error("Backend wallet session expired");
+    if (!activeBackendWalletSessionToken) throw new Error("Session expired");
     const response = await fetch(apiUrl(`/api/backend-wallet/market-state?token=${encodeURIComponent(activeBackendWalletSessionToken)}&marketAddress=${encodeURIComponent(marketAddress)}`));
     const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error || "Failed to load backend wallet market state");
+    if (!response.ok) throw new Error(payload.error || "Failed to load market state");
     return payload.position;
   }
 
@@ -1101,10 +1100,10 @@ export const readArcMarketPosition = async (marketAddress: string, account: stri
 
 export const readArcMarketState = async (marketAddress: string, account: string): Promise<ArcMarketState> => {
   if (isBackendWalletMode) {
-    if (!activeBackendWalletSessionToken) throw new Error("Backend wallet session expired");
+    if (!activeBackendWalletSessionToken) throw new Error("Session expired");
     const response = await fetch(apiUrl(`/api/backend-wallet/market-state?token=${encodeURIComponent(activeBackendWalletSessionToken)}&marketAddress=${encodeURIComponent(marketAddress)}`));
     const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error || "Failed to load backend wallet market state");
+    if (!response.ok) throw new Error(payload.error || "Failed to load market state");
     return payload;
   }
 
@@ -1176,7 +1175,7 @@ export const payAiBriefingUnlock = async (
         })
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Failed to charge backend wallet balance");
+      if (!response.ok) throw new Error(payload.error || "Payment failed");
       return payload.txHash as string;
     };
 
@@ -1186,7 +1185,7 @@ export const payAiBriefingUnlock = async (
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error || "");
       if (!/topping up/i.test(message)) {
-        throw error instanceof Error ? error : new Error(message || "Failed to charge backend wallet balance");
+        throw error instanceof Error ? error : new Error(message || "Payment failed");
       }
 
       onStatus?.("Preparing Gateway balance...");
@@ -1198,7 +1197,7 @@ export const payAiBriefingUnlock = async (
       } catch (retryError) {
         const retryMessage = retryError instanceof Error ? retryError.message : String(retryError || "");
         if (!/topping up/i.test(retryMessage)) {
-          throw retryError instanceof Error ? retryError : new Error(retryMessage || "Failed to charge backend wallet balance");
+          throw retryError instanceof Error ? retryError : new Error(retryMessage || "Payment failed");
         }
         throw new Error("AI briefing payment is still preparing. Please try again in a few seconds.");
       }
