@@ -94,7 +94,7 @@ export const fallbackMarketPreviews = [
       { id: "nil-nil", label: "0-0" }
     ],
     probability: 0,
-    kickoffAt: "2026-07-04T01:30:00Z",
+    kickoffAt: "2026-07-04T00:30:00Z",
     closes: "Jul 4, 1:10 AM GMT+1",
     resolution: "One option resolves correct based on the official halftime score after first-half stoppage time. Extra time and penalties are not relevant.",
     threadTopic: "Colombia Ghana Halftime Script",

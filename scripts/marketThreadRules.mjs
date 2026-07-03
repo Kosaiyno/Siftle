@@ -4,7 +4,7 @@ export const marketThreadRules = {
     topic: "Vozinha Argentina Save Watch",
     includeAnySets: [
       ["vozinha", "cape verde", "argentina"],
-      ["save", "saves", "keeper", "goalkeeper", "official save total", "survival", "pressure"]
+      ["save", "saves", "keeper", "goalkeeper", "world cup", "knockout", "match", "pressure", "mismatch"]
     ],
     reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball"]
   },
@@ -13,8 +13,7 @@ export const marketThreadRules = {
     topic: "Messi Cape Verde Impact",
     includeAnySets: [
       ["messi", "argentina"],
-      ["cape verde"],
-      ["goal", "assist", "score", "scores", "creator", "attack", "impact"]
+      ["goal", "assist", "score", "scores", "creator", "attack", "impact", "world cup", "knockout", "miami"]
     ],
     reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball"]
   },
@@ -23,7 +22,7 @@ export const marketThreadRules = {
     topic: "Australia Egypt First Event",
     includeAnySets: [
       ["australia", "egypt", "salah"],
-      ["shot", "shot on target", "yellow card", "goal", "first event", "pressure"]
+      ["shot", "shot on target", "yellow card", "goal", "first event", "pressure", "world cup", "knockout", "match", "fit"]
     ],
     reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball"]
   },
@@ -32,7 +31,7 @@ export const marketThreadRules = {
     topic: "Colombia Ghana Halftime Script",
     includeAnySets: [
       ["colombia", "ghana"],
-      ["halftime", "half-time", "first half", "0-0", "level", "leading", "defensive", "script"]
+      ["halftime", "half-time", "first half", "0-0", "level", "leading", "defensive", "script", "world cup", "knockout", "match"]
     ],
     reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball"]
   },

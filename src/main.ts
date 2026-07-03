@@ -2790,6 +2790,7 @@ const renderMarketCard = (market: MarketPreview): string => {
     ? `Yes ${market.probability}c - No ${100 - market.probability}c`
     : shareLabel;
   const view = getMarketView(market);
+  const lockLabel = market.timeframe === "Daily" ? getDailyTradeLockLabel(market, snapshot) : market.closes;
 
   return `
     <button class="market-card" type="button" data-market-id="${market.id}">
@@ -2817,8 +2818,8 @@ const renderMarketCard = (market: MarketPreview): string => {
       </div>
       <div class="market-meter" aria-hidden="true"><span style="width: ${optionMarket ? 100 : displayProbability}%"></span></div>
       <div class="market-card-footer">
-        <span>${view.evidence.length} thread updates</span>
-        <span>${snapshot ? `$${Math.round(snapshot.volumeUsdc).toLocaleString()} volume` : `Closes ${market.closes}`}</span>
+        <span>${view.evidence.length} related news</span>
+        <span>${market.timeframe === "Daily" ? `Locks ${lockLabel}` : `Closes ${lockLabel}`}</span>
       </div>
     </button>
   `;
@@ -2887,7 +2888,7 @@ const renderMarketDetail = (market: MarketPreview): void => {
     ? amount
     : estimatePoolPayout(snapshot, state.marketTradeSide, amount, state.marketOrderMode, position);
   const orderLabel = state.marketOrderMode === "buy" ? "Buy" : "Exit";
-  const marketStatus = optionMarket ? "Option market" : marketAddress ? "Arc testnet live" : "Contract not deployed";
+  const marketStatus = optionMarket ? "Pick one outcome" : marketAddress ? "Arc testnet live" : "Contract not deployed";
 
   storyList.hidden = true;
   storyDetail.hidden = false;
@@ -2995,15 +2996,15 @@ const renderMarketDetail = (market: MarketPreview): void => {
 
           <section class="market-evidence-thread">
             <header>
-              <h3>Timeline & Evidence</h3>
-              <span>${isLoadingEvidence ? "Loading..." : `${marketView.evidence.length} updates`}</span>
+              <h3>Related News</h3>
+              <span>${isLoadingEvidence ? "Loading..." : `${marketView.evidence.length} stories`}</span>
             </header>
-            <p class="market-thread-intro">Track how this topic is developing, newest first.</p>
+            <p class="market-thread-intro">Read the stories connected to this market, newest first.</p>
             <div class="market-thread-timeline">
               ${isLoadingEvidence
                 ? renderMarketEvidenceSkeleton(3)
                 : marketView.evidence.length === 0
-                  ? `<div class="portfolio-empty compact">Market thread is still being prepared for this match.</div>`
+                  ? `<div class="portfolio-empty compact">Related news is still loading for this market.</div>`
                 : marketView.evidence.map((item) => {
                   const briefingTarget = getBriefingTargetFromMarketEvidence(market, item);
                   const isUnlockingEvidence = state.unlockingSummaryUrl === item.sourceUrl;

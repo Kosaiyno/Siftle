@@ -1,15 +1,14 @@
 {
   "topic": "Messi Cape Verde Impact",
-  "reviewed_by": "curated-local-market-thread",
   "current": {
-    "id": "market-messi-current",
+    "id": "bbc-argentina-cape-verde-messi-vozinha",
     "category": "Sports",
-    "headline": "Messi goal involvement is the cleanest Argentina-Cape Verde question",
-    "summary": "The market turns on whether Messi is the scorer, the creator, both, or kept out of the official goal contribution column.",
-    "source": "Siftle Desk",
-    "sourceUrl": "https://example.com/messi-cape-verde-impact",
-    "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
-    "publishedAt": "Fri, 03 Jul 2026 09:15:00 GMT",
+    "headline": "Argentina v Cape Verde: Breaking down biggest World Cup knockout mismatch",
+    "summary": "Lionel Messi versus Vozinha. It is the World Cup battle no-one knew they wanted, but which fans now cannot wait to see.",
+    "source": "feeds.bbci.co.uk",
+    "sourceUrl": "https://www.bbc.co.uk/sport/football/articles/c17y82qyjj4o?at_medium=RSS&at_campaign=rss",
+    "imageUrl": "https://ichef.bbci.co.uk/ace/standard/240/cpsprodpb/10da/live/a100d9c0-761e-11f1-8c8c-f987daa96c22.jpg",
+    "publishedAt": "Fri, 03 Jul 2026 11:01:01 GMT",
     "readTime": "1 min read",
     "postedAt": "Latest",
     "accent": "blue",
@@ -17,22 +16,19 @@
   },
   "items": [
     {
-      "id": "market-messi-01",
+      "id": "guardian-messi-miami-homecoming",
       "category": "Sports",
-      "headline": "Argentina's attack keeps running through Messi in decisive moments",
-      "summary": "Messi's role makes both scoring and assisting live outcomes, but Cape Verde's defensive shape can still force a quieter night.",
-      "source": "Siftle Desk",
-      "sourceUrl": "https://example.com/messi-argentina-attack-form",
-      "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
-      "publishedAt": "Fri, 03 Jul 2026 08:30:00 GMT",
+      "headline": "Lionel Messi makes his Miami homecoming with Argentina: 'For us this is a chance to celebrate him'",
+      "summary": "Argentina's last-32 match puts Messi back in Miami as his club and country stories meet on the World Cup stage.",
+      "source": "theguardian.com",
+      "sourceUrl": "https://www.theguardian.com/football/2026/jul/03/lionel-messi-argentina-miami-world-cup",
+      "imageUrl": "https://i.guim.co.uk/img/media/3fdcb6577c0cccdb1d6aa1dd0984fe921d176e29/604_0_5000_4000/master/5000.jpg?width=140&quality=85&auto=format&fit=max&s=ea0ed9d8807e3f9aa6a493448953b8b5",
+      "publishedAt": "Fri, 03 Jul 2026 09:00:24 GMT",
       "readTime": "1 min read",
       "postedAt": "Jul 3",
       "accent": "blue",
       "saved": false
     }
   ],
-  "count": 1,
-  "market_id": "wc-messi-impact-cape-verde",
-  "saved_market_thread": true,
-  "saved_at": "2026-07-03T09:15:00.000Z"
+  "reviewed_by": "real-source-market-thread"
 }

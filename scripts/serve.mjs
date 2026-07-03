@@ -1439,8 +1439,15 @@ const stripStoryTempFields = (story) => {
   return clean;
 };
 
+const isSyntheticMarketThreadStory = (story) => {
+  const source = String(story?.source ?? "").trim().toLowerCase();
+  const sourceUrl = normalizeStoryUrl(story?.sourceUrl);
+  return source === "siftle desk" || sourceUrl.includes("example.com/");
+};
+
 const normalizeValidThread = (thread, seedStory = thread?.current) => {
   if (!thread || !seedStory) return null;
+  if (isSyntheticMarketThreadStory(seedStory)) return null;
 
   const currentUrl = normalizeStoryUrl(seedStory.sourceUrl);
   const currentDate = storyDateKey(seedStory, getTodayKey());
@@ -1452,6 +1459,7 @@ const normalizeValidThread = (thread, seedStory = thread?.current) => {
     const url = normalizeStoryUrl(item?.sourceUrl);
     const date = storyDateKey(item);
     const itemTime = new Date(item?.publishedAt || 0).getTime();
+    if (isSyntheticMarketThreadStory(item)) continue;
     if (!url || seen.has(url) || item?.category !== seedStory.category) continue;
     if (!currentDate || !date || date > currentDate) continue;
     if (date === currentDate) {
@@ -1951,7 +1959,15 @@ const findPreparedMarketThread = (marketId) => {
   const matchingStories = getPublishedStoriesForMarketRule(rule);
   for (const story of matchingStories) {
     const thread = findPreparedThreadForRequest(rule.category, story.sourceUrl);
-    const validThread = normalizeValidThread(thread, story);
+    const validThread = normalizeValidThread(
+      thread
+        ? {
+            ...thread,
+            items: (thread.items ?? []).filter((item) => storyMatchesMarketThreadRule(item, rule))
+          }
+        : thread,
+      story
+    );
     if (validThread?.count >= 1) return validThread;
   }
 
@@ -1960,7 +1976,15 @@ const findPreparedMarketThread = (marketId) => {
 
   for (const story of matchingStories.slice(1)) {
     const previousThread = findPreparedThreadForRequest(rule.category, story.sourceUrl);
-    const validPreviousThread = normalizeValidThread(previousThread, story);
+    const validPreviousThread = normalizeValidThread(
+      previousThread
+        ? {
+            ...previousThread,
+            items: (previousThread.items ?? []).filter((item) => storyMatchesMarketThreadRule(item, rule))
+          }
+        : previousThread,
+      story
+    );
     if (!validPreviousThread?.count) continue;
 
     const bridgedThread = normalizeValidThread({
@@ -2006,9 +2030,9 @@ const normalizeMarketThreadPayload = (thread, marketId) => {
   if (!storyMatchesMarketThreadRule(thread.current, rule)) return null;
 
   const normalized = normalizeValidThread({
-    topic: thread.topic || rule.topic,
+    topic: rule.topic,
     current: thread.current,
-    items: thread.items ?? [],
+    items: (thread.items ?? []).filter((item) => storyMatchesMarketThreadRule(item, rule)),
     reviewed_by: thread.reviewed_by ?? "local-market-thread"
   }, thread.current);
 
@@ -8075,7 +8099,7 @@ const server = createServer(async (request, response) => {
         sendJson(response, 400, { error: "This option market is not available" });
         return;
       }
-      const data = await loadLeaderboardFromSupabase(loadAnalytics());
+      const data = await loadReferralRelationshipsFromSupabase(await loadLeaderboardFromSupabase(loadAnalytics()));
       resolveOptionMarketInData(data, market, winningOptionId);
       saveAnalytics(data);
       await saveLeaderboardToSupabase(data);
