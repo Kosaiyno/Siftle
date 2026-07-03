@@ -5679,6 +5679,31 @@ async function loadLeaderboardFromSupabase(data) {
   if (!isSupabaseConfigured) return data;
 
   try {
+    const remoteMigrations = await loadBackendWalletMigrationsFromSupabase();
+    const migrationMap = getWalletMigrationMap(data);
+    Object.values(remoteMigrations || {}).forEach((entry) => {
+      const oldWallet = normalizeWalletAddress(entry?.oldWalletAddress);
+      const newWallet = normalizeWalletAddress(entry?.newWalletAddress);
+      if (oldWallet && newWallet && oldWallet !== newWallet) {
+        migrationMap.set(oldWallet, newWallet);
+      }
+    });
+    const canonicalAddress = (walletAddress) => {
+      const address = normalizeWalletAddress(walletAddress);
+      return address ? migrationMap.get(address) || address : "";
+    };
+    const earliestTimestamp = (left, right) => {
+      const leftMs = Date.parse(left || "") || Number.MAX_SAFE_INTEGER;
+      const rightMs = Date.parse(right || "") || Number.MAX_SAFE_INTEGER;
+      if (leftMs === Number.MAX_SAFE_INTEGER) return right || left || "";
+      if (rightMs === Number.MAX_SAFE_INTEGER) return left || right || "";
+      return leftMs <= rightMs ? left : right;
+    };
+    const latestTimestamp = (left, right) => {
+      const leftMs = Date.parse(left || "") || 0;
+      const rightMs = Date.parse(right || "") || 0;
+      return leftMs >= rightMs ? left : right;
+    };
     const [profiles, results] = await Promise.all([
       supabaseRequest("profiles?select=wallet_address,username,updated_at"),
       supabaseRequest("resolved_results?select=wallet_address,market_id,result,points,switched")
@@ -5706,25 +5731,46 @@ async function loadLeaderboardFromSupabase(data) {
     }
 
     const leaderboard = ensureLeaderboardState(data);
-    const profileMap = new Map((profiles || []).map((profile) => [profile.wallet_address, profile]));
+    const profileMap = new Map();
+    for (const profile of profiles || []) {
+      const address = canonicalAddress(profile.wallet_address);
+      if (!address) continue;
+      const existing = profileMap.get(address) || {};
+      profileMap.set(address, {
+        ...existing,
+        ...profile,
+        wallet_address: address,
+        username: String(profile.username || existing.username || ""),
+        updated_at: latestTimestamp(existing.updated_at, profile.updated_at) || profile.updated_at || existing.updated_at
+      });
+    }
 
     for (const entry of entries || []) {
-      const address = normalizeWalletAddress(entry.wallet_address);
+      const address = canonicalAddress(entry.wallet_address);
       if (!address) continue;
       const profile = profileMap.get(address) || {};
+      const existing = leaderboard.traders[address] || {};
+      const entryPoints = Number(entry.points) || 0;
+      const existingPoints = Number(existing.points) || 0;
+      const entryReportedPoints = Number(entry.reported_points) || 0;
+      const existingReportedPoints = Number(existing.reported_points) || 0;
       leaderboard.traders[address] = {
-        points: Number(entry.points) || 0,
-        status: String(entry.status || "0 wins, 0 losses"),
-        username: String(profile.username || leaderboard.traders[address]?.username || ""),
-        reported_points: Number(entry.reported_points) || 0,
-        reported_status: String(entry.reported_status || "0 wins, 0 losses"),
-        first_activity_at: entry.first_activity_at || leaderboard.traders[address]?.first_activity_at || entry.updated_at || new Date().toISOString(),
-        updated_at: entry.updated_at || leaderboard.traders[address]?.updated_at || new Date().toISOString()
+        points: Math.max(existingPoints, entryPoints),
+        status: entryPoints >= existingPoints
+          ? String(entry.status || existing.status || "0 wins, 0 losses")
+          : String(existing.status || entry.status || "0 wins, 0 losses"),
+        username: String(profile.username || existing.username || ""),
+        reported_points: Math.max(existingReportedPoints, entryReportedPoints),
+        reported_status: entryReportedPoints >= existingReportedPoints
+          ? String(entry.reported_status || existing.reported_status || "0 wins, 0 losses")
+          : String(existing.reported_status || entry.reported_status || "0 wins, 0 losses"),
+        first_activity_at: earliestTimestamp(existing.first_activity_at, entry.first_activity_at || entry.updated_at) || new Date().toISOString(),
+        updated_at: latestTimestamp(existing.updated_at, entry.updated_at) || new Date().toISOString()
       };
     }
 
     for (const result of results || []) {
-      const address = normalizeWalletAddress(result.wallet_address);
+      const address = canonicalAddress(result.wallet_address);
       const marketId = String(result.market_id || "");
       if (!address || !marketId) continue;
       if (!leaderboard.resolvedResults[address]) leaderboard.resolvedResults[address] = {};
@@ -5737,7 +5783,7 @@ async function loadLeaderboardFromSupabase(data) {
 
     for (const row of divisionRows || []) {
       const seasonId = String(row.season_id || "");
-      const address = normalizeWalletAddress(row.wallet_address);
+      const address = canonicalAddress(row.wallet_address);
       const divisionNumber = Math.max(1, Number(row.division_number) || 1);
       if (!seasonId || !address) continue;
       const assignments = getStoredDivisionAssignments(data, seasonId);
@@ -5745,7 +5791,7 @@ async function loadLeaderboardFromSupabase(data) {
     }
 
     for (const row of bonusRows || []) {
-      const address = normalizeWalletAddress(row.wallet_address);
+      const address = canonicalAddress(row.wallet_address);
       const bonusKey = String(row.bonus_key || "");
       if (!address || !bonusKey) continue;
       if (!leaderboard.bonusEvents[address]) leaderboard.bonusEvents[address] = {};
@@ -5757,6 +5803,8 @@ async function loadLeaderboardFromSupabase(data) {
         created_at: row.created_at || new Date().toISOString()
       };
     }
+
+    applyWalletMigrationAliases(data);
 
     Object.entries(leaderboard.traders || {}).forEach(([address, entry]) => {
       const normalized = normalizeWalletAddress(address);
@@ -8660,7 +8708,27 @@ const server = createServer(async (request, response) => {
         }
         const data = loadAnalytics();
         const leaderboard = ensureLeaderboardState(data);
-        const key = normalizedAddress;
+        applyWalletMigrationAliases(data);
+        const remoteMigrations = await loadBackendWalletMigrationsFromSupabase();
+        let key = canonicalLeaderboardAddress(data, normalizedAddress);
+        Object.values(remoteMigrations || {}).forEach((entry) => {
+          const oldWallet = normalizeWalletAddress(entry?.oldWalletAddress);
+          const newWallet = normalizeWalletAddress(entry?.newWalletAddress);
+          if (oldWallet && newWallet && oldWallet === key) key = newWallet;
+        });
+        if (!key) {
+          sendJson(response, 400, { error: "Missing walletAddress" });
+          return;
+        }
+        if (key !== normalizedAddress && leaderboard.traders[normalizedAddress]) {
+          const oldEntry = leaderboard.traders[normalizedAddress];
+          leaderboard.traders[key] = {
+            ...oldEntry,
+            ...(leaderboard.traders[key] || {}),
+            username: leaderboard.traders[key]?.username || oldEntry.username || ""
+          };
+          delete leaderboard.traders[normalizedAddress];
+        }
         const existing = data.leaderboard.traders[key] || {};
         const hasUsername = Object.prototype.hasOwnProperty.call(body, "username");
         const hasPoints = Object.prototype.hasOwnProperty.call(body, "points");
