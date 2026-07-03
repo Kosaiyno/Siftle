@@ -2629,23 +2629,30 @@ const placeOptionMarketOrder = async (marketId: string, optionId: string): Promi
   }
 
   const position = state.marketPositions[market.id];
-  if (position?.optionId) {
+  const exiting = state.marketOrderMode === "sell";
+  if (!exiting && position?.optionId) {
     showActionToast("Your pick is already locked for this market.");
     return;
   }
+  if (exiting && !position?.optionId) {
+    showActionToast("You do not have a pick to exit.");
+    return;
+  }
 
-  const tradeAmount = normalizeMarketTradeAmount(Number(state.marketTradeAmount) || 0, "buy", "yes", undefined);
+  const tradeAmount = exiting
+    ? Math.max(0.01, Number(position?.optionSharesUsdc) || Number(state.marketTradeAmount) || 0)
+    : normalizeMarketTradeAmount(Number(state.marketTradeAmount) || 0, "buy", "yes", undefined);
   state.marketTradeAmount = tradeAmount;
-  state.marketTradeOptionId = option.id;
+  state.marketTradeOptionId = exiting ? position?.optionId || option.id : option.id;
   trackEvent("trade_attempt");
 
   try {
-    state.marketTradeStatus = "Locking your pick...";
+    state.marketTradeStatus = exiting ? "Exiting your pick..." : "Locking your pick...";
     render();
     await executeArcOptionMarketOrder(
       market.id,
-      "buy",
-      option.id,
+      exiting ? "sell" : "buy",
+      exiting ? position?.optionId || option.id : option.id,
       tradeAmount,
       (status: string) => {
         state.marketTradeStatus = status;
@@ -2661,7 +2668,7 @@ const placeOptionMarketOrder = async (marketId: string, optionId: string): Promi
     if (state.walletAddress) state.walletBalance = await readArcUsdcBalance(state.walletAddress);
     await loadPortfolioPositions({ force: true });
     trackEvent("trade_success");
-    showActionToast(`Pick locked: ${option.label}`);
+    showActionToast(exiting ? "Pick exited" : `Pick locked: ${option.label}`);
     state.tradeDrawerOpen = false;
   } catch (error) {
     trackEvent("trade_failed");
@@ -2854,8 +2861,13 @@ const renderMarketDetail = (market: MarketPreview): void => {
   const yesPriceLabel = isLoadingSnapshot ? "" : marketAddress ? `${yesPrice}¢` : "--";
   const noPriceLabel = isLoadingSnapshot ? "" : marketAddress ? `${noPrice}¢` : "--";
   const position = state.marketPositions[market.id] || { yesSharesUsdc: 0, noSharesUsdc: 0 };
-  const amount = normalizeMarketTradeAmount(Number(state.marketTradeAmount) || 0, state.marketOrderMode, state.marketTradeSide, position);
-  const amountBounds = getTradeAmountBounds(state.marketOrderMode, state.marketTradeSide, position);
+  const optionExitAmount = optionMarket && state.marketOrderMode === "sell" ? Math.max(0, Number(position.optionSharesUsdc) || 0) : 0;
+  const amount = optionExitAmount > 0
+    ? optionExitAmount
+    : normalizeMarketTradeAmount(Number(state.marketTradeAmount) || 0, state.marketOrderMode, state.marketTradeSide, position);
+  const amountBounds = optionExitAmount > 0
+    ? { min: 0, max: optionExitAmount }
+    : getTradeAmountBounds(state.marketOrderMode, state.marketTradeSide, position);
   const amountHint = state.marketOrderMode === "buy"
     ? "$5-$10 USDC"
     : `Up to $${formatMoney(amountBounds.max)} USDC`;
@@ -2867,8 +2879,9 @@ const renderMarketDetail = (market: MarketPreview): void => {
   const canTradeYes = !optionMarket && !marketResolved && !marketTradeLocked && positionReady && canTradeSide(state.marketOrderMode, "yes", position);
   const canTradeNo = !optionMarket && !marketResolved && !marketTradeLocked && positionReady && canTradeSide(state.marketOrderMode, "no", position);
   const hasOptionPick = Boolean(position.optionId);
+  if (optionMarket && hasOptionPick && state.marketOrderMode !== "sell") state.marketOrderMode = "sell";
   const canSubmitTrade = optionMarket
-    ? !marketResolved && !marketTradeLocked && positionReady && !hasOptionPick && Boolean(selectedOption)
+    ? !marketResolved && !marketTradeLocked && positionReady && (state.marketOrderMode === "sell" ? hasOptionPick : !hasOptionPick && Boolean(selectedOption))
     : !marketResolved && !marketTradeLocked && positionReady && canTradeSide(state.marketOrderMode, state.marketTradeSide, position);
   const yesDisabledLabel = marketResolved
     ? "Market resolved"
@@ -3054,17 +3067,17 @@ const renderMarketDetail = (market: MarketPreview): void => {
           <button class="close-drawer-btn" type="button" id="closeTradeDrawerBtn" aria-label="Close trade panel">&times;</button>
         </div>
         <div class="trade-drawer-body">
-          ${optionMarket ? "" : `<div class="market-order-mode">
+          <div class="market-order-mode">
             <button type="button" class="${state.marketOrderMode === "buy" ? "active" : ""}" data-market-order-mode="buy" ${marketResolved || marketTradeLocked ? "disabled" : ""}>Buy</button>
             <button type="button" class="${state.marketOrderMode === "sell" ? "active" : ""}" data-market-order-mode="sell" ${marketResolved || marketTradeLocked ? "disabled" : ""}>Exit</button>
-          </div>`}
+          </div>
 
           <div class="market-action-grid">
             ${optionMarket
               ? optionList.map((option) => {
                 const poolAmount = snapshot?.optionPools?.[option.id] || 0;
                 const active = state.marketTradeOptionId === option.id || position.optionId === option.id;
-                const disabled = marketResolved || marketTradeLocked || hasOptionPick || !positionReady;
+                const disabled = marketResolved || marketTradeLocked || state.marketOrderMode === "sell" || hasOptionPick || !positionReady;
                 return `
                   <button type="button" class="market-side option ${active ? "active" : ""} ${disabled ? "disabled" : ""}" data-market-option-id="${escapeHtml(option.id)}" ${disabled ? "disabled" : ""}>
                     <span>${escapeHtml(option.label)}</span>
@@ -3118,8 +3131,8 @@ const renderMarketDetail = (market: MarketPreview): void => {
                 : state.walletAddress
                   ? !positionReady
                     ? `<button type="button" class="market-submit-button disabled" style="opacity: 0.6; pointer-events: none;">Loading position...</button>`
-                    : optionMarket && hasOptionPick
-                    ? `<button type="button" class="market-submit-button disabled" style="opacity: 0.6; pointer-events: none;">Pick already locked</button>`
+                    : optionMarket && state.marketOrderMode === "sell" && hasOptionPick
+                    ? `<button type="button" class="market-submit-button" data-market-option-trade="${escapeHtml(position.optionId || "")}">Exit pick</button>`
                     : canSubmitTrade
                     ? optionMarket
                       ? `<button type="button" class="market-submit-button" data-market-option-trade="${escapeHtml(selectedOption?.id || "")}">Confirm ${escapeHtml(selectedOption?.label || "pick")}</button>`

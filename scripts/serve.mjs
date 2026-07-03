@@ -5409,6 +5409,37 @@ function saveOptionMarketPosition(data, market, walletAddress, optionId, optionL
   if (!marketStore.traders.includes(cleanWallet)) marketStore.traders.push(cleanWallet);
 }
 
+function getOptionMarketExitPreview(data, market, walletAddress) {
+  const cleanWallet = normalizeWalletAddress(walletAddress);
+  const store = ensureOptionMarketStore(data);
+  const marketStore = store[market.id];
+  const position = cleanWallet ? marketStore?.positions?.[cleanWallet] : null;
+  if (!marketStore || !position?.optionId) throw new Error("You do not have a pick to exit");
+  if (marketStore.resolvedOptionId) throw new Error("This market is resolved and can no longer be traded");
+  return {
+    optionId: position.optionId,
+    optionLabel: position.optionLabel,
+    amountUsdc: Math.max(0, Number(position.amountUsdc) || 0)
+  };
+}
+
+function exitOptionMarketPosition(data, market, walletAddress) {
+  const cleanWallet = normalizeWalletAddress(walletAddress);
+  if (!cleanWallet) throw new Error("Missing wallet");
+  const store = ensureOptionMarketStore(data);
+  const marketStore = store[market.id];
+  const exit = getOptionMarketExitPreview(data, market, cleanWallet);
+  if (exit.amountUsdc <= 0) throw new Error("You do not have a pick to exit");
+
+  marketStore.optionPools[exit.optionId] = Math.max(0, (Number(marketStore.optionPools?.[exit.optionId]) || 0) - exit.amountUsdc);
+  delete marketStore.positions[cleanWallet];
+  if (marketStore.claimed) delete marketStore.claimed[cleanWallet];
+  if (Array.isArray(marketStore.traders)) {
+    marketStore.traders = marketStore.traders.filter((wallet) => normalizeWalletAddress(wallet) !== cleanWallet);
+  }
+  return exit;
+}
+
 function resolveOptionMarketInData(data, market, winningOptionId) {
   const option = getMarketOptions(market).find((entry) => entry.id === winningOptionId);
   if (!option) throw new Error("Choose a valid winning option");
@@ -7959,15 +7990,11 @@ const server = createServer(async (request, response) => {
         sendJson(response, 401, { error: "Session expired. Please sign in again." });
         return;
       }
-      if (!marketId || !optionId || !Number.isFinite(amountUsdc) || amountUsdc <= 0) {
+      if (!marketId || (mode === "buy" && (!optionId || !Number.isFinite(amountUsdc) || amountUsdc <= 0))) {
         sendJson(response, 400, { error: "marketId, optionId and amount are required" });
         return;
       }
-      if (mode !== "buy") {
-        sendJson(response, 400, { error: "Option picks are locked after entry for this test version" });
-        return;
-      }
-      if (amountUsdc < 5 || amountUsdc > 10) {
+      if (mode === "buy" && (amountUsdc < 5 || amountUsdc > 10)) {
         sendJson(response, 400, { error: "Trade amount must be between $5 and $10" });
         return;
       }
@@ -7978,8 +8005,8 @@ const server = createServer(async (request, response) => {
         return;
       }
 
-      const option = getMarketOptions(market).find((entry) => entry.id === optionId);
-      if (!option) {
+      const option = mode === "buy" ? getMarketOptions(market).find((entry) => entry.id === optionId) : null;
+      if (mode === "buy" && !option) {
         sendJson(response, 400, { error: "Choose a valid option" });
         return;
       }
@@ -7991,11 +8018,25 @@ const server = createServer(async (request, response) => {
       }
 
       const data = loadAnalytics();
-      saveOptionMarketPosition(data, market, user.address, option.id, option.label, amountUsdc);
-
       const treasuryAddress = normalizeWalletAddress(aiBriefingTreasuryAddress || process.env.SIFTLE_TREASURY_ADDRESS);
       let txHash = `0xoptionpick${randomUUID().replace(/-/g, "").slice(0, 24)}`;
-      if (treasuryAddress) {
+      if (mode === "buy") {
+        saveOptionMarketPosition(data, market, user.address, option.id, option.label, amountUsdc);
+      } else {
+        const exit = getOptionMarketExitPreview(data, market, user.address);
+        if (process.env.ARC_DEPLOYER_PRIVATE_KEY && exit.amountUsdc > 0) {
+          const signer = new Wallet(process.env.ARC_DEPLOYER_PRIVATE_KEY, leaderboardProvider);
+          const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
+          const tx = await usdc.transfer(user.address, parseUnits(exit.amountUsdc.toFixed(6), 6));
+          const receipt = await tx.wait();
+          txHash = receipt?.hash || tx.hash;
+        } else {
+          txHash = `0xoptionexit${randomUUID().replace(/-/g, "").slice(0, 24)}`;
+        }
+        exitOptionMarketPosition(data, market, user.address);
+      }
+
+      if (mode === "buy" && treasuryAddress) {
         const signer = new Wallet(user.privateKey, leaderboardProvider);
         const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
         const tx = await usdc.transfer(treasuryAddress, parseUnits(amountUsdc.toFixed(6), 6));
