@@ -1,7 +1,7 @@
 import express from "express";
 import { createGatewayMiddleware } from "@circle-fin/x402-batching/server";
 
-const port = Number(process.env.X402_PORT || 4020);
+const port = Number(process.env.PORT || process.env.X402_PORT || 4020);
 const sellerAddress = process.env.X402_SELLER_ADDRESS || process.env.ARC_DEPLOYER_ADDRESS || "";
 const price = process.env.X402_PRICE || "$0.001";
 
@@ -18,7 +18,7 @@ const gateway = createGatewayMiddleware({
 });
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true, service: "siftle-x402-local", price });
+  res.json({ ok: true, service: "siftle-x402-seller", price });
 });
 
 app.get("/x402/ai-briefing", gateway.require(price), (req, res) => {
@@ -44,7 +44,7 @@ app.get("/x402/ai-briefing", gateway.require(price), (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Siftle x402 local server running at http://localhost:${port}`);
+  console.log(`Siftle x402 seller running on port ${port}`);
   console.log(`Paid endpoint: http://localhost:${port}/x402/ai-briefing?topic=Germany%20coach%20news`);
   console.log(`Price: ${price}`);
 });

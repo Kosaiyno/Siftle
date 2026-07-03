@@ -150,6 +150,7 @@ const state: {
   referralData: ReferralData | null;
   referralError: string | null;
   loadingReferralData: boolean;
+  portfolioPositionsLoadedAt: number;
 } = {
   activeSurface: "markets",
   profileUsername: null,
@@ -194,7 +195,8 @@ const state: {
   referralPanelOpen: false,
   referralData: null,
   referralError: null,
-  loadingReferralData: false
+  loadingReferralData: false,
+  portfolioPositionsLoadedAt: 0
 };
 
 let selectedLeaderboardDivision: number | null = null;
@@ -754,19 +756,26 @@ const getMarketTradeLockMessage = (market: MarketPreview, snapshot: ArcMarketSna
 const renderLockedBriefing = (story: BriefingTarget, isUnlocking: boolean): string => `
   <div class="briefing-section">
     <h4 class="briefing-title">AI briefing</h4>
-    <p class="briefing-text">Get the key points, what happened, and the takeaway.</p>
-    <button type="button" class="source-button" data-unlock-briefing-url="${encodeURIComponent(story.sourceUrl)}" ${isUnlocking ? "disabled" : ""}>
-      AI briefing
-    </button>
+    ${isUnlocking
+      ? `
+        <p class="briefing-text">Preparing your AI briefing...</p>
+        ${renderSummarySkeleton()}
+      `
+      : `
+        <p class="briefing-text">Get the key points, what happened, and the takeaway.</p>
+        <button type="button" class="source-button" data-unlock-briefing-url="${encodeURIComponent(story.sourceUrl)}">
+          AI briefing
+        </button>
+      `}
   </div>
 `;
 
-const unlockAndLoadStorySummary = async (story: BriefingTarget): Promise<void> => {
+const unlockAndLoadStorySummary = async (story: BriefingTarget, force = false): Promise<void> => {
   if (!state.walletAddress) {
     showActionToast("Please sign in first.");
     return;
   }
-  if (state.unlockingSummaryUrl === story.sourceUrl) return;
+  if (state.unlockingSummaryUrl === story.sourceUrl && !force) return;
 
   state.unlockingSummaryUrl = story.sourceUrl;
   trackEvent("ai_unlock_attempt");
@@ -878,7 +887,9 @@ const openStory = (storyId: number, autoUnlockBriefing = false): void => {
   window.history.pushState({}, "", `#story-${story.id}`);
   render();
   if (autoUnlockBriefing && !isBriefingUnlocked(story)) {
-    void unlockAndLoadStorySummary(story);
+    if (state.walletAddress) state.unlockingSummaryUrl = story.sourceUrl;
+    render();
+    void unlockAndLoadStorySummary(story, true);
   } else if (isBriefingUnlocked(story)) {
     void loadStorySummary(story);
   }
@@ -1727,9 +1738,11 @@ const loadMarketSnapshot = async (market: MarketPreview): Promise<void> => {
   }
 };
 
-const loadPortfolioPositions = async (): Promise<void> => {
-  if (!state.walletAddress || state.loadingPortfolioPositions) return;
+const loadPortfolioPositions = async (options: { force?: boolean } = {}): Promise<void> => {
+  if (!state.walletAddress) return;
+  if (state.loadingPortfolioPositions && !options.force) return;
 
+  state.hasLoadedPortfolioPositions = false;
   state.loadingPortfolioPositions = true;
   try {
     if (state.portfolioMarketPreviews.length === 0) await loadPortfolioMarkets();
@@ -1749,6 +1762,7 @@ const loadPortfolioPositions = async (): Promise<void> => {
       })
     );
     state.marketPositions = Object.fromEntries(entries);
+    state.portfolioPositionsLoadedAt = Date.now();
   } catch (error) {
     console.warn(error);
   } finally {
@@ -1837,9 +1851,11 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
     delete state.marketPositions[market.id];
     delete state.checkedMarketSnapshots[market.id];
     delete state.loadingMarketSnapshots[market.id];
+    state.hasLoadedPortfolioPositions = false;
+    state.portfolioPositionsLoadedAt = 0;
     state.walletAddress = await getConnectedArcWallet();
     if (state.walletAddress) state.walletBalance = await readArcUsdcBalance(state.walletAddress);
-    await loadPortfolioPositions();
+    await loadPortfolioPositions({ force: true });
     void reportLeaderboardEntry(true).catch(err => console.error("Failed to report leaderboard entry:", err));
 
     // Update cost basis in localStorage
@@ -2508,7 +2524,9 @@ const handleStoryExport = async (storyId: number, action: "save" | "share"): Pro
   }
 };
 
-const renderThreadTimelineItem = (story: NewsStory, label: string): string => `
+const renderThreadTimelineItem = (story: NewsStory, label: string): string => {
+  const isUnlocking = state.unlockingSummaryUrl === story.sourceUrl;
+  return `
   <article class="thread-item">
     <div class="thread-dot" aria-hidden="true"></div>
     <div class="thread-item-body">
@@ -2522,9 +2540,11 @@ const renderThreadTimelineItem = (story: NewsStory, label: string): string => `
         ${/example\.com/i.test(story.sourceUrl)
           ? ""
           : `<a class="thread-source-link" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
-        <button type="button" class="thread-source-link" data-unlock-briefing-url="${encodeURIComponent(story.sourceUrl)}">AI briefing</button>
+        <button type="button" class="thread-source-link" data-unlock-briefing-url="${encodeURIComponent(story.sourceUrl)}" ${isUnlocking ? "disabled" : ""}>${isUnlocking ? "Preparing..." : "AI briefing"}</button>
       </div>
-      ${isBriefingUnlocked(story)
+      ${isUnlocking
+        ? `<div style="margin-top: 12px;">${renderSummarySkeleton()}</div>`
+        : isBriefingUnlocked(story)
         ? (state.loadingSummaryUrl === story.sourceUrl
             ? `<div style="margin-top: 12px;">${renderSummarySkeleton()}</div>`
             : `<div style="margin-top: 12px;">${formatAIBriefing(safeStorySummary(story, state.aiSummaries[story.sourceUrl] || story.ai_summary))}</div>`)
@@ -2532,6 +2552,7 @@ const renderThreadTimelineItem = (story: NewsStory, label: string): string => `
     </div>
   </article>
 `;
+};
 
 const renderThreadView = (): void => {
   if (!storyDetail || !storyList) return;
@@ -2745,8 +2766,10 @@ const renderMarketDetail = (market: MarketPreview): void => {
 
   void loadMarketSnapshot(market);
   void loadMarketEvidence(market);
-  if (state.walletAddress && !state.hasLoadedPortfolioPositions && !state.loadingPortfolioPositions) {
-    void loadPortfolioPositions();
+  const positionsAreStale = state.walletAddress
+    && (!state.hasLoadedPortfolioPositions || Date.now() - state.portfolioPositionsLoadedAt > 15000);
+  if (positionsAreStale && !state.loadingPortfolioPositions) {
+    void loadPortfolioPositions({ force: !state.hasLoadedPortfolioPositions });
   }
 
   const hasPosition = position.yesSharesUsdc > 0 || position.noSharesUsdc > 0;
@@ -2832,7 +2855,10 @@ const renderMarketDetail = (market: MarketPreview): void => {
                 ? renderMarketEvidenceSkeleton(3)
                 : marketView.evidence.length === 0
                   ? `<div class="portfolio-empty compact">Market thread is still being prepared for this match.</div>`
-                : marketView.evidence.map((item) => `
+                : marketView.evidence.map((item) => {
+                  const briefingTarget = getBriefingTargetFromMarketEvidence(market, item);
+                  const isUnlockingEvidence = state.unlockingSummaryUrl === item.sourceUrl;
+                  return `
                 <article class="market-thread-update">
                   <div class="market-thread-marker"></div>
                   <div class="market-thread-update-content">
@@ -2843,16 +2869,18 @@ const renderMarketDetail = (market: MarketPreview): void => {
                     <p>${item.summary}</p>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
                       ${/example\.com/i.test(item.sourceUrl) ? "" : `<a class="market-thread-source-link" href="${item.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
-                      <button type="button" class="market-thread-source-link" data-unlock-briefing-url="${encodeURIComponent(item.sourceUrl)}">AI briefing</button>
+                      <button type="button" class="market-thread-source-link" data-unlock-briefing-url="${encodeURIComponent(item.sourceUrl)}" ${isUnlockingEvidence ? "disabled" : ""}>${isUnlockingEvidence ? "Preparing..." : "AI briefing"}</button>
                     </div>
-                    ${isBriefingUnlocked(getBriefingTargetFromMarketEvidence(market, item))
+                    ${isUnlockingEvidence
+                      ? `<div style="margin-top: 12px;">${renderSummarySkeleton()}</div>`
+                      : isBriefingUnlocked(briefingTarget)
                       ? (state.loadingSummaryUrl === item.sourceUrl
                           ? `<div style="margin-top: 12px;">${renderSummarySkeleton()}</div>`
-                          : `<div style="margin-top: 12px;">${formatAIBriefing(safeStorySummary(getBriefingTargetFromMarketEvidence(market, item), state.aiSummaries[item.sourceUrl]))}</div>`)
+                          : `<div style="margin-top: 12px;">${formatAIBriefing(safeStorySummary(briefingTarget, state.aiSummaries[item.sourceUrl]))}</div>`)
                       : ""}
                   </div>
                 </article>
-              `).join("")}
+              `}).join("")}
             </div>
           </section>
         </div>
@@ -3752,9 +3780,11 @@ const renderPortfolio = (): void => {
   if (state.walletAddress && !state.referralData && !state.referralError && !state.loadingReferralData) {
     void loadReferralData();
   }
-  if (state.walletAddress && !state.hasLoadedPortfolioPositions && !state.loadingPortfolioPositions) {
+  const positionsAreStale = state.walletAddress
+    && (!state.hasLoadedPortfolioPositions || Date.now() - state.portfolioPositionsLoadedAt > 15000);
+  if (positionsAreStale && !state.loadingPortfolioPositions) {
     if (state.portfolioMarketPreviews.length === 0) void loadPortfolioMarkets();
-    void loadPortfolioPositions();
+    void loadPortfolioPositions({ force: !state.hasLoadedPortfolioPositions });
   }
   const claimedMarkets = readClaimedMarkets();
   const portfolioMarkets = getPortfolioMarkets().filter((market) => {
