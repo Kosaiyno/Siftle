@@ -1814,7 +1814,7 @@ const loadPortfolioPositions = async (options: { force?: boolean } = {}): Promis
     state.loadingPortfolioPositions = false;
     state.hasLoadedPortfolioPositions = true;
     void reportLeaderboardEntry(true).catch(err => console.error("Failed to report leaderboard entry:", err));
-    if (state.activeSurface === "portfolio" || state.activeSurface === "leaderboard") render();
+    if (state.activeSurface === "portfolio" || state.activeSurface === "leaderboard" || state.activeSurface === "markets") render();
   }
 };
 
@@ -2639,8 +2639,15 @@ const placeOptionMarketOrder = async (marketId: string, optionId: string): Promi
     return;
   }
 
+  const heldOptionAmount = Math.max(0, Number(position?.optionSharesUsdc) || 0);
+  if (exiting && heldOptionAmount <= 0) {
+    showActionToast("Your pick is still loading. Please try again.");
+    await loadPortfolioPositions({ force: true });
+    return;
+  }
+
   const tradeAmount = exiting
-    ? Math.max(0.01, Number(position?.optionSharesUsdc) || Number(state.marketTradeAmount) || 0)
+    ? heldOptionAmount
     : normalizeMarketTradeAmount(Number(state.marketTradeAmount) || 0, "buy", "yes", undefined);
   state.marketTradeAmount = tradeAmount;
   state.marketTradeOptionId = exiting ? position?.optionId || option.id : option.id;
@@ -2861,7 +2868,10 @@ const renderMarketDetail = (market: MarketPreview): void => {
   const yesPriceLabel = isLoadingSnapshot ? "" : marketAddress ? `${yesPrice}¢` : "--";
   const noPriceLabel = isLoadingSnapshot ? "" : marketAddress ? `${noPrice}¢` : "--";
   const position = state.marketPositions[market.id] || { yesSharesUsdc: 0, noSharesUsdc: 0 };
-  const optionExitAmount = optionMarket && state.marketOrderMode === "sell" ? Math.max(0, Number(position.optionSharesUsdc) || 0) : 0;
+  const hasOptionPick = Boolean(position.optionId);
+  if (optionMarket && hasOptionPick && state.marketOrderMode !== "sell") state.marketOrderMode = "sell";
+  if (optionMarket && !hasOptionPick && state.marketOrderMode === "sell") state.marketOrderMode = "buy";
+  const optionExitAmount = optionMarket && state.marketOrderMode === "sell" && hasOptionPick ? Math.max(0, Number(position.optionSharesUsdc) || 0) : 0;
   const amount = optionExitAmount > 0
     ? optionExitAmount
     : normalizeMarketTradeAmount(Number(state.marketTradeAmount) || 0, state.marketOrderMode, state.marketTradeSide, position);
@@ -2878,8 +2888,6 @@ const renderMarketDetail = (market: MarketPreview): void => {
   if (!optionMarket) state.marketTradeSide = normalizeTradeSideForMode(state.marketOrderMode, state.marketTradeSide, position);
   const canTradeYes = !optionMarket && !marketResolved && !marketTradeLocked && positionReady && canTradeSide(state.marketOrderMode, "yes", position);
   const canTradeNo = !optionMarket && !marketResolved && !marketTradeLocked && positionReady && canTradeSide(state.marketOrderMode, "no", position);
-  const hasOptionPick = Boolean(position.optionId);
-  if (optionMarket && hasOptionPick && state.marketOrderMode !== "sell") state.marketOrderMode = "sell";
   const canSubmitTrade = optionMarket
     ? !marketResolved && !marketTradeLocked && positionReady && (state.marketOrderMode === "sell" ? hasOptionPick : !hasOptionPick && Boolean(selectedOption))
     : !marketResolved && !marketTradeLocked && positionReady && canTradeSide(state.marketOrderMode, state.marketTradeSide, position);

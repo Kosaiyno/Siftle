@@ -92,6 +92,26 @@ create table if not exists season_division_assignments (
 create index if not exists season_division_assignments_season_idx
   on season_division_assignments (season_id, division_number);
 
+create table if not exists option_market_positions (
+  market_id text not null,
+  wallet_address text not null,
+  option_id text not null,
+  option_label text,
+  amount_usdc numeric not null default 0,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  primary key (market_id, wallet_address)
+);
+
+create index if not exists option_market_positions_market_idx
+  on option_market_positions (market_id);
+
+create table if not exists option_market_resolutions (
+  market_id text primary key,
+  winning_option_id text not null,
+  resolved_at timestamptz default now()
+);
+
 create table if not exists analytics_daily (
   date_key text primary key,
   app_open integer default 0,
@@ -131,5 +151,7 @@ grant select, insert, update, delete on table ai_briefing_unlocks to service_rol
 grant select, insert, update, delete on table referral_codes to service_role;
 grant select, insert, update, delete on table referral_relationships to service_role;
 grant select, insert, update, delete on table season_division_assignments to service_role;
+grant select, insert, update, delete on table option_market_positions to service_role;
+grant select, insert, update, delete on table option_market_resolutions to service_role;
 grant select, insert, update, delete on table analytics_daily to service_role;
 grant select, insert, update, delete on table analytics_signups to service_role;
