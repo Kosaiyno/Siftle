@@ -24,6 +24,12 @@ app.get("/health", (_req, res) => {
 app.get("/x402/ai-briefing", gateway.require(price), (req, res) => {
   const topic = String(req.query.topic || "World Cup market news").slice(0, 140);
   const paid = req.payment || {};
+  console.log("[X402 SELLER] Paid AI briefing", {
+    topic,
+    paidBy: paid.payer || null,
+    paidAmount: paid.amount || null,
+    network: paid.network || null
+  });
   res.json({
     service: "Siftle AI Briefing Agent",
     model: "local-smoke-test",

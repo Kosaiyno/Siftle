@@ -41,6 +41,13 @@ const executeArcMarketOrder = async (
   yesPriceCents?: number,
   noPriceCents?: number
 ): Promise<string> => (await loadArcModule()).executeArcMarketOrder(marketAddress, mode, side, amountUsdc, onStatus, yesPriceCents, noPriceCents);
+const executeArcOptionMarketOrder = async (
+  marketId: string,
+  mode: "buy" | "sell",
+  optionId: string,
+  amountUsdc: number,
+  onStatus?: (status: string) => void
+): Promise<string> => (await loadArcModule()).executeArcOptionMarketOrder(marketId, mode, optionId, amountUsdc, onStatus);
 const disconnectArcWallet = (): void => {
   void loadArcModule().then((arc) => arc.disconnectArcWallet());
 };
@@ -110,6 +117,7 @@ const state: {
   selectedMarketId: string | null;
   marketOrderMode: "buy" | "sell";
   marketTradeSide: "yes" | "no";
+  marketTradeOptionId: string | null;
   marketTradeAmount: number;
   marketSnapshots: Record<string, ArcMarketSnapshot>;
   marketPositions: Record<string, ArcMarketPosition>;
@@ -157,6 +165,7 @@ const state: {
   selectedMarketId: null,
   marketOrderMode: "buy",
   marketTradeSide: "yes",
+  marketTradeOptionId: null,
   marketTradeAmount: 5,
   marketSnapshots: {},
   marketPositions: {},
@@ -214,6 +223,8 @@ interface MarketPreview {
   question: string;
   probability: number;
   marketAddress?: string;
+  optionMarket?: boolean;
+  options?: { id: string; label: string }[];
   kickoffAt?: string;
   closes: string;
   resolution: string;
@@ -1224,7 +1235,20 @@ const loadMarketEvidence = async (market: MarketPreview): Promise<void> => {
 };
 
 const getMarketAddress = (market: MarketPreview): string =>
-  market.marketAddress || window.SIFTLE_MARKET_ADDRESSES?.[market.id] || "";
+  market.optionMarket ? market.id : (market.marketAddress || window.SIFTLE_MARKET_ADDRESSES?.[market.id] || "");
+
+const getMarketOptions = (market: MarketPreview): { id: string; label: string }[] =>
+  Array.isArray(market.options)
+    ? market.options.filter((option) => option?.id && option?.label)
+    : [];
+
+const isOptionMarket = (market: MarketPreview): boolean =>
+  Boolean(market.optionMarket && getMarketOptions(market).length > 1);
+
+const getSelectedOption = (market: MarketPreview): { id: string; label: string } | null => {
+  const options = getMarketOptions(market);
+  return options.find((option) => option.id === state.marketTradeOptionId) || options[0] || null;
+};
 
 const formatMoney = (value: number): string =>
   value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1725,10 +1749,31 @@ const reportStoredLocalMarketTraders = (): void => {
 const loadMarketSnapshot = async (market: MarketPreview): Promise<void> => {
   const marketAddress = getMarketAddress(market);
   if (!marketAddress || state.marketSnapshots[market.id] || state.loadingMarketSnapshots[market.id] || state.checkedMarketSnapshots[market.id]) return;
+  if (isOptionMarket(market) && !state.walletAddress) {
+    state.marketSnapshots[market.id] = {
+      yesPriceCents: 0,
+      noPriceCents: 0,
+      volumeUsdc: 0,
+      yesSharesUsdc: 0,
+      noSharesUsdc: 0,
+      outcome: 0,
+      optionPools: Object.fromEntries(getMarketOptions(market).map((option) => [option.id, 0])),
+      resolvedOptionId: null,
+      traderCount: 0
+    };
+    state.checkedMarketSnapshots[market.id] = true;
+    return;
+  }
 
   state.loadingMarketSnapshots[market.id] = true;
   try {
-    state.marketSnapshots[market.id] = await readArcMarketSnapshot(marketAddress);
+    if (isOptionMarket(market) && state.walletAddress) {
+      const { position, snapshot } = await readArcMarketState(marketAddress, state.walletAddress);
+      state.marketPositions[market.id] = position;
+      state.marketSnapshots[market.id] = snapshot;
+    } else {
+      state.marketSnapshots[market.id] = await readArcMarketSnapshot(marketAddress);
+    }
   } catch (error) {
     console.warn(error);
   } finally {
@@ -2554,6 +2599,80 @@ const renderThreadTimelineItem = (story: NewsStory, label: string): string => {
 `;
 };
 
+const placeOptionMarketOrder = async (marketId: string, optionId: string): Promise<void> => {
+  if (!state.walletAddress) {
+    showActionToast("Session expired or wallet not connected. Please sign in.");
+    void connectWallet();
+    return;
+  }
+
+  const market = getPortfolioMarkets().find((item) => item.id === marketId);
+  if (!market || !isOptionMarket(market)) return;
+
+  const option = getMarketOptions(market).find((item) => item.id === optionId);
+  if (!option) {
+    showActionToast("Choose a valid option.");
+    return;
+  }
+
+  if (!state.hasLoadedPortfolioPositions && !state.loadingPortfolioPositions) {
+    state.marketTradeStatus = "Loading position...";
+    render();
+    await loadPortfolioPositions();
+    state.marketTradeStatus = null;
+  }
+
+  const snapshot = state.marketSnapshots[market.id];
+  if (isMarketResolved(market, snapshot)) {
+    showActionToast("This market is resolved and can no longer be traded.");
+    return;
+  }
+
+  const position = state.marketPositions[market.id];
+  if (position?.optionId) {
+    showActionToast("Your pick is already locked for this market.");
+    return;
+  }
+
+  const tradeAmount = normalizeMarketTradeAmount(Number(state.marketTradeAmount) || 0, "buy", "yes", undefined);
+  state.marketTradeAmount = tradeAmount;
+  state.marketTradeOptionId = option.id;
+  trackEvent("trade_attempt");
+
+  try {
+    state.marketTradeStatus = "Locking your pick...";
+    render();
+    await executeArcOptionMarketOrder(
+      market.id,
+      "buy",
+      option.id,
+      tradeAmount,
+      (status: string) => {
+        state.marketTradeStatus = status;
+        render();
+      }
+    );
+    delete state.marketSnapshots[market.id];
+    delete state.marketPositions[market.id];
+    delete state.checkedMarketSnapshots[market.id];
+    state.hasLoadedPortfolioPositions = false;
+    state.portfolioPositionsLoadedAt = 0;
+    state.walletAddress = await getConnectedArcWallet();
+    if (state.walletAddress) state.walletBalance = await readArcUsdcBalance(state.walletAddress);
+    await loadPortfolioPositions({ force: true });
+    trackEvent("trade_success");
+    showActionToast(`Pick locked: ${option.label}`);
+    state.tradeDrawerOpen = false;
+  } catch (error) {
+    trackEvent("trade_failed");
+    showActionToast(error instanceof Error ? error.message : "Trade failed");
+  } finally {
+    state.marketTradeStatus = null;
+    renderWalletState();
+    render();
+  }
+};
+
 const renderThreadView = (): void => {
   if (!storyDetail || !storyList) return;
 
@@ -2659,10 +2778,12 @@ const renderDetail = (): void => {
 const renderMarketCard = (market: MarketPreview): string => {
   const snapshot = state.marketSnapshots[market.id];
   const marketAddress = getMarketAddress(market);
+  const optionMarket = isOptionMarket(market);
+  const optionCount = getMarketOptions(market).length;
 
   const yesPrice = snapshot?.yesPriceCents;
   const displayProbability = yesPrice ?? market.probability;
-  const probabilityLabel = `${displayProbability}%`;
+  const probabilityLabel = optionMarket ? `${optionCount}` : `${displayProbability}%`;
   const shareLabel =
     yesPrice === undefined ? (marketAddress ? "Loading Arc pools" : "Arc setup required") : `Yes ${yesPrice}¢ · No ${100 - yesPrice}¢`;
   const displayShareLabel = yesPrice === undefined
@@ -2691,10 +2812,10 @@ const renderMarketCard = (market: MarketPreview): string => {
       </div>
       <div class="market-probability-row">
         <strong>${probabilityLabel}</strong>
-        <span>${marketAddress ? "market probability" : "pending deployment"}</span>
-        <span class="market-share-prices">${displayShareLabel}</span>
+        <span>${optionMarket ? "possible outcomes" : marketAddress ? "market probability" : "pending deployment"}</span>
+        <span class="market-share-prices">${optionMarket ? "Pick exactly one" : displayShareLabel}</span>
       </div>
-      <div class="market-meter" aria-hidden="true"><span style="width: ${displayProbability}%"></span></div>
+      <div class="market-meter" aria-hidden="true"><span style="width: ${optionMarket ? 100 : displayProbability}%"></span></div>
       <div class="market-card-footer">
         <span>${view.evidence.length} thread updates</span>
         <span>${snapshot ? `$${Math.round(snapshot.volumeUsdc).toLocaleString()} volume` : `Closes ${market.closes}`}</span>
@@ -2722,6 +2843,10 @@ const renderMarketDetail = (market: MarketPreview): void => {
   const isLoadingEvidence = !state.checkedMarketEvidence[market.id];
   const marketAddress = getMarketAddress(market);
   const snapshot = state.marketSnapshots[market.id];
+  const optionMarket = isOptionMarket(market);
+  const optionList = getMarketOptions(market);
+  if (optionMarket && !state.marketTradeOptionId) state.marketTradeOptionId = optionList[0]?.id || null;
+  const selectedOption = getSelectedOption(market);
   const isLoadingSnapshot = Boolean(marketAddress && !snapshot);
   const yesPrice = snapshot?.yesPriceCents ?? (marketAddress ? market.probability : 0);
   const noPrice = snapshot?.noPriceCents ?? (marketAddress ? 100 - market.probability : 0);
@@ -2737,10 +2862,13 @@ const renderMarketDetail = (market: MarketPreview): void => {
   const marketResolved = isMarketResolved(market, snapshot);
   const marketTradeLockMessage = getMarketTradeLockMessage(market, snapshot);
   const marketTradeLocked = Boolean(marketTradeLockMessage);
-  state.marketTradeSide = normalizeTradeSideForMode(state.marketOrderMode, state.marketTradeSide, position);
-  const canTradeYes = !marketResolved && !marketTradeLocked && positionReady && canTradeSide(state.marketOrderMode, "yes", position);
-  const canTradeNo = !marketResolved && !marketTradeLocked && positionReady && canTradeSide(state.marketOrderMode, "no", position);
-  const canSubmitTrade = !marketResolved && !marketTradeLocked && positionReady && canTradeSide(state.marketOrderMode, state.marketTradeSide, position);
+  if (!optionMarket) state.marketTradeSide = normalizeTradeSideForMode(state.marketOrderMode, state.marketTradeSide, position);
+  const canTradeYes = !optionMarket && !marketResolved && !marketTradeLocked && positionReady && canTradeSide(state.marketOrderMode, "yes", position);
+  const canTradeNo = !optionMarket && !marketResolved && !marketTradeLocked && positionReady && canTradeSide(state.marketOrderMode, "no", position);
+  const hasOptionPick = Boolean(position.optionId);
+  const canSubmitTrade = optionMarket
+    ? !marketResolved && !marketTradeLocked && positionReady && !hasOptionPick && Boolean(selectedOption)
+    : !marketResolved && !marketTradeLocked && positionReady && canTradeSide(state.marketOrderMode, state.marketTradeSide, position);
   const yesDisabledLabel = marketResolved
     ? "Market resolved"
     : marketTradeLockMessage
@@ -2755,9 +2883,11 @@ const renderMarketDetail = (market: MarketPreview): void => {
     : state.marketOrderMode === "sell"
       ? "No NO shares"
       : "Exit YES first";
-  const projectedPayout = estimatePoolPayout(snapshot, state.marketTradeSide, amount, state.marketOrderMode, position);
+  const projectedPayout = optionMarket
+    ? amount
+    : estimatePoolPayout(snapshot, state.marketTradeSide, amount, state.marketOrderMode, position);
   const orderLabel = state.marketOrderMode === "buy" ? "Buy" : "Exit";
-  const marketStatus = marketAddress ? "Arc testnet live" : "Contract not deployed";
+  const marketStatus = optionMarket ? "Option market" : marketAddress ? "Arc testnet live" : "Contract not deployed";
 
   storyList.hidden = true;
   storyDetail.hidden = false;
@@ -2772,9 +2902,28 @@ const renderMarketDetail = (market: MarketPreview): void => {
     void loadPortfolioPositions({ force: !state.hasLoadedPortfolioPositions });
   }
 
-  const hasPosition = position.yesSharesUsdc > 0 || position.noSharesUsdc > 0;
+  const hasPosition = optionMarket ? Boolean(position.optionId) : position.yesSharesUsdc > 0 || position.noSharesUsdc > 0;
   let positionHtml = "";
-  if (hasPosition && state.walletAddress) {
+  if (optionMarket && hasPosition && state.walletAddress) {
+    const optionPool = snapshot?.optionPools?.[position.optionId || ""] || 0;
+    const totalPool = snapshot?.volumeUsdc || 0;
+    const payout = position.optionSharesUsdc && optionPool > 0 ? (position.optionSharesUsdc / optionPool) * totalPool : 0;
+    positionHtml = `
+      <div class="user-market-position-box" style="margin: 16px 0; padding: 16px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.15); border-radius: 12px; font-family: 'Space Grotesk', sans-serif;">
+        <h3 style="font-size: 0.9rem; font-weight: 700; color: var(--market-text-main); margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.05em;">Your Pick</h3>
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px;">
+          <div>
+            <span style="font-size: 0.72rem; color: var(--market-text-muted); display: block; margin-bottom: 2px;">Option</span>
+            <strong style="font-size: 0.95rem; color: var(--market-text-main);">${escapeHtml(position.optionLabel || "Selected option")}</strong>
+          </div>
+          <div>
+            <span style="font-size: 0.72rem; color: var(--market-text-muted); display: block; margin-bottom: 2px;">Projected payout</span>
+            <strong style="font-size: 0.95rem; color: var(--market-text-main);">$${formatMoney(payout || position.optionSharesUsdc || 0)}</strong>
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (hasPosition && state.walletAddress) {
     const heldRows = getHeldPositionRows(position, snapshot);
 
     positionHtml = `
@@ -2888,11 +3037,12 @@ const renderMarketDetail = (market: MarketPreview): void => {
 
       <div class="sticky-trade-bar">
         <div class="sticky-trade-info">
-          <span>Yes <strong>${yesPriceLabel}</strong></span>
-          <span>No <strong>${noPriceLabel}</strong></span>
+          ${optionMarket
+            ? `<span>${hasOptionPick ? "Pick locked" : "Choose one option"}</span><span><strong>${optionList.length} options</strong></span>`
+            : `<span>Yes <strong>${yesPriceLabel}</strong></span><span>No <strong>${noPriceLabel}</strong></span>`}
         </div>
         <button class="sticky-trade-btn" type="button" id="openTradeDrawerBtn" ${marketResolved || marketTradeLocked ? "disabled" : ""}>
-          ${marketResolved ? "Market Resolved" : marketTradeLockMessage || "Trade Market"}
+          ${marketResolved ? "Market Resolved" : marketTradeLockMessage || (optionMarket ? hasOptionPick ? "Pick Locked" : "Pick Outcome" : "Trade Market")}
         </button>
       </div>
 
@@ -2903,13 +3053,26 @@ const renderMarketDetail = (market: MarketPreview): void => {
           <button class="close-drawer-btn" type="button" id="closeTradeDrawerBtn" aria-label="Close trade panel">&times;</button>
         </div>
         <div class="trade-drawer-body">
-          <div class="market-order-mode">
+          ${optionMarket ? "" : `<div class="market-order-mode">
             <button type="button" class="${state.marketOrderMode === "buy" ? "active" : ""}" data-market-order-mode="buy" ${marketResolved || marketTradeLocked ? "disabled" : ""}>Buy</button>
             <button type="button" class="${state.marketOrderMode === "sell" ? "active" : ""}" data-market-order-mode="sell" ${marketResolved || marketTradeLocked ? "disabled" : ""}>Exit</button>
-          </div>
+          </div>`}
 
           <div class="market-action-grid">
-            ${isLoadingSnapshot
+            ${optionMarket
+              ? optionList.map((option) => {
+                const poolAmount = snapshot?.optionPools?.[option.id] || 0;
+                const active = state.marketTradeOptionId === option.id || position.optionId === option.id;
+                const disabled = marketResolved || marketTradeLocked || hasOptionPick || !positionReady;
+                return `
+                  <button type="button" class="market-side option ${active ? "active" : ""} ${disabled ? "disabled" : ""}" data-market-option-id="${escapeHtml(option.id)}" ${disabled ? "disabled" : ""}>
+                    <span>${escapeHtml(option.label)}</span>
+                    <strong>$${formatMoney(poolAmount)}</strong>
+                    ${position.optionId === option.id ? `<small>Your pick</small>` : ""}
+                  </button>
+                `;
+              }).join("")
+              : isLoadingSnapshot
               ? `
                 <div class="market-side yes" aria-busy="true"><div class="skeleton skeleton-line md" style="height: 18px; margin: 0 auto 6px;"></div></div>
                 <div class="market-side no" aria-busy="true"><div class="skeleton skeleton-line md" style="height: 18px; margin: 0 auto 6px;"></div></div>
@@ -2938,7 +3101,7 @@ const renderMarketDetail = (market: MarketPreview): void => {
           </div>
 
           <div class="market-inline-payout">
-            <span>${state.marketOrderMode === "buy" ? "Projected payout" : "Exit amount"}</span>
+            <span>${optionMarket ? "Your entry" : state.marketOrderMode === "buy" ? "Projected payout" : "Exit amount"}</span>
             <strong>$${formatMoney(projectedPayout)}</strong>
           </div>
 
@@ -2954,8 +3117,12 @@ const renderMarketDetail = (market: MarketPreview): void => {
                 : state.walletAddress
                   ? !positionReady
                     ? `<button type="button" class="market-submit-button disabled" style="opacity: 0.6; pointer-events: none;">Loading position...</button>`
+                    : optionMarket && hasOptionPick
+                    ? `<button type="button" class="market-submit-button disabled" style="opacity: 0.6; pointer-events: none;">Pick already locked</button>`
                     : canSubmitTrade
-                    ? `<button type="button" class="market-submit-button" data-market-trade="${state.marketTradeSide}">Confirm ${orderLabel} ${state.marketTradeSide === "yes" ? "Yes" : "No"}</button>`
+                    ? optionMarket
+                      ? `<button type="button" class="market-submit-button" data-market-option-trade="${escapeHtml(selectedOption?.id || "")}">Confirm ${escapeHtml(selectedOption?.label || "pick")}</button>`
+                      : `<button type="button" class="market-submit-button" data-market-trade="${state.marketTradeSide}">Confirm ${orderLabel} ${state.marketTradeSide === "yes" ? "Yes" : "No"}</button>`
                     : `<button type="button" class="market-submit-button disabled" style="opacity: 0.6; pointer-events: none;">No valid ${orderLabel.toLowerCase()} side</button>`
                   : `<button type="button" class="market-submit-button" data-connect-wallet>Sign in to trade</button>`
             }
@@ -3619,6 +3786,40 @@ const getMarketOutcomeLabel = (outcome?: number): string => {
 const renderPortfolioPositionCard = (market: MarketPreview): string => {
   const position = state.marketPositions[market.id] || { yesSharesUsdc: 0, noSharesUsdc: 0 };
   const snapshot = state.marketSnapshots[market.id];
+  if (isOptionMarket(market)) {
+    const resolvedOptionId = snapshot?.resolvedOptionId || null;
+    const isResolved = Boolean(resolvedOptionId);
+    const optionPool = snapshot?.optionPools?.[position.optionId || ""] || 0;
+    const totalPool = snapshot?.volumeUsdc || 0;
+    const won = isResolved && position.optionId === resolvedOptionId;
+    const payout = won && optionPool > 0 ? ((position.optionSharesUsdc || 0) / optionPool) * totalPool : 0;
+    const winningLabel = getMarketOptions(market).find((option) => option.id === resolvedOptionId)?.label;
+    const isClaimed = readClaimedMarkets().has(market.id);
+    return `
+      <article class="portfolio-position-card">
+        <div class="portfolio-position-top">
+          <span class="category-chip ${market.category}">${displayCategory(market.category)}</span>
+          <span>${isResolved ? `Resolved: ${escapeHtml(winningLabel || "Option selected")}` : "Open"}</span>
+        </div>
+        <h2>${market.question}</h2>
+        <div class="portfolio-position-stats">
+          <div><span>Your pick</span><strong>${escapeHtml(position.optionLabel || "Selected option")}</strong></div>
+          <div><span>Entry</span><strong>$${formatMoney(position.optionSharesUsdc || 0)}</strong></div>
+          <div><span>Projected payout</span><strong>$${formatMoney(payout || position.optionSharesUsdc || 0)}</strong></div>
+        </div>
+        <div class="portfolio-position-footer">
+          <span>${isResolved ? "" : `Closes ${market.closes}`}</span>
+          ${isResolved
+            ? isClaimed
+              ? `<span style="color: #34d399; font-size: 0.82rem; font-weight: 800;">Claimed</span>`
+              : won
+                ? `<button type="button" class="connect-wallet-btn" data-claim-market="${market.id}" style="background: #ffffff !important; color: #000000 !important; border: 1px solid #ffffff !important; border-radius: 6px !important; padding: 8px 14px !important; font-size: 0.82rem !important; font-weight: 700 !important; cursor: pointer !important;">Claim $${formatMoney(payout)}</button>`
+                : `<span style="color: #ef4444; font-size: 0.82rem; font-weight: 800;">Lost</span>`
+            : ""}
+        </div>
+      </article>
+    `;
+  }
   const outcome = getMarketOutcomeLabel(snapshot?.outcome);
   const heldRows = getHeldPositionRows(position, snapshot);
   const bestPotentialPayout = heldRows.reduce((best, row) => Math.max(best, row.payout), 0);
@@ -3789,7 +3990,8 @@ const renderPortfolio = (): void => {
   const claimedMarkets = readClaimedMarkets();
   const portfolioMarkets = getPortfolioMarkets().filter((market) => {
     const position = state.marketPositions[market.id];
-    return claimedMarkets.has(market.id) || (position && position.yesSharesUsdc + position.noSharesUsdc > 0);
+    return claimedMarkets.has(market.id)
+      || (position && (position.yesSharesUsdc + position.noSharesUsdc > 0 || (position.optionSharesUsdc || 0) > 0));
   });
   const openPositions = portfolioMarkets.filter((market) => (state.marketSnapshots[market.id]?.outcome ?? 0) === 0);
   const finalizedPositions = portfolioMarkets.filter((market) => (state.marketSnapshots[market.id]?.outcome ?? 0) !== 0);
@@ -4295,6 +4497,19 @@ storyDetail?.addEventListener("click", (event) => {
     void placeMarketOrder(state.selectedMarketId, side);
     return;
   }
+  const optionTradeButton = target.closest<HTMLButtonElement>("[data-market-option-trade]");
+  if (optionTradeButton && state.selectedMarketId) {
+    const optionId = optionTradeButton.dataset.marketOptionTrade || state.marketTradeOptionId || "";
+    void placeOptionMarketOrder(state.selectedMarketId, optionId);
+    return;
+  }
+  const optionButton = target.closest<HTMLButtonElement>("[data-market-option-id]");
+  if (optionButton) {
+    if (optionButton.disabled || optionButton.classList.contains("disabled")) return;
+    state.marketTradeOptionId = optionButton.dataset.marketOptionId || null;
+    render();
+    return;
+  }
   const tradeSide = target.closest<HTMLButtonElement>("[data-market-trade-side]");
   if (tradeSide) {
     if (tradeSide.disabled || tradeSide.classList.contains("disabled")) return;
@@ -4338,7 +4553,9 @@ storyDetail?.addEventListener("input", (event) => {
     position
   );
   target.value = String(state.marketTradeAmount);
-  const payout = estimatePoolPayout(snapshot, state.marketTradeSide, state.marketTradeAmount, state.marketOrderMode, position);
+  const payout = market && isOptionMarket(market)
+    ? state.marketTradeAmount
+    : estimatePoolPayout(snapshot, state.marketTradeSide, state.marketTradeAmount, state.marketOrderMode, position);
   const payoutValue = storyDetail.querySelector<HTMLElement>(".market-inline-payout strong");
   if (payoutValue) payoutValue.textContent = `$${formatMoney(payout)}`;
 });

@@ -4411,6 +4411,7 @@ const getPublishedFeed = async (category) => {
 
 
 const refreshIntervalMinutes = Number(process.env.REFRESH_INTERVAL_MINUTES ?? 60);
+const disableFeedRefresh = process.env.DISABLE_FEED_REFRESH === "true";
 const publishedSnapshots = new Map();
 const publishStatus = {
   is_running: false,
@@ -4619,7 +4620,9 @@ process.on("SIGINT", () => void handleShutdown("SIGINT"));
 
 // Kick off initial refresh and schedule periodic refreshes
 if (isMain) {
-  if (isShelbyArchiveConfigured()) {
+  if (disableFeedRefresh) {
+    console.log("[FEEDS] Feed refresh disabled by DISABLE_FEED_REFRESH=true.");
+  } else if (isShelbyArchiveConfigured()) {
     if (existsSync(analyticsBootFile)) {
       console.log("[ANALYTICS] Local analytics found. Skipping Shelby restore on boot.");
       void refreshPublishedFeeds("startup");
@@ -4646,7 +4649,9 @@ if (isMain) {
     void refreshPublishedFeeds("startup");
   }
 
-  setInterval(() => void refreshPublishedFeeds("scheduled"), Math.max(1, refreshIntervalMinutes) * 60 * 1000);
+  if (!disableFeedRefresh) {
+    setInterval(() => void refreshPublishedFeeds("scheduled"), Math.max(1, refreshIntervalMinutes) * 60 * 1000);
+  }
 }
 
 const OTP_FILE = join(root, ".siftle", "otp.json");
@@ -5292,6 +5297,147 @@ const readBackendWalletMarketState = async (walletAddress, marketAddress) => {
     }
   };
 };
+
+function ensureOptionMarketStore(data) {
+  if (!data.optionMarkets) data.optionMarkets = {};
+  if (!data.optionMarkets.markets) data.optionMarkets.markets = {};
+  return data.optionMarkets.markets;
+}
+
+function getMarketOptions(market) {
+  return Array.isArray(market?.options)
+    ? market.options
+        .map((option) => ({
+          id: String(option?.id || "").trim(),
+          label: String(option?.label || "").trim()
+        }))
+        .filter((option) => option.id && option.label)
+    : [];
+}
+
+function readOptionMarketStateFromData(data, walletAddress, market) {
+  const cleanWallet = normalizeWalletAddress(walletAddress);
+  const options = getMarketOptions(market);
+  const store = ensureOptionMarketStore(data);
+  const marketStore = store[market.id] || {};
+  const optionPools = Object.fromEntries(options.map((option) => [option.id, 0]));
+  Object.entries(marketStore.optionPools || {}).forEach(([optionId, amount]) => {
+    if (optionPools[optionId] !== undefined) optionPools[optionId] = Math.max(0, Number(amount) || 0);
+  });
+  const position = cleanWallet ? marketStore.positions?.[cleanWallet] : null;
+  const volumeUsdc = Object.values(optionPools).reduce((sum, amount) => sum + (Number(amount) || 0), 0);
+  return {
+    position: {
+      yesSharesUsdc: 0,
+      noSharesUsdc: 0,
+      optionId: position?.optionId || null,
+      optionLabel: options.find((option) => option.id === position?.optionId)?.label || position?.optionLabel || null,
+      optionSharesUsdc: Math.max(0, Number(position?.amountUsdc) || 0)
+    },
+    snapshot: {
+      yesPriceCents: 0,
+      noPriceCents: 0,
+      volumeUsdc,
+      yesSharesUsdc: 0,
+      noSharesUsdc: 0,
+      optionPools,
+      outcome: marketStore.resolvedOptionId ? 1 : 0,
+      resolvedOptionId: marketStore.resolvedOptionId || null,
+      traderCount: Array.isArray(marketStore.traders) ? marketStore.traders.length : Object.keys(marketStore.positions || {}).length
+    }
+  };
+}
+
+function saveOptionMarketPosition(data, market, walletAddress, optionId, optionLabel, amountUsdc) {
+  const cleanWallet = normalizeWalletAddress(walletAddress);
+  if (!cleanWallet) throw new Error("Missing wallet");
+  const store = ensureOptionMarketStore(data);
+  if (!store[market.id]) {
+    store[market.id] = {
+      positions: {},
+      optionPools: {},
+      traders: [],
+      resolvedOptionId: null,
+      claimed: {}
+    };
+  }
+  const marketStore = store[market.id];
+  if (!marketStore.positions) marketStore.positions = {};
+  if (!marketStore.optionPools) marketStore.optionPools = {};
+  if (!Array.isArray(marketStore.traders)) marketStore.traders = [];
+  if (marketStore.resolvedOptionId) throw new Error("This market is resolved and can no longer be traded");
+
+  const existing = marketStore.positions[cleanWallet];
+  if (existing && existing.optionId && existing.optionId !== optionId) {
+    throw new Error("You already picked an option in this market");
+  }
+  if (existing && existing.optionId === optionId) {
+    throw new Error("Your pick is already locked");
+  }
+
+  marketStore.positions[cleanWallet] = {
+    optionId,
+    optionLabel,
+    amountUsdc,
+    createdAt: new Date().toISOString()
+  };
+  marketStore.optionPools[optionId] = (Number(marketStore.optionPools[optionId]) || 0) + amountUsdc;
+  if (!marketStore.traders.includes(cleanWallet)) marketStore.traders.push(cleanWallet);
+}
+
+function resolveOptionMarketInData(data, market, winningOptionId) {
+  const option = getMarketOptions(market).find((entry) => entry.id === winningOptionId);
+  if (!option) throw new Error("Choose a valid winning option");
+  const store = ensureOptionMarketStore(data);
+  const marketStore = store[market.id];
+  if (!marketStore) throw new Error("No picks have been placed in this market yet");
+  marketStore.resolvedOptionId = option.id;
+  marketStore.resolvedAt = new Date().toISOString();
+
+  const leaderboard = ensureLeaderboardState(data);
+  Object.entries(marketStore.positions || {}).forEach(([walletAddress, position]) => {
+    const cleanWallet = normalizeWalletAddress(walletAddress);
+    if (!cleanWallet || isAdminWallet(cleanWallet)) return;
+    if (!leaderboard.traders[cleanWallet]) {
+      leaderboard.traders[cleanWallet] = {
+        points: 0,
+        status: "0 wins, 0 losses",
+        username: "",
+        reported_points: 0,
+        reported_status: "0 wins, 0 losses",
+        first_activity_at: position.createdAt || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+    }
+    if (!leaderboard.resolvedResults[cleanWallet]) leaderboard.resolvedResults[cleanWallet] = {};
+    leaderboard.resolvedResults[cleanWallet][market.id] = {
+      result: position.optionId === option.id ? "win" : "loss",
+      points: position.optionId === option.id ? 100 : 0,
+      option_id: position.optionId,
+      winning_option_id: option.id
+    };
+  });
+  applyCompensationChallengeBonuses(data);
+  applyReferralWinBonuses(data);
+}
+
+function getOptionMarketClaimPreview(data, market, walletAddress) {
+  const cleanWallet = normalizeWalletAddress(walletAddress);
+  const store = ensureOptionMarketStore(data);
+  const marketStore = store[market.id] || {};
+  const position = marketStore.positions?.[cleanWallet];
+  const winningOptionId = marketStore.resolvedOptionId || null;
+  if (!position || !winningOptionId) return { won: false, amountUsdc: 0 };
+  if (position.optionId !== winningOptionId) return { won: false, amountUsdc: 0 };
+  const winningPool = Number(marketStore.optionPools?.[winningOptionId]) || 0;
+  const totalPool = Object.values(marketStore.optionPools || {}).reduce((sum, value) => sum + (Number(value) || 0), 0);
+  const amountUsdc = winningPool > 0 ? ((Number(position.amountUsdc) || 0) / winningPool) * totalPool : 0;
+  return {
+    won: amountUsdc > 0,
+    amountUsdc,
+    alreadyClaimed: Boolean(marketStore.claimed?.[cleanWallet])
+  };
+}
 
 const ensureGatewayAvailableBalance = async (buyer, requiredUsdc) => {
   const requiredBaseUnits = parseUnits(requiredUsdc.toFixed(6), 6);
@@ -7747,6 +7893,15 @@ const server = createServer(async (request, response) => {
         const entryAddress = normalizeWalletAddress(entry.marketAddress) || getConfiguredMarketAddress(entry.id);
         return String(entry.id || "").trim() === marketRef || (normalizedRef && entryAddress === normalizedRef);
       });
+      if (market?.optionMarket) {
+        const data = loadAnalytics();
+        sendJson(response, 200, {
+          walletAddress: user.address,
+          marketAddress: market.id,
+          ...readOptionMarketStateFromData(data, user.address, market)
+        });
+        return;
+      }
       const marketAddress = normalizeWalletAddress(market?.marketAddress) || getConfiguredMarketAddress(market?.id || marketRef) || normalizedRef;
       if (!marketAddress || isLocalTestMarketAddress(marketAddress)) {
         sendJson(response, 400, { error: "This market is not available" });
@@ -7758,6 +7913,178 @@ const server = createServer(async (request, response) => {
         walletAddress: user.address,
         marketAddress,
         ...state
+      });
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/backend-wallet/option-trade" && request.method === "POST") {
+    if (!requireBackendWalletMode(request, response)) return;
+    try {
+      const body = await readJsonBody(request);
+      const sessionToken = String(body.sessionToken || "");
+      const marketId = String(body.marketId || "").trim();
+      const optionId = String(body.optionId || "").trim();
+      const mode = body.mode === "sell" ? "sell" : "buy";
+      const amountUsdc = Number(body.amountUsdc);
+      const user = await getBackendWalletUserBySession(sessionToken);
+
+      if (!user) {
+        sendJson(response, 401, { error: "Session expired. Please sign in again." });
+        return;
+      }
+      if (!marketId || !optionId || !Number.isFinite(amountUsdc) || amountUsdc <= 0) {
+        sendJson(response, 400, { error: "marketId, optionId and amount are required" });
+        return;
+      }
+      if (mode !== "buy") {
+        sendJson(response, 400, { error: "Option picks are locked after entry for this test version" });
+        return;
+      }
+      if (amountUsdc < 5 || amountUsdc > 10) {
+        sendJson(response, 400, { error: "Trade amount must be between $5 and $10" });
+        return;
+      }
+
+      const market = getActiveMarkets().find((entry) => String(entry.id || "").trim() === marketId && entry.optionMarket);
+      if (!market) {
+        sendJson(response, 400, { error: "This option market is not available" });
+        return;
+      }
+
+      const option = getMarketOptions(market).find((entry) => entry.id === optionId);
+      if (!option) {
+        sendJson(response, 400, { error: "Choose a valid option" });
+        return;
+      }
+
+      const lockTime = market.kickoffAt ? new Date(market.kickoffAt).getTime() - 20 * 60 * 1000 : null;
+      if (lockTime && Number.isFinite(lockTime) && Date.now() >= lockTime) {
+        sendJson(response, 400, { error: "Trading is locked for this market" });
+        return;
+      }
+
+      const data = loadAnalytics();
+      saveOptionMarketPosition(data, market, user.address, option.id, option.label, amountUsdc);
+
+      const treasuryAddress = normalizeWalletAddress(aiBriefingTreasuryAddress || process.env.SIFTLE_TREASURY_ADDRESS);
+      let txHash = `0xoptionpick${randomUUID().replace(/-/g, "").slice(0, 24)}`;
+      if (treasuryAddress) {
+        const signer = new Wallet(user.privateKey, leaderboardProvider);
+        const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
+        const tx = await usdc.transfer(treasuryAddress, parseUnits(amountUsdc.toFixed(6), 6));
+        const receipt = await tx.wait();
+        txHash = receipt?.hash || tx.hash;
+      }
+
+      saveAnalytics(data);
+      leaderboardCache.expiresAt = 0;
+      leaderboardCache.analytics = null;
+      sendJson(response, 200, {
+        txHash,
+        walletAddress: user.address,
+        optionId: option.id,
+        optionLabel: option.label
+      });
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/backend-wallet/option-claim" && request.method === "POST") {
+    if (!requireBackendWalletMode(request, response)) return;
+    try {
+      const body = await readJsonBody(request);
+      const sessionToken = String(body.sessionToken || "");
+      const marketId = String(body.marketId || "").trim();
+      const user = await getBackendWalletUserBySession(sessionToken);
+      if (!user) {
+        sendJson(response, 401, { error: "Session expired. Please sign in again." });
+        return;
+      }
+      const market = getKnownMarkets().find((entry) => String(entry.id || "").trim() === marketId && entry.optionMarket);
+      if (!market) {
+        sendJson(response, 400, { error: "This option market is not available" });
+        return;
+      }
+      const data = loadAnalytics();
+      const store = ensureOptionMarketStore(data);
+      const marketStore = store[market.id] || {};
+      const cleanWallet = normalizeWalletAddress(user.address);
+      const claim = getOptionMarketClaimPreview(data, market, cleanWallet);
+      if (!marketStore.resolvedOptionId) {
+        sendJson(response, 400, { error: "Market is not resolved yet" });
+        return;
+      }
+      if (claim.alreadyClaimed) {
+        sendJson(response, 400, { error: "Already claimed" });
+        return;
+      }
+      if (!claim.won || claim.amountUsdc <= 0) {
+        sendJson(response, 400, { error: "No winning payout to claim" });
+        return;
+      }
+      if (!process.env.ARC_DEPLOYER_PRIVATE_KEY) {
+        sendJson(response, 500, { error: "Payout wallet is not configured" });
+        return;
+      }
+
+      const signer = new Wallet(process.env.ARC_DEPLOYER_PRIVATE_KEY, leaderboardProvider);
+      const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
+      const tx = await usdc.transfer(cleanWallet, parseUnits(claim.amountUsdc.toFixed(6), 6));
+      const receipt = await tx.wait();
+      if (!marketStore.claimed) marketStore.claimed = {};
+      marketStore.claimed[cleanWallet] = {
+        amountUsdc: claim.amountUsdc,
+        txHash: receipt?.hash || tx.hash,
+        claimedAt: new Date().toISOString()
+      };
+      saveAnalytics(data);
+      sendJson(response, 200, {
+        txHash: receipt?.hash || tx.hash,
+        amountUsdc: claim.amountUsdc,
+        walletAddress: cleanWallet
+      });
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/admin/option-market/resolve" && request.method === "POST") {
+    try {
+      const body = await readJsonBody(request);
+      const configuredToken = String(process.env.SIFTLE_ADMIN_TOKEN || "").trim();
+      const providedToken = String(body.adminToken || request.headers["x-siftle-admin-token"] || "").trim();
+      if (configuredToken && providedToken !== configuredToken) {
+        sendJson(response, 401, { error: "Unauthorized" });
+        return;
+      }
+      if (!configuredToken && !isLocalRequest(request)) {
+        sendJson(response, 401, { error: "Admin token is required" });
+        return;
+      }
+
+      const marketId = String(body.marketId || "").trim();
+      const winningOptionId = String(body.winningOptionId || "").trim();
+      const market = getKnownMarkets().find((entry) => String(entry.id || "").trim() === marketId && entry.optionMarket);
+      if (!market) {
+        sendJson(response, 400, { error: "This option market is not available" });
+        return;
+      }
+      const data = await loadLeaderboardFromSupabase(loadAnalytics());
+      resolveOptionMarketInData(data, market, winningOptionId);
+      saveAnalytics(data);
+      await saveLeaderboardToSupabase(data);
+      leaderboardCache.expiresAt = 0;
+      leaderboardCache.analytics = null;
+      sendJson(response, 200, {
+        ok: true,
+        marketId,
+        winningOptionId
       });
     } catch (err) {
       sendJson(response, 500, { error: err.message });
@@ -7898,6 +8225,11 @@ const server = createServer(async (request, response) => {
           warmGatewayBalanceInBackground(user.privateKey, x402PriceUsdc);
           await ensureGatewayAvailableBalance(buyer, x402PriceUsdc);
           const paid = await payWithLocalX402Script(user.privateKey, targetUrl);
+          console.log("[AI BRIEFING] x402 payment completed", {
+            walletAddress: user.address,
+            targetUrl,
+            paymentAmount: paid.paymentAmount || x402PriceUsdc
+          });
           sendJson(response, 200, {
             txHash: `0xmockunlockx402${Math.random().toString(16).slice(2)}`,
             walletAddress: user.address,
@@ -7916,6 +8248,11 @@ const server = createServer(async (request, response) => {
       const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
       const tx = await usdc.transfer(treasuryAddress, parseUnits(amountUsdc.toFixed(6), 6));
       const receipt = await tx.wait();
+      console.log("[AI BRIEFING] USDC fallback payment completed", {
+        walletAddress: user.address,
+        txHash: receipt?.hash || tx.hash,
+        amountUsdc
+      });
       sendJson(response, 200, {
         txHash: receipt?.hash || tx.hash,
         walletAddress: user.address,

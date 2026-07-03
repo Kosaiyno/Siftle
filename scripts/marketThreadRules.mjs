@@ -1,4 +1,41 @@
 export const marketThreadRules = {
+  "wc-vozinha-saves-argentina": {
+    category: "Sports",
+    topic: "Vozinha Argentina Save Watch",
+    includeAnySets: [
+      ["vozinha", "cape verde", "argentina"],
+      ["save", "saves", "keeper", "goalkeeper", "official save total", "survival", "pressure"]
+    ],
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball"]
+  },
+  "wc-messi-impact-cape-verde": {
+    category: "Sports",
+    topic: "Messi Cape Verde Impact",
+    includeAnySets: [
+      ["messi", "argentina"],
+      ["cape verde"],
+      ["goal", "assist", "score", "scores", "creator", "attack", "impact"]
+    ],
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball"]
+  },
+  "wc-australia-egypt-first-event": {
+    category: "Sports",
+    topic: "Australia Egypt First Event",
+    includeAnySets: [
+      ["australia", "egypt", "salah"],
+      ["shot", "shot on target", "yellow card", "goal", "first event", "pressure"]
+    ],
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball"]
+  },
+  "wc-colombia-ghana-halftime": {
+    category: "Sports",
+    topic: "Colombia Ghana Halftime Script",
+    includeAnySets: [
+      ["colombia", "ghana"],
+      ["halftime", "half-time", "first half", "0-0", "level", "leading", "defensive", "script"]
+    ],
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball"]
+  },
   "wc-spain-austria-spread": {
     category: "Sports",
     topic: "Spain Austria World Cup Knockout",

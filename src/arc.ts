@@ -73,11 +73,16 @@ export interface ArcMarketSnapshot {
   outcome: 0 | 1 | 2 | 3;
   closesAtUnix?: number;
   traderCount?: number;
+  optionPools?: Record<string, number>;
+  resolvedOptionId?: string | null;
 }
 
 export interface ArcMarketPosition {
   yesSharesUsdc: number;
   noSharesUsdc: number;
+  optionId?: string | null;
+  optionLabel?: string | null;
+  optionSharesUsdc?: number;
 }
 
 export interface ArcClaimResult {
@@ -976,6 +981,19 @@ export const claimArcMarketPayout = async (marketAddress: string, account: strin
     throw new Error("Connect the wallet that holds this position first");
   }
   if (isBackendWalletMode) {
+    if (!/^0x[a-fA-F0-9]{40}$/.test(marketAddress)) {
+      const response = await fetch(apiUrl("/api/backend-wallet/option-claim"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionToken: activeBackendWalletSessionToken,
+          marketId: marketAddress
+        })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Failed to submit claim");
+      return { amountUsdc: Number(payload.amountUsdc) || 0, won: true };
+    }
     const [snapshot, position] = await Promise.all([
       readArcMarketSnapshot(marketAddress),
       readArcMarketPosition(marketAddress, account)
@@ -1438,6 +1456,39 @@ export const executeArcMarketOrder = async (
     const txHash = await waitForCircleTx(sellData.id || sellChallengeId);
     return txHash;
   }
+};
+
+export const executeArcOptionMarketOrder = async (
+  marketId: string,
+  mode: "buy" | "sell",
+  optionId: string,
+  amountUsdc: number,
+  onStatus?: (status: string) => void
+): Promise<string> => {
+  if (!activeWalletAddress) throw new Error("Please sign in first");
+  if (!marketId) throw new Error("Market is missing");
+  if (!optionId) throw new Error("Choose an option first");
+  if (!Number.isFinite(amountUsdc) || amountUsdc <= 0) throw new Error("Enter an amount first");
+
+  if (!isBackendWalletMode) {
+    throw new Error("Option markets are available after signing in with Siftle wallet.");
+  }
+
+  onStatus?.(mode === "buy" ? "Locking your pick..." : "Exiting your pick...");
+  const response = await fetch(apiUrl("/api/backend-wallet/option-trade"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sessionToken: activeBackendWalletSessionToken,
+      marketId,
+      mode,
+      optionId,
+      amountUsdc
+    })
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Option trade failed");
+  return payload.txHash;
 };
 
 export const shortenAddress = (account: string): string => `${account.slice(0, 6)}...${account.slice(-4)}`;
