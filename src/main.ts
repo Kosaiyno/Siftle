@@ -4568,13 +4568,8 @@ storyDetail?.addEventListener("input", (event) => {
   const market = marketPreviews.find((item) => item.id === state.selectedMarketId);
   const snapshot = market ? state.marketSnapshots[market.id] : undefined;
   const position = market ? state.marketPositions[market.id] : undefined;
-  state.marketTradeAmount = normalizeMarketTradeAmount(
-    Number(target.value) || 0,
-    state.marketOrderMode,
-    state.marketTradeSide,
-    position
-  );
-  target.value = String(state.marketTradeAmount);
+  const typedAmount = Number(target.value);
+  state.marketTradeAmount = Number.isFinite(typedAmount) ? typedAmount : 0;
   const payout = market && isOptionMarket(market)
     ? state.marketTradeAmount
     : estimatePoolPayout(snapshot, state.marketTradeSide, state.marketTradeAmount, state.marketOrderMode, position);
@@ -4590,8 +4585,17 @@ storyDetail?.addEventListener("focusin", (event) => {
 });
 
 storyDetail?.addEventListener("focusout", (event) => {
-  const target = event.target as HTMLElement;
+  const target = event.target as HTMLInputElement;
   if (target.matches("[data-market-amount]")) {
+    const market = marketPreviews.find((item) => item.id === state.selectedMarketId);
+    const position = market ? state.marketPositions[market.id] : undefined;
+    state.marketTradeAmount = normalizeMarketTradeAmount(
+      Number(target.value) || 0,
+      state.marketOrderMode,
+      state.marketTradeSide,
+      position
+    );
+    target.value = String(state.marketTradeAmount);
     window.setTimeout(() => document.body.classList.remove("market-amount-focused"), 120);
   }
 });
