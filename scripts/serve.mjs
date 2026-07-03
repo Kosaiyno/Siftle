@@ -5382,27 +5382,45 @@ async function loadOptionMarketStateFromSupabase(data, market) {
     const store = ensureOptionMarketStore(data);
     const current = store[market.id] || {};
     const marketStore = {
-      positions: {},
+      positions: { ...(current.positions || {}) },
       optionPools: {},
       traders: [],
       resolvedOptionId: resolutionRows?.[0]?.winning_option_id || current.resolvedOptionId || null,
       resolvedAt: resolutionRows?.[0]?.resolved_at || current.resolvedAt || null,
       claimed: current.claimed || {}
     };
+    const persistedWallets = new Set();
     for (const row of positionRows || []) {
       const wallet = normalizeWalletAddress(row.wallet_address);
       if (!wallet) continue;
       const optionId = String(row.option_id || "").trim();
       const amountUsdc = Math.max(0, Number(row.amount_usdc) || 0);
       if (!optionId || amountUsdc <= 0) continue;
+      persistedWallets.add(wallet);
       marketStore.positions[wallet] = {
         optionId,
         optionLabel: String(row.option_label || ""),
         amountUsdc,
         createdAt: row.created_at || new Date().toISOString()
       };
+    }
+    for (const [wallet, position] of Object.entries(marketStore.positions)) {
+      const cleanWallet = normalizeWalletAddress(wallet);
+      if (!cleanWallet) continue;
+      const optionId = String(position?.optionId || "").trim();
+      const amountUsdc = Math.max(0, Number(position?.amountUsdc) || 0);
+      if (!optionId || amountUsdc <= 0) continue;
       marketStore.optionPools[optionId] = (Number(marketStore.optionPools[optionId]) || 0) + amountUsdc;
-      if (!marketStore.traders.includes(wallet)) marketStore.traders.push(wallet);
+      if (!marketStore.traders.includes(cleanWallet)) marketStore.traders.push(cleanWallet);
+      if (!persistedWallets.has(cleanWallet)) {
+        void saveOptionMarketPositionToSupabase(
+          market,
+          cleanWallet,
+          optionId,
+          position?.optionLabel || getMarketOptions(market).find((entry) => entry.id === optionId)?.label || "",
+          amountUsdc
+        );
+      }
     }
     store[market.id] = marketStore;
   } catch (err) {
