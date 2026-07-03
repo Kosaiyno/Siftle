@@ -2674,7 +2674,7 @@ const placeOptionMarketOrder = async (marketId: string, optionId: string): Promi
     state.walletAddress = await getConnectedArcWallet();
     if (state.walletAddress) state.walletBalance = await readArcUsdcBalance(state.walletAddress);
     await loadPortfolioPositions({ force: true });
-    trackEvent("trade_success");
+    trackEvent(exiting ? "trade_sell_success" : "trade_buy_success");
     showActionToast(exiting ? "Pick exited" : `Pick locked: ${option.label}`);
     state.tradeDrawerOpen = false;
   } catch (error) {

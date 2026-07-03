@@ -5419,7 +5419,7 @@ async function loadOptionMarketStateFromSupabase(data, market) {
           optionId,
           position?.optionLabel || getMarketOptions(market).find((entry) => entry.id === optionId)?.label || "",
           amountUsdc
-        );
+        ).catch((err) => console.warn("[SUPABASE] Option position backfill failed:", err.message));
       }
     }
     store[market.id] = marketStore;
@@ -5435,22 +5435,18 @@ async function saveOptionMarketPositionToSupabase(market, walletAddress, optionI
   if (!isSupabaseConfigured) return;
   const wallet = normalizeWalletAddress(walletAddress);
   if (!market?.id || !wallet) return;
-  try {
-    await supabaseRequest("option_market_positions?on_conflict=market_id,wallet_address", {
-      method: "POST",
-      prefer: "resolution=merge-duplicates,return=minimal",
-      body: [{
-        market_id: market.id,
-        wallet_address: wallet,
-        option_id: optionId,
-        option_label: optionLabel,
-        amount_usdc: amountUsdc,
-        updated_at: new Date().toISOString()
-      }]
-    });
-  } catch (err) {
-    console.warn("[SUPABASE] Option position save failed:", err.message);
-  }
+  await supabaseRequest("option_market_positions?on_conflict=market_id,wallet_address", {
+    method: "POST",
+    prefer: "resolution=merge-duplicates,return=minimal",
+    body: [{
+      market_id: market.id,
+      wallet_address: wallet,
+      option_id: optionId,
+      option_label: optionLabel,
+      amount_usdc: amountUsdc,
+      updated_at: new Date().toISOString()
+    }]
+  });
 }
 
 async function deleteOptionMarketPositionFromSupabase(market, walletAddress) {
@@ -8142,15 +8138,20 @@ const server = createServer(async (request, response) => {
           sendJson(response, 400, { error: "You already picked an option in this market" });
           return;
         }
+        await saveOptionMarketPositionToSupabase(market, user.address, option.id, option.label, amountUsdc);
         if (treasuryAddress) {
-          const signer = new Wallet(user.privateKey, leaderboardProvider);
-          const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
-          const tx = await usdc.transfer(treasuryAddress, parseUnits(amountUsdc.toFixed(6), 6));
-          const receipt = await tx.wait();
-          txHash = receipt?.hash || tx.hash;
+          try {
+            const signer = new Wallet(user.privateKey, leaderboardProvider);
+            const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
+            const tx = await usdc.transfer(treasuryAddress, parseUnits(amountUsdc.toFixed(6), 6));
+            const receipt = await tx.wait();
+            txHash = receipt?.hash || tx.hash;
+          } catch (err) {
+            await deleteOptionMarketPositionFromSupabase(market, user.address);
+            throw err;
+          }
         }
         saveOptionMarketPosition(data, market, user.address, option.id, option.label, amountUsdc);
-        await saveOptionMarketPositionToSupabase(market, user.address, option.id, option.label, amountUsdc);
       } else {
         const exit = getOptionMarketExitPreview(data, market, user.address);
         if (process.env.ARC_DEPLOYER_PRIVATE_KEY && exit.amountUsdc > 0) {
@@ -8169,6 +8170,7 @@ const server = createServer(async (request, response) => {
       saveAnalytics(data);
       leaderboardCache.expiresAt = 0;
       leaderboardCache.analytics = null;
+      await trackAnalyticsEvent(mode === "buy" ? "trade_buy_success" : "trade_sell_success");
       sendJson(response, 200, {
         txHash,
         walletAddress: user.address,
@@ -8176,6 +8178,7 @@ const server = createServer(async (request, response) => {
         optionLabel: mode === "buy" ? option.label : null
       });
     } catch (err) {
+      await trackAnalyticsEvent("trade_failed");
       sendJson(response, 500, { error: err.message });
     }
     return;
