@@ -5565,6 +5565,7 @@ function readOptionMarketStateFromData(data, walletAddress, market) {
     if (optionPools[optionId] !== undefined) optionPools[optionId] = Math.max(0, Number(amount) || 0);
   });
   const position = cleanWallet ? marketStore.positions?.[cleanWallet] : null;
+  const claimRecord = cleanWallet ? marketStore.claimed?.[cleanWallet] || null : null;
   const volumeUsdc = Object.values(optionPools).reduce((sum, amount) => sum + (Number(amount) || 0), 0);
   return {
     position: {
@@ -5572,7 +5573,11 @@ function readOptionMarketStateFromData(data, walletAddress, market) {
       noSharesUsdc: 0,
       optionId: position?.optionId || null,
       optionLabel: options.find((option) => option.id === position?.optionId)?.label || position?.optionLabel || null,
-      optionSharesUsdc: Math.max(0, Number(position?.amountUsdc) || 0)
+      optionSharesUsdc: Math.max(0, Number(position?.amountUsdc) || 0),
+      claimedAt: claimRecord?.claimedAt || null,
+      claimedAmountUsdc: Math.max(0, Number(claimRecord?.amountUsdc) || 0),
+      claimTxHash: claimRecord?.txHash || null,
+      autoClaimed: Boolean(claimRecord?.autoPaid)
     },
     snapshot: {
       yesPriceCents: 0,
@@ -5816,6 +5821,60 @@ function getOptionMarketClaimPreview(data, market, walletAddress) {
     amountUsdc,
     alreadyClaimed: Boolean(marketStore.claimed?.[cleanWallet])
   };
+}
+
+async function payoutOptionMarketClaims(data, market, options = {}) {
+  const cleanTargetWallet = normalizeWalletAddress(options.walletAddress || "");
+  const store = ensureOptionMarketStore(data);
+  const marketStore = store[market.id] || {};
+  if (!marketStore.resolvedOptionId) {
+    return { paid: [], skipped: [], failed: [], skippedNoSigner: false };
+  }
+  if (!payoutPrivateKey) {
+    return { paid: [], skipped: [], failed: [], skippedNoSigner: true };
+  }
+
+  const signer = new Wallet(payoutPrivateKey, leaderboardProvider);
+  const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
+  const paid = [];
+  const skipped = [];
+  const failed = [];
+  const wallets = Object.keys(marketStore.positions || {});
+
+  for (const walletAddress of wallets) {
+    const cleanWallet = normalizeWalletAddress(walletAddress);
+    if (!cleanWallet || (cleanTargetWallet && cleanWallet !== cleanTargetWallet)) continue;
+    const claim = getOptionMarketClaimPreview(data, market, cleanWallet);
+    if (claim.alreadyClaimed) {
+      skipped.push({ walletAddress: cleanWallet, reason: "already-claimed" });
+      continue;
+    }
+    if (!claim.won || claim.amountUsdc <= 0) {
+      skipped.push({ walletAddress: cleanWallet, reason: "no-payout" });
+      continue;
+    }
+
+    try {
+      const tx = await usdc.transfer(cleanWallet, parseUnits(claim.amountUsdc.toFixed(6), 6));
+      const receipt = await tx.wait();
+      if (!marketStore.claimed) marketStore.claimed = {};
+      marketStore.claimed[cleanWallet] = {
+        amountUsdc: claim.amountUsdc,
+        txHash: receipt?.hash || tx.hash,
+        claimedAt: new Date().toISOString(),
+        autoPaid: !cleanTargetWallet
+      };
+      paid.push({
+        walletAddress: cleanWallet,
+        amountUsdc: claim.amountUsdc,
+        txHash: receipt?.hash || tx.hash
+      });
+    } catch (err) {
+      failed.push({ walletAddress: cleanWallet, error: err.message || String(err || "Payout failed") });
+    }
+  }
+
+  return { paid, skipped, failed, skippedNoSigner: false };
 }
 
 const ensureGatewayAvailableBalance = async (buyer, requiredUsdc) => {
@@ -8517,20 +8576,16 @@ const server = createServer(async (request, response) => {
         return;
       }
 
-      const signer = new Wallet(payoutPrivateKey, leaderboardProvider);
-      const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
-      const tx = await usdc.transfer(cleanWallet, parseUnits(claim.amountUsdc.toFixed(6), 6));
-      const receipt = await tx.wait();
-      if (!marketStore.claimed) marketStore.claimed = {};
-      marketStore.claimed[cleanWallet] = {
-        amountUsdc: claim.amountUsdc,
-        txHash: receipt?.hash || tx.hash,
-        claimedAt: new Date().toISOString()
-      };
+      const payout = await payoutOptionMarketClaims(data, market, { walletAddress: cleanWallet });
+      const paid = payout.paid?.[0];
+      if (!paid) {
+        const failure = payout.failed?.[0];
+        throw new Error(failure?.error || "Failed to submit claim");
+      }
       saveAnalytics(data);
       sendJson(response, 200, {
-        txHash: receipt?.hash || tx.hash,
-        amountUsdc: claim.amountUsdc,
+        txHash: paid.txHash,
+        amountUsdc: paid.amountUsdc,
         walletAddress: cleanWallet
       });
     } catch (err) {
@@ -8562,6 +8617,7 @@ const server = createServer(async (request, response) => {
       }
       const data = await loadOptionMarketStateFromSupabase(await loadReferralRelationshipsFromSupabase(await loadLeaderboardFromSupabase(loadAnalytics())), market);
       resolveOptionMarketInData(data, market, winningOptionId);
+      const autoPayout = await payoutOptionMarketClaims(data, market);
       await saveOptionMarketResolutionToSupabase(market, winningOptionId);
       saveAnalytics(data);
       await saveLeaderboardToSupabase(data);
@@ -8570,7 +8626,10 @@ const server = createServer(async (request, response) => {
       sendJson(response, 200, {
         ok: true,
         marketId,
-        winningOptionId
+        winningOptionId,
+        autoPaidCount: autoPayout.paid.length,
+        autoPaidSkippedNoSigner: autoPayout.skippedNoSigner,
+        autoPaidFailures: autoPayout.failed.length
       });
     } catch (err) {
       sendJson(response, 500, { error: err.message });

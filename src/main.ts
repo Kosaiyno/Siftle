@@ -163,6 +163,7 @@ const state: {
   unlockConfig: any | null;
   newsSearchQuery: string;
   briefingStatusByUrl: Record<string, string>;
+  claimingMarketIds: Record<string, boolean>;
 } = {
   activeSurface: "markets",
   profileUsername: null,
@@ -212,7 +213,8 @@ const state: {
   portfolioPositionsLoadedAt: 0,
   unlockConfig: null,
   newsSearchQuery: "",
-  briefingStatusByUrl: {}
+  briefingStatusByUrl: {},
+  claimingMarketIds: {}
 };
 
 let selectedLeaderboardDivision: number | null = null;
@@ -3887,7 +3889,8 @@ const renderPortfolioPositionCard = (market: MarketPreview): string => {
     const won = isResolved && position.optionId === resolvedOptionId;
     const payout = won && optionPool > 0 ? ((position.optionSharesUsdc || 0) / optionPool) * totalPool : 0;
     const winningLabel = getMarketOptions(market).find((option) => option.id === resolvedOptionId)?.label;
-    const isClaimed = readClaimedMarkets().has(market.id);
+    const isClaimed = Boolean(position.claimedAt) || readClaimedMarkets().has(market.id);
+    const isClaiming = Boolean(state.claimingMarketIds[market.id]);
     return `
       <article class="portfolio-position-card">
         <div class="portfolio-position-top">
@@ -3905,6 +3908,8 @@ const renderPortfolioPositionCard = (market: MarketPreview): string => {
           ${isResolved
             ? isClaimed
               ? `<span style="color: #34d399; font-size: 0.82rem; font-weight: 800;">Claimed</span>`
+              : isClaiming
+                ? `<button type="button" class="connect-wallet-btn" disabled style="background: #ffffff !important; color: #000000 !important; border: 1px solid #ffffff !important; border-radius: 6px !important; padding: 8px 14px !important; font-size: 0.82rem !important; font-weight: 700 !important; opacity: 0.7 !important; cursor: wait !important;">Claiming...</button>`
               : won
                 ? `<button type="button" class="connect-wallet-btn" data-claim-market="${market.id}" style="background: #ffffff !important; color: #000000 !important; border: 1px solid #ffffff !important; border-radius: 6px !important; padding: 8px 14px !important; font-size: 0.82rem !important; font-weight: 700 !important; cursor: pointer !important;">Claim $${formatMoney(payout)}</button>`
                 : `<span style="color: #ef4444; font-size: 0.82rem; font-weight: 800;">Lost</span>`
@@ -3966,6 +3971,8 @@ const claimPortfolioMarket = async (marketId: string): Promise<void> => {
   }
 
   try {
+    state.claimingMarketIds[market.id] = true;
+    renderPortfolio();
     trackEvent("claim_attempt");
     calculateLeaderboardScore();
     const result = await claimArcMarketPayout(marketAddress, state.walletAddress);
@@ -3982,6 +3989,9 @@ const claimPortfolioMarket = async (marketId: string): Promise<void> => {
   } catch (error) {
     trackEvent("claim_failed");
     showActionToast(error instanceof Error ? error.message : "Claim failed");
+  } finally {
+    delete state.claimingMarketIds[market.id];
+    renderPortfolio();
   }
 };
 

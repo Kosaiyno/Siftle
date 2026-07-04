@@ -83,6 +83,10 @@ export interface ArcMarketPosition {
   optionId?: string | null;
   optionLabel?: string | null;
   optionSharesUsdc?: number;
+  claimedAt?: string | null;
+  claimedAmountUsdc?: number;
+  claimTxHash?: string | null;
+  autoClaimed?: boolean;
 }
 
 export interface ArcClaimResult {
