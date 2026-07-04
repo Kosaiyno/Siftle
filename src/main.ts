@@ -57,6 +57,7 @@ const getConnectedArcWallet = async (): Promise<string | null> => (await loadArc
 const validateArcSession = async (): Promise<boolean> => (await loadArcModule()).validateArcSession();
 const subscribeArcWallet = async (callback: (address: string | null) => void): Promise<() => void> =>
   (await loadArcModule()).subscribeArcWallet(callback);
+const triggerGatewayWarmup = async (): Promise<void> => (await loadArcModule()).triggerGatewayWarmup();
 
 declare global {
   interface Window {
@@ -159,6 +160,7 @@ const state: {
   referralError: string | null;
   loadingReferralData: boolean;
   portfolioPositionsLoadedAt: number;
+  unlockConfig: any | null;
 } = {
   activeSurface: "markets",
   profileUsername: null,
@@ -205,7 +207,8 @@ const state: {
   referralData: null,
   referralError: null,
   loadingReferralData: false,
-  portfolioPositionsLoadedAt: 0
+  portfolioPositionsLoadedAt: 0,
+  unlockConfig: null
 };
 
 let selectedLeaderboardDivision: number | null = null;
@@ -764,22 +767,32 @@ const getMarketTradeLockMessage = (market: MarketPreview, snapshot: ArcMarketSna
   return Date.now() >= lockTime ? `Locked ${DAILY_TRADE_LOCK_MINUTES}m before kickoff` : null;
 };
 
-const renderLockedBriefing = (story: BriefingTarget, isUnlocking: boolean): string => `
-  <div class="briefing-section">
-    <h4 class="briefing-title">AI briefing</h4>
-    ${isUnlocking
-      ? `
-        <p class="briefing-text">Preparing your paid AI briefing...</p>
-        ${renderSummarySkeleton()}
-      `
-      : `
-        <p class="briefing-text">Pay a tiny USDC amount for the key points, what happened, and the takeaway.</p>
-        <button type="button" class="source-button" data-unlock-briefing-url="${encodeURIComponent(story.sourceUrl)}">
-          AI briefing
-        </button>
-      `}
-  </div>
-`;
+const renderLockedBriefing = (story: BriefingTarget, isUnlocking: boolean): string => {
+  const price = state.unlockConfig ? `${state.unlockConfig.amountUsdc} USDC` : "0.05 USDC";
+  const isX402 = state.unlockConfig?.x402Enabled;
+
+  return `
+    <div class="briefing-section">
+      <h4 class="briefing-title">AI briefing</h4>
+      ${isUnlocking
+        ? `
+          <p class="briefing-text">Preparing your paid AI briefing...</p>
+          ${renderSummarySkeleton()}
+        `
+        : `
+          <p class="briefing-text">
+            ${isX402 
+              ? `Pay a micro-price of <strong>${price}</strong> per call using <strong>Circle x402 Gateway Batched Nanopayments</strong> on Arc Testnet.`
+              : `Pay a tiny USDC amount of <strong>${price}</strong> for the key points, what happened, and the takeaway.`
+            }
+          </p>
+          <button type="button" class="source-button" data-unlock-briefing-url="${encodeURIComponent(story.sourceUrl)}">
+            ${isX402 ? "Unlock via Circle x402" : "AI briefing"}
+          </button>
+        `}
+    </div>
+  `;
+};
 
 const unlockAndLoadStorySummary = async (story: BriefingTarget, force = false): Promise<void> => {
   if (!state.walletAddress) {
@@ -4605,6 +4618,19 @@ storyDetail?.addEventListener("focusout", (event) => {
 window.addEventListener("popstate", syncStoryFromHash);
 window.addEventListener("hashchange", syncStoryFromHash);
 
+window.addEventListener("focus", async () => {
+  if (state.walletAddress) {
+    const oldBalance = state.walletBalance;
+    const balance = await readArcUsdcBalance(state.walletAddress);
+    state.walletBalance = balance;
+    renderWalletState();
+    if ((!oldBalance || parseFloat(oldBalance) === 0) && parseFloat(balance) > 0) {
+      console.log("[X402] Balance changed from 0 to positive. Triggering Gateway warmup...");
+      void triggerGatewayWarmup();
+    }
+  }
+});
+
 menuButton?.addEventListener("click", () => {
   if (!menuPanel || !menuButton) return;
 
@@ -4652,8 +4678,21 @@ document.addEventListener("click", (event) => {
   }
 });
 
+const fetchUnlockConfig = async (): Promise<void> => {
+  try {
+    const configRes = await fetch(apiUrl("/api/summary/unlock-config"));
+    if (configRes.ok) {
+      state.unlockConfig = await configRes.json();
+      render();
+    }
+  } catch (err) {
+    console.error("Failed to prefetch unlock config:", err);
+  }
+};
+
 render();
 renderWalletState();
+void fetchUnlockConfig();
 void loadMarkets().then(() => {
   reportStoredLocalMarketTraders();
   render();

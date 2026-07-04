@@ -74,6 +74,7 @@ const loadEnv = () => {
 };
 
 loadEnv();
+console.log("[DEBUG FETCH] global.fetch is:", global.fetch ? global.fetch.toString() : "undefined");
 
 let deployerAddress = "";
 if (process.env.ARC_DEPLOYER_PRIVATE_KEY) {
@@ -5611,21 +5612,44 @@ const ensureGatewayAvailableBalance = async (buyer, requiredUsdc) => {
   throw new Error("Gateway balance is still topping up. Try the AI briefing unlock again in a few seconds.");
 };
 
+const activeWarmups = new Set();
+
 const warmGatewayBalanceInBackground = (privateKey, minimumUsdc) => {
   if (!backendWalletUseX402) return;
   const depositAmount = x402AutoDepositUsdc || minimumUsdc.toFixed(6);
   void (async () => {
+    let walletAddress = "";
     try {
       const buyer = new GatewayClient({
         chain: "arcTestnet",
         privateKey
       });
+      walletAddress = buyer.address.toLowerCase();
+      if (activeWarmups.has(walletAddress)) {
+        console.log(`[X402] Gateway warmup already in progress for ${walletAddress}. Skipping duplicate.`);
+        return;
+      }
+      activeWarmups.add(walletAddress);
+
       const balances = await buyer.getBalances();
       const requiredBaseUnits = parseUnits(minimumUsdc.toFixed(6), 6);
       if ((balances.gateway?.available || 0n) >= requiredBaseUnits) return;
+
+      const walletBalanceRaw = BigInt(balances.wallet?.balance || "0");
+      const depositBaseUnits = parseUnits(Number(depositAmount).toFixed(6), 6);
+      if (walletBalanceRaw < depositBaseUnits) {
+        console.warn(`[X402] Gateway warmup skipped: wallet balance (${formatUnits(walletBalanceRaw, 6)} USDC) is less than required deposit amount (${depositAmount} USDC)`);
+        return;
+      }
+
+      console.log(`[X402] Auto-depositing ${depositAmount} USDC into Gateway for ${walletAddress}...`);
       await buyer.deposit(depositAmount);
     } catch (error) {
       console.warn("[X402] Gateway warmup failed:", error?.message || error);
+    } finally {
+      if (walletAddress) {
+        activeWarmups.delete(walletAddress);
+      }
     }
   })();
 };
@@ -7926,7 +7950,7 @@ const server = createServer(async (request, response) => {
       enabled: backendWalletMode,
       localOnly: backendWalletLocalOnly,
       manualFundingRequired: !backendWalletUseX402 && !x402AutoDepositUsdc,
-      aiBriefingUnlockUsdc,
+      aiBriefingUnlockUsdc: backendWalletUseX402 ? x402PriceUsdc : aiBriefingUnlockUsdc,
       x402Enabled: backendWalletUseX402,
       x402TargetUrl: x402TargetUrlBase
     });
@@ -7945,7 +7969,7 @@ const server = createServer(async (request, response) => {
 
       const user = await getOrCreateBackendWalletUser(email);
       const token = await issueBackendWalletSession(email);
-      warmGatewayBalanceInBackground(user.privateKey, aiBriefingUnlockUsdc);
+      warmGatewayBalanceInBackground(user.privateKey, backendWalletUseX402 ? x402PriceUsdc : aiBriefingUnlockUsdc);
       const migrationPreview = await buildMigrationPreview(email, user.address);
       const migration = backendWalletMigrationAutoClaim && migrationPreview.eligible
         ? await applyBackendWalletMigration(email, user.address)
@@ -7989,6 +8013,24 @@ const server = createServer(async (request, response) => {
         backendWalletMode: true,
         migrationEnabled: backendWalletMigrationEnabled
       });
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/backend-wallet/warmup" && request.method === "POST") {
+    if (!requireBackendWalletMode(request, response)) return;
+    try {
+      const body = await readJsonBody(request);
+      const sessionToken = String(body.sessionToken || "");
+      const user = await getBackendWalletUserBySession(sessionToken);
+      if (!user) {
+        sendJson(response, 401, { error: "Session expired" });
+        return;
+      }
+      warmGatewayBalanceInBackground(user.privateKey, aiBriefingUnlockUsdc);
+      sendJson(response, 200, { success: true });
     } catch (err) {
       sendJson(response, 500, { error: err.message });
     }
@@ -8408,8 +8450,12 @@ const server = createServer(async (request, response) => {
             chain: "arcTestnet",
             privateKey: user.privateKey
           });
-          const support = await buyer.supports(targetUrl);
+          const support = await buyer.supports(targetUrl).catch(err => {
+            console.error("[AI BRIEFING] buyer.supports threw error:", err, "cause:", err?.cause);
+            return { supported: false, error: err?.message };
+          });
           if (!support.supported) {
+            console.warn("[AI BRIEFING] x402 support check failed details:", JSON.stringify(support, null, 2));
             throw new Error("x402 seller did not advertise a compatible payment option");
           }
 
@@ -9429,8 +9475,9 @@ const server = createServer(async (request, response) => {
   if (requestUrl.pathname === "/api/summary/unlock-config" && request.method === "GET") {
     sendJson(response, 200, {
       enabled: aiBriefingUnlockUsdc > 0,
-      amountUsdc: aiBriefingUnlockUsdc,
-      treasuryAddress: aiBriefingTreasuryAddress
+      amountUsdc: backendWalletUseX402 ? x402PriceUsdc : aiBriefingUnlockUsdc,
+      treasuryAddress: aiBriefingTreasuryAddress,
+      x402Enabled: backendWalletUseX402
     });
     return;
   }

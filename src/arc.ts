@@ -1492,3 +1492,16 @@ export const executeArcOptionMarketOrder = async (
 };
 
 export const shortenAddress = (account: string): string => `${account.slice(0, 6)}...${account.slice(-4)}`;
+
+export const triggerGatewayWarmup = async (): Promise<void> => {
+  if (!isBackendWalletMode || !activeBackendWalletSessionToken) return;
+  try {
+    await fetch(apiUrl("/api/backend-wallet/warmup"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionToken: activeBackendWalletSessionToken })
+    });
+  } catch (err) {
+    console.error("Failed to trigger warmup:", err);
+  }
+};
