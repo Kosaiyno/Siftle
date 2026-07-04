@@ -28,7 +28,7 @@ import"./chunks/chunk-ZUUPKAA6.js";var ue="Sports",De=[{id:"wc-vozinha-saves-arg
           ${he()}
         `:`
           <p class="briefing-text">
-            ${o?`Pay <strong>${r}</strong> in <strong>testnet USDC</strong> through <strong>Circle x402</strong> to unlock what happened, key points, and takeaway.`:`Pay <strong>${r}</strong> in <strong>testnet USDC</strong> for the key points, what happened, and takeaway.`}
+            ${o?`Pay a <strong>${r}</strong> <strong>testnet USDC</strong> nanopayment through <strong>Circle x402</strong> to unlock what happened, key points, and takeaway.`:`Pay <strong>${r}</strong> in <strong>testnet USDC</strong> for the key points, what happened, and takeaway.`}
           </p>
           <button type="button" class="source-button" data-unlock-briefing-url="${encodeURIComponent(e.sourceUrl)}">
             ${o?"Unlock via Circle x402":"AI briefing"}
@@ -125,13 +125,11 @@ import"./chunks/chunk-ZUUPKAA6.js";var ue="Sports",De=[{id:"wc-vozinha-saves-arg
 `,ve=()=>{if(!k)return;let e=Ea();if(k.hidden=!!(t.selectedStoryId||t.selectedThreadUrl),t.isLoading){k.innerHTML=nr(4);return}let a=Number(t.unlockConfig?.amountUsdc)||.001,r=M(t.newsSearchQuery.trim()),n=`
     <section class="news-feed-search-shell">
       <div class="news-feed-search-copy">
-        <span>News feed</span>
-        <h2>Search the latest stories</h2>
-        <p>${r?`Showing ${e.length} of ${t.stories.length} stories matching "${r}".`:`Browse or search any news you like, then pay ${a} testnet USDC to unlock an AI briefing with what happened, key points, and takeaway without reading the full article or fighting ads.`}</p>
+        <p>${r?`${e.length} matches for "${r}".`:`Search saved news by keyword. Unlock an AI briefing with a ${a} testnet USDC nanopayment to get what happened, key points, and takeaway without opening the full article.`}</p>
       </div>
       <label class="news-feed-search-bar" for="newsSearchInput">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
-        <input id="newsSearchInput" type="search" placeholder="Search all saved Siftle news by keyword" value="${M(t.newsSearchQuery)}" autocomplete="off" />
+        <input id="newsSearchInput" type="search" placeholder="Search all saved news by keyword" value="${M(t.newsSearchQuery)}" autocomplete="off" />
       </label>
     </section>
   `;if(e.length===0){let s=t.showSaved?[]:t.stories;if(s.length>0){k.innerHTML=n+s.map(i=>`

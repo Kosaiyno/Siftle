@@ -9683,7 +9683,7 @@ const server = createServer(async (request, response) => {
   if (requestUrl.pathname === "/api/summary/unlock-config" && request.method === "GET") {
     sendJson(response, 200, {
       enabled: aiBriefingUnlockUsdc > 0,
-      amountUsdc: aiBriefingUnlockUsdc,
+      amountUsdc: backendWalletUseX402 ? x402PriceUsdc : aiBriefingUnlockUsdc,
       treasuryAddress: aiBriefingTreasuryAddress
     });
     return;

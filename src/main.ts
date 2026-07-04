@@ -800,8 +800,8 @@ const renderLockedBriefing = (story: BriefingTarget, isUnlocking: boolean): stri
         `
         : `
           <p class="briefing-text">
-            ${isX402 
-              ? `Pay <strong>${price}</strong> in <strong>testnet USDC</strong> through <strong>Circle x402</strong> to unlock what happened, key points, and takeaway.`
+            ${isX402
+              ? `Pay a <strong>${price}</strong> <strong>testnet USDC</strong> nanopayment through <strong>Circle x402</strong> to unlock what happened, key points, and takeaway.`
               : `Pay <strong>${price}</strong> in <strong>testnet USDC</strong> for the key points, what happened, and takeaway.`
             }
           </p>
@@ -2173,18 +2173,16 @@ const renderStories = (): void => {
   const feedUnlockPrice = Number(state.unlockConfig?.amountUsdc) || 0.001;
   const queryLabel = escapeHtml(state.newsSearchQuery.trim());
   const helperText = queryLabel
-    ? `Showing ${stories.length} of ${state.stories.length} stories matching "${queryLabel}".`
-    : `Browse or search any news you like, then pay ${feedUnlockPrice} testnet USDC to unlock an AI briefing with what happened, key points, and takeaway without reading the full article or fighting ads.`;
+    ? `${stories.length} matches for "${queryLabel}".`
+    : `Search saved news by keyword. Unlock an AI briefing with a ${feedUnlockPrice} testnet USDC nanopayment to get what happened, key points, and takeaway without opening the full article.`;
   const feedHeader = `
     <section class="news-feed-search-shell">
       <div class="news-feed-search-copy">
-        <span>News feed</span>
-        <h2>Search the latest stories</h2>
         <p>${helperText}</p>
       </div>
       <label class="news-feed-search-bar" for="newsSearchInput">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
-        <input id="newsSearchInput" type="search" placeholder="Search all saved Siftle news by keyword" value="${escapeHtml(state.newsSearchQuery)}" autocomplete="off" />
+        <input id="newsSearchInput" type="search" placeholder="Search all saved news by keyword" value="${escapeHtml(state.newsSearchQuery)}" autocomplete="off" />
       </label>
     </section>
   `;
