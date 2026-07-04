@@ -1,8 +1,42 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+
 import express from "express";
 import { createGatewayMiddleware } from "@circle-fin/x402-batching/server";
+import { Wallet } from "ethers";
+
+const root = resolve(process.cwd());
+const loadEnv = () => {
+  const envPath = join(root, ".env");
+  if (!existsSync(envPath)) return;
+
+  const lines = readFileSync(envPath, "utf8").split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+
+    const separator = trimmed.indexOf("=");
+    if (separator === -1) continue;
+
+    const key = trimmed.slice(0, separator).trim();
+    const value = trimmed.slice(separator + 1).trim().replace(/^["']|["']$/g, "");
+    if (!process.env[key]) {
+      process.env[key] = value;
+    }
+  }
+};
+
+loadEnv();
 
 const port = Number(process.env.PORT || process.env.X402_PORT || 4020);
-const sellerAddress = process.env.X402_SELLER_ADDRESS || process.env.ARC_DEPLOYER_ADDRESS || "";
+let sellerAddress = process.env.X402_SELLER_ADDRESS || process.env.ARC_DEPLOYER_ADDRESS || "";
+if (!sellerAddress && process.env.ARC_DEPLOYER_PRIVATE_KEY) {
+  try {
+    sellerAddress = new Wallet(process.env.ARC_DEPLOYER_PRIVATE_KEY).address;
+  } catch {
+    sellerAddress = "";
+  }
+}
 const price = process.env.X402_PRICE || "$0.001";
 
 if (!/^0x[a-fA-F0-9]{40}$/.test(sellerAddress)) {

@@ -74,7 +74,6 @@ const loadEnv = () => {
 };
 
 loadEnv();
-console.log("[DEBUG FETCH] global.fetch is:", global.fetch ? global.fetch.toString() : "undefined");
 
 let deployerAddress = "";
 if (process.env.ARC_DEPLOYER_PRIVATE_KEY) {
@@ -2687,7 +2686,7 @@ const summarizeLocally = (article) => {
   return base.length > 220 ? `${base.slice(0, 217).trim()}...` : base;
 };
 
-const summaryPromptVersion = "briefing-v2";
+const summaryPromptVersion = "briefing-v3";
 
 const summarizeLocallyTight = (article) =>
   stripHtml(article?.summary || article?.headline || "")
@@ -2752,6 +2751,209 @@ const cleanSummaryText = (value = "") => {
 
   if (looksLikeBadSummary(summary)) return "";
   return limitSummaryWords(summary);
+};
+
+const splitIntoSentences = (text = "") =>
+  String(text)
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+
+const truncateSentence = (text = "", maxWords = 18) => {
+  const words = String(text).split(/\s+/).filter(Boolean);
+  if (words.length <= maxWords) return String(text).trim();
+  return `${words.slice(0, maxWords).join(" ").replace(/[,:;\-]+$/g, "").trim()}...`;
+};
+
+const dedupeNormalizedLines = (items = []) => {
+  const seen = new Set();
+  const output = [];
+  for (const item of items) {
+    const clean = String(item || "").replace(/\s+/g, " ").trim();
+    if (!clean) continue;
+    const key = clean.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    output.push(clean);
+  }
+  return output;
+};
+
+const isBriefingHistoryMatch = (story, candidate) => {
+  if (!story || !candidate || story.category !== candidate.category) return false;
+
+  const sharedPrimaryAnchors = getSharedPrimaryAnchors(story, candidate);
+  const sharedEntities = getSharedValues(extractThreadEntities(story), extractThreadEntities(candidate))
+    .filter(isUsefulThreadEntity);
+  const sharedPhrase = hasSharedDistinctivePhrase(story, candidate);
+  const headlineOverlap = getSharedCount(tokenizeThreadText(story, true), tokenizeThreadText(candidate, true));
+  const hasCryptoContext = hasSharedCryptoProductContext(story, candidate);
+  const score = scoreThreadMatch(story, candidate);
+
+  if (sharedPrimaryAnchors.length === 0 && !hasCryptoContext) return false;
+
+  if (story?.category === "Crypto") {
+    return hasCryptoContext || (sharedPrimaryAnchors.length >= 1 && (sharedEntities.length >= 1 || sharedPhrase || headlineOverlap >= 2));
+  }
+
+  return score >= 0.42 && (sharedEntities.length >= 1 || sharedPhrase || headlineOverlap >= 2);
+};
+
+const selectBriefingHistoryItems = (story, thread) => {
+  if (!story || !Array.isArray(thread?.items)) return [];
+
+  return thread.items
+    .filter((item) => isBriefingHistoryMatch(story, item))
+    .slice(0, 3);
+};
+
+const buildPreviousUpdatesText = (story, thread) => {
+  const items = selectBriefingHistoryItems(story, thread);
+  if (!items.length) return "No prior updates available on this thread.";
+
+  const timeline = items
+    .slice()
+    .reverse()
+    .map((item) => {
+      const date = storyDateKey(item) || "Earlier";
+      const detail = truncateSentence(stripHtml(item.ai_summary || item.summary || item.headline || ""), 18) || stripHtml(item.headline || "");
+      return `${date}: ${detail}`;
+    });
+
+  return limitSummaryWords(timeline.join(" Then "), 34) || "No prior updates available on this thread.";
+};
+
+const formatStructuredBriefing = ({ whatHappened, keyPoints, previousUpdates, takeaway }) => {
+  const bullets = dedupeNormalizedLines(keyPoints).slice(0, 3);
+  while (bullets.length < 3) {
+    if (bullets.length === 0) bullets.push("Source coverage is limited, so this briefing sticks to the confirmed update.");
+    else if (bullets.length === 1) bullets.push("The current article provides the clearest confirmed details available right now.");
+    else bullets.push("Further context will depend on the next verified update in this story thread.");
+  }
+
+  return [
+    `**WHAT HAPPENED:** ${String(whatHappened || "").trim()}`,
+    "",
+    "**KEY POINTS:**",
+    ...bullets.map((bullet) => `- ${bullet}`),
+    "",
+    `**TAKEAWAY:** ${String(takeaway || "").trim()}`
+  ].join("\n");
+};
+
+const buildLocalStructuredBriefingParts = (article, thread = null) => {
+  const headline = stripHtml(article?.headline || "").trim();
+  const baseText = stripHtml(article?.summary || article?.headline || "").replace(/\s+/g, " ").trim();
+  const sentences = splitIntoSentences(baseText);
+  const whatHappened = truncateSentence(
+    dedupeNormalizedLines([
+      sentences.slice(0, 2).join(" ").trim(),
+      baseText,
+      headline
+    ])[0] || headline,
+    30
+  );
+
+  const keyPoints = dedupeNormalizedLines([
+    truncateSentence(sentences[0] || baseText || headline, 16),
+    truncateSentence(sentences[1] || sentences[0] || headline, 16),
+    truncateSentence(headline || baseText, 14)
+  ]);
+
+  const takeaway = truncateSentence(`${headline || "This update"} is the main confirmed signal available right now.`, 22);
+
+  return { whatHappened, keyPoints, takeaway };
+};
+
+const buildLocalStructuredBriefing = (article, thread = null) => {
+  return formatStructuredBriefing(buildLocalStructuredBriefingParts(article, thread));
+};
+
+const extractBriefingSections = (text = "") => {
+  const parts = String(text).split(/(?:\*\*|__)?(WHAT HAPPENED|KEY POINTS|TAKEAWAY)\s*:?\s*(?:\*\*|__)?\s*:?\s*/i);
+  const sections = {};
+  if (parts.length <= 1) return sections;
+
+  for (let i = 1; i < parts.length; i += 2) {
+    const header = String(parts[i] || "").trim().toUpperCase();
+    const content = String(parts[i + 1] || "").trim();
+    if (header && content) sections[header] = content;
+  }
+
+  return sections;
+};
+
+const normalizeStructuredBriefing = (summary, article, thread = null) => {
+  const fallback = buildLocalStructuredBriefingParts(article, thread);
+  const sections = extractBriefingSections(summary);
+  const whatHappened = cleanSummaryText(sections["WHAT HAPPENED"] || "") || fallback.whatHappened;
+
+  const rawKeyPoints = String(sections["KEY POINTS"] || "")
+    .split(/(?:•|\*|-)\s+/)
+    .map((item) => cleanSummaryText(item))
+    .filter(Boolean);
+
+  const keyPoints = rawKeyPoints.length
+    ? rawKeyPoints.slice(0, 3)
+    : fallback.keyPoints;
+
+  const takeaway = cleanSummaryText(sections["TAKEAWAY"] || "") || fallback.takeaway;
+
+  return formatStructuredBriefing({
+    whatHappened,
+    keyPoints,
+    takeaway
+  });
+};
+
+const findArticleInPublishedSnapshots = (article) => {
+  const sourceUrl = normalizeStoryUrl(article?.sourceUrl);
+  if (!sourceUrl) return null;
+
+  const categoriesToCheck = [...new Set([normalizeCategory(article?.category), "All"].filter(Boolean))];
+  for (const category of categoriesToCheck) {
+    const snapshot = readPublishedSnapshot(category);
+    const stories = Array.isArray(snapshot?.top_stories) ? snapshot.top_stories : [];
+    const found = stories.find((story) => normalizeStoryUrl(story?.sourceUrl) === sourceUrl);
+    if (found) {
+      return { story: found, stories };
+    }
+  }
+
+  return null;
+};
+
+const buildSummaryThreadContext = async (article) => {
+  const published = findArticleInPublishedSnapshots(article);
+  const seedStory = published?.story || article;
+  const currentStories = published?.stories || [];
+  if (!seedStory?.sourceUrl) return null;
+
+  const scoredCandidates = getScoredThreadCandidates(seedStory, currentStories);
+  if (scoredCandidates.length < 1) return null;
+
+  const thread = await getThreadForStory(seedStory, scoredCandidates);
+  if (!thread?.count) return null;
+
+  const reviewedBy = String(thread.reviewed_by || "").toLowerCase();
+  const topic = String(thread.topic || "").trim().toLowerCase();
+  const headline = String(seedStory.headline || "").trim().toLowerCase();
+  const isHeadlineTopic = Boolean(topic && headline && topic === headline);
+  const isWeakLocalThread = reviewedBy.includes("local-strict") && !reviewedBy.includes("0g");
+
+  // Single-item local-strict threads are too noisy for briefings and can produce off-topic history.
+  const relevantHistory = selectBriefingHistoryItems(seedStory, thread);
+  if (relevantHistory.length < 1 && (isWeakLocalThread || isHeadlineTopic || thread.count < 2)) {
+    return null;
+  }
+
+  return {
+    ...thread,
+    count: relevantHistory.length,
+    items: relevantHistory
+  };
 };
 
 const getSummaryCachePath = (article) => {
@@ -3085,9 +3287,10 @@ const scrapeArticleText = async (url) => {
 const summarizeWith0G = async (article, options = {}) => {
   const apiKey = process.env.ZERO_G_API_KEY || process.env.OG_COMPUTE_API_KEY;
   const model = process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "zai-org/GLM-5-FP8";
+  const thread = await buildSummaryThreadContext(article);
 
   if (!apiKey) {
-    return { summary: summarizeLocally(article), provider: "local-no-key" };
+    return { summary: buildLocalStructuredBriefing(article, thread), provider: "local-no-key" };
   }
 
   const cachePath = getSummaryCachePath(article);
@@ -3117,6 +3320,23 @@ const summarizeWith0G = async (article, options = {}) => {
     const endpoint = get0GEndpoint(service.url);
     console.log("0G service resolved:", { provider: service.provider, endpoint });
     console.log("0G api key present:", Boolean(apiKey));
+    const systemPrompt = [
+      "You are Siftle's AI Briefing assistant. Return strict JSON with exactly one key: summary.",
+      "The summary value must follow this exact structure and nothing else:",
+      "**WHAT HAPPENED:** [1-2 sentences]",
+      "**KEY POINTS:**",
+      "- [bullet 1]",
+      "- [bullet 2]",
+      "- [bullet 3]",
+      "**TAKEAWAY:** [1 sentence]",
+      "Rules: Stay strictly grounded in the supplied text. No outside facts. Keep it short and direct. Use exactly 3 key-point bullets. Output only valid JSON."
+    ].join(" ");
+    const userPayload = {
+      headline: article.headline,
+      articleText,
+      source: article.source,
+      category: article.category
+    };
     const response = await fetch(`${endpoint}/chat/completions`, {
       method: "POST",
       signal: AbortSignal.timeout(summaryTimeoutMs),
@@ -3129,17 +3349,11 @@ const summarizeWith0G = async (article, options = {}) => {
         messages: [
           {
             role: "system",
-            content:
-              "You are Siftle's AI Briefing assistant. Return strict JSON with exactly one key: summary. The value must be a highly structured, unique AI Briefing formatted EXACTLY like this (using standard bold HTML tags and line breaks): **WHAT HAPPENED:** [1-2 sentences summarizing the core event] <br/><br/> **KEY POINTS:** <br/> • [First bullet point detailing a key fact, stat, or figure] <br/> • [Second bullet point with critical details] <br/> • [Third bullet point with critical details] <br/> • [Fourth bullet point, if applicable] <br/><br/> **TAKEAWAY:** [1 sentence summarizing the final takeaway or outlook]. Rules: Stay strictly grounded in the text. No outside facts. Keep it concise (70 to 140 words total). Output ONLY valid JSON."
+            content: systemPrompt
           },
           {
             role: "user",
-            content: JSON.stringify({
-              headline: article.headline,
-              articleText: articleText,
-              source: article.source,
-              category: article.category
-            })
+            content: JSON.stringify(userPayload)
           }
         ],
         temperature: 0.15,
@@ -3168,7 +3382,7 @@ const summarizeWith0G = async (article, options = {}) => {
     let summary = extractSummaryFromResponse(data);
 
     // Retry only when the model returns something unusably short, while staying grounded.
-    const minWords = 70;
+    const minWords = 45;
     const wordCount = summary.split(/\s+/).filter(Boolean).length;
     if (wordCount < minWords) {
       try {
@@ -3184,17 +3398,11 @@ const summarizeWith0G = async (article, options = {}) => {
             messages: [
               {
                 role: "system",
-                content:
-                  "You are Siftle's AI Briefing assistant. Return strict JSON with exactly one key: summary. The value must be a highly structured, unique AI Briefing formatted EXACTLY like this (using standard bold HTML tags and line breaks): **WHAT HAPPENED:** [1-2 sentences summarizing the core event] <br/><br/> **KEY POINTS:** <br/> • [First bullet point detailing a key fact, stat, or figure] <br/> • [Second bullet point with critical details] <br/> • [Third bullet point with critical details] <br/> • [Fourth bullet point, if applicable] <br/><br/> **TAKEAWAY:** [1 sentence summarizing the final takeaway or outlook]. Rules: Stay strictly grounded in the text. No outside facts. Keep it concise (70 to 140 words total). Output ONLY valid JSON."
+                content: systemPrompt
               },
               {
                 role: "user",
-                content: JSON.stringify({
-                  headline: article.headline,
-                  articleText: articleText,
-                  source: article.source,
-                  category: article.category
-                })
+                content: JSON.stringify(userPayload)
               }
             ],
             temperature: 0.08,
@@ -3219,10 +3427,10 @@ const summarizeWith0G = async (article, options = {}) => {
     }
 
     if (!summary) {
-      summary = summarizeLocallyTight(article);
+      summary = buildLocalStructuredBriefing(article, thread);
     }
 
-    summary = cleanSummaryText(summary);
+    summary = normalizeStructuredBriefing(cleanSummaryText(summary), article, thread);
 
     const proofObj = {
       providerAddress: service.provider,
@@ -3246,7 +3454,7 @@ const summarizeWith0G = async (article, options = {}) => {
   } catch (error) {
     console.warn("0G summarization fallback:", error.message);
     recordZeroGFallback("summary", error);
-    const summary = cleanSummaryText(summarizeLocallyTight(article));
+    const summary = normalizeStructuredBriefing(buildLocalStructuredBriefing(article, thread), article, thread);
     writeFileSync(cachePath, JSON.stringify({ summary, cached_at: new Date().toISOString(), provider: "local-fallback", prompt_version: summaryPromptVersion }, null, 2));
     return { summary, provider: "local-fallback", error: error.message };
   }
@@ -7906,7 +8114,7 @@ function getAnalyticsHtml() {
               <td>\${(row.trade_attempt || 0).toLocaleString()}</td>
               <td>\${rowTradeSuccesses.toLocaleString()}</td>
               <td>\${(row.claim_success || 0).toLocaleString()}</td>
-              <td>\${(row.ai_unlock_success || 0).toLocaleString()}</td>
+              <td>${(row.ai_unlock_success || 0).toLocaleString()}</td>
               <td>\${(row.view_summary || 0).toLocaleString()}</td>
               <td>\${(row.open_source || 0).toLocaleString()}</td>
               <td>\${((row.wallet_connect_failed || 0) + (row.trade_failed || 0) + (row.claim_failed || 0) + (row.ai_unlock_failed || 0)).toLocaleString()}</td>
@@ -9475,9 +9683,8 @@ const server = createServer(async (request, response) => {
   if (requestUrl.pathname === "/api/summary/unlock-config" && request.method === "GET") {
     sendJson(response, 200, {
       enabled: aiBriefingUnlockUsdc > 0,
-      amountUsdc: backendWalletUseX402 ? x402PriceUsdc : aiBriefingUnlockUsdc,
-      treasuryAddress: aiBriefingTreasuryAddress,
-      x402Enabled: backendWalletUseX402
+      amountUsdc: aiBriefingUnlockUsdc,
+      treasuryAddress: aiBriefingTreasuryAddress
     });
     return;
   }

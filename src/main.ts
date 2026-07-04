@@ -161,6 +161,8 @@ const state: {
   loadingReferralData: boolean;
   portfolioPositionsLoadedAt: number;
   unlockConfig: any | null;
+  newsSearchQuery: string;
+  briefingStatusByUrl: Record<string, string>;
 } = {
   activeSurface: "markets",
   profileUsername: null,
@@ -208,7 +210,9 @@ const state: {
   referralError: null,
   loadingReferralData: false,
   portfolioPositionsLoadedAt: 0,
-  unlockConfig: null
+  unlockConfig: null,
+  newsSearchQuery: "",
+  briefingStatusByUrl: {}
 };
 
 let selectedLeaderboardDivision: number | null = null;
@@ -579,7 +583,16 @@ const formatHeaderDate = (date?: string | null): string => {
 const getFilteredStories = (): NewsStory[] =>
   state.stories.filter((story) => {
     if (state.showSaved) return Boolean(story.saved);
-    return state.activeCategory === "All" || story.category === state.activeCategory;
+    if (!(state.activeCategory === "All" || story.category === state.activeCategory)) return false;
+
+    const query = state.newsSearchQuery.trim().toLowerCase();
+    if (!query) return true;
+
+    const haystack = [story.headline, story.summary, story.source, story.ai_summary]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(query);
   });
 
 const getStoryTimeLabel = (story: NewsStory): string =>
@@ -696,6 +709,11 @@ const formatAIBriefing = (text: string): string => {
   return html;
 };
 
+const renderBriefingStatusNote = (story: BriefingTarget): string => {
+  const status = state.briefingStatusByUrl[story.sourceUrl] || "";
+  return status ? `<p class="briefing-status-note">${escapeHtml(status)}</p>` : "";
+};
+
 const briefingUnlockKey = (story: BriefingTarget): string =>
   `siftle_ai_briefing_unlock_${btoa(unescape(encodeURIComponent(story.sourceUrl))).replace(/=+$/g, "")}`;
 
@@ -774,6 +792,7 @@ const renderLockedBriefing = (story: BriefingTarget, isUnlocking: boolean): stri
   return `
     <div class="briefing-section">
       <h4 class="briefing-title">AI briefing</h4>
+      ${renderBriefingStatusNote(story)}
       ${isUnlocking
         ? `
           <p class="briefing-text">Preparing your paid AI briefing...</p>
@@ -782,8 +801,8 @@ const renderLockedBriefing = (story: BriefingTarget, isUnlocking: boolean): stri
         : `
           <p class="briefing-text">
             ${isX402 
-              ? `Pay a micro-price of <strong>${price}</strong> per call using <strong>Circle x402 Gateway Batched Nanopayments</strong> on Arc Testnet.`
-              : `Pay a tiny USDC amount of <strong>${price}</strong> for the key points, what happened, and the takeaway.`
+              ? `Pay <strong>${price}</strong> in <strong>testnet USDC</strong> through <strong>Circle x402</strong> to unlock what happened, key points, and takeaway.`
+              : `Pay <strong>${price}</strong> in <strong>testnet USDC</strong> for the key points, what happened, and takeaway.`
             }
           </p>
           <button type="button" class="source-button" data-unlock-briefing-url="${encodeURIComponent(story.sourceUrl)}">
@@ -802,6 +821,7 @@ const unlockAndLoadStorySummary = async (story: BriefingTarget, force = false): 
   if (state.unlockingSummaryUrl === story.sourceUrl && !force) return;
 
   state.unlockingSummaryUrl = story.sourceUrl;
+  state.briefingStatusByUrl[story.sourceUrl] = "Preparing AI briefing payment...";
   trackEvent("ai_unlock_attempt");
   render();
 
@@ -817,9 +837,16 @@ const unlockAndLoadStorySummary = async (story: BriefingTarget, force = false): 
       Number(config.amountUsdc) || 0.05,
       (status) => {
         if (menuStatus) menuStatus.textContent = status;
+        state.briefingStatusByUrl[story.sourceUrl] = status;
+        render();
       },
       { sourceUrl: story.sourceUrl, topic: story.headline }
     );
+
+    state.briefingStatusByUrl[story.sourceUrl] = config.x402Enabled
+      ? `Payment successful. Loading AI briefing paid with ${config.amountUsdc} testnet USDC through x402.`
+      : `Payment successful. Loading AI briefing paid with ${config.amountUsdc} testnet USDC.`;
+    render();
 
     const unlockRes = await fetch(apiUrl("/api/summary/unlock"), {
       method: "POST",
@@ -844,6 +871,7 @@ const unlockAndLoadStorySummary = async (story: BriefingTarget, force = false): 
     await loadStorySummary(story);
   } catch (error) {
     trackEvent("ai_unlock_failed");
+    delete state.briefingStatusByUrl[story.sourceUrl];
     showActionToast(error instanceof Error ? error.message : "AI briefing failed");
   } finally {
     state.unlockingSummaryUrl = null;
@@ -866,6 +894,7 @@ const loadStorySummary = async (story: BriefingTarget): Promise<void> => {
   }
 
   state.loadingSummaryUrl = story.sourceUrl;
+  state.briefingStatusByUrl[story.sourceUrl] = "Generating briefing...";
   render();
 
   try {
@@ -885,12 +914,14 @@ const loadStorySummary = async (story: BriefingTarget): Promise<void> => {
 
     const data = await response.json();
     state.aiSummaries[story.sourceUrl] = safeStorySummary(story, data.summary);
+    state.briefingStatusByUrl[story.sourceUrl] = "AI briefing ready.";
     if (menuStatus && data.provider) {
       menuStatus.textContent = data.provider === "0g" ? "Summary generated by 0G" : `Summary loaded from ${data.provider}`;
     }
   } catch (error) {
     console.warn(error);
     state.aiSummaries[story.sourceUrl] = safeStorySummary(story);
+    state.briefingStatusByUrl[story.sourceUrl] = "Fallback briefing ready.";
     if (menuStatus) {
       menuStatus.textContent = "Summary fallback loaded";
     }
@@ -2139,10 +2170,29 @@ const renderStories = (): void => {
     return;
   }
 
+  const feedUnlockPrice = Number(state.unlockConfig?.amountUsdc) || 0.001;
+  const queryLabel = escapeHtml(state.newsSearchQuery.trim());
+  const helperText = queryLabel
+    ? `Showing ${stories.length} of ${state.stories.length} stories matching "${queryLabel}".`
+    : `Browse or search any news you like, then pay ${feedUnlockPrice} testnet USDC to unlock an AI briefing with what happened, key points, and takeaway without reading the full article or fighting ads.`;
+  const feedHeader = `
+    <section class="news-feed-search-shell">
+      <div class="news-feed-search-copy">
+        <span>News feed</span>
+        <h2>Search the latest stories</h2>
+        <p>${helperText}</p>
+      </div>
+      <label class="news-feed-search-bar" for="newsSearchInput">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <input id="newsSearchInput" type="search" placeholder="Search all saved Siftle news by keyword" value="${escapeHtml(state.newsSearchQuery)}" autocomplete="off" />
+      </label>
+    </section>
+  `;
+
   if (stories.length === 0) {
     const fallbackStories = state.showSaved ? [] : state.stories;
     if (fallbackStories.length > 0) {
-      storyList.innerHTML = fallbackStories
+      storyList.innerHTML = feedHeader + fallbackStories
         .map(
           (story) => `
         <article class="story-card" data-story-id="${story.id}" role="button" tabindex="0" aria-label="Open summary for ${story.headline}">
@@ -2226,11 +2276,11 @@ const renderStories = (): void => {
         .join("");
       return;
     }
-    storyList.innerHTML = "";
+    storyList.innerHTML = feedHeader + '<div class="portfolio-empty compact news-search-empty">No stories match that keyword yet.</div>';
     return;
   }
 
-  storyList.innerHTML = stories
+  storyList.innerHTML = feedHeader + stories
     .map(
       (story) => `
         <article class="story-card" data-story-id="${story.id}" role="button" tabindex="0" aria-label="Open summary for ${story.headline}">
@@ -2602,6 +2652,7 @@ const renderThreadTimelineItem = (story: NewsStory, label: string): string => {
           : `<a class="thread-source-link" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
         <button type="button" class="thread-source-link" data-unlock-briefing-url="${encodeURIComponent(story.sourceUrl)}" ${isUnlocking ? "disabled" : ""}>${isUnlocking ? "Preparing..." : "AI briefing"}</button>
       </div>
+      ${renderBriefingStatusNote(story)}
       ${isUnlocking
         ? `<div style="margin-top: 12px;">${renderSummarySkeleton()}</div>`
         : isBriefingUnlocked(story)
@@ -2796,6 +2847,7 @@ const renderDetail = (): void => {
         <img class="detail-image" src="${story.imageUrl}" alt="" />
         <section class="detail-summary ${story.category}">
           <strong>AI briefing</strong>
+          ${isUnlocked ? renderBriefingStatusNote(story) : ""}
           ${!isUnlocked ? renderLockedBriefing(story, isUnlocking) : isLoadingSummary ? renderSummarySkeleton() : formatAIBriefing(summary)}
         </section>
         <a class="source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>
@@ -3057,6 +3109,7 @@ const renderMarketDetail = (market: MarketPreview): void => {
                       ${/example\.com/i.test(item.sourceUrl) ? "" : `<a class="market-thread-source-link" href="${item.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
                       <button type="button" class="market-thread-source-link" data-unlock-briefing-url="${encodeURIComponent(item.sourceUrl)}" ${isUnlockingEvidence ? "disabled" : ""}>${isUnlockingEvidence ? "Preparing..." : "AI briefing"}</button>
                     </div>
+                    ${renderBriefingStatusNote(briefingTarget)}
                     ${isUnlockingEvidence
                       ? `<div style="margin-top: 12px;">${renderSummarySkeleton()}</div>`
                       : isBriefingUnlocked(briefingTarget)
@@ -4169,6 +4222,13 @@ categoryTabs?.addEventListener("click", (event) => {
   render();
   ensureArchiveIndexLoaded();
   ensureFeedLoaded(state.activeCategory);
+});
+
+storyList?.addEventListener("input", (event) => {
+  const target = event.target as HTMLInputElement;
+  if (target.id !== "newsSearchInput") return;
+  state.newsSearchQuery = target.value;
+  renderStories();
 });
 
 topMarketsButton?.addEventListener("click", () => {
