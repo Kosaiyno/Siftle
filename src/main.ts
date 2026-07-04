@@ -1792,15 +1792,22 @@ const loadMarketSnapshot = async (market: MarketPreview): Promise<void> => {
   const marketAddress = getMarketAddress(market);
   if (!marketAddress || state.marketSnapshots[market.id] || state.loadingMarketSnapshots[market.id] || state.checkedMarketSnapshots[market.id]) return;
   if (isOptionMarket(market) && !state.walletAddress) {
+    const publicResolvedOptionId = (market as MarketPreview & { resolvedOptionId?: string | null }).resolvedOptionId || null;
+    const publicOutcome = Number((market as MarketPreview & { outcome?: number }).outcome);
     state.marketSnapshots[market.id] = {
       yesPriceCents: 0,
       noPriceCents: 0,
-      volumeUsdc: 0,
+      volumeUsdc: Number((market as MarketPreview & { volumeUsdc?: number }).volumeUsdc) || 0,
       yesSharesUsdc: 0,
       noSharesUsdc: 0,
-      outcome: 0,
-      optionPools: Object.fromEntries(getMarketOptions(market).map((option) => [option.id, 0])),
-      resolvedOptionId: null,
+      outcome: (publicOutcome === 1 || publicOutcome === 2 || publicOutcome === 3
+        ? publicOutcome
+        : publicResolvedOptionId
+          ? 1
+          : 0),
+      optionPools: (market as MarketPreview & { optionPools?: Record<string, number> }).optionPools
+        || Object.fromEntries(getMarketOptions(market).map((option) => [option.id, 0])),
+      resolvedOptionId: publicResolvedOptionId,
       traderCount: 0
     };
     state.checkedMarketSnapshots[market.id] = true;

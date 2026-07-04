@@ -75,6 +75,13 @@ const loadEnv = () => {
 
 loadEnv();
 
+const payoutPrivateKey = (
+  process.env.AI_BRIEFING_TREASURY_PRIVATE_KEY ||
+  process.env.SIFTLE_TREASURY_PRIVATE_KEY ||
+  process.env.ARC_DEPLOYER_PRIVATE_KEY ||
+  ""
+).trim();
+
 let deployerAddress = "";
 if (process.env.ARC_DEPLOYER_PRIVATE_KEY) {
   try {
@@ -7243,6 +7250,12 @@ function getFastMarketsWithCachedCounts() {
     return {
       ...market,
       ...(marketAddress ? { marketAddress } : {}),
+      ...(market.optionMarket && cached?.resolvedOptionId ? {
+        resolvedOptionId: cached.resolvedOptionId,
+        outcome: 1,
+        optionPools: cached.optionPools,
+        volumeUsdc: cached.volumeUsdc
+      } : {}),
       ...(cached?.traderCount !== undefined ? {
         traderCount: cached.traderCount,
         traders: cached.traders
@@ -7255,11 +7268,31 @@ async function refreshMarketListCache() {
   if (marketListCache.refreshPromise) return marketListCache.refreshPromise;
 
   marketListCache.refreshPromise = (async () => {
+    const data = loadAnalytics();
     const enrichedMarkets = [];
     for (const market of getActiveMarkets()) {
       const marketAddress = normalizeWalletAddress(market.marketAddress) || getConfiguredMarketAddress(market.id);
+      let optionState = null;
+      if (market.optionMarket) {
+        try {
+          optionState = await loadOptionMarketStateFromSupabase(data, market);
+        } catch {
+          optionState = data;
+        }
+      }
+      const publicOptionSnapshot = optionState && market.optionMarket
+        ? readOptionMarketStateFromData(optionState, "", market).snapshot
+        : null;
       if (!marketAddress || isLocalTestMarketAddress(marketAddress)) {
-        enrichedMarkets.push(market);
+        enrichedMarkets.push({
+          ...market,
+          ...(publicOptionSnapshot ? {
+            resolvedOptionId: publicOptionSnapshot.resolvedOptionId || null,
+            outcome: publicOptionSnapshot.outcome || 0,
+            optionPools: publicOptionSnapshot.optionPools,
+            volumeUsdc: publicOptionSnapshot.volumeUsdc
+          } : {})
+        });
         continue;
       }
 
@@ -7269,13 +7302,25 @@ async function refreshMarketListCache() {
         enrichedMarkets.push({
           ...market,
           marketAddress,
+          ...(publicOptionSnapshot ? {
+            resolvedOptionId: publicOptionSnapshot.resolvedOptionId || null,
+            outcome: publicOptionSnapshot.outcome || 0,
+            optionPools: publicOptionSnapshot.optionPools,
+            volumeUsdc: publicOptionSnapshot.volumeUsdc
+          } : {}),
           traderCount,
           traders: traderCount > 0 ? String(traderCount) : String(market.traders || "0")
         });
       } catch {
         enrichedMarkets.push({
           ...market,
-          marketAddress
+          marketAddress,
+          ...(publicOptionSnapshot ? {
+            resolvedOptionId: publicOptionSnapshot.resolvedOptionId || null,
+            outcome: publicOptionSnapshot.outcome || 0,
+            optionPools: publicOptionSnapshot.optionPools,
+            volumeUsdc: publicOptionSnapshot.volumeUsdc
+          } : {})
         });
       }
     }
@@ -8467,12 +8512,12 @@ const server = createServer(async (request, response) => {
         sendJson(response, 400, { error: "No winning payout to claim" });
         return;
       }
-      if (!process.env.ARC_DEPLOYER_PRIVATE_KEY) {
+      if (!payoutPrivateKey) {
         sendJson(response, 500, { error: "Payout wallet is not configured" });
         return;
       }
 
-      const signer = new Wallet(process.env.ARC_DEPLOYER_PRIVATE_KEY, leaderboardProvider);
+      const signer = new Wallet(payoutPrivateKey, leaderboardProvider);
       const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
       const tx = await usdc.transfer(cleanWallet, parseUnits(claim.amountUsdc.toFixed(6), 6));
       const receipt = await tx.wait();
