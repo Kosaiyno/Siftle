@@ -1514,8 +1514,8 @@ body.detail-mode .site-header {
 .action-toast {
   position: fixed;
   left: 50%;
-  bottom: 28px;
-  z-index: 90;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 84px);
+  z-index: 1205;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1542,10 +1542,9 @@ body.detail-mode .site-header {
 
 @media (max-width: 820px) {
   .action-toast {
-    top: calc(env(safe-area-inset-top, 0px) + 18px);
-    bottom: auto;
-    z-index: 220;
-    transform: translate(-50%, -12px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 84px);
+    z-index: 1205;
+    transform: translate(-50%, 12px);
   }
 
   .action-toast.show {

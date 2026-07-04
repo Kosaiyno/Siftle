@@ -54,25 +54,21 @@
           </div>
         </header>
 
-        
+                <section class="brief-hero" hidden aria-hidden="true">
+                  <div class="headline-row">
+                    <h1>Top News</h1>
+                    <p class="date-label" id="dateLabel"></p>
+                  </div>
+                </section>
 
-        <section class="brief-hero">
-          <div class="headline-row">
-            <h1>Top News</h1>
-            <p class="date-label" id="dateLabel"></p>
-            
-          </div>
-          
-        </section>
+                <section class="archive-controls" id="archiveControls" aria-label="Daily archive selector" hidden>
+                  <select id="archiveDateSelect" aria-label="Select saved day">
+                    <option value="">Today</option>
+                  </select>
+                  <span id="archiveStatus" aria-live="polite"></span>
+                </section>
 
-        <section class="archive-controls" id="archiveControls" aria-label="Daily archive selector">
-          <select id="archiveDateSelect" aria-label="Select saved day">
-            <option value="">Today</option>
-          </select>
-          <span id="archiveStatus" aria-live="polite"></span>
-        </section>
-
-        <nav class="category-tabs" id="categoryTabs" aria-label="News categories"></nav>
+                <nav class="category-tabs" id="categoryTabs" aria-label="News categories" hidden></nav>
 
         <section class="story-list" id="storyList" aria-label="Trending stories"></section>
 

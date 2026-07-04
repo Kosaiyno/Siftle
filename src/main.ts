@@ -791,11 +791,9 @@ const renderLockedBriefing = (story: BriefingTarget, isUnlocking: boolean): stri
 
   return `
     <div class="briefing-section">
-      <h4 class="briefing-title">AI briefing</h4>
       ${renderBriefingStatusNote(story)}
       ${isUnlocking
         ? `
-          <p class="briefing-text">Preparing your paid AI briefing...</p>
           ${renderSummarySkeleton()}
         `
         : `
@@ -3855,9 +3853,9 @@ const renderLeaderboard = (): void => {
 const showFeedSurface = (): void => {
   state.activeSurface = "feed";
   state.selectedMarketId = null;
-  briefHero?.removeAttribute("hidden");
-  archiveControls?.removeAttribute("hidden");
-  categoryTabs?.removeAttribute("hidden");
+  briefHero?.toggleAttribute("hidden", true);
+  archiveControls?.toggleAttribute("hidden", true);
+  categoryTabs?.toggleAttribute("hidden", true);
   topMarketsButton?.classList.remove("active");
   topNewsButton?.classList.add("active");
   topPortfolioButton?.classList.remove("active");
@@ -4225,8 +4223,15 @@ categoryTabs?.addEventListener("click", (event) => {
 storyList?.addEventListener("input", (event) => {
   const target = event.target as HTMLInputElement;
   if (target.id !== "newsSearchInput") return;
+  const selectionStart = target.selectionStart ?? target.value.length;
+  const selectionEnd = target.selectionEnd ?? target.value.length;
   state.newsSearchQuery = target.value;
   renderStories();
+  const nextInput = storyList?.querySelector<HTMLInputElement>("#newsSearchInput");
+  if (nextInput) {
+    nextInput.focus();
+    nextInput.setSelectionRange(selectionStart, selectionEnd);
+  }
 });
 
 topMarketsButton?.addEventListener("click", () => {
