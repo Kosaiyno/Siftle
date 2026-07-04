@@ -769,11 +769,11 @@ const renderLockedBriefing = (story: BriefingTarget, isUnlocking: boolean): stri
     <h4 class="briefing-title">AI briefing</h4>
     ${isUnlocking
       ? `
-        <p class="briefing-text">Preparing your AI briefing...</p>
+        <p class="briefing-text">Preparing your paid AI briefing...</p>
         ${renderSummarySkeleton()}
       `
       : `
-        <p class="briefing-text">Get the key points, what happened, and the takeaway.</p>
+        <p class="briefing-text">Pay a tiny USDC amount for the key points, what happened, and the takeaway.</p>
         <button type="button" class="source-button" data-unlock-briefing-url="${encodeURIComponent(story.sourceUrl)}">
           AI briefing
         </button>
@@ -2170,6 +2170,7 @@ const renderStories = (): void => {
 
           <div class="card-action-row desktop-only">
             ${renderDesktopThreadButton(story)}
+            <button class="card-source-button summary-btn" type="button">AI briefing</button>
             ${/example\\.com/i.test(story.sourceUrl)
               ? `<a class="card-source-button disabled" href="#" onclick="event.preventDefault(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
               : `<a class="card-source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
@@ -2257,6 +2258,7 @@ const renderStories = (): void => {
 
           <div class="card-action-row desktop-only">
             ${renderDesktopThreadButton(story)}
+            <button class="card-source-button summary-btn" type="button">AI briefing</button>
             ${/example\\.com/i.test(story.sourceUrl)
               ? `<a class="card-source-button disabled" href="#" onclick="event.preventDefault(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
               : `<a class="card-source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
@@ -4434,7 +4436,7 @@ storyList?.addEventListener("click", async (event) => {
 
   if (!storyCard) return;
   if (target.closest("a")) return;
-  openStory(Number(storyCard.dataset.storyId), Boolean(target.closest(".summary-btn")));
+  openStory(Number(storyCard.dataset.storyId), true);
 });
 
 storyList?.addEventListener("keydown", (event) => {
