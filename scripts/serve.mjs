@@ -8218,7 +8218,7 @@ function getAnalyticsHtml() {
               <td>\${(row.trade_attempt || 0).toLocaleString()}</td>
               <td>\${rowTradeSuccesses.toLocaleString()}</td>
               <td>\${(row.claim_success || 0).toLocaleString()}</td>
-              <td>${(row.ai_unlock_success || 0).toLocaleString()}</td>
+              <td>\${(row.ai_unlock_success || 0).toLocaleString()}</td>
               <td>\${(row.view_summary || 0).toLocaleString()}</td>
               <td>\${(row.open_source || 0).toLocaleString()}</td>
               <td>\${((row.wallet_connect_failed || 0) + (row.trade_failed || 0) + (row.claim_failed || 0) + (row.ai_unlock_failed || 0)).toLocaleString()}</td>
