@@ -5556,7 +5556,7 @@ const sendVerificationCodeEmail = async (email, otp) => {
           <p class="subtitle" style="font-size: 14px; color: #94a3b8; margin-bottom: 28px; line-height: 1.5; max-width: 380px; margin-left: auto; margin-right: auto;">Enter this 6-digit code to sign in to Siftle. It has no spaces.</p>
           
           <div class="code-container" style="background-color: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 8px; padding: 18px 28px; display: inline-block; margin-bottom: 24px;">
-            <span class="code" style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 700; letter-spacing: 2px; color: #a5b4fc;">\${formattedOtp}</span>
+            <span class="code" style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 700; letter-spacing: 2px; color: #a5b4fc;">${formattedOtp}</span>
             <div class="copy-hint" style="margin-top: 12px; color: #94a3b8; font-size: 13px; line-height: 1.4;">Tap and hold the code to copy it.</div>
           </div>
           
@@ -5581,24 +5581,24 @@ const sendVerificationCodeEmail = async (email, otp) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer \${resendApiKey.trim().replace(/^["']|["']$/g, "")}`
+          "Authorization": `Bearer ${resendApiKey.trim().replace(/^["']|["']$/g, "")}`
         },
         body: JSON.stringify({
           from: resendFrom,
           to: [email],
-          subject: `Siftle Security Code: \${otp}`,
+          subject: `Siftle Security Code: ${otp}`,
           html: htmlContent
         })
       });
       const resText = await res.text();
       if (res.ok) {
         emailSent = true;
-        console.log(`OTP sent via Resend API to \${email}`);
+        console.log(`OTP sent via Resend API to ${email}`);
       } else {
-        console.warn(`Resend API send failed: \${res.status} -> \${resText}`);
+        console.warn(`Resend API send failed: ${res.status} -> ${resText}`);
       }
     } catch (resendErr) {
-      console.warn(`Failed to send email via Resend API: \${resendErr.message}`);
+      console.warn(`Failed to send email via Resend API: ${resendErr.message}`);
     }
   }
 
@@ -5614,10 +5614,10 @@ const sendVerificationCodeEmail = async (email, otp) => {
           const addresses = await resolve4(smtpHost);
           if (addresses && addresses.length > 0) {
             resolvedHost = addresses[0];
-            console.log(`SMTP: Resolved \${smtpHost} -> \${resolvedHost} (IPv4)`);
+            console.log(`SMTP: Resolved ${smtpHost} -> ${resolvedHost} (IPv4)`);
           }
         } catch (dnsErr) {
-          console.warn(`SMTP DNS resolve4 failed for \${smtpHost}, using hostname directly: \${dnsErr.message}`);
+          console.warn(`SMTP DNS resolve4 failed for ${smtpHost}, using hostname directly: ${dnsErr.message}`);
         }
 
         const smtpPort = Number(process.env.SMTP_PORT || 587);
@@ -5634,15 +5634,15 @@ const sendVerificationCodeEmail = async (email, otp) => {
         });
 
         const randomId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-        const customMessageId = `<\${randomId}@gmail.com>`;
+        const customMessageId = `<${randomId}@gmail.com>`;
 
         await transporter.sendMail({
           messageId: customMessageId,
-          from: `Siftle <\${smtpUser}>`,
+          from: `Siftle <${smtpUser}>`,
           to: email,
           replyTo: smtpUser,
-          subject: `Siftle Security Code: \${otp}`,
-          text: `Verify Your Email\n\nEnter this 6-digit code to authorize your session and sign in to Siftle.\n\nVerification Code: \text{otp}\n\nThis code has no spaces. It will expire in 24 hours.`,
+          subject: `Siftle Security Code: ${otp}`,
+          text: `Verify Your Email\n\nEnter this 6-digit code to authorize your session and sign in to Siftle.\n\nVerification Code: ${otp}\n\nThis code has no spaces. It will expire in 24 hours.`,
           html: htmlContent,
           headers: {
             "X-Priority": "1",
@@ -5654,15 +5654,15 @@ const sendVerificationCodeEmail = async (email, otp) => {
           }
         });
         emailSent = true;
-        console.log(`OTP sent via SMTP to \${email}`);
+        console.log(`OTP sent via SMTP to ${email}`);
       } catch (mailErr) {
-        console.warn(`Failed to send SMTP email: \${mailErr.message}`);
+        console.warn(`Failed to send SMTP email: ${mailErr.message}`);
       }
     }
   }
 
   if (!emailSent) {
-    console.log(`\\n==========================================\\n[SMTP NOT CONFIG] OTP for \${email}: \${otp}\\n==========================================\\n`);
+    console.log(`\n==========================================\n[SMTP NOT CONFIG] OTP for ${email}: ${otp}\n==========================================\n`);
   }
 };
 
