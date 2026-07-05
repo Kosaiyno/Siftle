@@ -6603,28 +6603,38 @@ async function buildAnalyticsReport(localData = loadAnalytics()) {
     aiBriefingWalletsToday: 0
   };
 
+  const signupHashesByDate = {};
+  const allSignupHashes = new Set();
+  const addSignupRecord = (dateKey, emailOrHash) => {
+    const cleanDateKey = String(dateKey || "").trim();
+    const rawValue = String(emailOrHash || "").trim().toLowerCase();
+    if (!cleanDateKey || !rawValue) return;
+    const hashed = /^[a-f0-9]{64}$/i.test(rawValue) ? rawValue : emailHash(rawValue);
+    if (!signupHashesByDate[cleanDateKey]) signupHashesByDate[cleanDateKey] = new Set();
+    signupHashesByDate[cleanDateKey].add(hashed);
+    allSignupHashes.add(hashed);
+  };
+
   Object.entries(data.daily || {}).forEach(([dateKey, row]) => {
     derived.signupsByDate[dateKey] = Number(row?.sign_up) || 0;
   });
+  (data.emails || []).forEach((email) => addSignupRecord(todayKey, email));
+  Object.values(loadBackendWalletUsers()).forEach((user) => addSignupRecord(String(user?.createdAt || "").slice(0, 10), user?.email));
 
   if (isSupabaseConfigured) {
     try {
-      const [signupRows, aiUnlockRows] = await Promise.all([
+      const [signupRows, aiUnlockRows, backendWalletRows] = await Promise.all([
         supabaseRequest("analytics_signups?select=email_hash,date_key,created_at&order=created_at.desc&limit=5000"),
-        supabaseRequest("ai_briefing_unlocks?select=wallet_address,date_key,created_at&order=created_at.desc&limit=10000")
+        supabaseRequest("ai_briefing_unlocks?select=wallet_address,date_key,created_at&order=created_at.desc&limit=10000"),
+        supabaseRequest("backend_wallet_users?select=email,created_at&order=created_at.desc&limit=5000")
       ]);
 
-      const signupsByDate = {};
-      const signupHashes = new Set();
       (signupRows || []).forEach((row) => {
-        const dateKey = String(row?.date_key || "").trim();
-        const email = String(row?.email_hash || "").trim();
-        if (!dateKey || !email) return;
-        signupsByDate[dateKey] = (signupsByDate[dateKey] || 0) + 1;
-        signupHashes.add(email);
+        addSignupRecord(row?.date_key, row?.email_hash);
       });
-      derived.signupsByDate = signupsByDate;
-      derived.signupsTotalUnique = signupHashes.size;
+      (backendWalletRows || []).forEach((row) => {
+        addSignupRecord(String(row?.created_at || "").slice(0, 10), row?.email);
+      });
 
       const aiWalletSetsByDate = {};
       const allAiWallets = new Set();
@@ -6650,6 +6660,13 @@ async function buildAnalyticsReport(localData = loadAnalytics()) {
     const localAiMetrics = getLocalAiBriefingWalletMetrics(data);
     derived.aiBriefingWalletsByDate = localAiMetrics.byDate;
     derived.aiBriefingWalletsTotalUnique = localAiMetrics.totalUnique;
+  }
+
+  if (allSignupHashes.size > 0) {
+    derived.signupsByDate = Object.fromEntries(
+      Object.entries(signupHashesByDate).map(([dateKey, hashSet]) => [dateKey, hashSet.size])
+    );
+    derived.signupsTotalUnique = allSignupHashes.size;
   }
 
   derived.aiBriefingWalletsToday = Number(derived.aiBriefingWalletsByDate[todayKey]) || 0;
@@ -8451,7 +8468,7 @@ function getAnalyticsHtml() {
       <div class="card signups">
         <span class="card-label">USDC Signups</span>
         <span class="card-value" id="valSignups">-</span>
-        <span class="card-footer">Circle wallets initialized</span>
+        <span class="card-footer">Unique signup emails across wallet flows</span>
       </div>
     </div>
 
@@ -8474,7 +8491,7 @@ function getAnalyticsHtml() {
         <div class="progress-bar-container">
           <div class="progress-bar" id="barSummary"></div>
         </div>
-        <span class="ratio-desc">Percentage of successful unlocks that become viewed AI briefings.</span>
+        <span class="ratio-desc">Percentage of AI briefing unlock attempts that complete successfully.</span>
       </div>
       <div class="ratio-card">
         <div class="ratio-header">
@@ -8576,8 +8593,10 @@ function getAnalyticsHtml() {
         
         const opens = totals.app_open || 1;
         const signupRate = (uniqueSignups / opens) * 100;
-        const summaryRate = ((totals.view_summary || 0) / Math.max(1, aiUnlocks || totals.ai_unlock_attempt || 0)) * 100;
-        const clickRate = ((tradeSuccesses || 0) / Math.max(1, totals.trade_attempt || 0)) * 100;
+        const aiOutcomeTotal = (totals.ai_unlock_success || 0) + (totals.ai_unlock_failed || 0);
+        const tradeOutcomeTotal = tradeSuccesses + (totals.trade_failed || 0);
+        const summaryRate = ((totals.ai_unlock_success || 0) / Math.max(1, aiOutcomeTotal)) * 100;
+        const clickRate = ((tradeSuccesses || 0) / Math.max(1, tradeOutcomeTotal)) * 100;
         
         document.getElementById('ratioSignup').textContent = signupRate.toFixed(1) + '%';
         document.getElementById('ratioSummary').textContent = summaryRate.toFixed(1) + '%';
@@ -8589,7 +8608,6 @@ function getAnalyticsHtml() {
 
         const extraMetrics = [
           ['Unique Signups', uniqueSignups],
-          ['AI Wallets Today', aiWalletsToday],
           ['AI Wallets Total', aiWalletsTotal],
           ['Wallet Starts', totals.wallet_connect_start],
           ['Wallet Success', totals.wallet_connect_success],
