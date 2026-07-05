@@ -722,6 +722,10 @@ const briefingUnlockKey = (story: BriefingTarget): string =>
 const getBriefingUnlockToken = (story: BriefingTarget): string =>
   localStorage.getItem(briefingUnlockKey(story)) || "";
 
+const clearBriefingUnlockToken = (story: BriefingTarget): void => {
+  localStorage.removeItem(briefingUnlockKey(story));
+};
+
 const isBriefingUnlocked = (story: BriefingTarget): boolean => Boolean(getBriefingUnlockToken(story));
 
 const getBriefingTargetFromMarketEvidence = (
@@ -812,6 +816,17 @@ const renderLockedBriefing = (story: BriefingTarget, isUnlocking: boolean): stri
     </div>
   `;
 };
+
+const hasBriefingGenerationFailure = (story: BriefingTarget): boolean =>
+  /^AI briefing unavailable\./i.test(state.briefingStatusByUrl[story.sourceUrl] || "") && !state.aiSummaries[story.sourceUrl];
+
+const renderUnavailableBriefing = (story: BriefingTarget): string => `
+  <div class="briefing-section">
+    ${renderBriefingStatusNote(story)}
+    <p class="briefing-text">The AI briefing could not be generated for this article. Retry the briefing or open the source story below.</p>
+    <button type="button" class="source-button" data-unlock-briefing-url="${encodeURIComponent(story.sourceUrl)}">Retry AI briefing</button>
+  </div>
+`;
 
 const unlockAndLoadStorySummary = async (story: BriefingTarget, force = false): Promise<void> => {
   if (!state.walletAddress) {
@@ -909,6 +924,16 @@ const loadStorySummary = async (story: BriefingTarget): Promise<void> => {
     });
 
     if (!response.ok) {
+      if (response.status === 402) {
+        clearBriefingUnlockToken(story);
+        delete state.aiSummaries[story.sourceUrl];
+        state.briefingStatusByUrl[story.sourceUrl] = "AI briefing unlock expired. Unlock it again to generate a new briefing.";
+        if (menuStatus) {
+          menuStatus.textContent = "Unlock expired. Unlock again to continue.";
+        }
+        render();
+        return;
+      }
       throw new Error(`Summary request failed with ${response.status}`);
     }
 
@@ -920,10 +945,10 @@ const loadStorySummary = async (story: BriefingTarget): Promise<void> => {
     }
   } catch (error) {
     console.warn(error);
-    state.aiSummaries[story.sourceUrl] = safeStorySummary(story);
-    state.briefingStatusByUrl[story.sourceUrl] = "Fallback briefing ready.";
+    delete state.aiSummaries[story.sourceUrl];
+    state.briefingStatusByUrl[story.sourceUrl] = "AI briefing unavailable. Retry to generate it again.";
     if (menuStatus) {
-      menuStatus.textContent = "Summary fallback loaded";
+      menuStatus.textContent = "AI briefing failed. Retry available.";
     }
   } finally {
     state.loadingSummaryUrl = null;
@@ -2641,6 +2666,7 @@ const handleStoryExport = async (storyId: number, action: "save" | "share"): Pro
 
 const renderThreadTimelineItem = (story: NewsStory, label: string): string => {
   const isUnlocking = state.unlockingSummaryUrl === story.sourceUrl;
+  const hasFailure = hasBriefingGenerationFailure(story);
   return `
   <article class="thread-item">
     <div class="thread-dot" aria-hidden="true"></div>
@@ -2663,7 +2689,9 @@ const renderThreadTimelineItem = (story: NewsStory, label: string): string => {
         : isBriefingUnlocked(story)
         ? (state.loadingSummaryUrl === story.sourceUrl
             ? `<div style="margin-top: 12px;">${renderSummarySkeleton()}</div>`
-            : `<div style="margin-top: 12px;">${formatAIBriefing(safeStorySummary(story, state.aiSummaries[story.sourceUrl] || story.ai_summary))}</div>`)
+            : hasFailure
+              ? `<div style="margin-top: 12px;">${renderUnavailableBriefing(story)}</div>`
+              : `<div style="margin-top: 12px;">${formatAIBriefing(safeStorySummary(story, state.aiSummaries[story.sourceUrl] || story.ai_summary))}</div>`)
         : ""}
     </div>
   </article>
@@ -2832,6 +2860,7 @@ const renderDetail = (): void => {
   const isLoadingSummary = state.loadingSummaryUrl === story.sourceUrl;
   const isUnlocked = isBriefingUnlocked(story);
   const isUnlocking = state.unlockingSummaryUrl === story.sourceUrl;
+  const hasSummaryFailure = hasBriefingGenerationFailure(story);
 
   storyList.hidden = true;
   storyDetail.hidden = false;
@@ -2853,7 +2882,7 @@ const renderDetail = (): void => {
         <section class="detail-summary ${story.category}">
           <strong>AI briefing</strong>
           ${isUnlocked ? renderBriefingStatusNote(story) : ""}
-          ${!isUnlocked ? renderLockedBriefing(story, isUnlocking) : isLoadingSummary ? renderSummarySkeleton() : formatAIBriefing(summary)}
+          ${!isUnlocked ? renderLockedBriefing(story, isUnlocking) : isLoadingSummary ? renderSummarySkeleton() : hasSummaryFailure ? renderUnavailableBriefing(story) : formatAIBriefing(summary)}
         </section>
         <a class="source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>
       </article>
@@ -3125,7 +3154,9 @@ const renderMarketDetail = (market: MarketPreview): void => {
                       : isBriefingUnlocked(briefingTarget)
                       ? (state.loadingSummaryUrl === item.sourceUrl
                           ? `<div style="margin-top: 12px;">${renderSummarySkeleton()}</div>`
-                          : `<div style="margin-top: 12px;">${formatAIBriefing(safeStorySummary(briefingTarget, state.aiSummaries[item.sourceUrl]))}</div>`)
+                            : hasBriefingGenerationFailure(briefingTarget)
+                              ? `<div style="margin-top: 12px;">${renderUnavailableBriefing(briefingTarget)}</div>`
+                              : `<div style="margin-top: 12px;">${formatAIBriefing(safeStorySummary(briefingTarget, state.aiSummaries[item.sourceUrl]))}</div>`)
                       : ""}
                   </div>
                 </article>
