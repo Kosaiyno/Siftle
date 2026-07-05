@@ -128,7 +128,7 @@ const aiBriefingDailyBonusUnlocks = Math.max(1, Number(process.env.AI_BRIEFING_D
 const aiBriefingDailyBonusPoints = Math.max(0, Number(process.env.AI_BRIEFING_DAILY_BONUS_POINTS ?? 30));
 const backendWalletMode = process.env.BACKEND_WALLET_MODE === "true";
 const backendWalletLocalOnly = process.env.BACKEND_WALLET_LOCAL_ONLY !== "false";
-const backendWalletSessionTtlMs = Math.max(1, Number(process.env.BACKEND_WALLET_SESSION_HOURS ?? 24)) * 60 * 60 * 1000;
+const backendWalletSessionTtlMs = Math.max(1, Number(process.env.BACKEND_WALLET_SESSION_HOURS ?? 168)) * 60 * 60 * 1000;
 const backendWalletUseX402 = process.env.BACKEND_WALLET_USE_X402 === "true";
 const backendWalletMigrationEnabled = process.env.BACKEND_WALLET_MIGRATION_ENABLED === "true";
 const backendWalletMigrationAutoClaim = process.env.BACKEND_WALLET_MIGRATION_AUTO_CLAIM === "true";
