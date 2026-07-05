@@ -23,11 +23,17 @@ console.log(`Wallet USDC: ${before.wallet.formatted}`);
 console.log(`Gateway available: ${before.gateway.formattedAvailable}`);
 
 if (autoDeposit) {
-  console.log(`Depositing ${autoDeposit} USDC into Gateway...`);
-  const deposit = await client.deposit(autoDeposit);
-  console.log(`Deposit tx: ${deposit.depositTxHash}`);
-  const warmed = await client.getBalances();
-  console.log(`Gateway available after deposit: ${warmed.gateway.formattedAvailable}`);
+  const threshold = 50000n; // 0.05 USDC in base units (6 decimals)
+  const currentAvailable = before.gateway?.available || 0n;
+  if (currentAvailable < threshold) {
+    console.log(`Gateway available balance (${before.gateway.formattedAvailable}) is below threshold. Depositing ${autoDeposit} USDC...`);
+    const deposit = await client.deposit(autoDeposit);
+    console.log(`Deposit tx: ${deposit.depositTxHash}`);
+    const warmed = await client.getBalances();
+    console.log(`Gateway available after deposit: ${warmed.gateway.formattedAvailable}`);
+  } else {
+    console.log(`Gateway available balance (${before.gateway.formattedAvailable}) is sufficient. Skipping auto-deposit.`);
+  }
 }
 
 const support = await client.supports(targetUrl);
