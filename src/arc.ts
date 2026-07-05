@@ -369,8 +369,10 @@ export const connectArcWallet = async (): Promise<string> => {
             <img src="./assets/siftle-logo-small.png" alt="Siftle logo" />
             <h2>Sign in to Siftle</h2>
           </div>
-          <p class="circle-auth-subtitle">Enter your email to continue with your Siftle account.</p>
-          <div class="circle-auth-step">
+          <p class="circle-auth-subtitle">Confirm your email to receive a login verification code.</p>
+          
+          <!-- Step 1: Request Code -->
+          <div id="backendWalletStepEmail" class="circle-auth-step">
             <div class="circle-auth-field">
               <label for="backendWalletEmail">Email Address</label>
               <input type="email" id="backendWalletEmail" placeholder="name@domain.com" required />
@@ -382,8 +384,19 @@ export const connectArcWallet = async (): Promise<string> => {
                 <input type="text" id="backendReferralCode" placeholder="Optional" autocomplete="off" autocapitalize="characters" />
               </div>
             </details>
-            <button id="backendWalletContinue" class="circle-auth-btn" type="button">Continue</button>
+            <button id="backendWalletContinue" class="circle-auth-btn" type="button" style="margin-top: 16px;">Continue</button>
           </div>
+
+          <!-- Step 2: Verify Code -->
+          <div id="backendWalletStepCode" class="circle-auth-step" style="display: none;">
+            <div class="circle-auth-field">
+              <label for="backendWalletCode">6-Digit Verification Code</label>
+              <input type="text" id="backendWalletCode" placeholder="000000" pattern="[0-9]{6}" maxlength="6" style="text-align: center; font-size: 1.5rem; letter-spacing: 0.2em; font-weight: 800;" required />
+            </div>
+            <p style="margin: 8px 0 16px; font-size: 0.82rem; color: #a5b4fc; cursor: pointer; text-align: left;" id="backendWalletBack">← Change email</p>
+            <button id="backendWalletVerify" class="circle-auth-btn" type="button">Verify & Sign In</button>
+          </div>
+
           <div id="backendWalletStatus" class="circle-auth-status" style="display: none;"></div>
         </div>
       `;
@@ -391,10 +404,17 @@ export const connectArcWallet = async (): Promise<string> => {
       document.body.appendChild(overlay);
       const closeBtn = overlay.querySelector("#backendWalletClose") as HTMLButtonElement;
       const continueBtn = overlay.querySelector("#backendWalletContinue") as HTMLButtonElement;
+      const verifyBtn = overlay.querySelector("#backendWalletVerify") as HTMLButtonElement;
+      const backBtn = overlay.querySelector("#backendWalletBack") as HTMLParagraphElement;
       const emailInput = overlay.querySelector("#backendWalletEmail") as HTMLInputElement;
+      const codeInput = overlay.querySelector("#backendWalletCode") as HTMLInputElement;
       const referralDetails = overlay.querySelector("#backendReferralDetails") as HTMLDetailsElement;
       const referralInput = overlay.querySelector("#backendReferralCode") as HTMLInputElement;
       const statusDiv = overlay.querySelector("#backendWalletStatus") as HTMLDivElement;
+      
+      const stepEmailDiv = overlay.querySelector("#backendWalletStepEmail") as HTMLDivElement;
+      const stepCodeDiv = overlay.querySelector("#backendWalletStepCode") as HTMLDivElement;
+
       const lastEmail = localStorage.getItem(BACKEND_WALLET_EMAIL_KEY) || localStorage.getItem("siftle_circle_last_email") || "";
       const pendingReferral = localStorage.getItem("siftle_pending_referral_code") || "";
       if (lastEmail) emailInput.value = lastEmail;
@@ -418,6 +438,18 @@ export const connectArcWallet = async (): Promise<string> => {
         referralInput.value = referralInput.value.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 16);
       });
 
+      codeInput.addEventListener("input", () => {
+        codeInput.value = codeInput.value.replace(/[^0-9]/g, "").slice(0, 6);
+      });
+
+      backBtn.addEventListener("click", () => {
+        stepCodeDiv.style.display = "none";
+        stepEmailDiv.style.display = "block";
+        statusDiv.style.display = "none";
+        continueBtn.disabled = false;
+        continueBtn.textContent = "Continue";
+      });
+
       continueBtn.addEventListener("click", async () => {
         const email = emailInput.value.trim();
         if (!email || !email.includes("@")) {
@@ -428,17 +460,49 @@ export const connectArcWallet = async (): Promise<string> => {
         if (referralCode) localStorage.setItem("siftle_pending_referral_code", referralCode);
 
         continueBtn.disabled = true;
-        continueBtn.textContent = "Opening wallet...";
+        continueBtn.textContent = "Requesting code...";
+        statusDiv.style.display = "none";
+
+        try {
+          const response = await fetch(apiUrl("/api/backend-wallet/auth/request-code"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email })
+          });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error || "Failed to request verification code");
+
+          stepEmailDiv.style.display = "none";
+          stepCodeDiv.style.display = "block";
+          codeInput.focus();
+          showStatus("We sent a 6-digit verification code. Please check your email (or terminal logs).", false);
+        } catch (error) {
+          showStatus(error instanceof Error ? error.message : "Failed to request code", true);
+          continueBtn.disabled = false;
+          continueBtn.textContent = "Continue";
+        }
+      });
+
+      verifyBtn.addEventListener("click", async () => {
+        const email = emailInput.value.trim();
+        const code = codeInput.value.trim();
+        if (code.length !== 6) {
+          showStatus("Please enter a 6-digit code.", true);
+          return;
+        }
+
+        verifyBtn.disabled = true;
+        verifyBtn.textContent = "Signing in...";
         statusDiv.style.display = "none";
 
         try {
           const response = await fetch(apiUrl("/api/backend-wallet/auth"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email })
+            body: JSON.stringify({ email, code })
           });
           const payload = await response.json();
-          if (!response.ok) throw new Error(payload.error || "Failed to sign in");
+          if (!response.ok) throw new Error(payload.error || "Failed to verify code");
 
           if (payload.migrationEnabled && payload.migrationPreview?.eligible && !payload.migration?.migrated) {
             showStatus("Restoring competition points from your previous wallet...");
@@ -489,8 +553,8 @@ export const connectArcWallet = async (): Promise<string> => {
           resolve(activeWalletAddress!);
         } catch (error) {
           showStatus(error instanceof Error ? error.message : "Failed to sign in", true);
-          continueBtn.disabled = false;
-          continueBtn.textContent = "Continue";
+          verifyBtn.disabled = false;
+          verifyBtn.textContent = "Verify & Sign In";
         }
       });
     });

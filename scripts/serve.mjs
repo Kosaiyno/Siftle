@@ -5423,6 +5423,37 @@ const readBackendWalletSession = async (token) => {
   return remoteSession;
 };
 
+const verificationCodesCachePath = join(root, ".siftle", "verification-codes.json");
+
+const readVerificationCodes = () => {
+  if (!existsSync(verificationCodesCachePath)) return {};
+  try {
+    return JSON.parse(readFileSync(verificationCodesCachePath, "utf8"));
+  } catch {
+    return {};
+  }
+};
+
+const writeVerificationCode = (email, code) => {
+  const data = readVerificationCodes();
+  data[email.toLowerCase()] = {
+    code,
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 1 day
+  };
+  if (!existsSync(join(root, ".siftle"))) {
+    mkdirSync(join(root, ".siftle"), { recursive: true });
+  }
+  writeFileSync(verificationCodesCachePath, JSON.stringify(data, null, 2));
+};
+
+const verifyCode = (email, code) => {
+  const data = readVerificationCodes();
+  const entry = data[email.toLowerCase()];
+  if (!entry) return false;
+  if (Date.now() >= entry.expiresAt) return false;
+  return entry.code === code.trim();
+};
+
 const getOrCreateBackendWalletUser = async (email) => {
   const cleanEmail = normalizeEmail(email);
   if (!cleanEmail) throw new Error("Valid email is required");
@@ -8269,13 +8300,43 @@ const server = createServer(async (request, response) => {
     return;
   }
 
-  if (requestUrl.pathname === "/api/backend-wallet/auth" && request.method === "POST") {
+  if (requestUrl.pathname === "/api/backend-wallet/auth/request-code" && request.method === "POST") {
     if (!requireBackendWalletMode(request, response)) return;
     try {
       const body = await readJsonBody(request);
       const email = normalizeEmail(body.email);
       if (!email || !email.includes("@")) {
         sendJson(response, 400, { error: "Valid email address is required" });
+        return;
+      }
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      writeVerificationCode(email, code);
+      console.log("\n------------------------------------------------");
+      console.log(`[SECURITY] Siftle Login Verification Code for ${email}: ${code}`);
+      console.log("------------------------------------------------\n");
+      sendJson(response, 200, { success: true });
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/backend-wallet/auth" && request.method === "POST") {
+    if (!requireBackendWalletMode(request, response)) return;
+    try {
+      const body = await readJsonBody(request);
+      const email = normalizeEmail(body.email);
+      const code = String(body.code || "").trim();
+      if (!email || !email.includes("@")) {
+        sendJson(response, 400, { error: "Valid email address is required" });
+        return;
+      }
+      if (!code) {
+        sendJson(response, 400, { error: "Verification code is required" });
+        return;
+      }
+      if (!verifyCode(email, code)) {
+        sendJson(response, 401, { error: "Invalid or expired verification code" });
         return;
       }
 
