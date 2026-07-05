@@ -2866,6 +2866,7 @@ const renderMarketCard = (market: MarketPreview): string => {
   const marketAddress = getMarketAddress(market);
   const optionMarket = isOptionMarket(market);
   const optionCount = getMarketOptions(market).length;
+  const totalMoney = snapshot?.volumeUsdc ?? (Number((market as MarketPreview & { volumeUsdc?: number }).volumeUsdc) || 0);
 
   const yesPrice = snapshot?.yesPriceCents;
   const displayProbability = yesPrice ?? market.probability;
@@ -2903,6 +2904,10 @@ const renderMarketCard = (market: MarketPreview): string => {
         <span class="market-share-prices">${optionMarket ? "Pick exactly one" : displayShareLabel}</span>
       </div>
       <div class="market-meter" aria-hidden="true"><span style="width: ${optionMarket ? 100 : displayProbability}%"></span></div>
+      <div class="market-volume">
+        <span>Total vol</span>
+        <strong>$${formatMoney(totalMoney)}</strong>
+      </div>
       <div class="market-card-footer">
         <span>${view.evidence.length} related news</span>
         <span>${market.timeframe === "Daily" ? `Locks ${lockLabel}` : `Closes ${lockLabel}`}</span>

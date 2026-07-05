@@ -1,4 +1,40 @@
 export const marketThreadRules = {
+  "wc-brazil-norway-qualify": {
+    category: "Sports",
+    topic: "Brazil vs Norway Qualify Watch",
+    includeAnySets: [
+      ["brazil", "brazilian", "norway", "norwegian", "haaland"],
+      ["world cup", "fifa", "2026", "round of 16", "last 16", "knockout", "qualify", "qualification", "advance", "advances", "quarter-finals", "quarterfinals", "preview", "team news", "lineup", "lineups", "kickoff", "match", "extra time", "penalties"]
+    ],
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "mexico", "england"]
+  },
+  "wc-mexico-england-qualify": {
+    category: "Sports",
+    topic: "Mexico vs England Qualify Watch",
+    includeAnySets: [
+      ["mexico", "mexican", "england", "english", "kane", "tuchel"],
+      ["world cup", "fifa", "2026", "round of 16", "last 16", "knockout", "qualify", "qualification", "advance", "advances", "quarter-finals", "quarterfinals", "preview", "team news", "lineup", "lineups", "kickoff", "match", "extra time", "penalties"]
+    ],
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "brazil", "norway"]
+  },
+  "wc-kane-vs-haaland-goals": {
+    category: "Sports",
+    topic: "Kane vs Haaland Goal Race",
+    includeAnySets: [
+      ["harry kane", "kane", "erling haaland", "haaland"],
+      ["england", "norway", "world cup", "fifa", "2026", "goal", "goals", "score", "scores", "scorer", "golden boot", "preview", "team news", "lineup", "lineups", "match", "knockout"]
+    ],
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball"]
+  },
+  "wc-brazil-norway-total-goals": {
+    category: "Sports",
+    topic: "Brazil vs Norway Total Goals",
+    includeAnySets: [
+      ["brazil", "brazilian", "norway", "norwegian", "haaland"],
+      ["world cup", "fifa", "2026", "round of 16", "last 16", "knockout", "goal", "goals", "scoring", "attack", "preview", "team news", "lineup", "lineups", "kickoff", "match", "extra time", "penalties"]
+    ],
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "mexico", "england"]
+  },
   "wc-vozinha-saves-argentina": {
     category: "Sports",
     topic: "Vozinha Argentina Save Watch",
