@@ -187,7 +187,7 @@ const supabaseServiceRoleKey =
   process.env.service_role ||
   "";
 const isSupabaseConfigured = Boolean(supabaseUrl && supabaseServiceRoleKey);
-const supabaseRequestTimeoutMs = Number(process.env.SUPABASE_REQUEST_TIMEOUT_MS ?? 3000);
+const supabaseRequestTimeoutMs = Number(process.env.SUPABASE_REQUEST_TIMEOUT_MS ?? 8000);
 const leaderboardCacheMs = Number(process.env.LEADERBOARD_CACHE_MS ?? 120000);
 const leaderboardBrowserCacheSeconds = Number(process.env.LEADERBOARD_BROWSER_CACHE_SECONDS ?? 15);
 
@@ -5675,13 +5675,13 @@ const getOrCreateBackendWalletUser = async (email) => {
     const users = loadBackendWalletUsers();
     users[cleanEmail] = remoteUser;
     saveBackendWalletUsers(users);
-    return remoteUser;
+    return { ...remoteUser, isNewSignup: false };
   }
 
   const users = loadBackendWalletUsers();
   if (users[cleanEmail]?.privateKey && users[cleanEmail]?.address) {
     await saveBackendWalletUserToSupabase(users[cleanEmail]);
-    return users[cleanEmail];
+    return { ...users[cleanEmail], isNewSignup: false };
   }
 
   const wallet = Wallet.createRandom();
@@ -5694,7 +5694,7 @@ const getOrCreateBackendWalletUser = async (email) => {
   users[cleanEmail] = record;
   saveBackendWalletUsers(users);
   await saveBackendWalletUserToSupabase(record);
-  return record;
+  return { ...record, isNewSignup: true };
 };
 
 const getBackendWalletUserBySession = async (token) => {
@@ -6569,6 +6569,97 @@ async function incrementAnalyticsEventInSupabase(event, email = null) {
   }
 }
 
+function getLocalAiBriefingWalletMetrics(data = {}) {
+  const unlocks = data?.leaderboard?.aiBriefingUnlocks || {};
+  const dailyWalletSets = {};
+  const allWallets = new Set();
+
+  Object.entries(unlocks).forEach(([key, sourceHashes]) => {
+    const separatorIndex = key.lastIndexOf(":");
+    if (separatorIndex <= 0) return;
+    if (!Array.isArray(sourceHashes) || sourceHashes.length < 1) return;
+    const walletAddress = normalizeWalletAddress(key.slice(0, separatorIndex));
+    const dateKey = String(key.slice(separatorIndex + 1) || "").trim();
+    if (!walletAddress || !dateKey) return;
+    if (!dailyWalletSets[dateKey]) dailyWalletSets[dateKey] = new Set();
+    dailyWalletSets[dateKey].add(walletAddress);
+    allWallets.add(walletAddress);
+  });
+
+  return {
+    byDate: Object.fromEntries(Object.entries(dailyWalletSets).map(([dateKey, walletSet]) => [dateKey, walletSet.size])),
+    totalUnique: allWallets.size
+  };
+}
+
+async function buildAnalyticsReport(localData = loadAnalytics()) {
+  const data = await loadAnalyticsFromSupabase(localData);
+  const todayKey = getTodayKey();
+  const derived = {
+    signupsByDate: {},
+    signupsTotalUnique: Number(data.emails?.length) || 0,
+    aiBriefingWalletsByDate: {},
+    aiBriefingWalletsTotalUnique: 0,
+    aiBriefingWalletsToday: 0
+  };
+
+  Object.entries(data.daily || {}).forEach(([dateKey, row]) => {
+    derived.signupsByDate[dateKey] = Number(row?.sign_up) || 0;
+  });
+
+  if (isSupabaseConfigured) {
+    try {
+      const [signupRows, aiUnlockRows] = await Promise.all([
+        supabaseRequest("analytics_signups?select=email_hash,date_key,created_at&order=created_at.desc&limit=5000"),
+        supabaseRequest("ai_briefing_unlocks?select=wallet_address,date_key,created_at&order=created_at.desc&limit=10000")
+      ]);
+
+      const signupsByDate = {};
+      const signupHashes = new Set();
+      (signupRows || []).forEach((row) => {
+        const dateKey = String(row?.date_key || "").trim();
+        const email = String(row?.email_hash || "").trim();
+        if (!dateKey || !email) return;
+        signupsByDate[dateKey] = (signupsByDate[dateKey] || 0) + 1;
+        signupHashes.add(email);
+      });
+      derived.signupsByDate = signupsByDate;
+      derived.signupsTotalUnique = signupHashes.size;
+
+      const aiWalletSetsByDate = {};
+      const allAiWallets = new Set();
+      (aiUnlockRows || []).forEach((row) => {
+        const dateKey = String(row?.date_key || "").trim();
+        const walletAddress = normalizeWalletAddress(row?.wallet_address || "");
+        if (!dateKey || !walletAddress) return;
+        if (!aiWalletSetsByDate[dateKey]) aiWalletSetsByDate[dateKey] = new Set();
+        aiWalletSetsByDate[dateKey].add(walletAddress);
+        allAiWallets.add(walletAddress);
+      });
+      derived.aiBriefingWalletsByDate = Object.fromEntries(
+        Object.entries(aiWalletSetsByDate).map(([dateKey, walletSet]) => [dateKey, walletSet.size])
+      );
+      derived.aiBriefingWalletsTotalUnique = allAiWallets.size;
+    } catch (err) {
+      console.warn("[ANALYTICS] Derived analytics query failed; using local fallback:", err.message);
+      const localAiMetrics = getLocalAiBriefingWalletMetrics(data);
+      derived.aiBriefingWalletsByDate = localAiMetrics.byDate;
+      derived.aiBriefingWalletsTotalUnique = localAiMetrics.totalUnique;
+    }
+  } else {
+    const localAiMetrics = getLocalAiBriefingWalletMetrics(data);
+    derived.aiBriefingWalletsByDate = localAiMetrics.byDate;
+    derived.aiBriefingWalletsTotalUnique = localAiMetrics.totalUnique;
+  }
+
+  derived.aiBriefingWalletsToday = Number(derived.aiBriefingWalletsByDate[todayKey]) || 0;
+
+  return {
+    ...data,
+    derived
+  };
+}
+
 function parseLeaderboardStatus(status = "") {
   const winsMatch = String(status).match(/(\d+)\s+wins?/i);
   const lossesMatch = String(status).match(/(\d+)\s+loss(?:es)?/i);
@@ -7071,9 +7162,34 @@ async function verifyAiBriefingUnlockPayment({ sourceUrl, walletAddress, txHash 
   return createSummaryUnlockToken(sourceUrl, cleanWallet);
 }
 
+async function hasPersistentAiBriefingAccess(sourceUrl, walletAddress) {
+  const cleanWallet = normalizeWalletAddress(walletAddress);
+  const sourceHash = getSummaryUnlockKey(sourceUrl);
+  if (!cleanWallet || !sourceHash) return false;
+
+  if (isSupabaseConfigured) {
+    try {
+      const rows = await supabaseRequest(
+        `ai_briefing_unlocks?wallet_address=eq.${encodeURIComponent(cleanWallet)}&source_hash=eq.${encodeURIComponent(sourceHash)}&select=source_hash&limit=1`
+      );
+      return Array.isArray(rows) && rows.length > 0;
+    } catch (err) {
+      console.warn("[SUPABASE] AI briefing access check failed; using local fallback:", err.message);
+    }
+  }
+
+  const data = loadAnalytics();
+  const localUnlocks = data?.leaderboard?.aiBriefingUnlocks || {};
+  return Object.entries(localUnlocks).some(([key, sourceHashes]) => {
+    if (!Array.isArray(sourceHashes)) return false;
+    if (!key.startsWith(`${cleanWallet}:`)) return false;
+    return sourceHashes.includes(sourceHash);
+  });
+}
+
 async function recordAiBriefingUnlockBonus(walletAddress, sourceUrl, txHash = "") {
   const cleanWallet = normalizeWalletAddress(walletAddress);
-  if (!cleanWallet || !sourceUrl || aiBriefingDailyBonusPoints <= 0) {
+  if (!cleanWallet || !sourceUrl) {
     return { awarded: false, points: 0, unlockCount: 0 };
   }
 
@@ -7122,7 +7238,7 @@ async function recordAiBriefingUnlockBonus(walletAddress, sourceUrl, txHash = ""
     const unlockCount = new Set((unlockRows || []).map((row) => row.source_hash)).size;
     const alreadyAwarded = Boolean(leaderboard.bonusEvents?.[cleanWallet]?.[bonusKey]);
 
-    if (unlockCount >= aiBriefingDailyBonusUnlocks && !alreadyAwarded) {
+    if (aiBriefingDailyBonusPoints > 0 && unlockCount >= aiBriefingDailyBonusUnlocks && !alreadyAwarded) {
       setLeaderboardBonus(data, cleanWallet, bonusKey, "ai_briefing_daily", aiBriefingDailyBonusPoints, {
         date_key: dateKey,
         unlock_count: unlockCount,
@@ -7145,7 +7261,7 @@ async function recordAiBriefingUnlockBonus(walletAddress, sourceUrl, txHash = ""
   const localKey = `${cleanWallet}:${dateKey}`;
   localUnlocks[localKey] = Array.from(new Set([...(localUnlocks[localKey] || []), sourceHash]));
   const unlockCount = localUnlocks[localKey].length;
-  const awarded = unlockCount >= aiBriefingDailyBonusUnlocks
+  const awarded = aiBriefingDailyBonusPoints > 0 && unlockCount >= aiBriefingDailyBonusUnlocks
     && setLeaderboardBonus(data, cleanWallet, bonusKey, "ai_briefing_daily", aiBriefingDailyBonusPoints, {
       date_key: dateKey,
       unlock_count: unlockCount,
@@ -8323,9 +8439,9 @@ function getAnalyticsHtml() {
         <span class="card-footer">Total page views loaded</span>
       </div>
       <div class="card summaries">
-        <span class="card-label">Market Views</span>
+        <span class="card-label">AI Wallets Today</span>
         <span class="card-value" id="valSummaries">-</span>
-        <span class="card-footer">Market detail pages opened</span>
+        <span class="card-footer">Different wallets that unlocked AI briefing today</span>
       </div>
       <div class="card clicks">
         <span class="card-label">Trades</span>
@@ -8384,8 +8500,7 @@ function getAnalyticsHtml() {
             <th>Date</th>
             <th>App Opens</th>
             <th>Signups</th>
-            <th>Market Views</th>
-            <th>Trade Drawer</th>
+            <th>AI Wallets</th>
             <th>Trade Attempts</th>
             <th>Trades</th>
             <th>Claims</th>
@@ -8411,6 +8526,9 @@ function getAnalyticsHtml() {
         const data = await res.json();
 
         const daily = data.daily || {};
+        const derived = data.derived || {};
+        const signupByDate = derived.signupsByDate || {};
+        const aiWalletsByDate = derived.aiBriefingWalletsByDate || {};
         const eventKeys = [
           'app_open',
           'wallet_connect_start',
@@ -8447,14 +8565,17 @@ function getAnalyticsHtml() {
         const tradeSuccesses = (totals.trade_buy_success || 0) + (totals.trade_sell_success || 0);
         const aiUnlocks = totals.ai_unlock_success || 0;
         const claims = totals.claim_success || 0;
+        const uniqueSignups = Number(derived.signupsTotalUnique ?? totals.sign_up ?? 0);
+        const aiWalletsToday = Number(derived.aiBriefingWalletsToday ?? 0);
+        const aiWalletsTotal = Number(derived.aiBriefingWalletsTotalUnique ?? 0);
         
         document.getElementById('valOpens').textContent = (totals.app_open || 0).toLocaleString();
-        document.getElementById('valSummaries').textContent = (totals.market_view || 0).toLocaleString();
+        document.getElementById('valSummaries').textContent = aiWalletsToday.toLocaleString();
         document.getElementById('valClicks').textContent = tradeSuccesses.toLocaleString();
-        document.getElementById('valSignups').textContent = (totals.sign_up || 0).toLocaleString();
+        document.getElementById('valSignups').textContent = uniqueSignups.toLocaleString();
         
         const opens = totals.app_open || 1;
-        const signupRate = ((totals.sign_up || 0) / opens) * 100;
+        const signupRate = (uniqueSignups / opens) * 100;
         const summaryRate = ((totals.view_summary || 0) / Math.max(1, aiUnlocks || totals.ai_unlock_attempt || 0)) * 100;
         const clickRate = ((tradeSuccesses || 0) / Math.max(1, totals.trade_attempt || 0)) * 100;
         
@@ -8467,10 +8588,11 @@ function getAnalyticsHtml() {
         document.getElementById('barClick').style.width = Math.min(clickRate, 100) + '%';
 
         const extraMetrics = [
+          ['Unique Signups', uniqueSignups],
+          ['AI Wallets Today', aiWalletsToday],
+          ['AI Wallets Total', aiWalletsTotal],
           ['Wallet Starts', totals.wallet_connect_start],
           ['Wallet Success', totals.wallet_connect_success],
-          ['Market Views', totals.market_view],
-          ['Trade Drawer', totals.trade_drawer_open],
           ['Trade Attempts', totals.trade_attempt],
           ['Trade Success', tradeSuccesses],
           ['Trade Fails', totals.trade_failed],
@@ -8498,18 +8620,19 @@ function getAnalyticsHtml() {
         const sortedDates = Object.keys(daily).sort((a, b) => b.localeCompare(a));
         
         if (sortedDates.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; color: var(--text-muted); padding: 2rem;">No entries logged yet.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; color: var(--text-muted); padding: 2rem;">No entries logged yet.</td></tr>';
         } else {
           sortedDates.forEach(date => {
             const row = daily[date];
             const rowTradeSuccesses = (row.trade_buy_success || 0) + (row.trade_sell_success || 0);
+            const rowSignups = Number(signupByDate[date] ?? row.sign_up ?? 0);
+            const rowAiWallets = Number(aiWalletsByDate[date] ?? 0);
             const tr = document.createElement('tr');
             tr.innerHTML = \`
               <td><strong>\${date}</strong></td>
               <td>\${(row.app_open || 0).toLocaleString()}</td>
-              <td>\${(row.sign_up || 0).toLocaleString()}</td>
-              <td>\${(row.market_view || 0).toLocaleString()}</td>
-              <td>\${(row.trade_drawer_open || 0).toLocaleString()}</td>
+              <td>\${rowSignups.toLocaleString()}</td>
+              <td>\${rowAiWallets.toLocaleString()}</td>
               <td>\${(row.trade_attempt || 0).toLocaleString()}</td>
               <td>\${rowTradeSuccesses.toLocaleString()}</td>
               <td>\${(row.claim_success || 0).toLocaleString()}</td>
@@ -8603,6 +8726,13 @@ const server = createServer(async (request, response) => {
       }
 
       const user = await getOrCreateBackendWalletUser(email);
+      if (user?.isNewSignup) {
+        try {
+          await trackAnalyticsEvent("sign_up", email);
+        } catch (err) {
+          console.error("Failed to track backend-wallet sign_up event:", err);
+        }
+      }
       const token = await issueBackendWalletSession(email);
       warmGatewayBalanceInBackground(user.privateKey, backendWalletUseX402 ? x402PriceUsdc : aiBriefingUnlockUsdc);
       const migrationPreview = await buildMigrationPreview(email, user.address);
@@ -9147,7 +9277,7 @@ const server = createServer(async (request, response) => {
   }
 
   if (requestUrl.pathname === "/api/analytics/report" && request.method === "GET") {
-    const data = await loadAnalyticsFromSupabase(loadAnalytics());
+    const data = await buildAnalyticsReport(loadAnalytics());
     sendJson(response, 200, {
       ...data,
       supabaseConfigured: isSupabaseConfigured
@@ -10136,16 +10266,15 @@ const server = createServer(async (request, response) => {
   if (requestUrl.pathname === "/api/summary" && request.method === "POST") {
     readJsonBody(request)
       .then(async (article) => {
-        if (!hasValidSummaryUnlock(article?.sourceUrl, article?.walletAddress, article?.unlockToken)) {
+        const hasUnlock = hasValidSummaryUnlock(article?.sourceUrl, article?.walletAddress, article?.unlockToken)
+          || await hasPersistentAiBriefingAccess(article?.sourceUrl, article?.walletAddress);
+        if (!hasUnlock) {
           const error = new Error("AI briefing unlock payment required");
           error.statusCode = 402;
           throw error;
         }
         const force = Boolean(article && article.force);
         const result = await summarizeWith0G(article, { force });
-        if (result?.provider !== "local-fallback" && result?.provider !== "local-no-key") {
-          await persistSummaryToPublishedFeeds(article, result);
-        }
         try {
           trackAnalyticsEvent("view_summary");
         } catch (err) {

@@ -716,8 +716,13 @@ const renderBriefingStatusNote = (story: BriefingTarget): string => {
   return status ? `<p class="briefing-status-note">${escapeHtml(status)}</p>` : "";
 };
 
+const briefingWalletScope = (): string => {
+  const walletAddress = String(state.walletAddress || "").trim().toLowerCase();
+  return /^0x[a-f0-9]{40}$/.test(walletAddress) ? walletAddress : "guest";
+};
+
 const briefingUnlockKey = (story: BriefingTarget): string =>
-  `siftle_ai_briefing_unlock_${btoa(unescape(encodeURIComponent(story.sourceUrl))).replace(/=+$/g, "")}`;
+  `siftle_ai_briefing_unlock_${briefingWalletScope()}_${btoa(unescape(encodeURIComponent(story.sourceUrl))).replace(/=+$/g, "")}`;
 
 const getBriefingUnlockToken = (story: BriefingTarget): string =>
   localStorage.getItem(briefingUnlockKey(story)) || "";
@@ -1264,7 +1269,7 @@ const storyToMarketEvidence = (story: NewsStory, index: number): MarketPreview["
   date: marketEvidenceDate(story, index),
   source: story.source,
   headline: story.headline,
-  summary: safeStorySummary(story, story.ai_summary),
+  summary: safeStorySummary(story),
   impact: index === 0 ? "Latest" : "Update",
   direction: "flat",
   sourceUrl: story.sourceUrl
@@ -2676,7 +2681,7 @@ const renderThreadTimelineItem = (story: NewsStory, label: string): string => {
         <span>${label} - ${story.source}</span>
       </div>
       <h3>${story.headline}</h3>
-      <p>${safeStorySummary(story, story.ai_summary)}</p>
+      <p>${safeStorySummary(story)}</p>
       <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
         ${/example\.com/i.test(story.sourceUrl)
           ? ""
