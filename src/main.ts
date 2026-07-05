@@ -4892,7 +4892,11 @@ document.addEventListener("click", (event) => {
     const href = closestAnchor.getAttribute("href") || "";
     const isBriefingUnlock =
       closestAnchor.hasAttribute("data-unlock-briefing") ||
-      closestAnchor.hasAttribute("data-unlock-briefing-url");
+      closestAnchor.hasAttribute("data-unlock-briefing-url") ||
+      closestAnchor.classList.contains("summary-btn") ||
+      closestAnchor.textContent?.trim() === "AI briefing" ||
+      closestAnchor.textContent?.trim().includes("Unlock via");
+    
     if (
       !isBriefingUnlock &&
       (
