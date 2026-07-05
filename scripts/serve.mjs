@@ -5887,6 +5887,7 @@ async function loadOptionMarketStateFromSupabase(data, market) {
       }
     }
     store[market.id] = marketStore;
+    await loadOptionMarketClaimsFromSupabase(data, market);
   } catch (err) {
     if (!/option_market_positions|option_market_resolutions|relation|table/i.test(String(err.message || ""))) {
       console.warn("[SUPABASE] Option market state read failed:", err.message);
@@ -5942,6 +5943,55 @@ async function saveOptionMarketResolutionToSupabase(market, winningOptionId) {
   } catch (err) {
     console.warn("[SUPABASE] Option resolution save failed:", err.message);
   }
+}
+
+async function saveOptionMarketClaimToSupabase(marketId, walletAddress, amountUsdc, txHash) {
+  if (!isSupabaseConfigured) return;
+  const wallet = normalizeWalletAddress(walletAddress);
+  if (!marketId || !wallet) return;
+  try {
+    await supabaseRequest("leaderboard_bonus_events?on_conflict=wallet_address,bonus_key", {
+      method: "POST",
+      prefer: "resolution=merge-duplicates,return=minimal",
+      body: [{
+        wallet_address: wallet,
+        season_id: "options",
+        bonus_type: "option_market_claim",
+        bonus_key: `claim:${marketId}`,
+        points: 0,
+        metadata: {
+          amountUsdc,
+          txHash,
+          claimedAt: new Date().toISOString()
+        }
+      }]
+    });
+  } catch (err) {
+    console.warn("[SUPABASE] Claim save failed:", err.message);
+  }
+}
+
+async function loadOptionMarketClaimsFromSupabase(data, market) {
+  if (!isSupabaseConfigured || !market?.id) return data;
+  try {
+    const rows = await supabaseRequest(`leaderboard_bonus_events?bonus_key=eq.claim:${encodeURIComponent(market.id)}&bonus_type=eq.option_market_claim&select=wallet_address,metadata`);
+    const store = ensureOptionMarketStore(data);
+    const marketStore = store[market.id] || {};
+    if (!marketStore.claimed) marketStore.claimed = {};
+    for (const row of rows || []) {
+      const wallet = normalizeWalletAddress(row.wallet_address);
+      if (!wallet) continue;
+      const meta = row.metadata || {};
+      marketStore.claimed[wallet] = {
+        amountUsdc: Number(meta.amountUsdc) || 0,
+        txHash: String(meta.txHash || ""),
+        claimedAt: String(meta.claimedAt || new Date().toISOString())
+      };
+    }
+  } catch (err) {
+    console.warn("[SUPABASE] Claim load failed:", err.message);
+  }
+  return data;
 }
 
 function saveOptionMarketPosition(data, market, walletAddress, optionId, optionLabel, amountUsdc) {
@@ -6100,17 +6150,19 @@ async function payoutOptionMarketClaims(data, market, options = {}) {
     try {
       const tx = await usdc.transfer(cleanWallet, parseUnits(claim.amountUsdc.toFixed(6), 6));
       const receipt = await tx.wait();
+      const txHash = receipt?.hash || tx.hash;
       if (!marketStore.claimed) marketStore.claimed = {};
       marketStore.claimed[cleanWallet] = {
         amountUsdc: claim.amountUsdc,
-        txHash: receipt?.hash || tx.hash,
+        txHash: txHash,
         claimedAt: new Date().toISOString(),
         autoPaid: !cleanTargetWallet
       };
+      await saveOptionMarketClaimToSupabase(market.id, cleanWallet, claim.amountUsdc, txHash);
       paid.push({
         walletAddress: cleanWallet,
         amountUsdc: claim.amountUsdc,
-        txHash: receipt?.hash || tx.hash
+        txHash: txHash
       });
     } catch (err) {
       failed.push({ walletAddress: cleanWallet, error: err.message || String(err || "Payout failed") });
