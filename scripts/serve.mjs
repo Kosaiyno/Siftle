@@ -148,10 +148,10 @@ const referralWinBonusPoints = Math.max(0, Number(process.env.REFERRAL_WIN_BONUS
 const referralWinBonusMaxRefsPerMarket = Math.max(0, Number(process.env.REFERRAL_WIN_BONUS_MAX_REFS_PER_MARKET ?? 3));
 const referralWinBonusMaxUsesPerReferral = Math.max(0, Number(process.env.REFERRAL_WIN_BONUS_MAX_USES_PER_REFERRAL ?? 5));
 const rolledBackLeaderboardMarketIds = new Set([
-  "wc-brazil-norway-qualify",
-  "wc-brazil-norway-total-goals",
-  "wc-de-bruyne-score-assist-senegal",
-  "wc-mexico-england-qualify"
+  "wc-vozinha-saves-argentina",
+  "wc-messi-impact-cape-verde",
+  "wc-australia-egypt-first-event",
+  "wc-colombia-ghana-halftime"
 ]);
 
 const LEADERBOARD_MARKET_ABI = [
