@@ -6618,8 +6618,6 @@ async function buildAnalyticsReport(localData = loadAnalytics()) {
   Object.entries(data.daily || {}).forEach(([dateKey, row]) => {
     derived.signupsByDate[dateKey] = Number(row?.sign_up) || 0;
   });
-  (data.emails || []).forEach((email) => addSignupRecord(todayKey, email));
-  Object.values(loadBackendWalletUsers()).forEach((user) => addSignupRecord(String(user?.createdAt || "").slice(0, 10), user?.email));
 
   if (isSupabaseConfigured) {
     try {
@@ -6661,6 +6659,22 @@ async function buildAnalyticsReport(localData = loadAnalytics()) {
     derived.aiBriefingWalletsByDate = localAiMetrics.byDate;
     derived.aiBriefingWalletsTotalUnique = localAiMetrics.totalUnique;
   }
+
+  // Fallback to local files only for emails that aren't already captured in database records
+  (data.emails || []).forEach((email) => {
+    const hashed = emailHash(email);
+    if (!allSignupHashes.has(hashed)) {
+      addSignupRecord(todayKey, email);
+    }
+  });
+
+  Object.values(loadBackendWalletUsers()).forEach((user) => {
+    const cleanEmail = String(user?.email || "").trim().toLowerCase();
+    const hashed = emailHash(cleanEmail);
+    if (!allSignupHashes.has(hashed)) {
+      addSignupRecord(String(user?.createdAt || "").slice(0, 10), user?.email);
+    }
+  });
 
   if (allSignupHashes.size > 0) {
     derived.signupsByDate = Object.fromEntries(
