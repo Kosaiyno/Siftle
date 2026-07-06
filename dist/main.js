@@ -20,6 +20,7 @@ import"./chunks/chunk-ZUUPKAA6.js";var me="Sports",Oe=[{id:"wc-vozinha-saves-arg
           <img src="./assets/siftle-logo-small.png" alt="" />
           <span>Siftle Briefing</span>
         </div>
+        <span class="briefing-capture-url">siftle.xyz</span>
       </div>
       <h3 class="briefing-capture-title">${s}</h3>
     `}r[0].trim()&&(o+=`<p class="briefing-capture-intro">${r[0].trim()}</p>`);let n="";for(let s=1;s<r.length;s+=2){let i=r[s].trim().toUpperCase(),l=r[s+1]?r[s+1].trim():"";if(!l)continue;let u="";if(i==="KEY POINTS"){let f=l.split(/(?:•|\*|-)\s+/).map(p=>p.trim()).filter(Boolean);f.length>0?u=`<ul class="briefing-list">${f.map(p=>`<li>${p}</li>`).join("")}</ul>`:u=`<p class="briefing-text">${l}</p>`}else u=`<p class="briefing-text">${l}</p>`,i==="TAKEAWAY"&&(n=l);let m=i.toLowerCase().replace(/\s+/g,"-");o+=`
@@ -27,12 +28,7 @@ import"./chunks/chunk-ZUUPKAA6.js";var me="Sports",Oe=[{id:"wc-vozinha-saves-arg
         <h4 class="briefing-title">${i}</h4>
         ${u}
       </div>
-    `}return a&&(o+=`
-      <div class="briefing-capture-footer">
-        <span class="briefing-capture-footer-left">\u26BD Siftle News</span>
-        <span class="briefing-capture-footer-right">siftle.xyz</span>
-      </div>
-    `),o+="</div>",a&&(o+=`
+    `}return o+="</div>",a&&(o+=`
       <div class="share-briefing-container">
         <button type="button" class="share-briefing-btn" onclick="
           const container = event.currentTarget.closest('.detail-summary') || event.currentTarget.closest('.thread-item') || event.currentTarget.closest('.market-thread-update');

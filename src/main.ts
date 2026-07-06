@@ -684,6 +684,7 @@ const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
           <img src="./assets/siftle-logo-small.png" alt="" />
           <span>Siftle Briefing</span>
         </div>
+        <span class="briefing-capture-url">siftle.xyz</span>
       </div>
       <h3 class="briefing-capture-title">${headline}</h3>
     `;
@@ -724,15 +725,6 @@ const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
       <div class="briefing-section ${headerSlug}-section">
         <h4 class="briefing-title">${header}</h4>
         ${bodyHtml}
-      </div>
-    `;
-  }
-
-  if (story) {
-    html += `
-      <div class="briefing-capture-footer">
-        <span class="briefing-capture-footer-left">⚽ Siftle News</span>
-        <span class="briefing-capture-footer-right">siftle.xyz</span>
       </div>
     `;
   }
