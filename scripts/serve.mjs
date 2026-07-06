@@ -6781,19 +6781,13 @@ async function loadLeaderboardFromSupabase(data) {
       const profile = profileMap.get(address) || {};
       const existing = leaderboard.traders[address] || {};
       const entryPoints = Number(entry.points) || 0;
-      const existingPoints = Number(existing.points) || 0;
       const entryReportedPoints = Number(entry.reported_points) || 0;
-      const existingReportedPoints = Number(existing.reported_points) || 0;
       leaderboard.traders[address] = {
-        points: Math.max(existingPoints, entryPoints),
-        status: entryPoints >= existingPoints
-          ? String(entry.status || existing.status || "0 wins, 0 losses")
-          : String(existing.status || entry.status || "0 wins, 0 losses"),
+        points: entryPoints,
+        status: String(entry.status || existing.status || "0 wins, 0 losses"),
         username: String(profile.username || existing.username || ""),
-        reported_points: Math.max(existingReportedPoints, entryReportedPoints),
-        reported_status: entryReportedPoints >= existingReportedPoints
-          ? String(entry.reported_status || existing.reported_status || "0 wins, 0 losses")
-          : String(existing.reported_status || entry.reported_status || "0 wins, 0 losses"),
+        reported_points: entryReportedPoints,
+        reported_status: String(entry.reported_status || existing.reported_status || "0 wins, 0 losses"),
         first_activity_at: earliestTimestamp(existing.first_activity_at, entry.first_activity_at || entry.updated_at) || new Date().toISOString(),
         updated_at: latestTimestamp(existing.updated_at, entry.updated_at) || new Date().toISOString()
       };
