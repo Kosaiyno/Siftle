@@ -8470,9 +8470,9 @@ function getAnalyticsHtml() {
         <span class="card-footer">Total page views loaded</span>
       </div>
       <div class="card summaries">
-        <span class="card-label">AI Wallets Today</span>
+        <span class="card-label">Briefing Wallets Today</span>
         <span class="card-value" id="valSummaries">-</span>
-        <span class="card-footer">Different wallets that unlocked AI briefing today</span>
+        <span class="card-footer">Different wallets that unlocked briefing today</span>
       </div>
       <div class="card clicks">
         <span class="card-label">Trades</span>
@@ -8499,13 +8499,13 @@ function getAnalyticsHtml() {
       </div>
       <div class="ratio-card">
         <div class="ratio-header">
-          <span class="ratio-title">AI Briefing Completion</span>
+          <span class="ratio-title">Briefing Completion</span>
           <span class="ratio-value" id="ratioSummary">-</span>
         </div>
         <div class="progress-bar-container">
           <div class="progress-bar" id="barSummary"></div>
         </div>
-        <span class="ratio-desc">Percentage of AI briefing unlock attempts that complete successfully.</span>
+        <span class="ratio-desc">Percentage of briefing unlock attempts that complete successfully.</span>
       </div>
       <div class="ratio-card">
         <div class="ratio-header">
@@ -8531,12 +8531,12 @@ function getAnalyticsHtml() {
             <th>Date</th>
             <th>App Opens</th>
             <th>Signups</th>
-            <th>AI Wallets</th>
+            <th>Briefing Wallets</th>
             <th>Trade Attempts</th>
             <th>Trades</th>
             <th>Claims</th>
-            <th>AI Unlocks</th>
-            <th>AI Views</th>
+            <th>Briefing Unlocks</th>
+            <th>Briefing Views</th>
             <th>Source Clicks</th>
             <th>Errors</th>
           </tr>
@@ -8622,7 +8622,7 @@ function getAnalyticsHtml() {
 
         const extraMetrics = [
           ['Unique Signups', uniqueSignups],
-          ['AI Wallets Total', aiWalletsTotal],
+          ['Briefing Wallets Total', aiWalletsTotal],
           ['Wallet Starts', totals.wallet_connect_start],
           ['Wallet Success', totals.wallet_connect_success],
           ['Trade Attempts', totals.trade_attempt],
@@ -8630,13 +8630,13 @@ function getAnalyticsHtml() {
           ['Trade Fails', totals.trade_failed],
           ['Claim Attempts', totals.claim_attempt],
           ['Claims', claims],
-          ['AI Unlock Attempts', totals.ai_unlock_attempt],
-          ['AI Unlocks', aiUnlocks],
-          ['AI Views', totals.view_summary],
+          ['Briefing Unlock Attempts', totals.ai_unlock_attempt],
+          ['Briefing Unlocks', aiUnlocks],
+          ['Briefing Views', totals.view_summary],
           ['Source Clicks', totals.open_source],
           ['Wallet Fails', totals.wallet_connect_failed],
           ['Claim Fails', totals.claim_failed],
-          ['AI Fails', totals.ai_unlock_failed]
+          ['Briefing Fails', totals.ai_unlock_failed]
         ];
         const cards = document.querySelector('.stats-grid');
         document.querySelectorAll('.analytics-extra-card').forEach((node) => node.remove());
