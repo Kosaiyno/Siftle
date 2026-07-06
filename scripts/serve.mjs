@@ -2861,22 +2861,19 @@ const buildLocalStructuredBriefingParts = (article, thread = null) => {
   const headline = stripHtml(article?.headline || "").trim();
   const baseText = stripHtml(article?.summary || article?.headline || "").replace(/\s+/g, " ").trim();
   const sentences = splitIntoSentences(baseText);
-  const whatHappened = truncateSentence(
-    dedupeNormalizedLines([
-      sentences.slice(0, 2).join(" ").trim(),
-      baseText,
-      headline
-    ])[0] || headline,
-    30
-  );
+  const whatHappened = dedupeNormalizedLines([
+    sentences.slice(0, 2).join(" ").trim(),
+    baseText,
+    headline
+  ])[0] || headline;
 
   const keyPoints = dedupeNormalizedLines([
-    truncateSentence(sentences[0] || baseText || headline, 16),
-    truncateSentence(sentences[1] || sentences[0] || headline, 16),
-    truncateSentence(headline || baseText, 14)
+    sentences[0] || baseText || headline,
+    sentences[1] || sentences[0] || headline,
+    headline || baseText
   ]);
 
-  const takeaway = truncateSentence(`${headline || "This update"} is the main confirmed signal available right now.`, 22);
+  const takeaway = `${headline || "This update"} is the main confirmed signal available right now.`;
 
   return { whatHappened, keyPoints, takeaway };
 };
