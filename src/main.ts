@@ -668,7 +668,6 @@ const cleanSummaryText = (value: string): string => {
 
 const safeStorySummary = (story: NewsStory, preferred?: string): string =>
   cleanSummaryText(preferred || "") || cleanSummaryText(story.summary) || story.headline;
-
 const downloadBriefingCard = (button: HTMLElement | null): void => {
   const container = button?.closest('.detail-summary, .thread-item, .market-thread-update') as HTMLElement | null;
   const captureArea = container?.querySelector('.briefing-capture-area') as HTMLElement | null;
@@ -682,22 +681,31 @@ const downloadBriefingCard = (button: HTMLElement | null): void => {
   exportHost.appendChild(exportSurface);
   document.body.appendChild(exportHost);
 
+  // Force layout reflow to ensure styles are computed on the cloned element
+  void exportSurface.offsetHeight;
+
   const isLight = document.documentElement.dataset.theme === 'light';
-  (window as any).html2canvas(exportSurface, {
-    backgroundColor: isLight ? '#f5f7fb' : '#0f172a',
-    scale: 2,
-    logging: false,
-    useCORS: true
-  }).then((canvas: HTMLCanvasElement) => {
-    const link = document.createElement('a');
-    link.download = 'siftle-briefing.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-    (window as any).showActionToast?.('Briefing card image downloaded!');
-  }).catch(() => {
-    (window as any).showActionToast?.('Unable to download briefing card');
-  }).finally(() => {
-    exportHost.remove();
+
+  // Wait one frame to ensure browser has processed styling and layed out the element
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      (window as any).html2canvas(exportSurface, {
+        backgroundColor: isLight ? '#f5f7fb' : '#0f172a',
+        scale: 2,
+        logging: false,
+        useCORS: true
+      }).then((canvas: HTMLCanvasElement) => {
+        const link = document.createElement('a');
+        link.download = 'siftle-briefing.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        (window as any).showActionToast?.('Briefing card image downloaded!');
+      }).catch(() => {
+        (window as any).showActionToast?.('Unable to download briefing card');
+      }).finally(() => {
+        exportHost.remove();
+      });
+    }, 40);
   });
 };
 
