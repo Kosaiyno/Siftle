@@ -6328,7 +6328,6 @@ h4 {
 
 .briefing-section {
   position: relative !important;
-  background: rgba(30, 41, 59, 0.45) !important;
   border: 1px solid #1e293b !important;
   border-radius: 10px !important;
   padding: 12px 16px !important;
@@ -6337,9 +6336,32 @@ h4 {
   overflow: hidden !important;
 }
 
+.what-happened-section {
+  background: rgba(59, 130, 246, 0.08) !important;
+}
+
+.key-points-section {
+  background: rgba(16, 185, 129, 0.08) !important;
+}
+
+.takeaway-section {
+  background: rgba(251, 191, 36, 0.08) !important;
+}
+
 [data-theme="light"] .briefing-section {
-  background: #f1f5f9 !important;
   border-color: #cbd5e1 !important;
+}
+
+[data-theme="light"] .what-happened-section {
+  background: #eff6ff !important;
+}
+
+[data-theme="light"] .key-points-section {
+  background: #f0fdf4 !important;
+}
+
+[data-theme="light"] .takeaway-section {
+  background: #fffbeb !important;
 }
 
 .briefing-section::before {
