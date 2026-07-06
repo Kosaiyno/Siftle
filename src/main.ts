@@ -674,9 +674,24 @@ const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
     return `<p class="briefing-text">${text}</p>`;
   }
 
-  let html = '';
+  let html = '<div class="briefing-capture-area">';
+
+  if (story) {
+    const headline = (story as any).headline || "Football Match Update";
+    html += `
+      <div class="briefing-capture-header">
+        <div class="briefing-capture-brand">
+          <img src="./assets/siftle-logo-small.png" alt="" />
+          <span>Siftle Briefing</span>
+        </div>
+        <span class="briefing-capture-tag">Live Feed</span>
+      </div>
+      <h3 class="briefing-capture-title">${headline}</h3>
+    `;
+  }
+
   if (parts[0].trim()) {
-    html += `<p class="briefing-intro">${parts[0].trim()}</p>`;
+    html += `<p class="briefing-intro" style="margin-bottom:20px; color:#cbd5e1; font-family:Inter,sans-serif; font-size:0.96rem; line-height:1.6;">${parts[0].trim()}</p>`;
   }
 
   let takeawayText = '';
@@ -715,38 +730,78 @@ const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
   }
 
   if (story) {
-    const headline = (story as any).headline || "Football Match Update";
-    let shareText = `Siftle AI Briefing: ${headline} ⚽\n\n`;
-    if (takeawayText) {
-      const cleanTakeaway = takeawayText.replace(/\s+/g, ' ').trim();
-      const truncated = cleanTakeaway.length > 150 ? cleanTakeaway.slice(0, 147) + "..." : cleanTakeaway;
-      shareText += `💡 ${truncated}\n\n`;
-    }
-    shareText += `Read context & predict: ${window.location.origin} #Siftle`;
+    html += `
+      <div class="briefing-capture-footer">
+        <span class="briefing-capture-footer-left">⚽ Siftle News</span>
+        <span class="briefing-capture-footer-right">siftle.xyz</span>
+      </div>
+    `;
+  }
 
+  html += '</div>';
+
+  if (story) {
+    const headline = (story as any).headline || "Football Match Update";
     const xLogoSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" style="width:12px;height:12px;fill:currentColor;vertical-align:middle;margin-right:6px;"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>`;
 
-    const escapedShareText = shareText.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n');
+    const escapedHeadline = headline.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
     html += `
       <div class="share-briefing-container">
         <button type="button" class="share-briefing-btn" onclick="
-          const text = '${escapedShareText}';
-          navigator.clipboard.writeText(text).catch(() => {});
-          if (window.showActionToast) {
-            window.showActionToast('Briefing copied! Opening X...');
+          const container = event.currentTarget.closest('.detail-summary') || event.currentTarget.closest('.thread-item') || event.currentTarget.closest('.market-thread-update');
+          const captureArea = container ? container.querySelector('.briefing-capture-area') : null;
+          if (!captureArea) return;
+          
+          if (window.html2canvas) {
+            window.html2canvas(captureArea, {
+              backgroundColor: '#111827',
+              scale: 2,
+              logging: false,
+              useCORS: true
+            }).then(canvas => {
+              canvas.toBlob(blob => {
+                if (!blob) return;
+                try {
+                  const item = new ClipboardItem({ 'image/png': blob });
+                  navigator.clipboard.write([item]).then(() => {
+                    if (window.showActionToast) {
+                      window.showActionToast('Briefing card image copied! Opening X...');
+                    }
+                    window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent('Check out this Siftle AI Briefing: ' + '${escapedHeadline}' + ' ⚽\\n\\nPredict now: ' + window.location.origin + ' #Siftle'), '_blank');
+                  }).catch(() => {
+                    const link = document.createElement('a');
+                    link.download = 'siftle-briefing.png';
+                    link.href = canvas.toDataURL();
+                    link.click();
+                    if (window.showActionToast) {
+                      window.showActionToast('Briefing card downloaded! Opening X...');
+                    }
+                    window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent('Check out Siftle AI Briefings ⚽\\n\\nPredict now: ' + window.location.origin + ' #Siftle'), '_blank');
+                  });
+                } catch (e) {
+                  const link = document.createElement('a');
+                  link.download = 'siftle-briefing.png';
+                  link.href = canvas.toDataURL();
+                  link.click();
+                  if (window.showActionToast) {
+                    window.showActionToast('Briefing card downloaded! Opening X...');
+                  }
+                  window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent('Check out Siftle AI Briefings ⚽\\n\\nPredict now: ' + window.location.origin + ' #Siftle'), '_blank');
+                }
+              });
+            });
           }
-          window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text), '_blank');
         ">
           ${xLogoSvg}
-          <span>Share to X</span>
+          <span>Share Card to X</span>
         </button>
       </div>
     `;
   }
 
   return html;
-};
+};;
 
 const renderBriefingStatusNote = (story: BriefingTarget): string => {
   const status = state.briefingStatusByUrl[story.sourceUrl] || "";
