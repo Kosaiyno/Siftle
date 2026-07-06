@@ -1,12 +1,14 @@
 # Siftle
 
-Siftle is a live news and prediction app where readers pay tiny USDC amounts to unlock AI briefings, then use those briefings and source threads to make Arc testnet prediction-market calls.
+Siftle is a football news product built around fast, paid AI context. It helps users follow live stories, unlock short AI Briefings with USDC nanopayments through the Circle gateway, and use that context immediately inside Arc-powered prediction markets.
+
+Instead of pushing users into a full subscription, Siftle sells a single useful update at the moment interest is highest. The product starts with football because the news cycle is constant, the outcomes are clear, and users have a natural reason to return throughout the day.
 
 The core product loop is simple:
 
 1. Siftle finds fast-moving stories.
 2. Readers open a market or story thread.
-3. A locked AI briefing can be unlocked with a small Arc testnet USDC payment.
+3. A locked AI briefing can be unlocked with a small x402-backed USDC payment.
 4. The briefing explains the story in three parts: **What happened**, **Key points**, and **Takeaway**.
 5. Readers use that context to trade Yes/No markets, follow outcomes, claim payouts, and climb the leaderboard.
 
@@ -16,22 +18,22 @@ Siftle is built around the idea that news context can be sold in tiny units. Ins
 
 Siftle currently combines:
 
-- Live sports/news feeds
+- Live football news feeds
 - Threaded source updates for developing stories
-- Paid AI briefings unlocked with USDC
+- Paid AI briefings unlocked with Circle gateway x402 nanopayments
 - Arc testnet prediction markets
 - Circle wallet onboarding
 - Yes/No shares with resolution and claiming
 - Seasonal and global leaderboards
 - Product analytics for opens, wallets, trades, claims, AI unlocks, and source clicks
 
-The product is focused on high-interest sports markets first because they create clear, time-bound questions and natural user behavior: read, decide, predict, win or lose, come back.
+The product is focused on football first because it creates clear, time-bound questions and natural user behavior: read, unlock context, decide, predict, win or lose, come back.
 
 ## Paid AI Briefings
 
-The AI briefing is Siftle's nanopayment layer.
+The AI briefing is Siftle's core product.
 
-Each locked briefing is a compact, structured explanation of a story or market context. A user pays a small USDC amount to unlock the briefing, and Siftle returns the same clean format every time:
+Each locked briefing is a compact, structured explanation of a football story or market context. A user pays a small USDC amount through the Circle gateway using x402 to unlock the briefing, and Siftle returns the same clean format every time:
 
 ### What Happened
 
@@ -45,11 +47,13 @@ The facts that matter most: team news, player status, market context, recent upd
 
 A direct final read on what the information means for the user.
 
-This makes the AI output useful inside the prediction flow. The briefing is not generic summarization; it is paid decision support around a live event.
+This makes the AI output useful inside the prediction flow. The briefing is not generic summarization; it is paid decision support around a live event, delivered in seconds.
 
 ## Nanopayments
 
 Siftle uses small USDC payments to unlock specific pieces of AI-generated context.
+
+Those payments run through the Circle gateway using x402, so access to an AI briefing works like a clean, instant nanopayment instead of a subscription flow.
 
 Why this matters:
 
@@ -100,6 +104,7 @@ Daily market winners earn points only after the market resolves. This keeps lead
 Siftle uses Circle and Arc for:
 
 - Circle email wallet onboarding
+- Circle gateway x402 nanopayments for AI briefing access
 - Arc testnet USDC balance display
 - USDC approval and market trades
 - Market resolution and claiming
@@ -135,7 +140,7 @@ The app uses:
 - 0G Compute where deeper AI work is useful
 - Cached summaries so repeat reads do not regenerate unnecessarily
 
-The goal is not to flood users with AI text. The goal is to unlock one useful briefing at the moment the user needs context.
+The goal is not to flood users with AI text. The goal is to let a user unlock one useful briefing the moment they need context and get up to speed fast.
 
 ## Storage and Persistence
 
@@ -248,6 +253,7 @@ Siftle is moving toward a paid-context marketplace for live events.
 Near-term priorities:
 
 - Make paid AI briefings fast and reliable
+- Make football AI briefings the fastest way to understand a live story
 - Improve market creation and resolution workflow
 - Keep onboarding simple for first-time wallet users
 - Grow real user activity around daily markets

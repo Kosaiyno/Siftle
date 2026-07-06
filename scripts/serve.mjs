@@ -9245,18 +9245,28 @@ const server = createServer(async (request, response) => {
           warmGatewayBalanceInBackground(user.privateKey, x402PriceUsdc);
           await ensureGatewayAvailableBalance(buyer, x402PriceUsdc);
           const paid = await payWithLocalX402Script(user.privateKey, targetUrl);
+          const txHash = `0xmockunlockx402${Math.random().toString(16).slice(2)}`;
           console.log("[AI BRIEFING] x402 payment completed", {
             walletAddress: user.address,
             targetUrl,
             paymentAmount: paid.paymentAmount || x402PriceUsdc
           });
+
+          let bonus = null;
+          try {
+            bonus = await recordAiBriefingUnlockBonus(user.address, body.sourceUrl || body.topic || targetUrl, txHash);
+          } catch (bonusErr) {
+            console.warn("[LEADERBOARD] AI briefing backend-wallet bonus tracking failed:", bonusErr.message);
+          }
+
           sendJson(response, 200, {
-            txHash: `0xmockunlockx402${Math.random().toString(16).slice(2)}`,
+            txHash,
             walletAddress: user.address,
             x402: true,
             paymentStatus: "paid",
             paymentAmount: paid.paymentAmount,
-            paymentData: paid.output
+            paymentData: paid.output,
+            bonus
           });
           return;
         } catch (x402Err) {
@@ -9268,15 +9278,25 @@ const server = createServer(async (request, response) => {
       const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
       const tx = await usdc.transfer(treasuryAddress, parseUnits(amountUsdc.toFixed(6), 6));
       const receipt = await tx.wait();
+      const txHash = receipt?.hash || tx.hash;
       console.log("[AI BRIEFING] USDC fallback payment completed", {
         walletAddress: user.address,
-        txHash: receipt?.hash || tx.hash,
+        txHash,
         amountUsdc
       });
+
+      let bonus = null;
+      try {
+        bonus = await recordAiBriefingUnlockBonus(user.address, body.sourceUrl || body.topic, txHash);
+      } catch (bonusErr) {
+        console.warn("[LEADERBOARD] AI briefing backend-wallet bonus tracking failed:", bonusErr.message);
+      }
+
       sendJson(response, 200, {
-        txHash: receipt?.hash || tx.hash,
+        txHash,
         walletAddress: user.address,
-        x402: false
+        x402: false,
+        bonus
       });
     } catch (err) {
       sendJson(response, 500, { error: err.message });
