@@ -1615,7 +1615,7 @@ const formatLeaderboardStatus = (status: string): string => {
   return /\bloss/i.test(normalized) ? normalized : `${normalized}, 0 losses`;
 };
 
-const LEADERBOARD_CACHE_PREFIX = "siftle_leaderboard_cache_v3_";
+const LEADERBOARD_CACHE_PREFIX = "siftle_leaderboard_cache_v4_";
 
 const parseLeaderboardNumbers = (status: string): { wins: number; losses: number } => {
   const winsMatch = String(status || "").match(/(\d+)\s+wins?/i);
@@ -1676,24 +1676,8 @@ const mergeLeaderboardDuplicates = (players: any[]): any[] => {
   return Array.from(byIdentity.values());
 };
 
-const stabilizeLeaderboardPlayers = (freshPlayers: any[], cachedPlayers: any[] = [], isGlobal = false): any[] => {
-  const cacheByWallet = new Map(cachedPlayers.map((player) => [String(player?.username || "").toLowerCase(), player]));
-  const seen = new Set<string>();
-  const merged = freshPlayers.map((player) => {
-    const wallet = String(player?.username || "").toLowerCase();
-    seen.add(wallet);
-    const cached = cacheByWallet.get(wallet);
-    return cached && (Number(cached.points) || 0) > (Number(player.points) || 0)
-      ? { ...player, ...cached }
-      : player;
-  });
-
-  cachedPlayers.forEach((player) => {
-    const wallet = String(player?.username || "").toLowerCase();
-    if (wallet && !seen.has(wallet) && (Number(player?.points) || 0) > 0) merged.push(player);
-  });
-
-  const sorted = mergeLeaderboardDuplicates(merged).slice().sort(compareLeaderboardLikePlayers);
+const stabilizeLeaderboardPlayers = (freshPlayers: any[], _cachedPlayers: any[] = [], isGlobal = false): any[] => {
+  const sorted = mergeLeaderboardDuplicates(freshPlayers).slice().sort(compareLeaderboardLikePlayers);
   return isGlobal
     ? sorted.map((player, index) => ({ ...player, globalRank: index + 1 }))
     : sorted;
