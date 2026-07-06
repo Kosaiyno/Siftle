@@ -1683,6 +1683,15 @@ const stabilizeLeaderboardPlayers = (freshPlayers: any[], _cachedPlayers: any[] 
     : sorted;
 };
 
+const getOptionMarketProjectedPayout = (position: any, snapshot: any): number => {
+  const optionId = String(position?.optionId || "").trim();
+  const entryAmount = Math.max(0, Number(position?.optionSharesUsdc) || 0);
+  const optionPool = Math.max(0, Number(snapshot?.optionPools?.[optionId]) || 0);
+  const totalPool = Math.max(0, Number(snapshot?.volumeUsdc) || 0);
+  if (!optionId || entryAmount <= 0 || optionPool <= 0 || totalPool <= 0) return 0;
+  return (entryAmount / optionPool) * totalPool;
+};
+
 const renderLeaderboardSyncNote = (): string => `
   <div class="leaderboard-sync-note" role="status">
     Showing saved standings while Siftle refreshes live scores...
@@ -3091,9 +3100,7 @@ const renderMarketDetail = (market: MarketPreview): void => {
   const hasPosition = optionMarket ? Boolean(position.optionId) : position.yesSharesUsdc > 0 || position.noSharesUsdc > 0;
   let positionHtml = "";
   if (optionMarket && hasPosition && state.walletAddress) {
-    const optionPool = snapshot?.optionPools?.[position.optionId || ""] || 0;
-    const totalPool = snapshot?.volumeUsdc || 0;
-    const payout = position.optionSharesUsdc && optionPool > 0 ? (position.optionSharesUsdc / optionPool) * totalPool : 0;
+    const payout = getOptionMarketProjectedPayout(position, snapshot);
     positionHtml = `
       <div class="user-market-position-box" style="margin: 16px 0; padding: 16px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.15); border-radius: 12px; font-family: 'Space Grotesk', sans-serif;">
         <h3 style="font-size: 0.9rem; font-weight: 700; color: var(--market-text-main); margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.05em;">Your Pick</h3>
@@ -3104,7 +3111,7 @@ const renderMarketDetail = (market: MarketPreview): void => {
           </div>
           <div>
             <span style="font-size: 0.72rem; color: var(--market-text-muted); display: block; margin-bottom: 2px;">Projected payout</span>
-            <strong style="font-size: 0.95rem; color: var(--market-text-main);">$${formatMoney(payout || position.optionSharesUsdc || 0)}</strong>
+            <strong style="font-size: 0.95rem; color: var(--market-text-main);">$${formatMoney(payout)}</strong>
           </div>
         </div>
       </div>
@@ -3978,10 +3985,9 @@ const renderPortfolioPositionCard = (market: MarketPreview): string => {
   if (isOptionMarket(market)) {
     const resolvedOptionId = snapshot?.resolvedOptionId || null;
     const isResolved = Boolean(resolvedOptionId);
-    const optionPool = snapshot?.optionPools?.[position.optionId || ""] || 0;
-    const totalPool = snapshot?.volumeUsdc || 0;
     const won = isResolved && position.optionId === resolvedOptionId;
-    const payout = won && optionPool > 0 ? ((position.optionSharesUsdc || 0) / optionPool) * totalPool : 0;
+    const projectedPayout = getOptionMarketProjectedPayout(position, snapshot);
+    const payout = won ? projectedPayout : 0;
     const winningLabel = getMarketOptions(market).find((option) => option.id === resolvedOptionId)?.label;
     const isClaimed = Boolean(position.claimedAt) || readClaimedMarkets().has(market.id);
     const isClaiming = Boolean(state.claimingMarketIds[market.id]);
@@ -3995,7 +4001,7 @@ const renderPortfolioPositionCard = (market: MarketPreview): string => {
         <div class="portfolio-position-stats">
           <div><span>Your pick</span><strong>${escapeHtml(position.optionLabel || "Selected option")}</strong></div>
           <div><span>Entry</span><strong>$${formatMoney(position.optionSharesUsdc || 0)}</strong></div>
-          <div><span>Projected payout</span><strong>$${formatMoney(payout || position.optionSharesUsdc || 0)}</strong></div>
+          <div><span>Projected payout</span><strong>$${formatMoney(payout)}</strong></div>
         </div>
         <div class="portfolio-position-footer">
           <span>${isResolved ? "" : `Closes ${market.closes}`}</span>
