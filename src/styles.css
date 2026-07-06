@@ -6260,7 +6260,7 @@ h4 {
 }
 
 .briefing-capture-header {
-  display: flex !important;
+  display: none;
   justify-content: space-between !important;
   align-items: center !important;
   margin-bottom: 12px !important;
@@ -6297,6 +6297,7 @@ h4 {
 }
 
 .briefing-capture-title {
+  display: none;
   font-size: 1.1rem !important;
   color: #ffffff !important;
   font-weight: 800 !important;

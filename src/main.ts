@@ -741,6 +741,11 @@ const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
           const captureArea = container ? container.querySelector('.briefing-capture-area') : null;
           if (!captureArea) return;
           
+          const header = captureArea.querySelector('.briefing-capture-header');
+          const title = captureArea.querySelector('.briefing-capture-title');
+          if (header) header.style.setProperty('display', 'flex', 'important');
+          if (title) title.style.setProperty('display', 'block', 'important');
+          
           if (window.html2canvas) {
             const isLight = document.documentElement.dataset.theme === 'light';
             window.html2canvas(captureArea, {
@@ -749,6 +754,9 @@ const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
               logging: false,
               useCORS: true
             }).then(canvas => {
+              if (header) header.style.display = '';
+              if (title) title.style.display = '';
+              
               const link = document.createElement('a');
               link.download = 'siftle-briefing.png';
               link.href = canvas.toDataURL();
@@ -756,6 +764,9 @@ const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
               if (window.showActionToast) {
                 window.showActionToast('Briefing card image downloaded!');
               }
+            }).catch(err => {
+              if (header) header.style.display = '';
+              if (title) title.style.display = '';
             });
           }
         ">
