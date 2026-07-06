@@ -525,6 +525,7 @@ const showActionToast = (message: string): void => {
     toast?.classList.remove("show");
   }, 1700);
 };
+(window as any).showActionToast = showActionToast;
 
 const showSuccessModal = (mode: "buy" | "sell", amount: string | number, outcome: string, marketTitle: string): void => {
   const modalContainer = document.createElement("div");
@@ -667,7 +668,7 @@ const cleanSummaryText = (value: string): string => {
 const safeStorySummary = (story: NewsStory, preferred?: string): string =>
   cleanSummaryText(preferred || "") || cleanSummaryText(story.summary) || story.headline;
 
-const formatAIBriefing = (text: string): string => {
+const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
   const parts = text.split(/(?:\*\*|__)?(WHAT HAPPENED|KEY POINTS|TAKEAWAY)\s*:?\s*(?:\*\*|__)?\s*:?\s*/i);
   if (parts.length <= 1) {
     return `<p class="briefing-text">${text}</p>`;
@@ -677,6 +678,8 @@ const formatAIBriefing = (text: string): string => {
   if (parts[0].trim()) {
     html += `<p class="briefing-intro">${parts[0].trim()}</p>`;
   }
+
+  let takeawayText = '';
 
   for (let i = 1; i < parts.length; i += 2) {
     const header = parts[i].trim().toUpperCase();
@@ -697,6 +700,9 @@ const formatAIBriefing = (text: string): string => {
       }
     } else {
       bodyHtml = `<p class="briefing-text">${content}</p>`;
+      if (header === 'TAKEAWAY') {
+        takeawayText = content;
+      }
     }
 
     const headerSlug = header.toLowerCase().replace(/\s+/g, '-');
@@ -704,6 +710,37 @@ const formatAIBriefing = (text: string): string => {
       <div class="briefing-section ${headerSlug}-section">
         <h4 class="briefing-title">${header}</h4>
         ${bodyHtml}
+      </div>
+    `;
+  }
+
+  if (story) {
+    const headline = (story as any).headline || "Football Match Update";
+    let shareText = `Siftle AI Briefing: ${headline} ⚽\n\n`;
+    if (takeawayText) {
+      const cleanTakeaway = takeawayText.replace(/\s+/g, ' ').trim();
+      const truncated = cleanTakeaway.length > 150 ? cleanTakeaway.slice(0, 147) + "..." : cleanTakeaway;
+      shareText += `💡 ${truncated}\n\n`;
+    }
+    shareText += `Read context & predict: ${window.location.origin} #Siftle`;
+
+    const xLogoSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" style="width:12px;height:12px;fill:currentColor;vertical-align:middle;margin-right:6px;"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>`;
+
+    const escapedShareText = shareText.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n');
+
+    html += `
+      <div class="share-briefing-container">
+        <button type="button" class="share-briefing-btn" onclick="
+          const text = '${escapedShareText}';
+          navigator.clipboard.writeText(text).catch(() => {});
+          if (window.showActionToast) {
+            window.showActionToast('Briefing copied! Opening X...');
+          }
+          window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text), '_blank');
+        ">
+          ${xLogoSvg}
+          <span>Share to X</span>
+        </button>
       </div>
     `;
   }
@@ -2696,7 +2733,7 @@ const renderThreadTimelineItem = (story: NewsStory, label: string): string => {
             ? `<div style="margin-top: 12px;">${renderSummarySkeleton()}</div>`
             : hasFailure
               ? `<div style="margin-top: 12px;">${renderUnavailableBriefing(story)}</div>`
-              : `<div style="margin-top: 12px;">${formatAIBriefing(safeStorySummary(story, state.aiSummaries[story.sourceUrl] || story.ai_summary))}</div>`)
+              : `<div style="margin-top: 12px;">${formatAIBriefing(safeStorySummary(story, state.aiSummaries[story.sourceUrl] || story.ai_summary), story)}</div>`)
         : ""}
     </div>
   </article>
@@ -2887,7 +2924,7 @@ const renderDetail = (): void => {
         <section class="detail-summary ${story.category}">
           <strong>AI briefing</strong>
           ${isUnlocked ? renderBriefingStatusNote(story) : ""}
-          ${!isUnlocked ? renderLockedBriefing(story, isUnlocking) : isLoadingSummary ? renderSummarySkeleton() : hasSummaryFailure ? renderUnavailableBriefing(story) : formatAIBriefing(summary)}
+          ${!isUnlocked ? renderLockedBriefing(story, isUnlocking) : isLoadingSummary ? renderSummarySkeleton() : hasSummaryFailure ? renderUnavailableBriefing(story) : formatAIBriefing(summary, story)}
         </section>
         <a class="source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>
       </article>
@@ -3161,7 +3198,7 @@ const renderMarketDetail = (market: MarketPreview): void => {
                           ? `<div style="margin-top: 12px;">${renderSummarySkeleton()}</div>`
                             : hasBriefingGenerationFailure(briefingTarget)
                               ? `<div style="margin-top: 12px;">${renderUnavailableBriefing(briefingTarget)}</div>`
-                              : `<div style="margin-top: 12px;">${formatAIBriefing(safeStorySummary(briefingTarget, state.aiSummaries[item.sourceUrl]))}</div>`)
+                              : `<div style="margin-top: 12px;">${formatAIBriefing(safeStorySummary(briefingTarget, state.aiSummaries[item.sourceUrl]), briefingTarget)}</div>`)
                       : ""}
                   </div>
                 </article>
