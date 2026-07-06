@@ -681,8 +681,8 @@ const downloadBriefingCard = (button: HTMLElement | null): void => {
 
   const isLight = document.documentElement.dataset.theme === 'light';
 
-  // Apply explicit styling directly to the cloned surface and sections
-  // to prevent any browser layout engine or stylesheet race conditions
+  // Force card dimension, margins, padding, backgrounds, and borders inline
+  // to prevent mobile browser media query overrides from altering the card format.
   if (isLight) {
     exportSurface.style.background = 'linear-gradient(180deg, #ffffff, #f8fafc)';
     exportSurface.style.border = '1px solid #cbd5e1';
@@ -690,10 +690,38 @@ const downloadBriefingCard = (button: HTMLElement | null): void => {
     exportSurface.style.background = 'linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(17, 24, 39, 0.98))';
     exportSurface.style.border = '1px solid #1e293b';
   }
+  exportSurface.style.width = '704px';
+  exportSurface.style.padding = '28px 30px';
+  exportSurface.style.borderRadius = '24px';
+
+  const captureHeader = exportSurface.querySelector('.briefing-capture-header') as HTMLElement | null;
+  if (captureHeader) {
+    captureHeader.style.display = 'flex';
+    captureHeader.style.marginBottom = '18px';
+    captureHeader.style.paddingBottom = '14px';
+  }
+
+  const captureTitle = exportSurface.querySelector('.briefing-capture-title') as HTMLElement | null;
+  if (captureTitle) {
+    captureTitle.style.display = 'block';
+    captureTitle.style.fontSize = '1.48rem';
+    captureTitle.style.lineHeight = '1.3';
+    captureTitle.style.marginBottom = '16px';
+  }
+
+  const captureIntro = exportSurface.querySelector('.briefing-capture-intro') as HTMLElement | null;
+  if (captureIntro) {
+    captureIntro.style.fontSize = '1rem';
+    captureIntro.style.lineHeight = '1.65';
+    captureIntro.style.marginBottom = '18px';
+  }
 
   const sections = exportSurface.querySelectorAll('.briefing-section');
   sections.forEach((sec: any) => {
     sec.style.border = 'none';
+    sec.style.borderRadius = '18px';
+    sec.style.padding = '18px 20px 18px 22px';
+    sec.style.marginBottom = '14px';
     if (isLight) {
       sec.style.backgroundColor = '#f1f5f9';
     } else {
@@ -701,12 +729,24 @@ const downloadBriefingCard = (button: HTMLElement | null): void => {
     }
   });
 
-  if (isLight) {
-    const textEls = exportSurface.querySelectorAll('.what-happened-section .briefing-text, .takeaway-section .briefing-text');
-    textEls.forEach((el: any) => {
+  const sectionTitles = exportSurface.querySelectorAll('.briefing-title');
+  sectionTitles.forEach((t: any) => {
+    t.style.fontSize = '0.84rem';
+    t.style.letterSpacing = '0.12em';
+    t.style.marginBottom = '12px';
+  });
+
+  const bodyTexts = exportSurface.querySelectorAll('.briefing-text, .briefing-list li');
+  bodyTexts.forEach((el: any) => {
+    el.style.fontSize = '1rem';
+    el.style.lineHeight = '1.72';
+    el.style.fontWeight = '650';
+    if (isLight) {
       el.style.color = '#000000';
-    });
-  }
+    } else {
+      el.style.color = '#e2e8f0';
+    }
+  });
 
   exportHost.appendChild(exportSurface);
   document.body.appendChild(exportHost);
