@@ -147,6 +147,12 @@ const compensationChallengeThreeOfThreePoints = Math.max(0, Number(process.env.C
 const referralWinBonusPoints = Math.max(0, Number(process.env.REFERRAL_WIN_BONUS_POINTS ?? 10));
 const referralWinBonusMaxRefsPerMarket = Math.max(0, Number(process.env.REFERRAL_WIN_BONUS_MAX_REFS_PER_MARKET ?? 3));
 const referralWinBonusMaxUsesPerReferral = Math.max(0, Number(process.env.REFERRAL_WIN_BONUS_MAX_USES_PER_REFERRAL ?? 5));
+const rolledBackLeaderboardMarketIds = new Set([
+  "wc-brazil-norway-qualify",
+  "wc-brazil-norway-total-goals",
+  "wc-de-bruyne-score-assist-senegal",
+  "wc-mexico-england-qualify"
+]);
 
 const LEADERBOARD_MARKET_ABI = [
   "function outcome() view returns (uint8)",
@@ -6364,7 +6370,9 @@ function loadAnalytics() {
   try {
     if (existsSync(ANALYTICS_FILE)) {
       const content = readFileSync(ANALYTICS_FILE, "utf8").replace(/^\uFEFF/, "");
-      return normalizeAnalytics(JSON.parse(content));
+      const data = normalizeAnalytics(JSON.parse(content));
+      scrubRolledBackLeaderboardState(data);
+      return data;
     }
   } catch (err) {
     console.error("Failed to load analytics:", err);
@@ -6827,6 +6835,8 @@ async function loadLeaderboardFromSupabase(data) {
         created_at: row.created_at || new Date().toISOString()
       };
     }
+
+    scrubRolledBackLeaderboardState(data);
 
     applyWalletMigrationAliases(data);
 
@@ -7523,6 +7533,36 @@ function ensureLeaderboardState(data) {
   if (!data.leaderboard.bonusEvents) data.leaderboard.bonusEvents = {};
   if (!data.leaderboard.referrals) data.leaderboard.referrals = {};
   return data.leaderboard;
+}
+
+function scrubRolledBackLeaderboardState(data) {
+  const leaderboard = ensureLeaderboardState(data);
+  let changed = false;
+
+  Object.values(leaderboard.resolvedResults || {}).forEach((resultsByMarket) => {
+    if (!resultsByMarket || typeof resultsByMarket !== "object") return;
+    rolledBackLeaderboardMarketIds.forEach((marketId) => {
+      if (resultsByMarket[marketId]) {
+        delete resultsByMarket[marketId];
+        changed = true;
+      }
+    });
+  });
+
+  Object.values(leaderboard.bonusEvents || {}).forEach((events) => {
+    if (!events || typeof events !== "object") return;
+    Object.keys(events).forEach((bonusKey) => {
+      for (const marketId of rolledBackLeaderboardMarketIds) {
+        if (bonusKey.includes(marketId)) {
+          delete events[bonusKey];
+          changed = true;
+          break;
+        }
+      }
+    });
+  });
+
+  return changed;
 }
 
 function setLeaderboardBonus(data, walletAddress, bonusKey, bonusType, points, metadata = {}) {
