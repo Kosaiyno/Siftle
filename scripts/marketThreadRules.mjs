@@ -1,39 +1,39 @@
 export const marketThreadRules = {
-  "wc-brazil-norway-qualify": {
+  "wc-portugal-spain-qualify": {
     category: "Sports",
-    topic: "Brazil vs Norway Qualify Watch",
+    topic: "Portugal vs Spain Qualify Watch",
     includeAnySets: [
-      ["brazil", "brazilian", "norway", "norwegian", "haaland"],
-      ["world cup", "fifa", "2026", "round of 16", "last 16", "knockout", "qualify", "qualification", "advance", "advances", "quarter-finals", "quarterfinals", "preview", "team news", "lineup", "lineups", "kickoff", "match", "extra time", "penalties"]
+      ["portugal", "portuguese", "spain", "spanish", "ronaldo", "cristiano ronaldo", "yamal", "morata"],
+      ["world cup", "fifa", "2026", "knockout", "qualify", "qualification", "advance", "advances", "quarter-finals", "quarterfinals", "semi-finals", "semifinals", "preview", "team news", "lineup", "lineups", "kickoff", "match", "extra time", "penalties"]
     ],
-    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "mexico", "england"]
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "usa", "belgium", "pulisic", "de bruyne"]
   },
-  "wc-mexico-england-qualify": {
+  "wc-ronaldo-header-spain": {
     category: "Sports",
-    topic: "Mexico vs England Qualify Watch",
+    topic: "Ronaldo Header Watch vs Spain",
     includeAnySets: [
-      ["mexico", "mexican", "england", "english", "kane", "tuchel"],
-      ["world cup", "fifa", "2026", "round of 16", "last 16", "knockout", "qualify", "qualification", "advance", "advances", "quarter-finals", "quarterfinals", "preview", "team news", "lineup", "lineups", "kickoff", "match", "extra time", "penalties"]
+      ["ronaldo", "cristiano ronaldo", "cr7", "portugal", "portuguese", "spain", "spanish"],
+      ["world cup", "fifa", "2026", "header", "headed goal", "cross", "set piece", "goal", "score", "scores", "preview", "team news", "lineup", "lineups", "match", "knockout"]
     ],
-    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "brazil", "norway"]
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "usa", "belgium"]
   },
-  "wc-kane-vs-haaland-goals": {
+  "wc-usa-belgium-qualify": {
     category: "Sports",
-    topic: "Kane vs Haaland Goal Race",
+    topic: "USA vs Belgium Qualify Watch",
     includeAnySets: [
-      ["harry kane", "kane", "erling haaland", "haaland"],
-      ["england", "norway", "world cup", "fifa", "2026", "goal", "goals", "score", "scores", "scorer", "golden boot", "preview", "team news", "lineup", "lineups", "match", "knockout"]
+      ["usa", "united states", "usmnt", "belgium", "belgian", "pulisic", "balogun", "de bruyne", "lukaku"],
+      ["world cup", "fifa", "2026", "knockout", "qualify", "qualification", "advance", "advances", "quarter-finals", "quarterfinals", "preview", "team news", "lineup", "lineups", "kickoff", "match", "extra time", "penalties"]
     ],
-    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball"]
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "portugal", "spain", "ronaldo"]
   },
-  "wc-brazil-norway-total-goals": {
+  "wc-usa-goals-belgium": {
     category: "Sports",
-    topic: "Brazil vs Norway Total Goals",
+    topic: "USA Goals vs Belgium",
     includeAnySets: [
-      ["brazil", "brazilian", "norway", "norwegian", "haaland"],
-      ["world cup", "fifa", "2026", "round of 16", "last 16", "knockout", "goal", "goals", "scoring", "attack", "preview", "team news", "lineup", "lineups", "kickoff", "match", "extra time", "penalties"]
+      ["usa", "united states", "usmnt", "belgium", "belgian", "pulisic", "balogun", "de bruyne", "lukaku"],
+      ["world cup", "fifa", "2026", "goal", "goals", "score", "scores", "attack", "chance creation", "preview", "team news", "lineup", "lineups", "kickoff", "match", "extra time", "penalties", "knockout"]
     ],
-    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "mexico", "england"]
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "portugal", "spain", "ronaldo"]
   },
   "wc-vozinha-saves-argentina": {
     category: "Sports",
