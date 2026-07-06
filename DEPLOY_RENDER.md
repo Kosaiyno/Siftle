@@ -18,8 +18,9 @@ Follow these steps to deploy the Node backend (`scripts/serve.mjs`) to Render.
    - `ZERO_G_API_KEY` or `OG_COMPUTE_API_KEY` (if using 0G compute)
    - `OG_COMPUTE_PROVIDER` and optionally `OG_COMPUTE_ENDPOINT`
    - `SHELBY_API_KEY`, `SHELBY_PRIVATE_KEY`, `SHELBY_ACCOUNT_ADDRESS`, `SHELBY_RPC_URL`, `SHELBY_ARCHIVE_PREFIX` (if you use Shelby archive features)
-   - Optional: `APP_TIME_ZONE`, `MAX_ARTICLE_AGE_HOURS`, `RSS_ITEMS_PER_FEED`, `THREAD_HISTORY_WINDOW_HOURS`
+   - Optional: `APP_TIME_ZONE`, `MAX_ARTICLE_AGE_HOURS`, `RSS_ITEMS_PER_FEED`, `THREAD_HISTORY_WINDOW_HOURS`, `SHELBY_PREPOPULATE_ON_STARTUP`
    - Recommended for Shelby testnet: `THREAD_HISTORY_WINDOW_HOURS=48` to align threads with the current 48-hour blob expiration window.
+   - Recommended on Render free/512MB instances: leave `SHELBY_PREPOPULATE_ON_STARTUP` unset or set it to `false` to avoid boot-time memory spikes.
 
 4) Deploy and verify
    - Deploy the service and wait for Render to finish the build.

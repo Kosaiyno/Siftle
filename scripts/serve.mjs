@@ -122,6 +122,7 @@ const leaderboardLogChunkSize = Math.min(2000, Math.max(100, Number(process.env.
 const leaderboardLogLookbackBlocks = Math.min(100000, Math.max(leaderboardLogChunkSize, Number(process.env.LEADERBOARD_LOG_LOOKBACK_BLOCKS ?? 50000)));
 const leaderboardPositionBatchSize = Math.min(100, Math.max(5, Number(process.env.LEADERBOARD_POSITION_BATCH_SIZE ?? 20)));
 const enableMemoryDebugLogs = process.env.ENABLE_MEMORY_DEBUG_LOGS === "true";
+const shelbyPrepopulateOnStartup = process.env.SHELBY_PREPOPULATE_ON_STARTUP === "true";
 const leaderboardMarketSignalCacheMs = Number(process.env.LEADERBOARD_MARKET_SIGNAL_CACHE_MS ?? 120000);
 const marketListCacheMs = Number(process.env.MARKET_LIST_CACHE_MS ?? 120000);
 const aiBriefingDailyBonusUnlocks = Math.max(1, Number(process.env.AI_BRIEFING_DAILY_BONUS_UNLOCKS ?? 3));
@@ -4711,7 +4712,7 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
   resetThreadReviewBudget();
 
   try {
-    if (reason === "startup" && isShelbyArchiveConfigured()) {
+    if (reason === "startup" && isShelbyArchiveConfigured() && shelbyPrepopulateOnStartup) {
       console.log("Pre-populating publishedSnapshots cache from Shelby archive...");
       try {
         const files = await listShelbyArchiveFiles();
@@ -4763,6 +4764,10 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
       }, 1000);
 
       return { skipped: false, status: publishStatus };
+    }
+
+    if (reason === "startup" && isShelbyArchiveConfigured() && !shelbyPrepopulateOnStartup) {
+      console.log("[STARTUP] Skipping Shelby snapshot pre-population. Set SHELBY_PREPOPULATE_ON_STARTUP=true to re-enable it.");
     }
 
     console.log(`Publishing feeds every ${refreshIntervalMinutes} minutes (${reason})...`);
