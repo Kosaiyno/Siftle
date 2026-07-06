@@ -64,6 +64,7 @@ declare global {
     SIFTLE_API_BASE?: string;
     REOWN_PROJECT_ID?: string;
     SIFTLE_MARKET_ADDRESSES?: Record<string, string>;
+    downloadBriefingCard?: (button: HTMLElement | null) => void;
   }
 }
 
@@ -668,6 +669,40 @@ const cleanSummaryText = (value: string): string => {
 const safeStorySummary = (story: NewsStory, preferred?: string): string =>
   cleanSummaryText(preferred || "") || cleanSummaryText(story.summary) || story.headline;
 
+const downloadBriefingCard = (button: HTMLElement | null): void => {
+  const container = button?.closest('.detail-summary, .thread-item, .market-thread-update') as HTMLElement | null;
+  const captureArea = container?.querySelector('.briefing-capture-area') as HTMLElement | null;
+  if (!captureArea || !(window as any).html2canvas) return;
+
+  const exportHost = document.createElement('div');
+  exportHost.className = 'briefing-export-staging';
+
+  const exportSurface = captureArea.cloneNode(true) as HTMLElement;
+  exportSurface.classList.add('briefing-export-surface');
+  exportHost.appendChild(exportSurface);
+  document.body.appendChild(exportHost);
+
+  const isLight = document.documentElement.dataset.theme === 'light';
+  (window as any).html2canvas(exportSurface, {
+    backgroundColor: isLight ? '#f5f7fb' : '#0f172a',
+    scale: 2,
+    logging: false,
+    useCORS: true
+  }).then((canvas: HTMLCanvasElement) => {
+    const link = document.createElement('a');
+    link.download = 'siftle-briefing.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    (window as any).showActionToast?.('Briefing card image downloaded!');
+  }).catch(() => {
+    (window as any).showActionToast?.('Unable to download briefing card');
+  }).finally(() => {
+    exportHost.remove();
+  });
+};
+
+window.downloadBriefingCard = downloadBriefingCard;
+
 const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
   const parts = text.split(/(?:\*\*|__)?(WHAT HAPPENED|KEY POINTS|TAKEAWAY)\s*:?\s*(?:\*\*|__)?\s*:?\s*/i);
   if (parts.length <= 1) {
@@ -736,40 +771,7 @@ const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
 
     html += `
       <div class="share-briefing-container">
-        <button type="button" class="share-briefing-btn" onclick="
-          const container = event.currentTarget.closest('.detail-summary') || event.currentTarget.closest('.thread-item') || event.currentTarget.closest('.market-thread-update');
-          const captureArea = container ? container.querySelector('.briefing-capture-area') : null;
-          if (!captureArea) return;
-          
-          const header = captureArea.querySelector('.briefing-capture-header');
-          const title = captureArea.querySelector('.briefing-capture-title');
-          if (header) header.style.setProperty('display', 'flex', 'important');
-          if (title) title.style.setProperty('display', 'block', 'important');
-          
-          if (window.html2canvas) {
-            const isLight = document.documentElement.dataset.theme === 'light';
-            window.html2canvas(captureArea, {
-              backgroundColor: isLight ? '#ffffff' : '#111827',
-              scale: 1.5,
-              logging: false,
-              useCORS: true
-            }).then(canvas => {
-              if (header) header.style.display = '';
-              if (title) title.style.display = '';
-              
-              const link = document.createElement('a');
-              link.download = 'siftle-briefing.png';
-              link.href = canvas.toDataURL();
-              link.click();
-              if (window.showActionToast) {
-                window.showActionToast('Briefing card image downloaded!');
-              }
-            }).catch(err => {
-              if (header) header.style.display = '';
-              if (title) title.style.display = '';
-            });
-          }
-        ">
+        <button type="button" class="share-briefing-btn" onclick="window.downloadBriefingCard?.(event.currentTarget)">
           ${downloadIconSvg}
           <span>Download Card</span>
         </button>
