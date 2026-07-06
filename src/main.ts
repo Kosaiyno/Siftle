@@ -684,27 +684,27 @@ const downloadBriefingCard = (button: HTMLElement | null): void => {
   // Apply explicit styling directly to the cloned surface and sections
   // to prevent any browser layout engine or stylesheet race conditions
   if (isLight) {
-    exportSurface.style.setProperty('background', 'linear-gradient(180deg, #ffffff, #f8fafc)', 'important');
-    exportSurface.style.setProperty('border', '1px solid #cbd5e1', 'important');
+    exportSurface.style.background = 'linear-gradient(180deg, #ffffff, #f8fafc)';
+    exportSurface.style.border = '1px solid #cbd5e1';
   } else {
-    exportSurface.style.setProperty('background', 'linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(17, 24, 39, 0.98))', 'important');
-    exportSurface.style.setProperty('border', '1px solid #1e293b', 'important');
+    exportSurface.style.background = 'linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(17, 24, 39, 0.98))';
+    exportSurface.style.border = '1px solid #1e293b';
   }
 
   const sections = exportSurface.querySelectorAll('.briefing-section');
   sections.forEach((sec: any) => {
-    sec.style.setProperty('border', 'none', 'important');
+    sec.style.border = 'none';
     if (isLight) {
-      sec.style.setProperty('background-color', '#f1f5f9', 'important');
+      sec.style.backgroundColor = '#f1f5f9';
     } else {
-      sec.style.setProperty('background-color', 'rgba(30, 41, 59, 0.45)', 'important');
+      sec.style.backgroundColor = 'rgba(30, 41, 59, 0.45)';
     }
   });
 
   if (isLight) {
     const textEls = exportSurface.querySelectorAll('.what-happened-section .briefing-text, .takeaway-section .briefing-text');
     textEls.forEach((el: any) => {
-      el.style.setProperty('color', '#000000', 'important');
+      el.style.color = '#000000';
     });
   }
 
