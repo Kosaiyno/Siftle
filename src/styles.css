@@ -6523,6 +6523,7 @@ h4 {
   border-radius: 18px !important;
   padding: 18px 20px 18px 22px !important;
   margin-bottom: 14px !important;
+  border: none !important;
 }
 
 .briefing-export-surface .briefing-title {
