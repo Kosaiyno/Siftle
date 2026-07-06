@@ -684,14 +684,13 @@ const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
           <img src="./assets/siftle-logo-small.png" alt="" />
           <span>Siftle Briefing</span>
         </div>
-        <span class="briefing-capture-tag">Live Feed</span>
       </div>
       <h3 class="briefing-capture-title">${headline}</h3>
     `;
   }
 
   if (parts[0].trim()) {
-    html += `<p class="briefing-intro" style="margin-bottom:20px; color:#cbd5e1; font-family:Inter,sans-serif; font-size:0.96rem; line-height:1.6;">${parts[0].trim()}</p>`;
+    html += `<p class="briefing-capture-intro">${parts[0].trim()}</p>`;
   }
 
   let takeawayText = '';
@@ -741,10 +740,7 @@ const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
   html += '</div>';
 
   if (story) {
-    const headline = (story as any).headline || "Football Match Update";
-    const xLogoSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" style="width:12px;height:12px;fill:currentColor;vertical-align:middle;margin-right:6px;"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>`;
-
-    const escapedHeadline = headline.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const downloadIconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;vertical-align:middle;margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>`;
 
     html += `
       <div class="share-briefing-container">
@@ -754,54 +750,32 @@ const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
           if (!captureArea) return;
           
           if (window.html2canvas) {
+            const isLight = document.documentElement.dataset.theme === 'light';
             window.html2canvas(captureArea, {
-              backgroundColor: '#111827',
-              scale: 2,
+              backgroundColor: isLight ? '#ffffff' : '#111827',
+              scale: 1.5,
               logging: false,
               useCORS: true
             }).then(canvas => {
-              canvas.toBlob(blob => {
-                if (!blob) return;
-                try {
-                  const item = new ClipboardItem({ 'image/png': blob });
-                  navigator.clipboard.write([item]).then(() => {
-                    if (window.showActionToast) {
-                      window.showActionToast('Briefing card image copied! Opening X...');
-                    }
-                    window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent('Check out this Siftle AI Briefing: ' + '${escapedHeadline}' + ' ⚽\\n\\nPredict now: ' + window.location.origin + ' #Siftle'), '_blank');
-                  }).catch(() => {
-                    const link = document.createElement('a');
-                    link.download = 'siftle-briefing.png';
-                    link.href = canvas.toDataURL();
-                    link.click();
-                    if (window.showActionToast) {
-                      window.showActionToast('Briefing card downloaded! Opening X...');
-                    }
-                    window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent('Check out Siftle AI Briefings ⚽\\n\\nPredict now: ' + window.location.origin + ' #Siftle'), '_blank');
-                  });
-                } catch (e) {
-                  const link = document.createElement('a');
-                  link.download = 'siftle-briefing.png';
-                  link.href = canvas.toDataURL();
-                  link.click();
-                  if (window.showActionToast) {
-                    window.showActionToast('Briefing card downloaded! Opening X...');
-                  }
-                  window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent('Check out Siftle AI Briefings ⚽\\n\\nPredict now: ' + window.location.origin + ' #Siftle'), '_blank');
-                }
-              });
+              const link = document.createElement('a');
+              link.download = 'siftle-briefing.png';
+              link.href = canvas.toDataURL();
+              link.click();
+              if (window.showActionToast) {
+                window.showActionToast('Briefing card image downloaded!');
+              }
             });
           }
         ">
-          ${xLogoSvg}
-          <span>Share Card to X</span>
+          ${downloadIconSvg}
+          <span>Download Card</span>
         </button>
       </div>
     `;
   }
 
   return html;
-};;
+};
 
 const renderBriefingStatusNote = (story: BriefingTarget): string => {
   const status = state.briefingStatusByUrl[story.sourceUrl] || "";
