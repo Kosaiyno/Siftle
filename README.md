@@ -1,263 +1,170 @@
-# Siftle
+# Siftle: Paid AI Briefings & Nanopayments on Arc
 
-Siftle is a football news product built around fast, paid AI context. It helps users follow live stories, unlock short AI Briefings with USDC nanopayments through the Circle gateway, and use that context immediately inside Arc-powered prediction markets.
+Hey there! Welcome to Siftle. Let me walk you through what we've built, how it works under the hood, and how we use Circle and Arc to power sub-cent nanopayments.
 
-Instead of pushing users into a full subscription, Siftle sells a single useful update at the moment interest is highest. The product starts with football because the news cycle is constant, the outcomes are clear, and users have a natural reason to return throughout the day.
+Siftle is a football news and prediction platform designed to monetize micro-information. Rather than forcing sports readers into a full monthly subscription, Siftle unbundles context. We sell individual, high-value **AI Briefings** for **0.0001 USDC** at the exact moment user interest is highest—right when they are deciding on a prediction market.
 
-The core product loop is simple:
+---
 
-1. Siftle finds fast-moving stories.
-2. Readers open a market or story thread.
-3. A locked AI briefing can be unlocked with a small x402-backed USDC payment.
-4. The briefing explains the story in three parts: **What happened**, **Key points**, and **Takeaway**.
-5. Readers use that context to trade Yes/No markets, follow outcomes, claim payouts, and climb the leaderboard.
+## 💡 Why we fit RFB 02 and RFB 06
 
-Siftle is built around the idea that news context can be sold in tiny units. Instead of a subscription or a large paywall, a reader can pay only when they want a specific AI briefing.
+We sat down and realized Siftle sits right at the intersection of two major Requests for Builders:
 
-## What Siftle Does Now
+* **RFB 02: Selling Agent Services via Nanopayments**:
+  Siftle's AI Briefing is not a static news article. It is an **AI Analyst Agent Service** running on the backend. When a user requests context, the AI agent pulls the live news thread, clusters source updates, and constructs a structured analysis (**What Happened**, **Key Points**, **Takeaway**). We monetize this agent's work at the micro-level: **0.0001 USDC per request**, paid dynamically.
+* **RFB 06: Creator & Publisher Monetization**:
+  Subscriptions are too heavy for daily, casual reading. Siftle proves that micro-payments remove the paywall floor. By pricing briefings at $0.0001, we show a viable path for newsletters, journalists, and independent creators to monetize single updates.
 
-Siftle currently combines:
+---
 
-- Live football news feeds
-- Threaded source updates for developing stories
-- Paid AI briefings unlocked with Circle gateway x402 nanopayments
-- Arc testnet prediction markets
-- Circle wallet onboarding
-- Yes/No shares with resolution and claiming
-- Seasonal and global leaderboards
-- Product analytics for opens, wallets, trades, claims, AI unlocks, and source clicks
+## 🛠️ How it Works: The x402 Web Service Flow
 
-The product is focused on football first because it creates clear, time-bound questions and natural user behavior: read, unlock context, decide, predict, win or lose, come back.
+Here is exactly how our x402 protocol flow works in the codebase:
 
-## Paid AI Briefings
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Reader/Agent
+    participant Client as Frontend UI
+    participant Server as Node Backend (serve.mjs)
+    participant Circle as Circle Wallet / Gateway
+    participant Arc as Arc Testnet (L1)
 
-The AI briefing is Siftle's core product.
+    User->>Client: Clicks locked AI Briefing
+    Client->>Server: POST /api/summary (requesting content)
+    note over Server: Server checks unlock token
+    Server-->>Client: HTTP 402 Payment Required (briefing locked)
+    Client->>Circle: Initiates Circle Gateway transaction (0.0001 USDC)
+    Circle->>Arc: Settles gasless USDC transfer to Siftle treasury
+    Arc-->>Circle: Emits Transfer Event (receipt txHash)
+    Client->>Server: POST /api/summary/unlock { walletAddress, sourceUrl, txHash }
+    note over Server: Server verifies receipt & awards leaderboard bonus
+    Server-->>Client: Returns unlockToken
+    Client->>Server: POST /api/summary { unlockToken }
+    Server-->>Client: Returns Decisive AI Briefing
+```
 
-Each locked briefing is a compact, structured explanation of a football story or market context. A user pays a small USDC amount through the Circle gateway using x402 to unlock the briefing, and Siftle returns the same clean format every time:
+### Under the Hood:
+1. **The 402 Paywall**: When a client requests an AI summary via `/api/summary` without a valid token, the backend throws a custom error:
+   ```javascript
+   const error = new Error("AI briefing unlock payment required");
+   error.statusCode = 402;
+   throw error;
+   ```
+2. **The x402 Payment**: The client catches this `402` error, prompts the user's connected Circle wallet, and executes a gas-free payment of **0.0001 USDC** to Siftle's treasury address on the Arc testnet.
+3. **Receipt Verification**: The frontend submits the transaction hash to `/api/summary/unlock`. The server runs `verifyAiBriefingUnlockPayment(body)` by inspecting the transaction on ArcScan, logs the unlock, and returns a secure `unlockToken`.
+4. **Context Delivered**: The client submits the unlock token to fetch the decrypted structured briefing.
 
-### What Happened
+---
 
-A short explanation of the core event or market-moving update.
+## 💻 Our Tech Stack & Implementation Details
 
-### Key Points
+Here is the exact stack we put together to make this fast, cheap, and robust:
 
-The facts that matter most: team news, player status, market context, recent updates, source signals, or anything else that changes how a user might think about the question.
+### 1. Circle developer stack
+* **Circle Email Wallet Onboarding**: We use Circle's OTP authentication to let first-time users sign up with just an email. Behind the scenes, Circle generates a secure, compliant embedded wallet for them instantly.
+* **Circle CLI & SDK**: Wire the wallet onboarding and transaction approvals into the client, showing USDC balances and handling contract calls.
 
-### Takeaway
+### 2. Arc L1 Settlement
+* **Sub-second Finality**: When users submit a transaction to buy Yes/No shares or unlock a briefing, Arc settles it in **under 500ms**, keeping the UI responsive.
+* **USDC-native Gas**: Siftle users don't need to hold a volatile native token just to pay gas. Everything is denominated and settled in USDC.
 
-A direct final read on what the information means for the user.
+### 3. AI & Data Layers
+* **0G Compute**: Used for on-demand summary generation when external LLM pipelines are congested.
+* **Shelby Network**: We back up and archive our 48-hour rolling news snapshots directly to the Shelby testnet to maintain a transparent, tamper-proof history of the sources.
+* **Supabase**: Handles the persistent gamification state—leaderboard scores, divisional rankings, wins, losses, and user profiles.
 
-This makes the AI output useful inside the prediction flow. The briefing is not generic summarization; it is paid decision support around a live event, delivered in seconds.
+### 4. Client Presentation & Card Exporter
+We wanted Siftle to be highly shareable on Twitter/X, so we built a **Briefing Card Exporter** on the client:
+* **The Spacing Bug we fixed**: In `html2canvas`, media queries (like `@media (max-width: 640px)`) are evaluated against the browser's window width, which caused cards downloaded on mobile phones to look compressed and squished.
+* **Our Solution**: In `src/main.ts#downloadBriefingCard`, we clone the card and explicitly **hardcode and apply the desktop layout inline** using JavaScript (outer card width of `704px`, padding `28px 30px`, section box padding `18px 20px 18px 22px`, section margin `14px`, and `1rem` typography).
+* **The html2canvas Inline Style Bug we fixed**: `html2canvas`'s internal CSS parser completely ignores inline styles that use the `!important` flag. We rewrote our JS style setters to use standard DOM properties (e.g., `sec.style.backgroundColor = '#f1f5f9'`) without `!important`, ensuring the beautiful gray background cards render consistently on every single download, even if it's the 100th time.
 
-## Nanopayments
+---
 
-Siftle uses small USDC payments to unlock specific pieces of AI-generated context.
+## ⚙️ Environment Variables
 
-Those payments run through the Circle gateway using x402, so access to an AI briefing works like a clean, instant nanopayment instead of a subscription flow.
+Create a `.env` file at the root of the project to set up local environments:
 
-Why this matters:
+```ini
+PORT=5173
+PUBLIC_API_BASE_URL=http://localhost:5173
+SIFTLE_API_BASE=http://localhost:5173
 
-- Readers do not need to subscribe before getting value.
-- Each briefing can be priced independently.
-- The app can monetize long-tail news context.
-- AI-generated analysis becomes a pay-per-use product.
-- The same pattern can later support publishers, creators, analysts, and source attribution.
+# Database (Supabase)
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_PUBLIC_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
-The current implementation uses Arc testnet USDC for product validation. Testnet funds have no real financial value.
+# Circle Developer Stack
+CIRCLE_API_KEY=your_circle_api_key
+CIRCLE_APP_ID=your_circle_app_id
+RESEND_API_KEY=your_resend_api_key
+RESEND_FROM=notifications@yourdomain.com
 
-## Prediction Markets
-
-Siftle markets are simple Yes/No questions tied to real events.
-
-Users can:
-
-- Connect a Circle wallet
-- Claim testnet USDC
-- Buy Yes or No shares
-- Exit shares before resolution when the market is still open
-- Claim after the market resolves if they are on the winning side
-- Earn leaderboard points from resolved Daily markets
-
-Markets are designed to be easy to understand:
-
-- Winning side splits the final pool.
-- Losing side funds the winning side.
-- Resolved markets cannot be traded.
-- Payout is shown as projected payout while the market is open.
-
-## Leaderboard
-
-Siftle turns prediction into a game layer.
-
-The leaderboard tracks:
-
-- Points
-- Wins
-- Losses
-- Division ranking
-- Global ranking
-
-Daily market winners earn points only after the market resolves. This keeps leaderboard points tied to real outcomes, not just activity.
-
-## Arc and Circle Usage
-
-Siftle uses Circle and Arc for:
-
-- Circle email wallet onboarding
-- Circle gateway x402 nanopayments for AI briefing access
-- Arc testnet USDC balance display
-- USDC approval and market trades
-- Market resolution and claiming
-- Paid AI briefing unlocks
-- Testnet usage analytics around real product behavior
-
-Current Arc configuration:
-
-```txt
+# Arc L1 Chain Config
 ARC_TESTNET_RPC_URL=https://rpc.testnet.arc.network
 ARC_TESTNET_USDC_ADDRESS=0x3600000000000000000000000000000000000000
-REOWN_PROJECT_ID=
-ARC_DEPLOYER_PRIVATE_KEY=
+ARC_DEPLOYER_PRIVATE_KEY=your_private_key
+REOWN_PROJECT_ID=your_reown_project_id
+
+# Treasury & Nanopayment Config
+AI_BRIEFING_TREASURY_ADDRESS=your_treasury_address
+AI_BRIEFING_UNLOCK_USDC=0.0001
+X402_PRICE=0.0001
+
+# 0G Compute Configuration
+OG_RPC_URL=https://evmrpc.0g.ai
+OG_COMPUTE_PROVIDER=your_provider
+OG_COMPUTE_ENDPOINT=your_endpoint
+OG_COMPUTE_API_KEY=your_api_key
+OG_USAGE_MODE=conserve
+
+# Feed Scrapers & Archiving
+NEWSDATA_API_KEY=your_newsdata_key
+GUARDIAN_API_KEY=your_guardian_key
+SHELBY_UPLOAD_URL=your_shelby_upload_url
+SHELBY_API_KEY=your_shelby_api_key
 ```
 
-Market addresses are exposed through `dist/client-config.js` after running:
+---
 
-```bash
-npm run build
-```
+## 🛠️ Local Development
 
-Private keys and service-role secrets must stay server-side only.
-
-## AI and Source Threads
-
-Siftle keeps source context attached to each story and market.
-
-The app uses:
-
-- RSS and configured news APIs for fresh stories
-- Thread matching for related updates
-- Local fallbacks when AI or external services are unavailable
-- 0G Compute where deeper AI work is useful
-- Cached summaries so repeat reads do not regenerate unnecessarily
-
-The goal is not to flood users with AI text. The goal is to let a user unlock one useful briefing the moment they need context and get up to speed fast.
-
-## Storage and Persistence
-
-Siftle uses multiple layers:
-
-- Supabase for leaderboard/profile persistence
-- Local `.siftle` files for development caches and analytics fallback
-- Shelby testnet archive support for feed snapshots
-- Browser storage for wallet/session hints and local UI state
-
-Supabase is the durable source for leaderboard data. Shelby is not used for critical leaderboard or market state because testnet storage can be wiped or expire.
-
-## Local Development
-
-Install dependencies:
-
+### 1. Install Dependencies
 ```bash
 npm install
 ```
 
-Build:
-
+### 2. Build Frontend Bundle
 ```bash
 npm run build
 ```
 
-Run tests:
-
+### 3. Run Verification Tests
 ```bash
 npm test
 ```
 
-Start local backend/frontend:
-
+### 4. Start Local Server
 ```bash
 node scripts/serve.mjs
 ```
+The app will run locally at [http://localhost:5173](http://localhost:5173).
 
-Open:
+---
 
-```txt
-http://localhost:5173
-```
-
-## Environment
-
-Create `.env` from `.env.example`.
-
-Common variables:
+## 📡 API Reference
 
 ```txt
-PORT=5173
-PUBLIC_API_BASE_URL=
-SIFTLE_API_BASE=
-
-SUPABASE_URL=
-SUPABASE_ANON_PUBLIC_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-
-CIRCLE_API_KEY=
-CIRCLE_APP_ID=
-RESEND_API_KEY=
-RESEND_FROM=
-
-ARC_TESTNET_RPC_URL=https://rpc.testnet.arc.network
-ARC_TESTNET_USDC_ADDRESS=0x3600000000000000000000000000000000000000
-ARC_DEPLOYER_PRIVATE_KEY=
-REOWN_PROJECT_ID=
-
-AI_BRIEFING_TREASURY_ADDRESS=
-AI_BRIEFING_UNLOCK_USDC=0.05
-
-OG_RPC_URL=https://evmrpc.0g.ai
-OG_COMPUTE_PROVIDER=
-OG_COMPUTE_ENDPOINT=
-OG_COMPUTE_API_KEY=
-OG_USAGE_MODE=conserve
-
-NEWSDATA_API_KEY=
-GUARDIAN_API_KEY=
-SHELBY_UPLOAD_URL=
-SHELBY_API_KEY=
+GET  /api/status               - Fetch health and connectivity status
+GET  /api/markets              - Retrieve active Yes/No markets on Arc
+GET  /api/feed                 - Ingest clustered news feed
+GET  /api/market-thread        - Retrieve related news source updates
+GET  /api/leaderboard/global   - Global ranking data
+GET  /api/analytics/report     - Fetch briefing unlocks and volume stats
+POST /api/summary/unlock       - Verify x402 payment transactions
+POST /api/summary              - Fetch briefing content (throws 402 if locked)
+POST /api/circle/auth/otp      - Trigger Circle OTP email authentication
+POST /api/circle/auth/verify   - Verify OTP and generate wallet instance
 ```
-
-## Useful Endpoints
-
-```txt
-GET  /api/status
-GET  /api/markets
-GET  /api/feed?category=Sports
-GET  /api/market-thread?id=...
-GET  /api/leaderboard/global
-GET  /api/leaderboard/division
-GET  /api/analytics/report
-GET  /api/summary/unlock-config
-
-POST /api/analytics
-POST /api/summary/unlock
-POST /api/summary
-POST /api/leaderboard/report
-POST /api/circle/auth/otp
-POST /api/circle/auth/verify
-POST /api/circle/tx/contract-call
-```
-
-## Product Direction
-
-Siftle is moving toward a paid-context marketplace for live events.
-
-Near-term priorities:
-
-- Make paid AI briefings fast and reliable
-- Make football AI briefings the fastest way to understand a live story
-- Improve market creation and resolution workflow
-- Keep onboarding simple for first-time wallet users
-- Grow real user activity around daily markets
-- Show clear analytics for signups, AI unlocks, trades, claims, and retention
-- Package the product as a nanopayment use case for AI-generated news context
-
-The thesis: if the smallest useful unit of news context can be priced, unlocked, and used immediately, AI briefings become a real product instead of a generic feature.
