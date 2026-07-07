@@ -6569,6 +6569,19 @@ h4 {
     box-shadow: 0 12px 32px rgba(2, 6, 23, 0.22) !important;
   }
 
+  .detail-summary .briefing-section strong {
+    display: inline !important;
+    text-transform: none !important;
+    font-size: inherit !important;
+    font-weight: 700 !important;
+    letter-spacing: normal !important;
+    color: #ffffff !important;
+  }
+
+  :root[data-theme="light"] .detail-summary .briefing-section strong {
+    color: #0f172a !important;
+  }
+
   .detail-summary .briefing-title {
     margin-bottom: 10px !important;
     font-size: 0.78rem !important;
