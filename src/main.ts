@@ -1264,7 +1264,7 @@ function syncStoryFromHash(): void {
     const storyMatch = window.location.hash.match(/^#story-(.+)$/);
     const threadMatch = window.location.hash.match(/^#thread-(.+)$/);
 
-    if (state.stories.length === 0 && !state.isLoading) {
+    if (state.stories.length === 0 && !state.isLoading && !state.hasLoadedFeed) {
       void loadFeed(state.activeCategory).then(() => {
         syncStoryFromHash();
       });
@@ -1368,6 +1368,7 @@ const loadFeed = async (category: Category = state.activeCategory, isBackground 
       state.stories = [];
     }
     applySavedFlags();
+    state.hasLoadedFeed = true;
     if (menuStatus) {
       menuStatus.textContent = state.activeArchiveDate
         ? "That saved day/category is not available yet"
