@@ -779,8 +779,17 @@ const downloadBriefingCard = (button: HTMLElement | null): void => {
 
 window.downloadBriefingCard = downloadBriefingCard;
 
+const getStorySlug = (headline: string): string => {
+  return headline
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+};
+
 const copyBriefingLink = (storyId: number): void => {
-  const shareUrl = `${window.location.origin}${window.location.pathname}#story-${storyId}`;
+  const story = state.stories.find((item) => item.id === storyId);
+  const slug = story ? getStorySlug(story.headline) : String(storyId);
+  const shareUrl = `${window.location.origin}${window.location.pathname}#story-${slug}`;
   navigator.clipboard.writeText(shareUrl).then(() => {
     (window as any).showActionToast?.('Link copied to clipboard!');
   }).catch(() => {
@@ -1138,7 +1147,7 @@ const openStory = (storyId: number, autoUnlockBriefing = false): void => {
   state.selectedStoryId = story.id;
   state.selectedThreadUrl = null;
   state.activeThread = null;
-  window.history.pushState({}, "", `#story-${story.id}`);
+  window.history.pushState({}, "", `#story-${getStorySlug(story.headline)}`);
   render();
   if (autoUnlockBriefing && !isBriefingUnlocked(story)) {
     if (state.walletAddress) state.unlockingSummaryUrl = story.sourceUrl;
@@ -1156,7 +1165,7 @@ const openThread = (story: NewsStory): void => {
   state.selectedThreadUrl = story.sourceUrl;
   state.activeThread = null;
   state.loadingThreadUrl = story.sourceUrl;
-  window.history.pushState({}, "", `#thread-${story.id}`);
+  window.history.pushState({}, "", `#thread-${getStorySlug(story.headline)}`);
   render();
   void loadStoryThread(story);
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1252,8 +1261,8 @@ function syncStoryFromHash(): void {
   }
   if (window.location.hash === "#feed" || window.location.hash.startsWith("#story-") || window.location.hash.startsWith("#thread-")) {
     state.activeSurface = "feed";
-    const storyMatch = window.location.hash.match(/^#story-(\d+)$/);
-    const threadMatch = window.location.hash.match(/^#thread-(\d+)$/);
+    const storyMatch = window.location.hash.match(/^#story-(.+)$/);
+    const threadMatch = window.location.hash.match(/^#thread-(.+)$/);
 
     if (state.stories.length === 0 && !state.isLoading) {
       void loadFeed(state.activeCategory).then(() => {
@@ -1262,8 +1271,23 @@ function syncStoryFromHash(): void {
       return;
     }
 
-    const story = storyMatch ? state.stories.find((item) => item.id === Number(storyMatch[1])) : undefined;
-    const threadStory = threadMatch ? state.stories.find((item) => item.id === Number(threadMatch[1])) : undefined;
+    let story: any = undefined;
+    if (storyMatch) {
+      const val = storyMatch[1];
+      story = state.stories.find((item) => getStorySlug(item.headline) === val);
+      if (!story && /^\d+$/.test(val)) {
+        story = state.stories.find((item) => item.id === Number(val));
+      }
+    }
+
+    let threadStory: any = undefined;
+    if (threadMatch) {
+      const val = threadMatch[1];
+      threadStory = state.stories.find((item) => getStorySlug(item.headline) === val);
+      if (!threadStory && /^\d+$/.test(val)) {
+        threadStory = state.stories.find((item) => item.id === Number(val));
+      }
+    }
     
     if (story) {
       document.title = `${story.headline} | Siftle`;
