@@ -780,13 +780,9 @@ const downloadBriefingCard = (button: HTMLElement | null): void => {
 window.downloadBriefingCard = downloadBriefingCard;
 
 const copyBriefingLink = (storyId: number): void => {
-  const story = state.stories.find((item) => item.id === storyId);
-  const title = story ? story.headline : "Siftle AI Briefing";
   const shareUrl = `${window.location.origin}${window.location.pathname}#story-${storyId}`;
-  const textToCopy = `📰 *Siftle Briefing Alert* 📰\n\n*Story:* ${title}\n\nRead the full AI briefing, predictions and source updates here: ${shareUrl}`;
-
-  navigator.clipboard.writeText(textToCopy).then(() => {
-    (window as any).showActionToast?.('Shareable link copied to clipboard!');
+  navigator.clipboard.writeText(shareUrl).then(() => {
+    (window as any).showActionToast?.('Link copied to clipboard!');
   }).catch(() => {
     (window as any).showActionToast?.('Unable to copy link');
   });
@@ -1231,6 +1227,8 @@ function syncStoryFromHash(): void {
     state.selectedStoryId = null;
     state.selectedThreadUrl = null;
     state.activeThread = null;
+    const market = marketMatch ? marketPreviews.find((item) => item.id === marketMatch[1]) : undefined;
+    document.title = market ? `${market.question} | Siftle` : "Siftle Markets";
     render();
     return;
   }
@@ -1239,6 +1237,7 @@ function syncStoryFromHash(): void {
     state.selectedMarketId = null;
     state.selectedStoryId = null;
     state.selectedThreadUrl = null;
+    document.title = "Siftle Portfolio";
     render();
     return;
   }
@@ -1247,6 +1246,7 @@ function syncStoryFromHash(): void {
     state.selectedMarketId = null;
     state.selectedStoryId = null;
     state.selectedThreadUrl = null;
+    document.title = "Siftle Leaderboard";
     render();
     return;
   }
@@ -1264,6 +1264,15 @@ function syncStoryFromHash(): void {
 
     const story = storyMatch ? state.stories.find((item) => item.id === Number(storyMatch[1])) : undefined;
     const threadStory = threadMatch ? state.stories.find((item) => item.id === Number(threadMatch[1])) : undefined;
+    
+    if (story) {
+      document.title = `${story.headline} | Siftle`;
+    } else if (threadStory) {
+      document.title = `${threadStory.headline} | Siftle`;
+    } else {
+      document.title = "Siftle News";
+    }
+
     const wasInDetail = state.selectedStoryId !== null || state.selectedThreadUrl !== null;
     state.selectedStoryId = story?.id ?? null;
     state.selectedThreadUrl = threadStory?.sourceUrl ?? null;
@@ -1282,6 +1291,7 @@ function syncStoryFromHash(): void {
   state.selectedMarketId = null;
   state.selectedStoryId = null;
   state.selectedThreadUrl = null;
+  document.title = "Siftle";
   render();
   ensureFeedLoaded(state.activeCategory);
 }
