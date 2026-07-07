@@ -8,13 +8,13 @@ As a secondary companion feature, Siftle integrates gamified **Prediction Market
 
 ## 💡 The Problem & The Siftle Solution
 
-### 1. The Paywall Problem vs. Context Unbundling (Primary Focus)
-* **The Problem**: Traditional sports media outlets lock articles behind high-friction, monthly subscriptions ($10–$20/month). Casual fans refuse to pay recurring subscriptions just to read a single transfer rumor or match lineup update.
-* **The Solution**: Siftle unbundles sports journalism. Readers pay a microscopic fee (**$0.0001 USDC**) only for the specific news briefings they want to unlock, right when their interest is highest.
+### 1. The Ad-Bloated & Fluffy Sports Media Problem (Core Focus)
+* **The Problem**: Mainstream sports blogs and news outlets are heavily bloated with massive walls of text, intrusive autoplay videos, pop-up banner ads, cookie consent dialogs, and clickbait slideshows designed to maximize ad impressions. Readers waste valuable minutes scrolling through fluff just to find a single piece of critical information (such as an injury update or a transfer negotiation status).
+* **The Solution**: Siftle's ingestion engine crawls news feeds, strips away all HTML bloat, trackers, and ads, and feeds the raw text directly into our AI pipeline. Siftle distills the story into an ultra-clean, structured 3-bullet briefing (**What Happened**, **Key Points**, and **Takeaway**). Readers get 100% of the factual value in under 10 seconds, ad-free.
 
-### 2. Scattered Sources vs. Consolidated AI Briefings
-* **The Problem**: Staying informed requires checking dozens of news feeds, transfer portals, and social media channels to piece together what actually happened.
-* **The Solution**: Siftle's background engine crawls, clusters, and structures real-time updates. The AI agent generates a clean, readable briefing containing **What Happened**, **Key Points**, and the final **Takeaway**.
+### 2. The Subscription Paywall Problem vs. Context Unbundling
+* **The Problem**: Traditional sports publishers lock high-quality content behind expensive monthly paywalls ($10–$20/month). Most readers only want quick context on a single headline and refuse to commit to recurring subscriptions.
+* **The Solution**: Siftle unbundles sports journalism. Readers pay a microscopic fee (**$0.0001 USDC**) only for the specific news briefings they want to unlock, right when their interest is highest.
 
 ### 3. Integrated Sports Options (Secondary Feature)
 * **The Setup**: Once readers have unlocked the AI Briefing and obtained full context, Siftle presents a secondary prediction market (Sports Options) tied to the headline, allowing them to trade on outcomes with sub-second, gas-free settlement on Arc L1.
@@ -31,7 +31,8 @@ Siftle runs a continuous background data ingestion engine to capture, category-f
    * **Social Reporters**: Live signals from verified transfer reporters (e.g., Fabrizio Romano).
 2. **Clustering & Threading**: The backend groups related updates into chronological stories. For example, a transfer saga will cluster the initial rumor, bid updates, medical tests, and the final signing.
 3. **On-Chain Archiving (Shelby)**: Daily news snapshots are archived and pinned to the **Shelby Network** (on-chain storage) to maintain a decentralized, tamper-proof audit trail of the sports data feed.
-4. **LLM Fallback (0G Compute)**: Decentralized **0G Compute** LLM services are used to process summaries and briefings when mainstream pipelines experience congestion.
+4. **High Availability via 0G Compute (LLM Fallback)**:
+   * **What it means**: Siftle is built with high availability in mind. If our primary centralized LLM API endpoint experiences rate limits, congestion, or outages, Siftle automatically redirects summary generation requests to **0G's decentralized AI inference compute network**. 0G compute providers process the prompt and return the structured briefing text, preventing centralized single points of failure.
 
 ---
 
@@ -44,6 +45,39 @@ Siftle uses social engagement to drive immediate app traffic and conversion:
 3. **Immediate Conversion**:
    * If a user clicks the shared link and is logged in, they can unlock and generate the briefing instantly.
    * If they are not logged in or have an empty balance, the UI prompts them to authenticate via email OTP or fund their wallet.
+
+---
+
+## 🔄 User Onboarding, Funding & Briefing Flow
+
+Here is the complete step-by-step user journey from sign-in to payment settlement:
+
+```txt
+[1. Email Sign-In] ────> [2. Claim Faucet USDC] ────> [3. Click Locked Briefing]
+                                                               │
+[5. Unlock Content] <──── [4. Verify & Settle payment] <───────┘
+```
+
+### 1. Seamless Onboarding (Sign-In)
+* **The Flow**: The user enters their email on the Siftle client. The backend triggers a Resend/SMTP email containing a 6-digit One-Time Password (OTP).
+* **The Wallet Creation**: Once the user enters the OTP, Siftle calls the **Circle Developer Stack** to automatically generate a secure, gas-free, contract-compatible embedded Web3 wallet for the user, requiring no passwords or seed phrases.
+
+### 2. Account Funding (Testnet USDC Faucet)
+* **The Flow**: In the Profile / Leaderboard screen, users can click the Faucet button to request testnet USDC.
+* **The Settlement**: Siftle's faucet backend signs a gas-free transaction on the Arc L1 testnet and transfers **USDC** directly into the user's new Circle embedded wallet address, setting them up to buy briefings and place predictions.
+
+### 3. Purchasing & Generating the Briefing
+* **The Trigger**: The user clicks the **Unlock Briefing** button on a story. The client recognizes that the summary requires a payment of `0.0001 USDC` and calls the backend `/api/summary` endpoint which returns a `402 Payment Required` response.
+* **The Gateway Execution**: The client triggers the Circle Web SDK to initiate a gasless transaction, paying `0.0001 USDC` to Siftle's Treasury Account on the Arc L1 chain.
+
+### 4. Seller Payment Verification & Payout
+* **The Verification**: The client sends the transaction hash (`txHash`) to Siftle's `/api/summary/unlock` endpoint.
+* **The Validation**: The backend inspects the transaction directly on the Arc testnet via RPC, verifying:
+  1. The transaction exists on-chain.
+  2. The recipient is Siftle's configured treasury address.
+  3. The transfer amount matches exactly (`0.0001 USDC`).
+* **The Unlock**: Once verified, the backend logs the unlock state in the analytics cache, awards the user leaderboard points for the purchase, and returns a secure session `unlockToken`.
+* **The Delivery**: The client resubmits the request to `/api/summary` with the `unlockToken`. The server decrypts and delivers the 3-bullet AI Briefing.
 
 ---
 
@@ -73,11 +107,6 @@ sequenceDiagram
     Client->>Server: POST /api/summary { unlockToken }
     Server-->>Client: Returns Decisive AI Briefing
 ```
-
-1. **402 Locked State**: Requests to `/api/summary` fail with an HTTP `402 Payment Required` status if not paid.
-2. **Gateway Payment**: The client initiates a `0.0001 USDC` gasless transfer to Siftle's treasury address on the Arc testnet.
-3. **On-Chain Verification**: The backend verifies the transaction receipt on the Arc L1 chain and returns a secure `unlockToken`.
-4. **Decryption**: The client resubmits the request with the `unlockToken` to obtain the summary.
 
 ---
 
