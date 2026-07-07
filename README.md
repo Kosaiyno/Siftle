@@ -10,7 +10,7 @@ As a secondary companion feature, Siftle integrates gamified **Prediction Market
 
 ### 1. The Ad-Bloated & Fluffy Sports Media Problem (Core Focus)
 * **The Problem**: Mainstream sports blogs and news outlets are heavily bloated with massive walls of text, intrusive autoplay videos, pop-up banner ads, cookie consent dialogs, and clickbait slideshows designed to maximize ad impressions. Readers waste valuable minutes scrolling through fluff just to find a single piece of critical information (such as an injury update or a transfer negotiation status).
-* **The Solution**: Siftle's ingestion engine crawls news feeds, strips away all HTML bloat, trackers, and ads, and feeds the raw text directly into our AI pipeline. Siftle distills the story into an ultra-clean, structured 3-bullet briefing (**What Happened**, **Key Points**, and **Takeaway**). Readers get 100% of the factual value in under 10 seconds, ad-free.
+* **. The Solution**: Siftle's ingestion engine crawls news feeds, strips away all HTML bloat, trackers, and ads, and feeds the raw text directly into our AI pipeline. Siftle distills the story into an ultra-clean, structured 3-bullet briefing (**What Happened**, **Key Points**, and **Takeaway**). Readers get 100% of the factual value in under 10 seconds, ad-free.
 
 ### 2. The Subscription Paywall Problem vs. Context Unbundling
 * **The Problem**: Traditional sports publishers lock high-quality content behind expensive monthly paywalls ($10–$20/month). Most readers only want quick context on a single headline and refuse to commit to recurring subscriptions.
@@ -31,8 +31,8 @@ Siftle runs a continuous background data ingestion engine to capture, category-f
    * **Social Reporters**: Live signals from verified transfer reporters (e.g., Fabrizio Romano).
 2. **Clustering & Threading**: The backend groups related updates into chronological stories. For example, a transfer saga will cluster the initial rumor, bid updates, medical tests, and the final signing.
 3. **On-Chain Archiving (Shelby)**: Daily news snapshots are archived and pinned to the **Shelby Network** (on-chain storage) to maintain a decentralized, tamper-proof audit trail of the sports data feed.
-4. **High Availability via 0G Compute (LLM Fallback)**:
-   * **What it means**: Siftle is built with high availability in mind. If our primary centralized LLM API endpoint experiences rate limits, congestion, or outages, Siftle automatically redirects summary generation requests to **0G's decentralized AI inference compute network**. 0G compute providers process the prompt and return the structured briefing text, preventing centralized single points of failure.
+4. **Primary AI Engine via 0G Compute**:
+   * **The Setup**: Siftle uses the **0G Compute Network** (0G Foundation's decentralized AI inference compute network) as its primary LLM API. The backend interacts directly with 0G compute brokers to invoke deep learning models, processing article contexts and generating the structured AI Briefings.
 
 ---
 
@@ -77,7 +77,7 @@ Here is the complete step-by-step user journey from sign-in to payment settlemen
   2. The recipient is Siftle's configured treasury address.
   3. The transfer amount matches exactly (`0.0001 USDC`).
 * **The Unlock**: Once verified, the backend logs the unlock state in the analytics cache, awards the user leaderboard points for the purchase, and returns a secure session `unlockToken`.
-* **The Delivery**: The client resubmits the request to `/api/summary` with the `unlockToken`. The server decrypts and delivers the 3-bullet AI Briefing.
+* **The Delivery**: The client resubmits the request to `/api/summary` with the `unlockToken`. The server calls the **0G Compute LLM API** to decrypt, summarize, and deliver the 3-bullet AI Briefing.
 
 ---
 
