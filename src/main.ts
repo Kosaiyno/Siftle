@@ -779,6 +779,17 @@ const downloadBriefingCard = (button: HTMLElement | null): void => {
 
 window.downloadBriefingCard = downloadBriefingCard;
 
+const copyBriefingLink = (storyId: number): void => {
+  const shareUrl = `${window.location.origin}${window.location.pathname}#story-${storyId}`;
+  navigator.clipboard.writeText(shareUrl).then(() => {
+    (window as any).showActionToast?.('Shareable link copied to clipboard!');
+  }).catch(() => {
+    (window as any).showActionToast?.('Unable to copy link');
+  });
+};
+
+(window as any).copyBriefingLink = copyBriefingLink;
+
 const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
   const parts = text.split(/(?:\*\*|__)?(WHAT HAPPENED|KEY POINTS|TAKEAWAY)\s*:?\s*(?:\*\*|__)?\s*:?\s*/i);
   if (parts.length <= 1) {
@@ -843,10 +854,15 @@ const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
   html += '</div>';
 
   if (story) {
+    const linkIconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;vertical-align:middle;margin-right:6px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
     const downloadIconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;vertical-align:middle;margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>`;
 
     html += `
       <div class="share-briefing-container">
+        <button type="button" class="share-briefing-btn copy-link-btn" onclick="window.copyBriefingLink?.(${story.id})">
+          ${linkIconSvg}
+          <span>Copy Link</span>
+        </button>
         <button type="button" class="share-briefing-btn" onclick="window.downloadBriefingCard?.(event.currentTarget)">
           ${downloadIconSvg}
           <span>Download Card</span>
@@ -999,9 +1015,15 @@ const unlockAndLoadStorySummary = async (story: BriefingTarget, force = false): 
       throw new Error(config.error || "AI briefing is not configured");
     }
 
+    const price = Number(config.amountUsdc) || 0.0001;
+    const balance = Number(state.walletBalance || 0);
+    if (balance < price) {
+      throw new Error(`Your wallet has insufficient balance. Please fund your wallet (minimum ${price} USDC required).`);
+    }
+
     const txHash = await payAiBriefingUnlock(
       config.treasuryAddress,
-      Number(config.amountUsdc) || 0.05,
+      price,
       (status) => {
         if (menuStatus) menuStatus.textContent = status;
         state.briefingStatusByUrl[story.sourceUrl] = status;
@@ -1228,6 +1250,14 @@ function syncStoryFromHash(): void {
     state.activeSurface = "feed";
     const storyMatch = window.location.hash.match(/^#story-(\d+)$/);
     const threadMatch = window.location.hash.match(/^#thread-(\d+)$/);
+
+    if (state.stories.length === 0 && !state.isLoading) {
+      void loadFeed(state.activeCategory).then(() => {
+        syncStoryFromHash();
+      });
+      return;
+    }
+
     const story = storyMatch ? state.stories.find((item) => item.id === Number(storyMatch[1])) : undefined;
     const threadStory = threadMatch ? state.stories.find((item) => item.id === Number(threadMatch[1])) : undefined;
     const wasInDetail = state.selectedStoryId !== null || state.selectedThreadUrl !== null;

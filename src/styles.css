@@ -6207,6 +6207,13 @@ h4 {
   display: flex;
   justify-content: flex-end;
   margin-top: 18px;
+  gap: 10px;
+}
+
+.share-briefing-btn.copy-link-btn:hover {
+  background: #10b981; /* Emerald Green */
+  border-color: #10b981;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
 .share-briefing-btn {
@@ -6591,6 +6598,7 @@ h4 {
   .share-briefing-container {
     justify-content: stretch !important;
     margin-top: 16px !important;
+    gap: 10px !important;
   }
 
   .share-briefing-btn {
