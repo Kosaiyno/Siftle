@@ -1,25 +1,23 @@
-# Siftle: Micro-Monetized AI Sports Briefings & Prediction Markets
+# Siftle: Micro-Monetized AI Sports Briefings
 
-Siftle is a decentralized news and prediction platform for sports (specifically football) that leverages micro-information. By combining real-time news aggregation, gamified prediction markets (sports options), and on-demand AI briefings, Siftle enables sports fans to obtain contextual details and participate in prediction markets frictionlessly.
+Siftle is a decentralized sports news platform designed to monetize micro-information. Its core offering is **AI Sports Briefings**—high-value, on-demand context summaries (covering transfer updates, lineup rumors, and match analysis) unbundled and sold for **0.0001 USDC** per briefing. By utilizing Circle's email-onboarded embedded wallets and the Arc L1 blockchain, Siftle enables sports fans to unlock premium insights instantly with sub-cent nanopayments.
 
----
-
-## 💡 The Problem
-
-1. **High-Friction Paywalls**: Traditional publisher subscriptions ($10–$20/month) create a heavy barrier for casual readers. Most users only want context for a specific headline or prediction decision, rejecting monthly commitments.
-2. **Scattered Sports Context**: Sports bettors and prediction market traders have to check dozens of news outlets, social posts, and forums to piece together context (such as lineup confirmations, injuries, or transfer progress) before placing a trade.
-3. **Complex Crypto UX**: Traditional Web3 apps require users to manage seed phrases, fund wallets with volatile native tokens for gas fees, and wait for slow block times.
+As a secondary companion feature, Siftle integrates gamified **Prediction Markets** (Sports Options) directly below each story, allowing readers to immediately test their sports knowledge once they've read the briefing.
 
 ---
 
-## 🛠️ The Solution
+## 💡 The Problem & The Siftle Solution
 
-Siftle unbundles media monetization by enabling pay-per-read context:
+### 1. The Paywall Problem vs. Context Unbundling (Primary Focus)
+* **The Problem**: Traditional sports media outlets lock articles behind high-friction, monthly subscriptions ($10–$20/month). Casual fans refuse to pay recurring subscriptions just to read a single transfer rumor or match lineup update.
+* **The Solution**: Siftle unbundles sports journalism. Readers pay a microscopic fee (**$0.0001 USDC**) only for the specific news briefings they want to unlock, right when their interest is highest.
 
-* **Micro-Monetized AI Briefings**: Users unlock structured summaries (**What Happened**, **Key Points**, and **Takeaway**) for just **0.0001 USDC** at the exact moment they need it.
-* **Circle Embedded Wallets**: Users sign up with just their email using One-Time Passwords (OTP). Behind the scenes, a secure embedded wallet is created instantly.
-* **Arc L1 Settlement**: Transactions for prediction market shares and briefing payments settle in **under 500ms** with gas-free USDC transactions.
-* **Unified Sports Feed**: We consolidate real-time articles, rumors, and announcements into chronological threads linked directly to prediction options.
+### 2. Scattered Sources vs. Consolidated AI Briefings
+* **The Problem**: Staying informed requires checking dozens of news feeds, transfer portals, and social media channels to piece together what actually happened.
+* **The Solution**: Siftle's background engine crawls, clusters, and structures real-time updates. The AI agent generates a clean, readable briefing containing **What Happened**, **Key Points**, and the final **Takeaway**.
+
+### 3. Integrated Sports Options (Secondary Feature)
+* **The Setup**: Once readers have unlocked the AI Briefing and obtained full context, Siftle presents a secondary prediction market (Sports Options) tied to the headline, allowing them to trade on outcomes with sub-second, gas-free settlement on Arc L1.
 
 ---
 
@@ -49,7 +47,7 @@ Siftle uses social engagement to drive immediate app traffic and conversion:
 
 ---
 
-## 🔄 The Payment Flow (x402 Protocol)
+## 🔄 The x402 Briefing Payment Flow
 
 Siftle implements the x402 payment flow to authorize and verify micro-payments seamlessly:
 
