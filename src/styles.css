@@ -10232,3 +10232,7 @@ html, body, .app-shell, main {
   }
 }
 
+.brand-lockup {
+  cursor: pointer !important;
+}
+

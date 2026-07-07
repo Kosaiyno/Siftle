@@ -780,8 +780,12 @@ const downloadBriefingCard = (button: HTMLElement | null): void => {
 window.downloadBriefingCard = downloadBriefingCard;
 
 const copyBriefingLink = (storyId: number): void => {
+  const story = state.stories.find((item) => item.id === storyId);
+  const title = story ? story.headline : "Siftle AI Briefing";
   const shareUrl = `${window.location.origin}${window.location.pathname}#story-${storyId}`;
-  navigator.clipboard.writeText(shareUrl).then(() => {
+  const textToCopy = `📰 *Siftle Briefing Alert* 📰\n\n*Story:* ${title}\n\nRead the full AI briefing, predictions and source updates here: ${shareUrl}`;
+
+  navigator.clipboard.writeText(textToCopy).then(() => {
     (window as any).showActionToast?.('Shareable link copied to clipboard!');
   }).catch(() => {
     (window as any).showActionToast?.('Unable to copy link');
@@ -1273,12 +1277,13 @@ function syncStoryFromHash(): void {
     return;
   }
 
-  // Fallback default: Markets first
-  state.activeSurface = "markets";
+  // Fallback default: Feed first (News Section is the home page!)
+  state.activeSurface = "feed";
   state.selectedMarketId = null;
   state.selectedStoryId = null;
   state.selectedThreadUrl = null;
   render();
+  ensureFeedLoaded(state.activeCategory);
 }
 
 const setArchiveStatus = (message: string): void => {
@@ -4983,11 +4988,18 @@ renderWalletState();
 void fetchUnlockConfig();
 void loadMarkets().then(() => {
   reportStoredLocalMarketTraders();
-  render();
   renderWalletState();
   window.setTimeout(initializeWalletSession, 1200);
-  warmFeedAfterFirstPaint();
 });
+
+// Logo/brand click redirects to home page (News Feed)
+const brandLockup = document.querySelector(".brand-lockup");
+brandLockup?.addEventListener("click", () => {
+  window.location.hash = "#feed";
+});
+
+// Initial route evaluation on startup
+syncStoryFromHash();
 
 // Mobile archive card: toggle the archive controls via class (safe for desktop)
 const mobileArchiveCardEl = document.querySelector<HTMLButtonElement>("#mobileArchiveCard");
