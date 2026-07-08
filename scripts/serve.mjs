@@ -518,13 +518,15 @@ const rssFeeds = {
     "https://www.theguardian.com/football/rss",
     "https://www.transfermarkt.co.uk/rss/news",
     "https://www.skysports.com/rss/12040",
+    "https://www.skysports.com/rss/11095",
     "https://www.caughtoffside.com/feed/",
     "https://www.football365.com/transfer-gossip/feed",
     "https://www.90min.com/posts.rss",
     "https://e00-marca.uecdn.es/rss/en/index.xml",
     "https://www.football-espana.net/feed",
     "https://football-italia.net/feed/",
-    "https://bulinews.com/rss.xml"
+    "https://bulinews.com/rss.xml",
+    "https://www.footballinsider247.com/stories.rss"
   ]
 };
 
