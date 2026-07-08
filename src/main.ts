@@ -813,7 +813,7 @@ const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
     html += `
       <div class="briefing-capture-header">
         <div class="briefing-capture-brand">
-          <img src="./assets/siftle-logo-small.png" alt="" />
+          <img src="/assets/siftle-logo-small.png" alt="" />
           <span>Siftle Briefing</span>
         </div>
         <span class="briefing-capture-url">siftle.xyz</span>
@@ -2761,7 +2761,7 @@ const drawShareCard = async (story: NewsStory, includeRemoteImage = true): Promi
   context.fill();
   context.shadowColor = "transparent";
 
-  const logo = await loadCanvasImage("./assets/siftle-logo-small.png").catch(() => null);
+  const logo = await loadCanvasImage("/assets/siftle-logo-small.png").catch(() => null);
   if (logo) {
     context.drawImage(logo, 784, 106, 54, 54);
   }
