@@ -10397,7 +10397,10 @@ const server = createServer(async (request, response) => {
           ? `Read live source updates and timeline for: ${story.headline}` 
           : (story.summary || "Read the full AI briefing and source updates on Siftle.");
         const redirectPath = isThread ? `thread-${slug}` : `story-${slug}`;
-        const image = story.imageUrl || getFallbackImage(story.category || "Sports", story.headline);
+        let image = story.imageUrl || getFallbackImage(story.category || "Sports", story.headline);
+        if (image.includes("i.guim.co.uk") || image.includes("width=140") || image.includes("/240/")) {
+          image = getFallbackImage(story.category || "Sports", story.headline);
+        }
 
         const metaTags = `
 <title>${title}</title>
