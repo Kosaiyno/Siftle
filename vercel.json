@@ -2,6 +2,8 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".",
   "rewrites": [
+    { "source": "/story/:slug", "destination": "https://siftle.onrender.com/story/:slug" },
+    { "source": "/thread/:slug", "destination": "https://siftle.onrender.com/thread/:slug" },
     { "source": "/((?!api/.*).*)", "destination": "/index.html" }
   ]
 }
