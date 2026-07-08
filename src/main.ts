@@ -789,7 +789,8 @@ const getStorySlug = (headline: string): string => {
 const copyBriefingLink = (storyId: number): void => {
   const story = state.stories.find((item) => item.id === storyId);
   const slug = story ? getStorySlug(story.headline) : String(storyId);
-  const shareUrl = `${window.location.origin}${window.location.pathname}#story-${slug}`;
+  const base = window.location.origin + (window.location.pathname.endsWith('/') ? window.location.pathname.slice(0, -1) : window.location.pathname);
+  const shareUrl = `${base}/story/${slug}`;
   navigator.clipboard.writeText(shareUrl).then(() => {
     (window as any).showActionToast?.('Link copied to clipboard!');
   }).catch(() => {

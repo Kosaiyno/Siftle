@@ -10377,6 +10377,57 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  const storyMatch = requestUrl.pathname.match(/^\/story\/([a-zA-Z0-9-]+)$/);
+  const threadMatch = requestUrl.pathname.match(/^\/thread\/([a-zA-Z0-9-]+)$/);
+  if ((storyMatch || threadMatch) && request.method === "GET") {
+    const isThread = Boolean(threadMatch);
+    const slug = isThread ? threadMatch[1] : storyMatch[1];
+    try {
+      const feed = await getPublishedFeed("All");
+      const stories = feed?.top_stories ?? [];
+      const story = stories.find((item) => {
+        const itemSlug = item.headline.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+        return itemSlug === slug;
+      });
+
+      if (story) {
+        let html = readFileSync(join(root, "index.html"), "utf8");
+        const title = isThread ? `Updates: ${story.headline} | Siftle` : `${story.headline} | Siftle`;
+        const description = isThread 
+          ? `Read live source updates and timeline for: ${story.headline}` 
+          : (story.summary || "Read the full AI briefing and source updates on Siftle.");
+        const redirectPath = isThread ? `thread-${slug}` : `story-${slug}`;
+        const image = story.imageUrl || getFallbackImage(story.category || "Sports", story.headline);
+
+        const metaTags = `
+<title>${title}</title>
+<meta name="description" content="${description}" />
+<meta property="og:title" content="${title}" />
+<meta property="og:description" content="${description}" />
+<meta property="og:image" content="${image}" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://siftle.xyz/${isThread ? 'thread' : 'story'}/${slug}" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="${title}" />
+<meta name="twitter:description" content="${description}" />
+<meta name="twitter:image" content="${image}" />
+<script>
+  window.location.replace('/#' + '${redirectPath}');
+</script>
+`;
+        html = html.replace(/<title>.*?<\/title>/i, metaTags);
+        response.writeHead(200, {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store"
+        });
+        response.end(html);
+        return;
+      }
+    } catch (err) {
+      console.warn("Failed to generate dynamic OG meta tags:", err.message);
+    }
+  }
+
   const decodedPath = decodeURIComponent(requestUrl.pathname);
   const safePath = normalize(decodedPath).replace(/^(\.\.[/\\])+/, "");
   let filePath = join(root, safePath);
