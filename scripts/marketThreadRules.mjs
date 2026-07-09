@@ -1,39 +1,30 @@
 export const marketThreadRules = {
-  "wc-portugal-spain-qualify": {
+  "wc-france-morocco-qualify": {
     category: "Sports",
-    topic: "Portugal vs Spain Qualify Watch",
+    topic: "France vs Morocco Qualify Watch",
     includeAnySets: [
-      ["portugal", "portuguese", "spain", "spanish", "ronaldo", "cristiano ronaldo", "yamal", "morata"],
-      ["world cup", "fifa", "2026", "knockout", "qualify", "qualification", "advance", "advances", "quarter-finals", "quarterfinals", "semi-finals", "semifinals", "preview", "team news", "lineup", "lineups", "kickoff", "match", "extra time", "penalties"]
+      ["france", "french", "morocco", "moroccan", "mbappe", "mbappé", "olise", "hakimi", "enzo kana-biyik"],
+      ["world cup", "fifa", "2026", "knockout", "qualify", "qualification", "advance", "advances", "semi-finals", "semifinals", "final", "preview", "team news", "lineup", "lineups", "kickoff", "match", "extra time", "penalties"]
     ],
-    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "usa", "belgium", "pulisic", "de bruyne"]
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "portugal", "spain", "usa", "belgium"]
   },
-  "wc-ronaldo-header-spain": {
+  "wc-morocco-goals-france": {
     category: "Sports",
-    topic: "Ronaldo Header Watch vs Spain",
+    topic: "Morocco Goals vs France",
     includeAnySets: [
-      ["ronaldo", "cristiano ronaldo", "cr7", "portugal", "portuguese", "spain", "spanish"],
-      ["world cup", "fifa", "2026", "header", "headed goal", "cross", "set piece", "goal", "score", "scores", "preview", "team news", "lineup", "lineups", "match", "knockout"]
+      ["morocco", "moroccan", "france", "french", "hakimi", "ounahi", "en-nesyri", "boufal"],
+      ["world cup", "fifa", "2026", "goal", "goals", "score", "scores", "attack", "chance creation", "preview", "team news", "lineup", "lineups", "match", "extra time", "knockout"]
     ],
-    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "usa", "belgium"]
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "portugal", "spain", "usa", "belgium"]
   },
-  "wc-usa-belgium-qualify": {
+  "wc-olise-assists-morocco": {
     category: "Sports",
-    topic: "USA vs Belgium Qualify Watch",
+    topic: "Michael Olise Assist Watch vs Morocco",
     includeAnySets: [
-      ["usa", "united states", "usmnt", "belgium", "belgian", "pulisic", "balogun", "de bruyne", "lukaku"],
-      ["world cup", "fifa", "2026", "knockout", "qualify", "qualification", "advance", "advances", "quarter-finals", "quarterfinals", "preview", "team news", "lineup", "lineups", "kickoff", "match", "extra time", "penalties"]
+      ["olise", "michael olise", "france", "french", "morocco", "moroccan"],
+      ["world cup", "fifa", "2026", "assist", "assists", "chance creation", "chance created", "cross", "key pass", "preview", "team news", "lineup", "lineups", "match", "knockout"]
     ],
-    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "portugal", "spain", "ronaldo"]
-  },
-  "wc-usa-goals-belgium": {
-    category: "Sports",
-    topic: "USA Goals vs Belgium",
-    includeAnySets: [
-      ["usa", "united states", "usmnt", "belgium", "belgian", "pulisic", "balogun", "de bruyne", "lukaku"],
-      ["world cup", "fifa", "2026", "goal", "goals", "score", "scores", "attack", "chance creation", "preview", "team news", "lineup", "lineups", "kickoff", "match", "extra time", "penalties", "knockout"]
-    ],
-    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "portugal", "spain", "ronaldo"]
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "portugal", "spain", "usa", "belgium"]
   },
   "wc-vozinha-saves-argentina": {
     category: "Sports",
