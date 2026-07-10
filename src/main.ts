@@ -3092,8 +3092,8 @@ const renderMarketCard = (market: MarketPreview): string => {
       </div>
       <div class="market-meter" aria-hidden="true"><span style="width: ${optionMarket ? 100 : displayProbability}%"></span></div>
       <div class="market-volume">
-        <span>Total vol</span>
-        <strong>$${formatMoney(totalMoney)}</strong>
+        <span>Market activity</span>
+        <strong>Hidden</strong>
       </div>
       <div class="market-card-footer">
         <span>${view.evidence.length} related news</span>
@@ -3266,8 +3266,8 @@ const renderMarketDetail = (market: MarketPreview): void => {
               <strong>${getDailyTradeLockLabel(market, snapshot)}</strong>
             </div>
             <div class="market-stat">
-              <span>Volume</span>
-              <strong>${snapshot ? `$${Math.round(snapshot.volumeUsdc).toLocaleString()}` : market.volume}</strong>
+              <span>Market activity</span>
+              <strong>Hidden</strong>
             </div>
           </div>
 
@@ -3348,13 +3348,11 @@ const renderMarketDetail = (market: MarketPreview): void => {
           <div class="market-action-grid">
             ${optionMarket
               ? optionList.map((option) => {
-                const poolAmount = snapshot?.optionPools?.[option.id] || 0;
                 const active = state.marketTradeOptionId === option.id || position.optionId === option.id;
                 const disabled = marketResolved || marketTradeLocked || state.marketOrderMode === "sell" || hasOptionPick || !positionReady;
                 return `
                   <button type="button" class="market-side option ${active ? "active" : ""} ${disabled ? "disabled" : ""}" data-market-option-id="${escapeHtml(option.id)}" ${disabled ? "disabled" : ""}>
                     <span>${escapeHtml(option.label)}</span>
-                    <strong>$${formatMoney(poolAmount)}</strong>
                     ${position.optionId === option.id ? `<small>Your pick</small>` : ""}
                   </button>
                 `;
@@ -3388,8 +3386,7 @@ const renderMarketDetail = (market: MarketPreview): void => {
           </div>
 
           <div class="market-inline-payout">
-            <span>${optionMarket ? "Your entry" : state.marketOrderMode === "buy" ? "Projected payout" : "Exit amount"}</span>
-            <strong>$${formatMoney(projectedPayout)}</strong>
+            <span>Market amounts are hidden while this market is open.</span>
           </div>
 
           <div class="drawer-action-container">
@@ -5123,3 +5120,5 @@ document.addEventListener("click", (event) => {
     }
   }
 }, true);
+
+
