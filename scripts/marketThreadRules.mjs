@@ -1,30 +1,39 @@
 export const marketThreadRules = {
-  "wc-france-morocco-qualify": {
+  "wc-spain-belgium-qualify": {
     category: "Sports",
-    topic: "France vs Morocco Qualify Watch",
+    topic: "Spain vs Belgium Qualify Watch",
     includeAnySets: [
-      ["france", "french", "morocco", "moroccan", "mbappe", "mbappé", "olise", "hakimi", "enzo kana-biyik"],
+      ["spain", "spanish", "belgium", "belgian", "yamal", "lamine yamal", "de bruyne", "doku", "rodri", "pedri"],
       ["world cup", "fifa", "2026", "knockout", "qualify", "qualification", "advance", "advances", "semi-finals", "semifinals", "final", "preview", "team news", "lineup", "lineups", "kickoff", "match", "extra time", "penalties"]
     ],
-    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "portugal", "spain", "usa", "belgium"]
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "france", "morocco", "usa", "england", "norway"]
   },
-  "wc-morocco-goals-france": {
+  "wc-spain-concede-belgium": {
     category: "Sports",
-    topic: "Morocco Goals vs France",
+    topic: "Spain Clean Sheet Watch vs Belgium",
     includeAnySets: [
-      ["morocco", "moroccan", "france", "french", "hakimi", "ounahi", "en-nesyri", "boufal"],
-      ["world cup", "fifa", "2026", "goal", "goals", "score", "scores", "attack", "chance creation", "preview", "team news", "lineup", "lineups", "match", "extra time", "knockout"]
+      ["spain", "spanish", "belgium", "belgian", "de bruyne", "doku", "lukaku", "rodri", "cucurella", "unai simon"],
+      ["world cup", "fifa", "2026", "goal", "goals", "score", "scores", "concede", "concedes", "clean sheet", "attack", "chance creation", "preview", "team news", "lineup", "lineups", "match", "extra time", "knockout"]
     ],
-    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "portugal", "spain", "usa", "belgium"]
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "france", "morocco", "usa", "england", "norway"]
   },
-  "wc-olise-assists-morocco": {
+  "wc-yamal-goal-assist-belgium": {
     category: "Sports",
-    topic: "Michael Olise Assist Watch vs Morocco",
+    topic: "Lamine Yamal Impact vs Belgium",
     includeAnySets: [
-      ["olise", "michael olise", "france", "french", "morocco", "moroccan"],
-      ["world cup", "fifa", "2026", "assist", "assists", "chance creation", "chance created", "cross", "key pass", "preview", "team news", "lineup", "lineups", "match", "knockout"]
+      ["yamal", "lamine yamal", "spain", "spanish", "belgium", "belgian"],
+      ["world cup", "fifa", "2026", "goal", "assist", "assists", "score", "scores", "chance creation", "chance created", "cross", "key pass", "preview", "team news", "lineup", "lineups", "match", "knockout"]
     ],
-    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "portugal", "spain", "usa", "belgium"]
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "france", "morocco", "usa", "england", "norway"]
+  },
+  "wc-spain-goals-belgium": {
+    category: "Sports",
+    topic: "Spain Goals vs Belgium",
+    includeAnySets: [
+      ["spain", "spanish", "belgium", "belgian", "yamal", "pedri", "rodri", "nico williams", "de bruyne", "doku"],
+      ["world cup", "fifa", "2026", "goal", "goals", "score", "scores", "attack", "finishing", "chance creation", "preview", "team news", "lineup", "lineups", "match", "extra time", "knockout"]
+    ],
+    reject: ["women", "futsal", "olympics", "club world cup", "basketball", "baseball", "volleyball", "france", "morocco", "usa", "england", "norway"]
   },
   "wc-vozinha-saves-argentina": {
     category: "Sports",

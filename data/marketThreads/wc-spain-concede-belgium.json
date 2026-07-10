@@ -1,0 +1,53 @@
+{
+  "topic": "Spain Clean Sheet Watch vs Belgium",
+  "reviewed_by": "curated-local-market-thread",
+  "current": {
+    "id": 5,
+    "headline": "'What old timers can do' - the evolution of Belgium's golden generation",
+    "category": "Sports",
+    "summary": "BBC Sport explores what is behind Belgium's progress to the last eight of the World Cup, and whether they were too easily discounted among the contenders.",
+    "source": "feeds.bbci.co.uk",
+    "sourceUrl": "https://www.bbc.co.uk/sport/football/articles/c5yz0g0mg4no?at_medium=RSS&at_campaign=rss",
+    "imageUrl": "https://ichef.bbci.co.uk/ace/standard/240/cpsprodpb/91c9/live/30d0d4d0-7a0a-11f1-92a1-2dcee5cd2863.jpg",
+    "publishedAt": "Fri, 10 Jul 2026 11:38:58 GMT",
+    "readTime": "1 min read",
+    "postedAt": "31m",
+    "accent": "blue",
+    "saved": false,
+    "type": "news"
+  },
+  "items": [
+    {
+      "id": 30,
+      "headline": "How De la Fuente's Spain are closing in on greatness",
+      "category": "Sports",
+      "summary": "Before Spain's World Cup quarter-final against Belgium, Guillem Balague talks to Spain boss Luis de la Fuente about their identity and Lamine Yamal.",
+      "source": "feeds.bbci.co.uk",
+      "sourceUrl": "https://www.bbc.co.uk/sport/football/articles/cwyez8r7ve8o?at_medium=RSS&at_campaign=rss",
+      "imageUrl": "https://ichef.bbci.co.uk/ace/standard/240/cpsprodpb/08d5/live/bfc4f4f0-7c2b-11f1-b3bb-a3d4161295ad.jpg",
+      "publishedAt": "Fri, 10 Jul 2026 06:47:29 GMT",
+      "readTime": "1 min read",
+      "postedAt": "5h",
+      "accent": "blue",
+      "saved": false,
+      "type": "news"
+    },
+    {
+      "id": 23,
+      "headline": "Courtois: Two-on-One Is Belgium&#8217;s Best Hope Against Yamal",
+      "category": "Sports",
+      "summary": "Thibaut Courtois says numerical superiority is Belgium's most realistic tactic to contain Lamine Yamal in Friday's World Cup quarterfinal against Spain. The post Courtois: Two-on-One Is Belgium&#8217;s Best Hope Again...",
+      "source": "football-espana.net",
+      "sourceUrl": "https://www.football-espana.net/2026/07/10/lamine-yamal-belgium-courtois-two-on-one",
+      "imageUrl": "https://www.football-espana.net/wp-content/uploads/2026/07/courtois-two-on-one-belgium-best-hope-against-yamal.webp",
+      "publishedAt": "Fri, 10 Jul 2026 09:00:00 +0000",
+      "readTime": "1 min read",
+      "postedAt": "3h",
+      "accent": "blue",
+      "saved": false,
+      "type": "news"
+    }
+  ],
+  "market_id": "wc-spain-concede-belgium",
+  "saved_market_thread": true
+}
