@@ -15,16 +15,20 @@ Follow these steps to deploy the Node backend (`scripts/serve.mjs`) to Render.
    - Instance type / Plan: `Free` (or select the free instance)
 
 3) Environment variables (DO NOT commit secrets to git)
+   - `NEWSDATA_API_KEY` to enable NewsData stories during publish
+   - `GUARDIAN_API_KEY` to enable Guardian stories during publish
    - `ZERO_G_API_KEY` or `OG_COMPUTE_API_KEY` (if using 0G compute)
    - `OG_COMPUTE_PROVIDER` and optionally `OG_COMPUTE_ENDPOINT`
    - `SHELBY_API_KEY`, `SHELBY_PRIVATE_KEY`, `SHELBY_ACCOUNT_ADDRESS`, `SHELBY_RPC_URL`, `SHELBY_ARCHIVE_PREFIX` (if you use Shelby archive features)
-   - Optional: `APP_TIME_ZONE`, `MAX_ARTICLE_AGE_HOURS`, `RSS_ITEMS_PER_FEED`, `THREAD_HISTORY_WINDOW_HOURS`, `SHELBY_PREPOPULATE_ON_STARTUP`
+   - Optional: `APP_TIME_ZONE`, `MAX_ARTICLE_AGE_HOURS`, `RSS_ITEMS_PER_FEED`, `THREAD_HISTORY_WINDOW_HOURS`, `SHELBY_PREPOPULATE_ON_STARTUP`, `REFRESH_INTERVAL_MINUTES`
    - Recommended for Shelby testnet: `THREAD_HISTORY_WINDOW_HOURS=48` to align threads with the current 48-hour blob expiration window.
    - Recommended on Render free/512MB instances: leave `SHELBY_PREPOPULATE_ON_STARTUP` unset or set it to `false` to avoid boot-time memory spikes.
+   - Recommended for production publishing: set `REFRESH_INTERVAL_MINUTES=15` only if the service can handle the publish workload reliably. Otherwise use a safer higher interval until memory is stabilized.
 
 4) Deploy and verify
    - Deploy the service and wait for Render to finish the build.
    - Visit `https://<your-service>.onrender.com/api/feed` to verify it returns JSON.
+   - Visit `https://<your-service>.onrender.com/api/feed/health` to confirm `newsdata` and `guardian` are `true` when their keys are configured.
 
 5) Point frontend to backend
    - In Vercel, add this Environment Variable before deploying the frontend:

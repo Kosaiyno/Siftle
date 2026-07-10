@@ -40,6 +40,8 @@ const rssItemsPerFeed = Number(process.env.RSS_ITEMS_PER_FEED ?? 30);
 const summaryConcurrency = Number(process.env.SUMMARY_CONCURRENCY ?? 2);
 const summaryTimeoutMs = Number(process.env.SUMMARY_TIMEOUT_MS ?? 90000);
 const threadReviewTimeoutMs = Number(process.env.THREAD_REVIEW_TIMEOUT_MS ?? 90000);
+const headlineRepairConcurrency = Number(process.env.HEADLINE_REPAIR_CONCURRENCY ?? 4);
+const headlineRepairLimitPerSnapshot = Number(process.env.HEADLINE_REPAIR_LIMIT_PER_SNAPSHOT ?? 12);
 const appTimeZone = process.env.APP_TIME_ZONE || "Africa/Lagos";
 const allowedOrigin = process.env.ALLOWED_ORIGIN || process.env.ALLOWED_ORIGINS || "*";
 const ogUsageMode = process.env.OG_USAGE_MODE || "conserve";
@@ -518,15 +520,13 @@ const rssFeeds = {
     "https://www.theguardian.com/football/rss",
     "https://www.transfermarkt.co.uk/rss/news",
     "https://www.skysports.com/rss/12040",
-    "https://www.skysports.com/rss/11095",
     "https://www.caughtoffside.com/feed/",
     "https://www.football365.com/transfer-gossip/feed",
     "https://www.90min.com/posts.rss",
     "https://e00-marca.uecdn.es/rss/en/index.xml",
     "https://www.football-espana.net/feed",
     "https://football-italia.net/feed/",
-    "https://bulinews.com/rss.xml",
-    "https://www.footballinsider247.com/stories.rss"
+    "https://bulinews.com/rss.xml"
   ]
 };
 
@@ -1281,8 +1281,12 @@ export const getHistoricalThreadCandidates = (story, currentStories = []) => {
   const currentDate = storyDateKey(story, getTodayKey());
   const currentTime = new Date(story?.publishedAt || 0).getTime();
   const hasCurrentTime = !Number.isNaN(currentTime);
+  const minCandidateDate = hasCurrentTime
+    ? new Date(currentTime - Math.max(1, threadHistoryWindowHours) * 60 * 60 * 1000).toISOString().slice(0, 10)
+    : null;
   const seen = new Set([normalizeStoryUrl(story.sourceUrl)]);
   const candidates = [];
+  const cacheKey = `${String(story.category || "")}:${currentDate || ""}:${minCandidateDate || ""}`;
 
   const addSnapshotStories = (snapshot, fallbackDate) => {
     const threadContextByUrl = new Map();
@@ -1328,37 +1332,53 @@ export const getHistoricalThreadCandidates = (story, currentStories = []) => {
     addSnapshotStories({ top_stories: currentStories }, currentDate);
   }
 
-  if (existsSync(archiveDir)) {
-    for (const filename of readdirSync(archiveDir).filter((file) => file.endsWith(".json"))) {
-      const match = filename.match(/^(\d{4}-\d{2}-\d{2})-([a-z]+)\.json$/i);
-      if (!match) continue;
-      const [, date, categorySlug] = match;
-      if (currentDate && date > currentDate) continue;
-      if (categorySlug.toLowerCase() !== "all" && categorySlug.toLowerCase() !== story.category.toLowerCase()) continue;
+  let cachedSnapshots = threadHistorySnapshotCache.get(cacheKey);
+  if (!cachedSnapshots) {
+    cachedSnapshots = [];
 
-      try {
-        addSnapshotStories(JSON.parse(readFileSync(join(archiveDir, filename), "utf8")), date);
-      } catch {
-        // Ignore unreadable archive snapshots.
+    if (existsSync(archiveDir)) {
+      for (const filename of readdirSync(archiveDir).filter((file) => file.endsWith(".json"))) {
+        const match = filename.match(/^(\d{4}-\d{2}-\d{2})-([a-z]+)\.json$/i);
+        if (!match) continue;
+        const [, date, categorySlug] = match;
+        if (currentDate && date > currentDate) continue;
+        if (minCandidateDate && date < minCandidateDate) continue;
+        if (categorySlug.toLowerCase() !== "all" && categorySlug.toLowerCase() !== story.category.toLowerCase()) continue;
+
+        try {
+          cachedSnapshots.push({
+            snapshot: JSON.parse(readFileSync(join(archiveDir, filename), "utf8")),
+            fallbackDate: date
+          });
+        } catch {
+          // Ignore unreadable archive snapshots.
+        }
       }
     }
+
+    if (existsSync(publishedDir)) {
+      for (const filename of readdirSync(publishedDir).filter((file) => file.endsWith(".json"))) {
+        const match = filename.match(/^latest-([a-z]+)\.json$/i);
+        if (!match) continue;
+        const [, categorySlug] = match;
+        if (categorySlug.toLowerCase() !== "all" && categorySlug.toLowerCase() !== story.category.toLowerCase()) continue;
+
+        try {
+          const snapshot = JSON.parse(readFileSync(join(publishedDir, filename), "utf8"));
+          if (currentDate && snapshot.date > currentDate) continue;
+          if (minCandidateDate && snapshot.date && snapshot.date < minCandidateDate) continue;
+          cachedSnapshots.push({ snapshot, fallbackDate: snapshot.date });
+        } catch {
+          // Ignore unreadable published snapshots.
+        }
+      }
+    }
+
+    threadHistorySnapshotCache.set(cacheKey, cachedSnapshots);
   }
 
-  if (existsSync(publishedDir)) {
-    for (const filename of readdirSync(publishedDir).filter((file) => file.endsWith(".json"))) {
-      const match = filename.match(/^latest-([a-z]+)\.json$/i);
-      if (!match) continue;
-      const [, categorySlug] = match;
-      if (categorySlug.toLowerCase() !== "all" && categorySlug.toLowerCase() !== story.category.toLowerCase()) continue;
-
-      try {
-        const snapshot = JSON.parse(readFileSync(join(publishedDir, filename), "utf8"));
-        if (currentDate && snapshot.date > currentDate) continue;
-        addSnapshotStories(snapshot, snapshot.date);
-      } catch {
-        // Ignore unreadable published snapshots.
-      }
-    }
+  for (const { snapshot, fallbackDate } of cachedSnapshots) {
+    addSnapshotStories(snapshot, fallbackDate);
   }
 
   return candidates;
@@ -1517,9 +1537,14 @@ const getLocalThreadForStory = (story, currentStories = []) => {
 };
 
 let threadReviewBudgetRemaining = threadReviewBudgetPerRefresh;
+let threadHistorySnapshotCache = new Map();
 
 const resetThreadReviewBudget = () => {
   threadReviewBudgetRemaining = Math.max(0, threadReviewBudgetPerRefresh);
+};
+
+const resetThreadHistorySnapshotCache = () => {
+  threadHistorySnapshotCache = new Map();
 };
 
 const canSpendThreadReview = () => {
@@ -1842,7 +1867,7 @@ const prepareSnapshotThreads = async (snapshot) => {
   const workItems = snapshot.top_stories
     .map((story, index) => {
       const scoredCandidates = getScoredThreadCandidates(story, snapshot.top_stories);
-      return { story, index, scoredCandidates, opportunity: getThreadOpportunity(story, scoredCandidates) };
+      return { story, index, opportunity: getThreadOpportunity(story, scoredCandidates) };
     })
     .sort((first, second) => {
       if (second.opportunity.score !== first.opportunity.score) return second.opportunity.score - first.opportunity.score;
@@ -1850,7 +1875,8 @@ const prepareSnapshotThreads = async (snapshot) => {
     });
 
   const preparedWorkItems = await runWithConcurrency(workItems, threadPrepConcurrency, async (workItem) => {
-    const { story, index, scoredCandidates, opportunity } = workItem;
+    const { story, index } = workItem;
+    const scoredCandidates = getScoredThreadCandidates(story, snapshot.top_stories);
     if (scoredCandidates.length < 1) {
       const { thread: _thread, ...storyWithoutThread } = story;
       return { index, story: storyWithoutThread, thread: null };
@@ -2472,12 +2498,18 @@ const fetchFullHeadline = async (article) => {
 };
 
 const repairTruncatedArticleTitles = async (articles) => {
-  const repaired = await Promise.all(
-    articles.map(async (article) => ({
+  const repaired = [...articles];
+  const repairTargets = articles
+    .map((article, index) => ({ article, index }))
+    .filter(({ article }) => isTruncatedHeadline(article?.headline) && article?.sourceUrl)
+    .slice(0, Math.max(0, headlineRepairLimitPerSnapshot));
+
+  await runWithConcurrency(repairTargets, headlineRepairConcurrency, async ({ article, index }) => {
+    repaired[index] = {
       ...article,
       headline: await fetchFullHeadline(article)
-    }))
-  );
+    };
+  });
 
   return repaired;
 };
@@ -2687,6 +2719,84 @@ const fetchRssFeed = async (url, fallbackCategory) => {
   });
 };
 
+const fetchTwitterAccountRss = async (username, fallbackCategory) => {
+  const rssUrl = `https://nitter.net/${username}/rss`;
+
+  const isLowSignalTweet = (headline = "") => {
+    const normalized = String(headline)
+      .replace(/https?:\/\/\S+/gi, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    return /^R to\s+@[^:]+:\s*(?:more here|watch more here)\b[:.!?\s]*$/i.test(normalized);
+  };
+
+  const parseTweetItems = (xml = "") => {
+    const items = xml.match(/<item[\s\S]*?<\/item>/gi) ?? [];
+    return items.slice(0, 6).map((item) => {
+      const headline = stripHtml(extractTag(item, "title")) || `@${username}`;
+      const summary = stripHtml(extractTag(item, "description") || headline);
+      const publishedAt = stripHtml(extractTag(item, "pubDate"));
+      const rawLink = stripHtml(extractTag(item, "link"));
+      const sourceUrl = rawLink
+        .replace(/^https?:\/\/nitter\.net\/([^/]+)\/status\/([^#?]+).*$/i, "https://x.com/$1/status/$2")
+        .replace(/^https?:\/\/(?:www\.)?(?:twitter|x)\.com\//i, "https://x.com/");
+      const category = inferCategory({ headline, summary, category: fallbackCategory }, fallbackCategory);
+
+      return {
+        headline,
+        summary,
+        source: `@${username}`,
+        sourceUrl: sourceUrl || `https://x.com/${username}`,
+        imageUrl: getFallbackImage(category, `${username} ${headline}`),
+        publishedAt,
+        category,
+        type: "tweet"
+      };
+    });
+  };
+
+  const pickFreshest = (primary = [], fallback = []) => {
+    const primaryLatest = Math.max(...primary.map((item) => new Date(item.publishedAt || 0).getTime()), 0);
+    const fallbackLatest = Math.max(...fallback.map((item) => new Date(item.publishedAt || 0).getTime()), 0);
+
+    if (fallbackLatest > primaryLatest) return fallback;
+    if (primaryLatest > fallbackLatest) return primary;
+    return fallback.length > primary.length ? fallback : primary;
+  };
+
+  let fetchItems = [];
+  let curlItems = [];
+  const curlCommand = process.platform === "win32" ? "curl.exe" : "curl";
+
+  try {
+    const response = await fetch(rssUrl, {
+      signal: AbortSignal.timeout(15000),
+      headers: {
+        "User-Agent": "Siftle/0.1 news aggregator"
+      }
+    });
+
+    if (response.ok) {
+      fetchItems = parseTweetItems(await response.text());
+    }
+  } catch {
+    // Fall through to curl fallback below.
+  }
+
+  try {
+    const { stdout } = await execFileAsync(curlCommand, ["-L", "-A", "Mozilla/5.0", rssUrl], {
+      timeout: 15000,
+      windowsHide: true,
+      maxBuffer: 1024 * 1024
+    });
+    curlItems = parseTweetItems(stdout);
+  } catch {
+    // Keep fetch result if curl is unavailable or blocked.
+  }
+
+  return pickFreshest(fetchItems, curlItems).filter((item) => item.sourceUrl && !isLowSignalTweet(item.headline));
+};
+
 const fetchNicheRss = async (category) => {
   const feedEntries =
     category === "All"
@@ -2863,19 +2973,22 @@ const buildLocalStructuredBriefingParts = (article, thread = null) => {
   const headline = stripHtml(article?.headline || "").trim();
   const baseText = stripHtml(article?.summary || article?.headline || "").replace(/\s+/g, " ").trim();
   const sentences = splitIntoSentences(baseText);
-  const whatHappened = dedupeNormalizedLines([
-    sentences.slice(0, 2).join(" ").trim(),
-    baseText,
-    headline
-  ])[0] || headline;
+  const whatHappened = truncateSentence(
+    dedupeNormalizedLines([
+      sentences.slice(0, 2).join(" ").trim(),
+      baseText,
+      headline
+    ])[0] || headline,
+    30
+  );
 
   const keyPoints = dedupeNormalizedLines([
-    sentences[0] || baseText || headline,
-    sentences[1] || sentences[0] || headline,
-    headline || baseText
+    truncateSentence(sentences[0] || baseText || headline, 16),
+    truncateSentence(sentences[1] || sentences[0] || headline, 16),
+    truncateSentence(headline || baseText, 14)
   ]);
 
-  const takeaway = `${headline || "This update"} is the main confirmed signal available right now.`;
+  const takeaway = truncateSentence(`${headline || "This update"} is the main confirmed signal available right now.`, 22);
 
   return { whatHappened, keyPoints, takeaway };
 };
@@ -3500,6 +3613,117 @@ const getActiveMarketQueriesStr = (category) => {
   }
 };
 
+const sportsTweetAccounts = [
+  "FabrizioRomano",
+  "DeadlineDayLive"
+];
+
+const sportsTweetQueryBlocklist = new Set([
+  ...sportsTweetAccounts.map((account) => account.toLowerCase()),
+  "breaking",
+  "exclusive",
+  "official",
+  "sources",
+  "sport",
+  "sports",
+  "football",
+  "soccer",
+  "basketball",
+  "transfer",
+  "transfers"
+]);
+
+const sanitizeNewsQueryEntity = (value = "") =>
+  normalizeThreadEntity(value)
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Za-z0-9\s-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const buildSportsTweetDiscoveryQueries = (tweets = []) => {
+  const queries = [];
+  const seen = new Set();
+
+  for (const tweet of sortStoriesByPublishedAtDesc(tweets).slice(0, 12)) {
+    const entities = [...extractThreadEntities(tweet)]
+      .map((entity) => sanitizeNewsQueryEntity(entity))
+      .filter((entity) => {
+        if (!isUsefulThreadEntity(entity)) return false;
+        const normalized = entity.toLowerCase();
+        if (sportsTweetQueryBlocklist.has(normalized)) return false;
+        if (normalized.startsWith("@")) return false;
+        if (entity.length > 40) return false;
+        return true;
+      })
+      .sort((first, second) => second.length - first.length);
+
+    if (entities.length === 0) continue;
+
+    const queryParts = entities.slice(0, 2).map((entity) => entity.split(/\s+/).slice(0, 3).join(" "));
+    const query = queryParts.join(" ").trim();
+    const key = query.toLowerCase();
+    if (!query || query.length < 5 || query.length > 60 || seen.has(key)) continue;
+
+    seen.add(key);
+    queries.push(query);
+    if (queries.length >= 4) break;
+  }
+
+  return queries;
+};
+
+const fetchSportsTweets = async (category) => {
+  if (category !== "Sports") return [];
+
+  const results = await Promise.allSettled(
+    sportsTweetAccounts.map((username) => fetchTwitterAccountRss(username, category))
+  );
+
+  return dedupeArticles(
+    results.flatMap((result) => (result.status === "fulfilled" ? result.value : []))
+  );
+};
+
+const freshSportsTweetCacheMs = Math.max(30, Number(process.env.FRESH_SPORTS_TWEET_CACHE_SECONDS ?? 120)) * 1000;
+let freshSportsTweetCache = {
+  expiresAt: 0,
+  tweets: []
+};
+
+const getFreshSportsTweets = async () => {
+  if (freshSportsTweetCache.expiresAt > Date.now() && freshSportsTweetCache.tweets.length > 0) {
+    return freshSportsTweetCache.tweets;
+  }
+
+  const tweets = sortStoriesNewestFirst(await fetchSportsTweets("Sports")).slice(0, 12);
+  freshSportsTweetCache = {
+    expiresAt: Date.now() + freshSportsTweetCacheMs,
+    tweets
+  };
+  return tweets;
+};
+
+const overlayFreshSportsTweets = async (snapshot) => {
+  if (!snapshot || snapshot.category !== "Sports") return snapshot;
+
+  const freshTweets = await getFreshSportsTweets();
+  if (freshTweets.length === 0) return snapshot;
+
+  return {
+    ...snapshot,
+    top_stories: mergeDailyStories(freshTweets, snapshot.top_stories ?? []),
+    generated_at: snapshot.generated_at,
+    published_at: snapshot.published_at,
+    status: snapshot.status,
+    sources: {
+      ...(snapshot.sources ?? {}),
+      fresh_tweets_overlay: true,
+      fresh_tweet_cache_seconds: Math.round(freshSportsTweetCacheMs / 1000)
+    }
+  };
+};
+
 const fetchNewsDataWithCustomQuery = async (query, category) => {
   if (!process.env.NEWSDATA_API_KEY) return [];
 
@@ -4029,7 +4253,8 @@ const buildStories = async (articles) => {
       readTime: estimateReadTime(`${article.headline} ${article.summary}`),
       postedAt: relativeTime(article.publishedAt),
       accent: accentForCategory(category),
-      saved: false
+      saved: false,
+      type: article.type || "news"
     };
   });
 
@@ -4117,16 +4342,20 @@ const sanitizeSnapshotForCategory = (snapshot) => {
   if (!snapshot || !Array.isArray(snapshot.top_stories)) return snapshot;
   const storyFilter =
     snapshot.category === "Tech"
-      ? (story) => isThreadFriendlyTechArticle(story)
+      ? (story) => story.type === "tweet" || isThreadFriendlyTechArticle(story)
       : snapshot.category === "Sports"
-        ? (story) => isFootballOrNbaArticle(story)
+        ? (story) => story.type === "tweet" || isFootballOrNbaArticle(story)
       : snapshot.category === "All"
         ? (story) =>
-            (story.category !== "Tech" || isThreadFriendlyTechArticle(story)) &&
-            (story.category !== "Sports" || isFootballOrNbaArticle(story))
+            story.type === "tweet" || (
+              (story.category !== "Tech" || isThreadFriendlyTechArticle(story)) &&
+              (story.category !== "Sports" || isFootballOrNbaArticle(story))
+            )
         : () => true;
 
-  const categoryStories = snapshot.top_stories.filter((story) => isPredictionMarketFriendly(story) && storyFilter(story));
+  const categoryStories = snapshot.top_stories.filter(
+    (story) => story.type === "tweet" || storyFilter(story)
+  );
   const filteredStories = categoryStories.filter((story) => !isDevelopmentFallbackStory(story));
   const validThreads = {};
   const sanitizedStories = filteredStories.map((story, index) => {
@@ -4547,6 +4776,7 @@ const generateSnapshot = async (category) => {
   const selectedCategory = categories.includes(category) ? category : "All";
   const date = getTodayKey();
   const marketQuery = getActiveMarketQueriesStr(selectedCategory);
+  const sportsTweetsPromise = fetchSportsTweets(selectedCategory);
   const results = await Promise.allSettled([
     fetchNicheRss(selectedCategory),
     fetchNewsData(selectedCategory),
@@ -4554,18 +4784,31 @@ const generateSnapshot = async (category) => {
     marketQuery ? fetchNewsDataWithCustomQuery(marketQuery, selectedCategory) : Promise.resolve([]),
     marketQuery ? fetchGuardianWithCustomQuery(marketQuery, selectedCategory) : Promise.resolve([])
   ]);
-  const rawArticles = results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
+  const sportsTweets = await sportsTweetsPromise;
+  const sportsTweetQueries = buildSportsTweetDiscoveryQueries(sportsTweets);
+  const sportsTweetNewsResults = sportsTweetQueries.length > 0
+    ? await Promise.allSettled([
+        ...sportsTweetQueries.map((query) => fetchNewsDataWithCustomQuery(query, selectedCategory)),
+        ...sportsTweetQueries.map((query) => fetchGuardianWithCustomQuery(query, selectedCategory))
+      ])
+    : [];
+  const rawArticles = [
+    ...results.flatMap((result) => (result.status === "fulfilled" ? result.value : [])),
+    ...sportsTweetNewsResults.flatMap((result) => (result.status === "fulfilled" ? result.value : []))
+  ];
   const repairedArticles = await repairTruncatedArticleTitles(rawArticles);
   const dedupedArticles = dedupeArticles(repairedArticles).filter(
     (article) =>
       isArticleOnAppDate(article, date) &&
       !isPaidSource(article) &&
-      isPredictionMarketFriendly(article) &&
       (selectedCategory === "All" || matchesCategorySignal(article, selectedCategory)) &&
       (article.category !== "Sports" || isFootballOrNbaArticle(article)) &&
       (article.category !== "Tech" || isThreadFriendlyTechArticle(article))
   );
-  const articles = dedupedArticles;
+  const forcedSportsTweets = selectedCategory === "Sports"
+    ? sportsTweets.slice(0, 8)
+    : [];
+  const articles = dedupeArticles([...forcedSportsTweets, ...dedupedArticles]);
   const stories = articles.length > 0
     ? await buildStories(articles)
     : allowMockFeeds
@@ -4645,12 +4888,12 @@ const getPublishedFeed = async (category) => {
 
   const snapshot = await getRecoverablePublishedSnapshot(selectedCategory);
   if (snapshot && hasRealStories(snapshot)) {
-    const sanitized = sanitizeSnapshotForCategory(snapshot);
+    const sanitized = sanitizeSnapshotForCategory(await overlayFreshSportsTweets(snapshot));
     return annotateSnapshotThreads(sanitized);
   }
 
   const fresh = await generateAndPublishFeed(selectedCategory);
-  const sanitized = sanitizeSnapshotForCategory(fresh);
+  const sanitized = sanitizeSnapshotForCategory(await overlayFreshSportsTweets(fresh));
   return annotateSnapshotThreads(sanitized);
 };
 
@@ -4715,6 +4958,7 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
   publishStatus.last_started_at = new Date().toISOString();
   publishStatus.last_error = null;
   resetThreadReviewBudget();
+  resetThreadHistorySnapshotCache();
 
   try {
     if (reason === "startup" && isShelbyArchiveConfigured() && shelbyPrepopulateOnStartup) {
@@ -10375,60 +10619,6 @@ const server = createServer(async (request, response) => {
       .then((payload) => sendJson(response, 200, payload))
       .catch((error) => sendJson(response, error.statusCode || 500, { error: error.message }));
     return;
-  }
-
-  const storyMatch = requestUrl.pathname.match(/^\/story\/([a-zA-Z0-9-]+)$/);
-  const threadMatch = requestUrl.pathname.match(/^\/thread\/([a-zA-Z0-9-]+)$/);
-  if ((storyMatch || threadMatch) && request.method === "GET") {
-    const isThread = Boolean(threadMatch);
-    const slug = isThread ? threadMatch[1] : storyMatch[1];
-    try {
-      const feed = await getPublishedFeed("All");
-      const stories = feed?.top_stories ?? [];
-      const story = stories.find((item) => {
-        const itemSlug = item.headline.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-        return itemSlug === slug;
-      });
-
-      if (story) {
-        let html = readFileSync(join(root, "index.html"), "utf8");
-        const title = isThread ? `Updates: ${story.headline} | Siftle` : `${story.headline} | Siftle`;
-        const description = isThread 
-          ? `Read live source updates and timeline for: ${story.headline}` 
-          : (story.summary || "Read the full AI briefing and source updates on Siftle.");
-        const redirectPath = isThread ? `thread-${slug}` : `story-${slug}`;
-        let image = story.imageUrl || getFallbackImage(story.category || "Sports", story.headline);
-        if (image.includes("i.guim.co.uk") || image.includes("width=140") || image.includes("/240/")) {
-          image = getFallbackImage(story.category || "Sports", story.headline);
-        }
-
-        const metaTags = `
-<title>${title}</title>
-<meta name="description" content="${description}" />
-<meta property="og:title" content="${title}" />
-<meta property="og:description" content="${description}" />
-<meta property="og:image" content="${image}" />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://siftle.xyz/${isThread ? 'thread' : 'story'}/${slug}" />
-<meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="${title}" />
-<meta name="twitter:description" content="${description}" />
-<meta name="twitter:image" content="${image}" />
-<script>
-  window.location.replace('/#' + '${redirectPath}');
-</script>
-`;
-        html = html.replace(/<title>.*?<\/title>/i, metaTags);
-        response.writeHead(200, {
-          "Content-Type": "text/html; charset=utf-8",
-          "Cache-Control": "no-store"
-        });
-        response.end(html);
-        return;
-      }
-    } catch (err) {
-      console.warn("Failed to generate dynamic OG meta tags:", err.message);
-    }
   }
 
   const decodedPath = decodeURIComponent(requestUrl.pathname);

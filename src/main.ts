@@ -668,6 +668,7 @@ const cleanSummaryText = (value: string): string => {
 
 const safeStorySummary = (story: NewsStory, preferred?: string): string =>
   cleanSummaryText(preferred || "") || cleanSummaryText(story.summary) || story.headline;
+
 const downloadBriefingCard = (button: HTMLElement | null): void => {
   const container = button?.closest('.detail-summary, .thread-item, .market-thread-update') as HTMLElement | null;
   const captureArea = container?.querySelector('.briefing-capture-area') as HTMLElement | null;
@@ -678,127 +679,29 @@ const downloadBriefingCard = (button: HTMLElement | null): void => {
 
   const exportSurface = captureArea.cloneNode(true) as HTMLElement;
   exportSurface.classList.add('briefing-export-surface');
-
-  const isLight = document.documentElement.dataset.theme === 'light';
-
-  // Force card dimension, margins, padding, backgrounds, and borders inline
-  // to prevent mobile browser media query overrides from altering the card format.
-  if (isLight) {
-    exportSurface.style.background = 'linear-gradient(180deg, #ffffff, #f8fafc)';
-    exportSurface.style.border = '1px solid #cbd5e1';
-  } else {
-    exportSurface.style.background = 'linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(17, 24, 39, 0.98))';
-    exportSurface.style.border = '1px solid #1e293b';
-  }
-  exportSurface.style.width = '704px';
-  exportSurface.style.padding = '28px 30px';
-  exportSurface.style.borderRadius = '24px';
-
-  const captureHeader = exportSurface.querySelector('.briefing-capture-header') as HTMLElement | null;
-  if (captureHeader) {
-    captureHeader.style.display = 'flex';
-    captureHeader.style.marginBottom = '18px';
-    captureHeader.style.paddingBottom = '14px';
-  }
-
-  const captureTitle = exportSurface.querySelector('.briefing-capture-title') as HTMLElement | null;
-  if (captureTitle) {
-    captureTitle.style.display = 'block';
-    captureTitle.style.fontSize = '1.48rem';
-    captureTitle.style.lineHeight = '1.3';
-    captureTitle.style.marginBottom = '16px';
-  }
-
-  const captureIntro = exportSurface.querySelector('.briefing-capture-intro') as HTMLElement | null;
-  if (captureIntro) {
-    captureIntro.style.fontSize = '1rem';
-    captureIntro.style.lineHeight = '1.65';
-    captureIntro.style.marginBottom = '18px';
-  }
-
-  const sections = exportSurface.querySelectorAll('.briefing-section');
-  sections.forEach((sec: any) => {
-    sec.style.border = 'none';
-    sec.style.borderRadius = '18px';
-    sec.style.padding = '18px 20px 18px 22px';
-    sec.style.marginBottom = '14px';
-    if (isLight) {
-      sec.style.backgroundColor = '#f1f5f9';
-    } else {
-      sec.style.backgroundColor = 'rgba(30, 41, 59, 0.45)';
-    }
-  });
-
-  const sectionTitles = exportSurface.querySelectorAll('.briefing-title');
-  sectionTitles.forEach((t: any) => {
-    t.style.fontSize = '0.84rem';
-    t.style.letterSpacing = '0.12em';
-    t.style.marginBottom = '12px';
-  });
-
-  const bodyTexts = exportSurface.querySelectorAll('.briefing-text, .briefing-list li');
-  bodyTexts.forEach((el: any) => {
-    el.style.fontSize = '1rem';
-    el.style.lineHeight = '1.72';
-    el.style.fontWeight = '650';
-    if (isLight) {
-      el.style.color = '#000000';
-    } else {
-      el.style.color = '#e2e8f0';
-    }
-  });
-
   exportHost.appendChild(exportSurface);
   document.body.appendChild(exportHost);
 
-  // Force layout reflow to ensure styles are computed on the cloned element
-  void exportSurface.offsetHeight;
-
-  // Wait one frame to ensure browser has processed styling and layed out the element
-  requestAnimationFrame(() => {
-    setTimeout(() => {
-      (window as any).html2canvas(exportSurface, {
-        backgroundColor: isLight ? '#f5f7fb' : '#0f172a',
-        scale: 2,
-        logging: false,
-        useCORS: true
-      }).then((canvas: HTMLCanvasElement) => {
-        const link = document.createElement('a');
-        link.download = 'siftle-briefing.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-        (window as any).showActionToast?.('Briefing card image downloaded!');
-      }).catch(() => {
-        (window as any).showActionToast?.('Unable to download briefing card');
-      }).finally(() => {
-        exportHost.remove();
-      });
-    }, 40);
+  const isLight = document.documentElement.dataset.theme === 'light';
+  (window as any).html2canvas(exportSurface, {
+    backgroundColor: isLight ? '#f5f7fb' : '#0f172a',
+    scale: 2,
+    logging: false,
+    useCORS: true
+  }).then((canvas: HTMLCanvasElement) => {
+    const link = document.createElement('a');
+    link.download = 'siftle-briefing.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    (window as any).showActionToast?.('Briefing card image downloaded!');
+  }).catch(() => {
+    (window as any).showActionToast?.('Unable to download briefing card');
+  }).finally(() => {
+    exportHost.remove();
   });
 };
 
 window.downloadBriefingCard = downloadBriefingCard;
-
-const getStorySlug = (headline: string): string => {
-  return headline
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-};
-
-const copyBriefingLink = (storyId: number): void => {
-  const story = state.stories.find((item) => item.id === storyId);
-  const slug = story ? getStorySlug(story.headline) : String(storyId);
-  const base = window.location.origin + (window.location.pathname.endsWith('/') ? window.location.pathname.slice(0, -1) : window.location.pathname);
-  const shareUrl = `${base}/story/${slug}`;
-  navigator.clipboard.writeText(shareUrl).then(() => {
-    (window as any).showActionToast?.('Link copied to clipboard!');
-  }).catch(() => {
-    (window as any).showActionToast?.('Unable to copy link');
-  });
-};
-
-(window as any).copyBriefingLink = copyBriefingLink;
 
 const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
   const parts = text.split(/(?:\*\*|__)?(WHAT HAPPENED|KEY POINTS|TAKEAWAY)\s*:?\s*(?:\*\*|__)?\s*:?\s*/i);
@@ -813,7 +716,7 @@ const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
     html += `
       <div class="briefing-capture-header">
         <div class="briefing-capture-brand">
-          <img src="/assets/siftle-logo-small.png" alt="" />
+          <img src="./assets/siftle-logo-small.png" alt="" />
           <span>Siftle Briefing</span>
         </div>
         <span class="briefing-capture-url">siftle.xyz</span>
@@ -864,15 +767,10 @@ const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
   html += '</div>';
 
   if (story) {
-    const linkIconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;vertical-align:middle;margin-right:6px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
     const downloadIconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;vertical-align:middle;margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>`;
 
     html += `
       <div class="share-briefing-container">
-        <button type="button" class="share-briefing-btn copy-link-btn" onclick="window.copyBriefingLink?.(${story.id})">
-          ${linkIconSvg}
-          <span>Copy Link</span>
-        </button>
         <button type="button" class="share-briefing-btn" onclick="window.downloadBriefingCard?.(event.currentTarget)">
           ${downloadIconSvg}
           <span>Download Card</span>
@@ -1025,15 +923,9 @@ const unlockAndLoadStorySummary = async (story: BriefingTarget, force = false): 
       throw new Error(config.error || "AI briefing is not configured");
     }
 
-    const price = Number(config.amountUsdc) || 0.0001;
-    const balance = Number(state.walletBalance || 0);
-    if (balance < price) {
-      throw new Error(`Your wallet has insufficient balance. Please fund your wallet (minimum ${price} USDC required).`);
-    }
-
     const txHash = await payAiBriefingUnlock(
       config.treasuryAddress,
-      price,
+      Number(config.amountUsdc) || 0.05,
       (status) => {
         if (menuStatus) menuStatus.textContent = status;
         state.briefingStatusByUrl[story.sourceUrl] = status;
@@ -1144,16 +1036,11 @@ const openStory = (storyId: number, autoUnlockBriefing = false): void => {
   const story = state.stories.find((item) => item.id === storyId);
   if (!story) return;
 
-  if (story.type === "tweet") {
-    window.open(story.sourceUrl, "_blank", "noreferrer");
-    return;
-  }
-
   state.feedScrollY = window.scrollY;
   state.selectedStoryId = story.id;
   state.selectedThreadUrl = null;
   state.activeThread = null;
-  window.history.pushState({}, "", `#story-${getStorySlug(story.headline)}`);
+  window.history.pushState({}, "", `#story-${story.id}`);
   render();
   if (autoUnlockBriefing && !isBriefingUnlocked(story)) {
     if (state.walletAddress) state.unlockingSummaryUrl = story.sourceUrl;
@@ -1171,7 +1058,7 @@ const openThread = (story: NewsStory): void => {
   state.selectedThreadUrl = story.sourceUrl;
   state.activeThread = null;
   state.loadingThreadUrl = story.sourceUrl;
-  window.history.pushState({}, "", `#thread-${getStorySlug(story.headline)}`);
+  window.history.pushState({}, "", `#thread-${story.id}`);
   render();
   void loadStoryThread(story);
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1242,8 +1129,6 @@ function syncStoryFromHash(): void {
     state.selectedStoryId = null;
     state.selectedThreadUrl = null;
     state.activeThread = null;
-    const market = marketMatch ? marketPreviews.find((item) => item.id === marketMatch[1]) : undefined;
-    document.title = market ? `${market.question} | Siftle` : "Siftle Markets";
     render();
     return;
   }
@@ -1252,7 +1137,6 @@ function syncStoryFromHash(): void {
     state.selectedMarketId = null;
     state.selectedStoryId = null;
     state.selectedThreadUrl = null;
-    document.title = "Siftle Portfolio";
     render();
     return;
   }
@@ -1261,48 +1145,15 @@ function syncStoryFromHash(): void {
     state.selectedMarketId = null;
     state.selectedStoryId = null;
     state.selectedThreadUrl = null;
-    document.title = "Siftle Leaderboard";
     render();
     return;
   }
   if (window.location.hash === "#feed" || window.location.hash.startsWith("#story-") || window.location.hash.startsWith("#thread-")) {
     state.activeSurface = "feed";
-    const storyMatch = window.location.hash.match(/^#story-(.+)$/);
-    const threadMatch = window.location.hash.match(/^#thread-(.+)$/);
-
-    if (state.stories.length === 0 && !state.isLoading && !state.hasLoadedFeed) {
-      void loadFeed(state.activeCategory).then(() => {
-        syncStoryFromHash();
-      });
-      return;
-    }
-
-    let story: any = undefined;
-    if (storyMatch) {
-      const val = storyMatch[1];
-      story = state.stories.find((item) => getStorySlug(item.headline) === val);
-      if (!story && /^\d+$/.test(val)) {
-        story = state.stories.find((item) => item.id === Number(val));
-      }
-    }
-
-    let threadStory: any = undefined;
-    if (threadMatch) {
-      const val = threadMatch[1];
-      threadStory = state.stories.find((item) => getStorySlug(item.headline) === val);
-      if (!threadStory && /^\d+$/.test(val)) {
-        threadStory = state.stories.find((item) => item.id === Number(val));
-      }
-    }
-    
-    if (story) {
-      document.title = `${story.headline} | Siftle`;
-    } else if (threadStory) {
-      document.title = `${threadStory.headline} | Siftle`;
-    } else {
-      document.title = "Siftle News";
-    }
-
+    const storyMatch = window.location.hash.match(/^#story-(\d+)$/);
+    const threadMatch = window.location.hash.match(/^#thread-(\d+)$/);
+    const story = storyMatch ? state.stories.find((item) => item.id === Number(storyMatch[1])) : undefined;
+    const threadStory = threadMatch ? state.stories.find((item) => item.id === Number(threadMatch[1])) : undefined;
     const wasInDetail = state.selectedStoryId !== null || state.selectedThreadUrl !== null;
     state.selectedStoryId = story?.id ?? null;
     state.selectedThreadUrl = threadStory?.sourceUrl ?? null;
@@ -1316,14 +1167,12 @@ function syncStoryFromHash(): void {
     return;
   }
 
-  // Fallback default: Feed first (News Section is the home page!)
-  state.activeSurface = "feed";
+  // Fallback default: Markets first
+  state.activeSurface = "markets";
   state.selectedMarketId = null;
   state.selectedStoryId = null;
   state.selectedThreadUrl = null;
-  document.title = "Siftle";
   render();
-  ensureFeedLoaded(state.activeCategory);
 }
 
 const setArchiveStatus = (message: string): void => {
@@ -1374,7 +1223,6 @@ const loadFeed = async (category: Category = state.activeCategory, isBackground 
       state.stories = [];
     }
     applySavedFlags();
-    state.hasLoadedFeed = true;
     if (menuStatus) {
       menuStatus.textContent = state.activeArchiveDate
         ? "That saved day/category is not available yet"
@@ -1440,6 +1288,69 @@ const getCategoryLabel = (category: Category): string =>
   category === "All" ? "For you" : (category === "Sports" ? "Football" : category);
 
 const displayCategory = (cat: string): string => cat === "Sports" ? "Football" : cat;
+
+const isSocialStory = (story: NewsStory): boolean =>
+  /^@/.test(String(story.source || "")) || /(?:^|\/)(?:x|twitter)\.com\//i.test(String(story.sourceUrl || ""));
+
+const shortenText = (value: string, maxLength: number): string => {
+  const clean = value.trim();
+  if (clean.length <= maxLength) return clean;
+  return `${clean.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
+};
+
+const compactSourceWords = (value: string): string[] =>
+  value
+    .replace(/^@/, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean);
+
+const getStorySourceLabel = (story: NewsStory): string => {
+  const source = String(story.source || displayCategory(story.category)).trim();
+  const words = compactSourceWords(source);
+  if (words.length === 0) return displayCategory(story.category);
+
+  const filteredWords = words.filter((word, index) => {
+    const lowered = word.toLowerCase();
+    if (index > 0 && ["live", "news", "official"].includes(lowered)) return false;
+    return true;
+  });
+  const preferredWords = filteredWords.length > 0 ? filteredWords : words;
+
+  let label = "";
+  for (const word of preferredWords) {
+    const candidate = label ? `${label} ${word}` : word;
+    if (candidate.length > 18) break;
+    label = candidate;
+  }
+
+  return shortenText(label || preferredWords[0], 18);
+};
+
+const getStoryCardHeadline = (story: NewsStory): string => {
+  const headline = String(story.headline || "").replace(/\s+/g, " ").trim();
+  if (!isSocialStory(story)) return headline;
+
+  const compact = headline
+    .replace(/https?:\/\/\S+/gi, "")
+    .replace(/\(Source:[^)]+\)\s*$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (/^R to\s+@[^:]+:\s*(?:more here|watch more here)[:.!?]*$/i.test(compact)) {
+    return `Latest from ${getStorySourceLabel(story)}`;
+  }
+
+  const withoutLead = compact.replace(/^R to\s+@[^:]+:\s*/i, "").trim();
+  const candidate =
+    withoutLead.length >= 24 && !/^(?:more here|watch more here)[:.!?]*$/i.test(withoutLead)
+      ? withoutLead
+      : compact || headline;
+  return shortenText(candidate, 150);
+};
 
 const renderCategories = (): void => {
   if (!categoryTabs) return;
@@ -1842,8 +1753,17 @@ const getOptionMarketProjectedPayout = (position: any, snapshot: any): number =>
   const entryAmount = Math.max(0, Number(position?.optionSharesUsdc) || 0);
   const optionPool = Math.max(0, Number(snapshot?.optionPools?.[optionId]) || 0);
   const totalPool = Math.max(0, Number(snapshot?.volumeUsdc) || 0);
-  if (!optionId || entryAmount <= 0 || optionPool <= 0 || totalPool <= 0) return 0;
+  if (!optionId || entryAmount <= 0) return 0;
+  if (optionPool <= 0 || totalPool <= 0) return entryAmount;
   return (entryAmount / optionPool) * totalPool;
+};
+
+const redactOptionPools = (market: MarketPreview, snapshot: any): any => {
+  if (!isOptionMarket(market) || !snapshot) return snapshot;
+  return {
+    ...snapshot,
+    optionPools: Object.fromEntries(getMarketOptions(market).map((option) => [option.id, 0]))
+  };
 };
 
 const renderLeaderboardSyncNote = (): string => `
@@ -2042,7 +1962,7 @@ const loadMarketSnapshot = async (market: MarketPreview): Promise<void> => {
   if (isOptionMarket(market) && !state.walletAddress) {
     const publicResolvedOptionId = (market as MarketPreview & { resolvedOptionId?: string | null }).resolvedOptionId || null;
     const publicOutcome = Number((market as MarketPreview & { outcome?: number }).outcome);
-    state.marketSnapshots[market.id] = {
+    state.marketSnapshots[market.id] = redactOptionPools(market, {
       yesPriceCents: 0,
       noPriceCents: 0,
       volumeUsdc: Number((market as MarketPreview & { volumeUsdc?: number }).volumeUsdc) || 0,
@@ -2057,7 +1977,7 @@ const loadMarketSnapshot = async (market: MarketPreview): Promise<void> => {
         || Object.fromEntries(getMarketOptions(market).map((option) => [option.id, 0])),
       resolvedOptionId: publicResolvedOptionId,
       traderCount: 0
-    };
+    });
     state.checkedMarketSnapshots[market.id] = true;
     return;
   }
@@ -2067,9 +1987,9 @@ const loadMarketSnapshot = async (market: MarketPreview): Promise<void> => {
     if (isOptionMarket(market) && state.walletAddress) {
       const { position, snapshot } = await readArcMarketState(marketAddress, state.walletAddress);
       state.marketPositions[market.id] = position;
-      state.marketSnapshots[market.id] = snapshot;
+      state.marketSnapshots[market.id] = redactOptionPools(market, snapshot);
     } else {
-      state.marketSnapshots[market.id] = await readArcMarketSnapshot(marketAddress);
+      state.marketSnapshots[market.id] = redactOptionPools(market, await readArcMarketSnapshot(marketAddress));
     }
   } catch (error) {
     console.warn(error);
@@ -2412,101 +2332,6 @@ const renderPortfolioSkeleton = (count = 2): string => `
   </div>
 `;
 
-const renderStoryCardHtml = (story: NewsStory): string => {
-  const isTweet = story.type === "tweet";
-
-  const desktopActions = isTweet
-    ? `<a class="card-source-button twitter-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Open Tweet</a>`
-    : `
-      ${renderDesktopThreadButton(story)}
-      <button class="card-source-button summary-btn" type="button">AI briefing</button>
-      ${/example\\.com/i.test(story.sourceUrl)
-        ? `<a class="card-source-button disabled" href="#" onclick="event.preventDefault(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
-        : `<a class="card-source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
-    `;
-
-  const mobileActions = isTweet
-    ? `<a class="mobile-action-btn twitter-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Open Tweet</a>`
-    : `
-      ${renderMobileThreadButton(story)}
-      ${/example\\.com/i.test(story.sourceUrl)
-        ? `<a class="mobile-action-btn source-btn disabled" href="#" onclick="event.preventDefault(); event.stopPropagation(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
-        : `<a class="mobile-action-btn source-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Open source</a>`}
-      <button class="mobile-action-btn summary-btn" type="button">AI briefing</button>
-    `;
-
-  const copyLabel = isTweet ? "Tap to view tweet on Twitter." : "Tap to read the AI briefing.";
-
-  return `
-    <article class="story-card ${isTweet ? "tweet-card" : ""}" data-story-id="${story.id}" role="button" tabindex="0" aria-label="${isTweet ? "Open tweet" : "Open summary"} for ${story.headline}">
-      <!-- Desktop layout (visible above 640px) -->
-      <div class="story-topline desktop-only">
-        <div class="story-source">
-          <div>
-            <strong>${story.source}</strong>
-            <span>${getStoryTimeLabel(story)} ${isTweet ? "" : `- ${story.readTime}`}</span>
-          </div>
-        </div>
-        <div class="story-card-actions">
-          <button class="bookmark-button" type="button" data-bookmark-url="${story.sourceUrl}" aria-pressed="${story.saved ? "true" : "false"}" aria-label="${story.saved ? "Remove saved story" : "Save story"}">
-            ${renderBookmarkIcon()}
-          </button>
-          <div class="share-control">
-            <button class="export-button" type="button" aria-label="Export story card" data-export-id="${story.id}" aria-expanded="${state.activeShareStoryId === story.id}">
-              ${renderExportIcon()}
-            </button>
-            <div class="share-menu" ${state.activeShareStoryId === story.id ? "" : "hidden"}>
-              <button type="button" data-export-action="save" data-export-story-id="${story.id}">Save image</button>
-              <button type="button" data-export-action="share" data-export-story-id="${story.id}">Share</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="story-image-frame desktop-only" aria-hidden="true">
-        <img src="${story.imageUrl}" alt="" loading="lazy" />
-      </div>
-
-      <div class="story-copy desktop-only">
-        <span class="category-chip ${story.category}">${displayCategory(story.category)}</span>
-        <h2>${story.headline}</h2>
-        <p>${copyLabel}</p>
-      </div>
-
-      <div class="card-action-row desktop-only">
-        ${desktopActions}
-      </div>
-
-      <!-- Mobile layout (visible at 640px and below) -->
-      <div class="mobile-card-inner mobile-only">
-        <div class="mobile-card-body">
-          <div class="mobile-card-text">
-            <div class="mobile-card-topline">
-              <span class="category-chip ${story.category}">${displayCategory(story.category)}</span>
-              <div class="mobile-icons">
-                <button class="mobile-bookmark-btn" type="button" data-bookmark-url="${story.sourceUrl}" aria-pressed="${story.saved ? "true" : "false"}" aria-label="Save story">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-                </button>
-                <button class="mobile-export-icon" type="button" data-export-action="save" data-export-story-id="${story.id}" aria-label="Save image">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="19"/></svg>
-                </button>
-              </div>
-            </div>
-            <h2>${story.headline}</h2>
-            <span class="mobile-card-time">${getStoryTimeLabel(story)}</span>
-          </div>
-          <div class="mobile-card-image" aria-hidden="true">
-            <img src="${story.imageUrl}" alt="" loading="lazy" />
-          </div>
-        </div>
-        <div class="mobile-card-actions">
-          ${mobileActions}
-        </div>
-      </div>
-    </article>
-  `;
-};
-
 const renderStories = (): void => {
   if (!storyList) return;
 
@@ -2539,7 +2364,86 @@ const renderStories = (): void => {
     const fallbackStories = state.showSaved ? [] : state.stories;
     if (fallbackStories.length > 0) {
       storyList.innerHTML = feedHeader + fallbackStories
-        .map(renderStoryCardHtml)
+        .map(
+          (story) => `
+        <article class="story-card ${isSocialStory(story) ? "social-story" : ""}" data-story-id="${story.id}" role="button" tabindex="0" aria-label="Open summary for ${story.headline}">
+
+          <!-- Desktop layout (visible above 640px) -->
+          <div class="story-topline desktop-only">
+            <div class="story-source">
+              <div>
+                <strong>${story.source}</strong>
+                <span>${getStoryTimeLabel(story)} - ${story.readTime}</span>
+              </div>
+            </div>
+            <div class="story-card-actions">
+              <button class="bookmark-button" type="button" data-bookmark-url="${story.sourceUrl}" aria-pressed="${story.saved ? "true" : "false"}" aria-label="${story.saved ? "Remove saved story" : "Save story"}">
+                ${renderBookmarkIcon()}
+              </button>
+              <div class="share-control">
+                <button class="export-button" type="button" aria-label="Export story card" data-export-id="${story.id}" aria-expanded="${state.activeShareStoryId === story.id}">
+                  ${renderExportIcon()}
+                </button>
+                <div class="share-menu" ${state.activeShareStoryId === story.id ? "" : "hidden"}>
+                  <button type="button" data-export-action="save" data-export-story-id="${story.id}">Save image</button>
+                  <button type="button" data-export-action="share" data-export-story-id="${story.id}">Share</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="story-image-frame desktop-only" aria-hidden="true">
+            <img src="${story.imageUrl}" alt="" loading="lazy" />
+          </div>
+
+          <div class="story-copy desktop-only">
+            <span class="category-chip ${story.category}">${displayCategory(story.category)}</span>
+            <h2 class="card-headline">${getStoryCardHeadline(story)}</h2>
+            <p>Tap to read the AI briefing.</p>
+          </div>
+
+          <div class="card-action-row desktop-only">
+            ${renderDesktopThreadButton(story)}
+            <button class="card-source-button summary-btn" type="button">AI briefing</button>
+            ${/example\\.com/i.test(story.sourceUrl)
+              ? `<a class="card-source-button disabled" href="#" onclick="event.preventDefault(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
+              : `<a class="card-source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
+          </div>
+
+          <!-- Mobile layout (visible at 640px and below) -->
+          <div class="mobile-card-inner mobile-only">
+            <div class="mobile-card-body">
+              <div class="mobile-card-text">
+                <div class="mobile-card-topline">
+                  <span class="mobile-source-pill ${isSocialStory(story) ? "social" : ""}">${getStorySourceLabel(story)}</span>
+                  <div class="mobile-icons">
+                    <button class="mobile-bookmark-btn" type="button" data-bookmark-url="${story.sourceUrl}" aria-pressed="${story.saved ? "true" : "false"}" aria-label="Save story">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                    </button>
+                    <button class="mobile-export-icon" type="button" data-export-action="save" data-export-story-id="${story.id}" aria-label="Save image">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="19"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <h2 class="card-headline">${getStoryCardHeadline(story)}</h2>
+                <span class="mobile-card-time">${getStoryTimeLabel(story)}</span>
+              </div>
+              <div class="mobile-card-image" aria-hidden="true">
+                <img src="${story.imageUrl}" alt="" loading="lazy" />
+              </div>
+            </div>
+            <div class="mobile-card-actions">
+              ${renderMobileThreadButton(story)}
+              ${/example\\.com/i.test(story.sourceUrl)
+                ? `<a class="mobile-action-btn source-btn disabled" href="#" onclick="event.preventDefault(); event.stopPropagation(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
+                : `<a class="mobile-action-btn source-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Open source</a>`}
+              <button class="mobile-action-btn summary-btn" type="button">AI briefing</button>
+            </div>
+          </div>
+
+        </article>
+      `
+        )
         .join("");
       return;
     }
@@ -2548,7 +2452,86 @@ const renderStories = (): void => {
   }
 
   storyList.innerHTML = feedHeader + stories
-    .map(renderStoryCardHtml)
+    .map(
+      (story) => `
+        <article class="story-card ${isSocialStory(story) ? "social-story" : ""}" data-story-id="${story.id}" role="button" tabindex="0" aria-label="Open summary for ${story.headline}">
+
+          <!-- Desktop layout (visible above 640px) -->
+          <div class="story-topline desktop-only">
+            <div class="story-source">
+              <div>
+                <strong>${story.source}</strong>
+                <span>${getStoryTimeLabel(story)} - ${story.readTime}</span>
+              </div>
+            </div>
+            <div class="story-card-actions">
+              <button class="bookmark-button" type="button" data-bookmark-url="${story.sourceUrl}" aria-pressed="${story.saved ? "true" : "false"}" aria-label="${story.saved ? "Remove saved story" : "Save story"}">
+                ${renderBookmarkIcon()}
+              </button>
+              <div class="share-control">
+                <button class="export-button" type="button" aria-label="Export story card" data-export-id="${story.id}" aria-expanded="${state.activeShareStoryId === story.id}">
+                  ${renderExportIcon()}
+                </button>
+                <div class="share-menu" ${state.activeShareStoryId === story.id ? "" : "hidden"}>
+                  <button type="button" data-export-action="save" data-export-story-id="${story.id}">Save image</button>
+                  <button type="button" data-export-action="share" data-export-story-id="${story.id}">Share</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="story-image-frame desktop-only" aria-hidden="true">
+            <img src="${story.imageUrl}" alt="" loading="lazy" />
+          </div>
+
+          <div class="story-copy desktop-only">
+            <span class="category-chip ${story.category}">${displayCategory(story.category)}</span>
+            <h2 class="card-headline">${getStoryCardHeadline(story)}</h2>
+            <p>Tap to read the AI briefing.</p>
+          </div>
+
+          <div class="card-action-row desktop-only">
+            ${renderDesktopThreadButton(story)}
+            <button class="card-source-button summary-btn" type="button">AI briefing</button>
+            ${/example\\.com/i.test(story.sourceUrl)
+              ? `<a class="card-source-button disabled" href="#" onclick="event.preventDefault(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
+              : `<a class="card-source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
+          </div>
+
+          <!-- Mobile layout (visible at 640px and below) -->
+          <div class="mobile-card-inner mobile-only">
+            <div class="mobile-card-body">
+              <div class="mobile-card-text">
+                <div class="mobile-card-topline">
+                  <span class="mobile-source-pill ${isSocialStory(story) ? "social" : ""}">${getStorySourceLabel(story)}</span>
+                  <div class="mobile-icons">
+                    <button class="mobile-bookmark-btn" type="button" data-bookmark-url="${story.sourceUrl}" aria-pressed="${story.saved ? "true" : "false"}" aria-label="Save story">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                    </button>
+                    <button class="mobile-export-icon" type="button" data-export-action="save" data-export-story-id="${story.id}" aria-label="Save image">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="19"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <h2 class="card-headline">${getStoryCardHeadline(story)}</h2>
+                <span class="mobile-card-time">${getStoryTimeLabel(story)}</span>
+              </div>
+              <div class="mobile-card-image" aria-hidden="true">
+                <img src="${story.imageUrl}" alt="" loading="lazy" />
+              </div>
+            </div>
+            <div class="mobile-card-actions">
+              ${renderMobileThreadButton(story)}
+              ${/example\\.com/i.test(story.sourceUrl)
+                ? `<a class="mobile-action-btn source-btn disabled" href="#" onclick="event.preventDefault(); event.stopPropagation(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
+                : `<a class="mobile-action-btn source-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Open source</a>`}
+              <button class="mobile-action-btn summary-btn" type="button">AI briefing</button>
+            </div>
+          </div>
+
+        </article>
+      `
+    )
     .join("");
 };
 
@@ -2703,7 +2686,7 @@ const drawShareCard = async (story: NewsStory, includeRemoteImage = true): Promi
   context.fill();
   context.shadowColor = "transparent";
 
-  const logo = await loadCanvasImage("/assets/siftle-logo-small.png").catch(() => null);
+  const logo = await loadCanvasImage("./assets/siftle-logo-small.png").catch(() => null);
   if (logo) {
     context.drawImage(logo, 784, 106, 54, 54);
   }
@@ -3088,7 +3071,7 @@ const renderMarketCard = (market: MarketPreview): string => {
       <div class="market-probability-row">
         <strong>${probabilityLabel}</strong>
         <span>${optionMarket ? "possible outcomes" : marketAddress ? "market probability" : "pending deployment"}</span>
-        <span class="market-share-prices">${optionMarket ? "Pick exactly one" : displayShareLabel}</span>
+        <span class="market-share-prices">${optionMarket ? "Pick exactly one" : "Choose a side"}</span>
       </div>
       <div class="market-meter" aria-hidden="true"><span style="width: ${optionMarket ? 100 : displayProbability}%"></span></div>
       <div class="market-volume">
@@ -3191,7 +3174,6 @@ const renderMarketDetail = (market: MarketPreview): void => {
   const hasPosition = optionMarket ? Boolean(position.optionId) : position.yesSharesUsdc > 0 || position.noSharesUsdc > 0;
   let positionHtml = "";
   if (optionMarket && hasPosition && state.walletAddress) {
-    const payout = getOptionMarketProjectedPayout(position, snapshot);
     positionHtml = `
       <div class="user-market-position-box" style="margin: 16px 0; padding: 16px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.15); border-radius: 12px; font-family: 'Space Grotesk', sans-serif;">
         <h3 style="font-size: 0.9rem; font-weight: 700; color: var(--market-text-main); margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.05em;">Your Pick</h3>
@@ -3201,8 +3183,8 @@ const renderMarketDetail = (market: MarketPreview): void => {
             <strong style="font-size: 0.95rem; color: var(--market-text-main);">${escapeHtml(position.optionLabel || "Selected option")}</strong>
           </div>
           <div>
-            <span style="font-size: 0.72rem; color: var(--market-text-muted); display: block; margin-bottom: 2px;">Projected payout</span>
-            <strong style="font-size: 0.95rem; color: var(--market-text-main);">$${formatMoney(payout)}</strong>
+            <span style="font-size: 0.72rem; color: var(--market-text-muted); display: block; margin-bottom: 2px;">Status</span>
+            <strong style="font-size: 0.95rem; color: var(--market-text-main);">Locked in</strong>
           </div>
         </div>
       </div>
@@ -3326,7 +3308,7 @@ const renderMarketDetail = (market: MarketPreview): void => {
         <div class="sticky-trade-info">
           ${optionMarket
             ? `<span>${hasOptionPick ? "Pick locked" : "Choose one option"}</span><span><strong>${optionList.length} options</strong></span>`
-            : `<span>Yes <strong>${yesPriceLabel}</strong></span><span>No <strong>${noPriceLabel}</strong></span>`}
+            : `<span>Choose a side</span><span><strong>${state.marketOrderMode === "sell" ? "Exit available" : "Trade open"}</strong></span>`}
         </div>
         <button class="sticky-trade-btn" type="button" id="openTradeDrawerBtn" ${marketResolved || marketTradeLocked ? "disabled" : ""}>
           ${marketResolved ? "Market Resolved" : marketTradeLockMessage || (optionMarket ? hasOptionPick ? "Pick Locked" : "Pick Outcome" : "Trade Market")}
@@ -3365,12 +3347,10 @@ const renderMarketDetail = (market: MarketPreview): void => {
               : `
                 <button type="button" class="market-side yes ${state.marketTradeSide === "yes" ? "active" : ""} ${canTradeYes ? "" : "disabled"}" data-market-trade-side="yes" ${canTradeYes ? "" : "disabled"} title="${canTradeYes ? "Yes" : yesDisabledLabel}">
                   <span>Yes</span>
-                  <strong>${yesPriceLabel}</strong>
                   ${canTradeYes ? "" : `<small>${yesDisabledLabel}</small>`}
                 </button>
                 <button type="button" class="market-side no ${state.marketTradeSide === "no" ? "active" : ""} ${canTradeNo ? "" : "disabled"}" data-market-trade-side="no" ${canTradeNo ? "" : "disabled"} title="${canTradeNo ? "No" : noDisabledLabel}">
                   <span>No</span>
-                  <strong>${noPriceLabel}</strong>
                   ${canTradeNo ? "" : `<small>${noDisabledLabel}</small>`}
                 </button>
               `}
@@ -4717,14 +4697,7 @@ storyList?.addEventListener("click", async (event) => {
 
   if (!storyCard) return;
   if (target.closest("a")) return;
-  const storyId = Number(storyCard.dataset.storyId);
-  const story = state.stories.find((s) => s.id === storyId);
-  if (story && story.type === "tweet") {
-    event.stopPropagation();
-    window.open(story.sourceUrl, "_blank", "noreferrer");
-    return;
-  }
-  openStory(storyId, true);
+  openStory(Number(storyCard.dataset.storyId), true);
 });
 
 storyList?.addEventListener("keydown", (event) => {
@@ -4733,13 +4706,7 @@ storyList?.addEventListener("keydown", (event) => {
   if (!storyCard || (event.key !== "Enter" && event.key !== " ")) return;
 
   event.preventDefault();
-  const storyId = Number(storyCard.dataset.storyId);
-  const story = state.stories.find((s) => s.id === storyId);
-  if (story && story.type === "tweet") {
-    window.open(story.sourceUrl, "_blank", "noreferrer");
-    return;
-  }
-  openStory(storyId);
+  openStory(Number(storyCard.dataset.storyId));
 });
 
 storyDetail?.addEventListener("click", (event) => {
@@ -4976,18 +4943,11 @@ renderWalletState();
 void fetchUnlockConfig();
 void loadMarkets().then(() => {
   reportStoredLocalMarketTraders();
+  render();
   renderWalletState();
   window.setTimeout(initializeWalletSession, 1200);
+  warmFeedAfterFirstPaint();
 });
-
-// Logo/brand click redirects to home page (News Feed)
-const brandLockup = document.querySelector(".brand-lockup");
-brandLockup?.addEventListener("click", () => {
-  window.location.hash = "#feed";
-});
-
-// Initial route evaluation on startup
-syncStoryFromHash();
 
 // Mobile archive card: toggle the archive controls via class (safe for desktop)
 const mobileArchiveCardEl = document.querySelector<HTMLButtonElement>("#mobileArchiveCard");
@@ -5120,5 +5080,3 @@ document.addEventListener("click", (event) => {
     }
   }
 }, true);
-
-

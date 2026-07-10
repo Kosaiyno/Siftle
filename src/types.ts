@@ -13,6 +13,7 @@ export interface NewsStory {
   postedAt: string;
   accent: "blue" | "teal" | "violet" | "slate" | "orange";
   saved: boolean;
+  type?: "news" | "tweet";
   thread?: {
     count: number;
     topic: string;
