@@ -245,6 +245,42 @@ export const marketThreadRules = {
       ["knockout", "round of 32", "round of 16", "world cup", "eliminated", "eliminate", "qualify", "advances", "advance", "match", "game", "last 32", "tournament"]
     ],
     reject: ["cricket", "basketball", "baseball", "tennis"]
+  },
+  "wc-england-norway-qualify": {
+    category: "Sports",
+    topic: "England vs Norway Qualify Watch",
+    includeAnySets: [
+      ["england", "norway"],
+      ["world cup", "fifa", "2026", "knockout", "qualify", "quarter-final", "quarterfinal", "semifinal", "eliminate", "clash", "match", "lineup", "tuchel", "haaland", "kane"]
+    ],
+    reject: ["women", "futsal", "olympics"]
+  },
+  "wc-haaland-kane-goals": {
+    category: "Sports",
+    topic: "Haaland vs Kane Goal Battle",
+    includeAnySets: [
+      ["haaland", "kane", "england", "norway"],
+      ["world cup", "goal", "goals", "score", "scores", "scorer", "striker", "clash", "match", "quotes", "beast"]
+    ],
+    reject: ["women", "futsal", "olympics"]
+  },
+  "wc-england-norway-yellow-cards": {
+    category: "Sports",
+    topic: "England vs Norway Disciplinary Record",
+    includeAnySets: [
+      ["england", "norway"],
+      ["world cup", "fifa", "match", "game", "kick-off", "kickoff", "miami", "weather", "thunderstorms", "lightning", "cards", "yellow", "red", "disciplinary"]
+    ],
+    reject: ["women", "futsal", "olympics"]
+  },
+  "wc-england-norway-victory-method": {
+    category: "Sports",
+    topic: "England vs Norway Method of Victory",
+    includeAnySets: [
+      ["england", "norway"],
+      ["world cup", "fifa", "match", "game", "win", "victory", "extra time", "penalties", "shootout", "method", "kick-off", "weather", "thunderstorms", "lightning"]
+    ],
+    reject: ["women", "futsal", "olympics"]
   }
 };
 

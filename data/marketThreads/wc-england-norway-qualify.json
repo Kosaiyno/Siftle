@@ -1,0 +1,55 @@
+{
+  "topic": "England vs Norway Qualify Watch",
+  "current": {
+    "headline": "Tuchel Warns England Over Haaland Danger in Historic Norway Clash",
+    "category": "Sports",
+    "summary": "Thomas Tuchel has urged England's defence to remain hyper-focused on Erling Haaland, who has scored 7 goals in this World Cup, including a brace to eliminate Brazil.",
+    "source": "theguardian.com",
+    "sourceUrl": "https://www.theguardian.com/football/2026/jul/11/thomas-tuchel-england-erling-haaland-norway-world-cup",
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
+    "publishedAt": "2026-07-11T13:30:55.444Z",
+    "readTime": "3 min read",
+    "postedAt": "5m ago",
+    "accent": "blue",
+    "saved": false,
+    "type": "news",
+    "id": 1
+  },
+  "items": [
+    {
+      "headline": "Miami Weather Warning: Thunderstorms Threaten England-Norway Kick-off",
+      "category": "Sports",
+      "summary": "Meteorologists warn of severe thunderstorms and lightning near the Hard Rock Stadium in Miami. FIFA regulations state any lightning within 8 miles will suspend play.",
+      "source": "skysports.com",
+      "sourceUrl": "https://www.skysports.com/football/news/12026/07/11/england-norway-miami-weather-warning-thunderstorms",
+      "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "2026-07-11T13:25:55.445Z",
+      "readTime": "2 min read",
+      "postedAt": "10m ago",
+      "accent": "teal",
+      "saved": false,
+      "type": "news",
+      "id": 2
+    },
+    {
+      "headline": "Haaland: Kane is a beast, but Norway is ready for England",
+      "category": "Sports",
+      "summary": "Speaking ahead of the quarter-final, Erling Haaland paid tribute to England captain Harry Kane, calling him a world-class striker, but insisted Norway can pull off another shock.",
+      "source": "bbc.co.uk",
+      "sourceUrl": "https://www.bbc.co.uk/sport/football/articles/haaland-kane-norway-england-quotes",
+      "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "2026-07-11T13:20:55.445Z",
+      "readTime": "3 min read",
+      "postedAt": "15m ago",
+      "accent": "violet",
+      "saved": false,
+      "type": "news",
+      "id": 3
+    }
+  ],
+  "reviewed_by": "feed-market-bridge",
+  "count": 3,
+  "market_id": "wc-england-norway-qualify",
+  "saved_market_thread": true,
+  "saved_at": "2026-07-11T13:35:55.455Z"
+}
