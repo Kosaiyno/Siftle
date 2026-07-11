@@ -2340,7 +2340,7 @@ const renderPortfolioSkeleton = (count = 2): string => `
 const renderStoryCardHtml = (story: NewsStory): string => {
   const isTweet = story.type === "tweet";
 
-  const twitterSvg = `<svg class="x-logo-svg" viewBox="0 0 24 24" fill="currentColor" style="width: 14px; height: 14px; display: inline-block; vertical-align: text-top; margin-right: 6px; color: var(--color-text-primary);"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
+  const twitterSvg = `<svg class="x-logo-svg" viewBox="0 0 24 24" fill="currentColor" style="width: 14px; height: 14px; display: inline-block; vertical-align: text-top; color: var(--color-text-primary);"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
 
   const twitterSvgMobile = `<svg class="x-logo-svg" viewBox="0 0 24 24" fill="currentColor" style="width: 12px; height: 12px; display: inline-block; vertical-align: text-top; margin-right: 4px;"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
 
@@ -2351,7 +2351,7 @@ const renderStoryCardHtml = (story: NewsStory): string => {
       <div class="story-topline desktop-only">
         <div class="story-source">
           <div>
-            ${isTweet ? twitterSvg : ""}
+            ${isTweet ? `<div style="margin-bottom: 6px;">${twitterSvg}</div>` : ""}
             <strong>${story.source}</strong>
             <span>${getStoryTimeLabel(story)} - ${story.readTime}</span>
           </div>
@@ -2379,12 +2379,13 @@ const renderStoryCardHtml = (story: NewsStory): string => {
       <div class="story-copy desktop-only">
         <span class="category-chip ${story.category}">${displayCategory(story.category)}</span>
         <h2 class="card-headline">${getStoryCardHeadline(story)}</h2>
-        <p>${isTweet ? "Tap to open the original tweet on X." : "Tap to read the AI briefing."}</p>
+        <p>${isTweet ? "Tap to read the tweet" : "Tap to read the AI briefing."}</p>
       </div>
 
       <div class="card-action-row desktop-only">
         ${isTweet
-          ? `<a class="card-source-button twitter-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()" style="display: inline-flex; align-items: center; gap: 6px;">
+          ? `<button class="card-source-button read-tweet-btn" type="button" style="cursor: pointer;">Read Tweet</button>
+             <a class="card-source-button twitter-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()" style="display: inline-flex; align-items: center; gap: 6px;">
               ${twitterSvg}
               Open Tweet
              </a>`
@@ -2403,7 +2404,7 @@ const renderStoryCardHtml = (story: NewsStory): string => {
         <div class="mobile-card-body">
           <div class="mobile-card-text">
             <div class="mobile-card-topline">
-              <span class="mobile-source-pill ${isSocialStory(story) ? "social" : ""}">
+              <span class="mobile-source-pill ${isSocialStory(story) ? "social" : ""}" style="display: inline-flex; align-items: center; gap: 4px;">
                 ${isTweet ? twitterSvgMobile : ""}
                 ${getStorySourceLabel(story)}
               </span>
@@ -2425,7 +2426,8 @@ const renderStoryCardHtml = (story: NewsStory): string => {
         </div>
         <div class="mobile-card-actions">
           ${isTweet
-            ? `<a class="mobile-action-btn source-btn twitter-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%;">
+            ? `<button class="mobile-action-btn read-tweet-btn" type="button" style="width: 50%; cursor: pointer;">Read Tweet</button>
+               <a class="mobile-action-btn source-btn twitter-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 50%;">
                 ${twitterSvgMobile}
                 Open Tweet
                </a>`
@@ -2965,21 +2967,21 @@ const renderDetail = (): void => {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
           Back to feed
         </button>
-        <article class="detail-card tweet-detail-card" style="border: 1px solid var(--border-color, #2f3336); border-radius: 16px; background: var(--bg-card, #000000); padding: 24px; box-shadow: var(--shadow-lg);">
-          <div class="detail-topline" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; font-size: 14px; color: var(--color-text-secondary, #8899a6); border-bottom: 1px solid var(--border-color, #2f3336); padding-bottom: 12px;">
+        <article class="detail-card tweet-detail-card" style="border-radius: 16px; padding: 24px;">
+          <div class="detail-topline" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; font-size: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color, #334155);">
             <div style="display: flex; align-items: center; gap: 8px;">
               ${twitterSvg}
-              <strong style="color: var(--color-text-primary, #ffffff); font-size: 15px;">${story.source}</strong>
+              <strong class="tweet-account-name" style="font-size: 15px;">${story.source}</strong>
             </div>
-            <span>${getStoryTimeLabel(story)}</span>
+            <span class="tweet-detail-time">${getStoryTimeLabel(story)}</span>
           </div>
           
           <div class="tweet-content-wrapper" style="margin-bottom: 24px;">
             ${story.imageUrl && !/nitter\.net\/pic/i.test(story.imageUrl) && !/placeholder/i.test(story.imageUrl)
-              ? `<img class="detail-image" src="${story.imageUrl}" alt="" style="width: 100%; border-radius: 12px; margin-bottom: 16px; object-fit: cover; max-height: 400px; border: 1px solid var(--border-color, #2f3336);" />`
+              ? `<img class="detail-image" src="${story.imageUrl}" alt="" style="width: 100%; border-radius: 12px; margin-bottom: 16px; object-fit: cover; max-height: 400px; border: 1px solid var(--border-color, #334155);" />`
               : ""
             }
-            <div class="tweet-full-text" style="font-size: 16px; line-height: 1.6; color: var(--color-text-primary, #e1e8ed); white-space: pre-wrap; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-weight: 400; word-break: break-word;">
+            <div class="tweet-full-text" style="font-size: 16px; line-height: 1.6; white-space: pre-wrap; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-weight: 400; word-break: break-word;">
               ${story.summary}
             </div>
           </div>
@@ -4647,6 +4649,16 @@ storyList?.addEventListener("click", async (event) => {
     window.history.pushState({}, "", `#market-${state.selectedMarketId}`);
     render();
     window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+
+  const readTweetButton = target.closest<HTMLButtonElement>(".read-tweet-btn");
+  if (readTweetButton) {
+    event.stopPropagation();
+    const storyCard = target.closest<HTMLElement>("[data-story-id]");
+    if (storyCard) {
+      openStory(Number(storyCard.dataset.storyId), true);
+    }
     return;
   }
 
