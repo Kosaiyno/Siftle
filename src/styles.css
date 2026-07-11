@@ -10287,3 +10287,36 @@ html, body, .app-shell, main {
   }
 }
 
+/* Sleek X/Twitter Action Button Styles */
+.twitter-btn {
+  background: #0f1419 !important;
+  color: #ffffff !important;
+  border: 1px solid #2f3336 !important;
+  transition: all 0.2s ease !important;
+}
+
+.twitter-btn:hover {
+  background: #272c30 !important;
+  border-color: #536471 !important;
+  transform: translateY(-1px) !important;
+}
+
+:root[data-theme="light"] .twitter-btn {
+  background: #0f1419 !important;
+  color: #ffffff !important;
+  border-color: #0f1419 !important;
+}
+
+:root[data-theme="light"] .twitter-btn:hover {
+  background: #272c30 !important;
+  border-color: #272c30 !important;
+}
+
+.x-logo-svg {
+  transition: transform 0.2s ease;
+}
+
+.twitter-btn:hover .x-logo-svg {
+  transform: scale(1.1);
+}
+

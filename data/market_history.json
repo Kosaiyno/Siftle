@@ -1,5 +1,125 @@
 [
   {
+    "id": "wc-spain-belgium-qualify",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "optionMarket": true,
+    "question": "Which team will qualify in Spain vs Belgium?",
+    "options": [
+      {
+        "id": "spain",
+        "label": "Spain"
+      },
+      {
+        "id": "belgium",
+        "label": "Belgium"
+      }
+    ],
+    "probability": 0,
+    "kickoffAt": "2026-07-10T19:00:00Z",
+    "expectedEndAt": "2026-07-10T21:30:00Z",
+    "resolveAfter": "2026-07-10T22:30:00Z",
+    "closes": "Resolved",
+    "resolution": "Resolves to the team that officially qualifies in Spain vs Belgium, including extra time and penalties.",
+    "threadTopic": "Spain vs Belgium Qualify Watch",
+    "volume": "$0",
+    "traders": "0",
+    "liquidity": "$0",
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80"
+  },
+  {
+    "id": "wc-spain-concede-belgium",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "optionMarket": true,
+    "question": "Will Spain concede against Belgium?",
+    "options": [
+      {
+        "id": "yes",
+        "label": "Yes"
+      },
+      {
+        "id": "no",
+        "label": "No"
+      }
+    ],
+    "probability": 0,
+    "kickoffAt": "2026-07-10T19:00:00Z",
+    "expectedEndAt": "2026-07-10T21:30:00Z",
+    "resolveAfter": "2026-07-10T22:30:00Z",
+    "closes": "Resolved",
+    "resolution": "Resolves Yes if Belgium are officially credited with at least one goal against Spain in regular time or extra time. Penalty shootout goals do not count. Otherwise resolves No.",
+    "threadTopic": "Spain Clean Sheet Watch vs Belgium",
+    "volume": "$0",
+    "traders": "0",
+    "liquidity": "$0",
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80"
+  },
+  {
+    "id": "wc-yamal-goal-assist-belgium",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "optionMarket": true,
+    "question": "Will Lamine Yamal record a goal or assist against Belgium?",
+    "options": [
+      {
+        "id": "yes",
+        "label": "Yes"
+      },
+      {
+        "id": "no",
+        "label": "No"
+      }
+    ],
+    "probability": 0,
+    "kickoffAt": "2026-07-10T19:00:00Z",
+    "expectedEndAt": "2026-07-10T21:30:00Z",
+    "resolveAfter": "2026-07-10T22:30:00Z",
+    "closes": "Resolved",
+    "resolution": "Resolves Yes if Lamine Yamal is officially credited with at least one goal or at least one assist for Spain against Belgium in regular time or extra time. Penalty shootout goals do not count. If he does not play or is not officially credited with a goal or assist, resolves No.",
+    "threadTopic": "Lamine Yamal Impact vs Belgium",
+    "volume": "$0",
+    "traders": "0",
+    "liquidity": "$0",
+    "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80"
+  },
+  {
+    "id": "wc-spain-goals-belgium",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "optionMarket": true,
+    "question": "How many goals will Spain score in regular + extra time vs Belgium?",
+    "options": [
+      {
+        "id": "0",
+        "label": "0 goals"
+      },
+      {
+        "id": "1",
+        "label": "1 goal"
+      },
+      {
+        "id": "2",
+        "label": "2 goals"
+      },
+      {
+        "id": "3-plus",
+        "label": "3+ goals"
+      }
+    ],
+    "probability": 0,
+    "kickoffAt": "2026-07-10T19:00:00Z",
+    "expectedEndAt": "2026-07-10T21:30:00Z",
+    "resolveAfter": "2026-07-10T22:30:00Z",
+    "closes": "Resolved",
+    "resolution": "Resolves to the correct option matching the number of goals officially scored by Spain against Belgium in regular time and extra time. Penalty shootout goals do not count.",
+    "threadTopic": "Spain Goals vs Belgium",
+    "volume": "$0",
+    "traders": "0",
+    "liquidity": "$0",
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80"
+  },
+  {
     "id": "wc-vinicius-score-japan",
     "category": "Sports",
     "timeframe": "Daily",
@@ -172,10 +292,22 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
     "options": [
-      { "id": "under-4", "label": "Under 4 saves" },
-      { "id": "exactly-4", "label": "Exactly 4 saves" },
-      { "id": "exactly-5", "label": "Exactly 5 saves" },
-      { "id": "six-plus", "label": "6+ saves" }
+      {
+        "id": "under-4",
+        "label": "Under 4 saves"
+      },
+      {
+        "id": "exactly-4",
+        "label": "Exactly 4 saves"
+      },
+      {
+        "id": "exactly-5",
+        "label": "Exactly 5 saves"
+      },
+      {
+        "id": "six-plus",
+        "label": "6+ saves"
+      }
     ]
   },
   {
@@ -195,10 +327,22 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
     "options": [
-      { "id": "scores-only", "label": "Scores only" },
-      { "id": "assists-only", "label": "Assists only" },
-      { "id": "score-and-assist", "label": "Scores and assists" },
-      { "id": "no-goal-assist", "label": "No goal or assist" }
+      {
+        "id": "scores-only",
+        "label": "Scores only"
+      },
+      {
+        "id": "assists-only",
+        "label": "Assists only"
+      },
+      {
+        "id": "score-and-assist",
+        "label": "Scores and assists"
+      },
+      {
+        "id": "no-goal-assist",
+        "label": "No goal or assist"
+      }
     ]
   },
   {
@@ -218,10 +362,22 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80",
     "options": [
-      { "id": "salah-shot", "label": "Salah shot on target" },
-      { "id": "australia-shot", "label": "Australia shot on target" },
-      { "id": "yellow-card", "label": "Yellow card" },
-      { "id": "goal", "label": "Goal" }
+      {
+        "id": "salah-shot",
+        "label": "Salah shot on target"
+      },
+      {
+        "id": "australia-shot",
+        "label": "Australia shot on target"
+      },
+      {
+        "id": "yellow-card",
+        "label": "Yellow card"
+      },
+      {
+        "id": "goal",
+        "label": "Goal"
+      }
     ]
   },
   {
@@ -241,10 +397,22 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&w=1200&q=80",
     "options": [
-      { "id": "colombia-leading", "label": "Colombia leading" },
-      { "id": "ghana-leading", "label": "Ghana leading" },
-      { "id": "level-with-goals", "label": "Level with goals" },
-      { "id": "nil-nil", "label": "0-0" }
+      {
+        "id": "colombia-leading",
+        "label": "Colombia leading"
+      },
+      {
+        "id": "ghana-leading",
+        "label": "Ghana leading"
+      },
+      {
+        "id": "level-with-goals",
+        "label": "Level with goals"
+      },
+      {
+        "id": "nil-nil",
+        "label": "0-0"
+      }
     ]
   },
   {

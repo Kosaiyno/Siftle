@@ -1,89 +1,131 @@
 [
   {
-    "id": "wc-spain-belgium-qualify",
+    "id": "wc-england-norway-qualify",
     "category": "Sports",
     "timeframe": "Daily",
     "optionMarket": true,
-    "question": "Which team will qualify in Spain vs Belgium?",
+    "question": "Which team will qualify in England vs Norway?",
     "options": [
-      { "id": "spain", "label": "Spain" },
-      { "id": "belgium", "label": "Belgium" }
+      {
+        "id": "england",
+        "label": "England"
+      },
+      {
+        "id": "norway",
+        "label": "Norway"
+      }
     ],
     "probability": 0,
-    "kickoffAt": "2026-07-10T19:00:00Z",
-    "expectedEndAt": "2026-07-10T21:30:00Z",
-    "resolveAfter": "2026-07-10T22:30:00Z",
-    "closes": "Jul 10, 7:40 PM GMT+1",
-    "resolution": "Resolves to the team that officially qualifies in Spain vs Belgium, including extra time and penalties.",
-    "threadTopic": "Spain vs Belgium Qualify Watch",
+    "kickoffAt": "2026-07-11T19:00:00Z",
+    "expectedEndAt": "2026-07-11T21:30:00Z",
+    "resolveAfter": "2026-07-11T22:30:00Z",
+    "closes": "Jul 11, 7:40 PM GMT+1",
+    "resolution": "Resolves to the team that officially qualifies in England vs Norway, including extra time and penalties.",
+    "threadTopic": "England vs Norway Qualify Watch",
     "volume": "$0",
     "traders": "0",
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80"
   },
   {
-    "id": "wc-spain-concede-belgium",
+    "id": "wc-haaland-kane-goals",
     "category": "Sports",
     "timeframe": "Daily",
     "optionMarket": true,
-    "question": "Will Spain concede against Belgium?",
+    "question": "Who will score more goals: Erling Haaland or Harry Kane?",
     "options": [
-      { "id": "yes", "label": "Yes" },
-      { "id": "no", "label": "No" }
+      {
+        "id": "haaland",
+        "label": "Erling Haaland"
+      },
+      {
+        "id": "kane",
+        "label": "Harry Kane"
+      },
+      {
+        "id": "tie",
+        "label": "Tie / Both score equal"
+      }
     ],
     "probability": 0,
-    "kickoffAt": "2026-07-10T19:00:00Z",
-    "expectedEndAt": "2026-07-10T21:30:00Z",
-    "resolveAfter": "2026-07-10T22:30:00Z",
-    "closes": "Jul 10, 7:40 PM GMT+1",
-    "resolution": "Resolves Yes if Belgium are officially credited with at least one goal against Spain in regular time or extra time. Penalty shootout goals do not count. Otherwise resolves No.",
-    "threadTopic": "Spain Clean Sheet Watch vs Belgium",
+    "kickoffAt": "2026-07-11T19:00:00Z",
+    "expectedEndAt": "2026-07-11T21:30:00Z",
+    "resolveAfter": "2026-07-11T22:30:00Z",
+    "closes": "Jul 11, 7:40 PM GMT+1",
+    "resolution": "Resolves to the player who scores the most official goals in regular and extra time (excluding penalty shootouts). Ties resolve to 'Tie / Both score equal'.",
+    "threadTopic": "Haaland vs Kane Goal Battle",
     "volume": "$0",
     "traders": "0",
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80"
   },
   {
-    "id": "wc-yamal-goal-assist-belgium",
+    "id": "wc-england-norway-yellow-cards",
     "category": "Sports",
     "timeframe": "Daily",
     "optionMarket": true,
-    "question": "Will Lamine Yamal record a goal or assist against Belgium?",
+    "question": "How many total yellow cards will be shown in England vs Norway?",
     "options": [
-      { "id": "yes", "label": "Yes" },
-      { "id": "no", "label": "No" }
+      {
+        "id": "0-2",
+        "label": "0 to 2 yellow cards"
+      },
+      {
+        "id": "3-4",
+        "label": "3 to 4 yellow cards"
+      },
+      {
+        "id": "5-6",
+        "label": "5 to 6 yellow cards"
+      },
+      {
+        "id": "7-plus",
+        "label": "7+ yellow cards"
+      }
     ],
     "probability": 0,
-    "kickoffAt": "2026-07-10T19:00:00Z",
-    "expectedEndAt": "2026-07-10T21:30:00Z",
-    "resolveAfter": "2026-07-10T22:30:00Z",
-    "closes": "Jul 10, 7:40 PM GMT+1",
-    "resolution": "Resolves Yes if Lamine Yamal is officially credited with at least one goal or at least one assist for Spain against Belgium in regular time or extra time. Penalty shootout goals do not count. If he does not play or is not officially credited with a goal or assist, resolves No.",
-    "threadTopic": "Lamine Yamal Impact vs Belgium",
+    "kickoffAt": "2026-07-11T19:00:00Z",
+    "expectedEndAt": "2026-07-11T21:30:00Z",
+    "resolveAfter": "2026-07-11T22:30:00Z",
+    "closes": "Jul 11, 7:40 PM GMT+1",
+    "resolution": "Resolves to the correct option based on the total number of official yellow cards shown to players on the field in regular time and extra time. Red cards, second yellow cards, or yellow cards to coaching staff do not count.",
+    "threadTopic": "England vs Norway Disciplinary Record",
     "volume": "$0",
     "traders": "0",
     "liquidity": "$0",
-    "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80"
   },
   {
-    "id": "wc-spain-goals-belgium",
+    "id": "wc-england-norway-victory-method",
     "category": "Sports",
     "timeframe": "Daily",
     "optionMarket": true,
-    "question": "How many goals will Spain score in regular + extra time vs Belgium?",
+    "question": "What will be the method of victory in England vs Norway?",
     "options": [
-      { "id": "0", "label": "0 goals" },
-      { "id": "1", "label": "1 goal" },
-      { "id": "2", "label": "2 goals" },
-      { "id": "3-plus", "label": "3+ goals" }
+      {
+        "id": "england-90",
+        "label": "England wins in 90 minutes"
+      },
+      {
+        "id": "norway-90",
+        "label": "Norway wins in 90 minutes"
+      },
+      {
+        "id": "either-et",
+        "label": "Either team wins in Extra Time"
+      },
+      {
+        "id": "either-penalties",
+        "label": "Either team wins via Penalty Shootout"
+      }
     ],
     "probability": 0,
-    "kickoffAt": "2026-07-10T19:00:00Z",
-    "expectedEndAt": "2026-07-10T21:30:00Z",
-    "resolveAfter": "2026-07-10T22:30:00Z",
-    "closes": "Jul 10, 7:40 PM GMT+1",
-    "resolution": "Resolves to the correct option matching the number of goals officially scored by Spain against Belgium in regular time and extra time. Penalty shootout goals do not count.",
-    "threadTopic": "Spain Goals vs Belgium",
+    "kickoffAt": "2026-07-11T19:00:00Z",
+    "expectedEndAt": "2026-07-11T21:30:00Z",
+    "resolveAfter": "2026-07-11T22:30:00Z",
+    "closes": "Jul 11, 7:40 PM GMT+1",
+    "resolution": "Resolves to the correct option based on the official final match outcome. If the match goes to extra time or penalties, it resolves to either-et or either-penalties.",
+    "threadTopic": "England vs Norway Method of Victory",
     "volume": "$0",
     "traders": "0",
     "liquidity": "$0",
