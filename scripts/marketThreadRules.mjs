@@ -281,6 +281,42 @@ export const marketThreadRules = {
       ["world cup", "fifa", "match", "game", "win", "victory", "extra time", "penalties", "shootout", "method", "kick-off", "weather", "thunderstorms", "lightning"]
     ],
     reject: ["women", "futsal", "olympics"]
+  },
+  "wc-spain-france-qualify": {
+    category: "Sports",
+    topic: "Spain vs France Qualify Watch",
+    includeAnySets: [
+      ["spain", "france"],
+      ["world cup", "fifa", "2026", "knockout", "qualify", "qualification", "advance", "advances", "semi-final", "semifinal", "final", "preview", "team news", "lineup", "match", "extra time", "penalties"]
+    ],
+    reject: ["women", "futsal", "olympics"]
+  },
+  "wc-spain-france-first-half-result": {
+    category: "Sports",
+    topic: "Spain vs France World Cup Semi-Final",
+    includeAnySets: [
+      ["spain", "france"],
+      ["world cup", "semi-final", "semifinal", "halftime", "half-time", "first half", "lead", "leading", "draw", "draws", "match", "game", "preview", "merino", "mbappe", "olise"]
+    ],
+    reject: ["women", "futsal", "olympics"]
+  },
+  "wc-spain-france-first-goal": {
+    category: "Sports",
+    topic: "Spain vs France World Cup Semi-Final",
+    includeAnySets: [
+      ["spain", "france"],
+      ["world cup", "goal", "goals", "score", "scores", "scorer", "first goal", "opening goal", "match", "game", "preview", "merino", "mbappe", "olise"]
+    ],
+    reject: ["women", "futsal", "olympics"]
+  },
+  "wc-spain-france-shots-target": {
+    category: "Sports",
+    topic: "Spain vs France World Cup Semi-Final",
+    includeAnySets: [
+      ["spain", "france"],
+      ["world cup", "match", "game", "preview", "shots", "shots on target", "shot", "target", "attack", "attacking", "volume"]
+    ],
+    reject: ["women", "futsal", "olympics"]
   }
 };
 

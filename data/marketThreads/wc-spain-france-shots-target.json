@@ -1,0 +1,40 @@
+{
+  "topic": "Spain vs France World Cup Semi-Final",
+  "current": {
+    "headline": "Mbappé and Olise Lead Unbeaten France Into Dallas Semi-final",
+    "category": "Sports",
+    "summary": "Kylian Mbappé (8 goals) and playmaker Michael Olise (6 assists) prepare to lead France against Spain in Dallas. Les Bleus remain unbeaten after a 2-0 win over Morocco.",
+    "source": "skysports.com",
+    "sourceUrl": "https://www.skysports.com/football/news/12026/07/12/kylian-mbappe-michael-olise-france-spain-world-cup-semi-final",
+    "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
+    "publishedAt": "2026-07-12T14:38:50.873Z",
+    "readTime": "2 min read",
+    "postedAt": "10m ago",
+    "accent": "teal",
+    "saved": false,
+    "type": "news",
+    "id": 2
+  },
+  "items": [
+    {
+      "headline": "Deschamps: Spain is the ultimate test for France's World Cup hopes",
+      "category": "Sports",
+      "summary": "Didier Deschamps paid tribute to Spain's tactical identity ahead of their semi-final showdown in Arlington, labeling Luis de la Fuente's side the most complete team in the tournament.",
+      "source": "bbc.co.uk",
+      "sourceUrl": "https://www.bbc.co.uk/sport/football/articles/didier-deschamps-france-spain-tactics",
+      "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "2026-07-12T14:33:50.873Z",
+      "readTime": "3 min read",
+      "postedAt": "15m ago",
+      "accent": "violet",
+      "saved": false,
+      "type": "news",
+      "id": 3
+    }
+  ],
+  "reviewed_by": "feed-market-bridge",
+  "count": 2,
+  "market_id": "wc-spain-france-shots-target",
+  "saved_market_thread": true,
+  "saved_at": "2026-07-12T14:48:50.891Z"
+}

@@ -1,1 +1,130 @@
-[]
+[
+  {
+    "id": "wc-spain-france-qualify",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "optionMarket": true,
+    "question": "Which team will qualify in Spain vs France?",
+    "options": [
+      {
+        "id": "spain",
+        "label": "Spain"
+      },
+      {
+        "id": "france",
+        "label": "France"
+      }
+    ],
+    "probability": 0,
+    "kickoffAt": "2026-07-14T19:00:00Z",
+    "expectedEndAt": "2026-07-14T21:30:00Z",
+    "resolveAfter": "2026-07-14T22:30:00Z",
+    "closes": "Jul 14, 7:40 PM GMT+1",
+    "resolution": "Resolves to the team that officially qualifies for the World Cup Final, including extra time and penalties.",
+    "threadTopic": "Spain vs France Qualify Watch",
+    "volume": "$0",
+    "traders": "0",
+    "liquidity": "$0",
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80"
+  },
+  {
+    "id": "wc-spain-france-first-half-result",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "optionMarket": true,
+    "question": "What will be the half-time result in Spain vs France?",
+    "options": [
+      {
+        "id": "spain-lead",
+        "label": "Spain leading"
+      },
+      {
+        "id": "france-lead",
+        "label": "France leading"
+      },
+      {
+        "id": "draw",
+        "label": "Draw / Level"
+      }
+    ],
+    "probability": 0,
+    "kickoffAt": "2026-07-14T19:00:00Z",
+    "expectedEndAt": "2026-07-14T21:30:00Z",
+    "resolveAfter": "2026-07-14T22:30:00Z",
+    "closes": "Jul 14, 7:40 PM GMT+1",
+    "resolution": "Resolves to the scoreline when the referee blows the whistle for half-time (45 minutes + injury time).",
+    "threadTopic": "Spain vs France World Cup Semi-Final",
+    "volume": "$0",
+    "traders": "0",
+    "liquidity": "$0",
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80"
+  },
+  {
+    "id": "wc-spain-france-first-goal",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "optionMarket": true,
+    "question": "Which team will score the first goal in Spain vs France?",
+    "options": [
+      {
+        "id": "spain",
+        "label": "Spain"
+      },
+      {
+        "id": "france",
+        "label": "France"
+      },
+      {
+        "id": "no-goals",
+        "label": "No goals scored in 90 minutes"
+      }
+    ],
+    "probability": 0,
+    "kickoffAt": "2026-07-14T19:00:00Z",
+    "expectedEndAt": "2026-07-14T21:30:00Z",
+    "resolveAfter": "2026-07-14T22:30:00Z",
+    "closes": "Jul 14, 7:40 PM GMT+1",
+    "resolution": "Resolves to the team that scores the first official goal of the match (regular time + extra time). Own goals count in favor of the attacking team.",
+    "threadTopic": "Spain vs France World Cup Semi-Final",
+    "volume": "$0",
+    "traders": "0",
+    "liquidity": "$0",
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80"
+  },
+  {
+    "id": "wc-spain-france-shots-target",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "optionMarket": true,
+    "question": "How many total shots on target will be recorded in Spain vs France?",
+    "options": [
+      {
+        "id": "0-7",
+        "label": "0 to 7 shots"
+      },
+      {
+        "id": "8-10",
+        "label": "8 to 10 shots"
+      },
+      {
+        "id": "11-13",
+        "label": "11 to 13 shots"
+      },
+      {
+        "id": "14-plus",
+        "label": "14+ shots"
+      }
+    ],
+    "probability": 0,
+    "kickoffAt": "2026-07-14T19:00:00Z",
+    "expectedEndAt": "2026-07-14T21:30:00Z",
+    "resolveAfter": "2026-07-14T22:30:00Z",
+    "closes": "Jul 14, 7:40 PM GMT+1",
+    "resolution": "Resolves to the combined sum of official shots on target for both teams during regular and extra time (excluding penalty shootouts).",
+    "threadTopic": "Spain vs France World Cup Semi-Final",
+    "volume": "$0",
+    "traders": "0",
+    "liquidity": "$0",
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80"
+  }
+]
