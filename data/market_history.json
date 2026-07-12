@@ -1,5 +1,141 @@
 [
   {
+    "id": "wc-england-norway-qualify",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "optionMarket": true,
+    "question": "Which team will qualify in England vs Norway?",
+    "options": [
+      {
+        "id": "england",
+        "label": "England"
+      },
+      {
+        "id": "norway",
+        "label": "Norway"
+      }
+    ],
+    "probability": 0,
+    "kickoffAt": "2026-07-11T21:00:00Z",
+    "expectedEndAt": "2026-07-11T23:30:00Z",
+    "resolveAfter": "2026-07-12T00:30:00Z",
+    "closes": "Resolved",
+    "resolution": "Resolves to the team that officially qualifies in England vs Norway, including extra time and penalties.",
+    "threadTopic": "England vs Norway Qualify Watch",
+    "volume": "$0",
+    "traders": "0",
+    "liquidity": "$0",
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
+    "resolvedWinningOptionId": "england"
+  },
+  {
+    "id": "wc-haaland-kane-goals",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "optionMarket": true,
+    "question": "Who will score more goals: Erling Haaland or Harry Kane?",
+    "options": [
+      {
+        "id": "haaland",
+        "label": "Erling Haaland"
+      },
+      {
+        "id": "kane",
+        "label": "Harry Kane"
+      },
+      {
+        "id": "tie",
+        "label": "Tie / Both score equal"
+      }
+    ],
+    "probability": 0,
+    "kickoffAt": "2026-07-11T21:00:00Z",
+    "expectedEndAt": "2026-07-11T23:30:00Z",
+    "resolveAfter": "2026-07-12T00:30:00Z",
+    "closes": "Resolved",
+    "resolution": "Resolves to the player who scores the most official goals in regular and extra time (excluding penalty shootouts). Ties resolve to 'Tie / Both score equal'.",
+    "threadTopic": "Haaland vs Kane Goal Battle",
+    "volume": "$0",
+    "traders": "0",
+    "liquidity": "$0",
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
+    "resolvedWinningOptionId": "tie"
+  },
+  {
+    "id": "wc-england-norway-yellow-cards",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "optionMarket": true,
+    "question": "How many total yellow cards will be shown in England vs Norway?",
+    "options": [
+      {
+        "id": "0-2",
+        "label": "0 to 2 yellow cards"
+      },
+      {
+        "id": "3-4",
+        "label": "3 to 4 yellow cards"
+      },
+      {
+        "id": "5-6",
+        "label": "5 to 6 yellow cards"
+      },
+      {
+        "id": "7-plus",
+        "label": "7+ yellow cards"
+      }
+    ],
+    "probability": 0,
+    "kickoffAt": "2026-07-11T21:00:00Z",
+    "expectedEndAt": "2026-07-11T23:30:00Z",
+    "resolveAfter": "2026-07-12T00:30:00Z",
+    "closes": "Resolved",
+    "resolution": "Resolves to the correct option based on the total number of official yellow cards shown to players on the field in regular time and extra time. Red cards, second yellow cards, or yellow cards to coaching staff do not count.",
+    "threadTopic": "England vs Norway Disciplinary Record",
+    "volume": "$0",
+    "traders": "0",
+    "liquidity": "$0",
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
+    "resolvedWinningOptionId": "0-2"
+  },
+  {
+    "id": "wc-england-norway-victory-method",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "optionMarket": true,
+    "question": "What will be the method of victory in England vs Norway?",
+    "options": [
+      {
+        "id": "england-90",
+        "label": "England wins in 90 minutes"
+      },
+      {
+        "id": "norway-90",
+        "label": "Norway wins in 90 minutes"
+      },
+      {
+        "id": "either-et",
+        "label": "Either team wins in Extra Time"
+      },
+      {
+        "id": "either-penalties",
+        "label": "Either team wins via Penalty Shootout"
+      }
+    ],
+    "probability": 0,
+    "kickoffAt": "2026-07-11T21:00:00Z",
+    "expectedEndAt": "2026-07-11T23:30:00Z",
+    "resolveAfter": "2026-07-12T00:30:00Z",
+    "closes": "Resolved",
+    "resolution": "Resolves to the correct option based on the official final match outcome. If the match goes to extra time or penalties, it resolves to either-et or either-penalties.",
+    "threadTopic": "England vs Norway Method of Victory",
+    "volume": "$0",
+    "traders": "0",
+    "liquidity": "$0",
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
+    "resolvedWinningOptionId": "either-et"
+  },
+  {
     "id": "wc-spain-belgium-qualify",
     "category": "Sports",
     "timeframe": "Daily",
