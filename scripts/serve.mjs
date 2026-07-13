@@ -2982,11 +2982,19 @@ const buildLocalStructuredBriefingParts = (article, thread = null) => {
     30
   );
 
+  const whatHappenedLower = whatHappened.toLowerCase();
+  const remainingSentences = sentences.filter(s => {
+    const cleanS = s.trim().toLowerCase();
+    if (cleanS.length < 5) return false;
+    return !whatHappenedLower.includes(cleanS) && !cleanS.includes(whatHappenedLower);
+  });
+
   const keyPoints = dedupeNormalizedLines([
-    truncateSentence(sentences[0] || baseText || headline, 16),
-    truncateSentence(sentences[1] || sentences[0] || headline, 16),
-    truncateSentence(headline || baseText, 14)
-  ]);
+    remainingSentences[0] ? truncateSentence(remainingSentences[0], 16) : null,
+    remainingSentences[1] ? truncateSentence(remainingSentences[1], 16) : null,
+    truncateSentence(headline, 14),
+    "Further context will depend on the next verified update in this story thread."
+  ].filter(Boolean));
 
   const takeaway = truncateSentence(`${headline || "This update"} is the main confirmed signal available right now.`, 22);
 

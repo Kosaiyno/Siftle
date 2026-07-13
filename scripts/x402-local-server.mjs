@@ -132,5 +132,5 @@ app.get("/x402/ai-briefing", (req, res, next) => {
 app.listen(port, () => {
   console.log(`Siftle x402 seller running on port ${port}`);
   console.log(`Paid endpoint: http://localhost:${port}/x402/ai-briefing?topic=Germany%20coach%20news`);
-  console.log(`Price: ${price}`);
+  console.log("Price: dynamic");
 });
