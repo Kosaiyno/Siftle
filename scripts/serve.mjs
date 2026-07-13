@@ -4237,11 +4237,56 @@ const runWithConcurrency = async (items, limit, worker) => {
   return results;
 };
 
+const calculateAutonomousUnlockPrice = (story) => {
+  const headline = String(story.headline || "").toLowerCase();
+  const summary = String(story.summary || "").toLowerCase();
+  let price = 0.000010; // base price: 10 units ($0.000010)
+
+  const premiumKeywords = [
+    "injury", "injured", "ruled out", "fracture", "torn", "acl", "hamstring",
+    "transfer", "signing", "agreement", "medical", "here we go", "deal", "bid", "agree",
+    "win", "defeat", "victory", "eliminate", "knockout", "semifinal", "semi-final", "final", "qualify",
+    "champions league", "world cup", "mbappe", "yamal", "haaland", "kane", "bellingham"
+  ];
+
+  const mediumKeywords = [
+    "lineup", "tactics", "preview", "weather", "kick-off", "kickoff", "stadium"
+  ];
+
+  let matchesPremium = 0;
+  for (const kw of premiumKeywords) {
+    if (headline.includes(kw) || summary.includes(kw)) matchesPremium++;
+  }
+
+  let matchesMedium = 0;
+  for (const kw of mediumKeywords) {
+    if (headline.includes(kw) || summary.includes(kw)) matchesMedium++;
+  }
+
+  if (matchesPremium > 0) {
+    price += Math.min(0.0008, matchesPremium * 0.0002);
+  } else if (matchesMedium > 0) {
+    price += Math.min(0.0001, matchesMedium * 0.00005);
+  }
+
+  // Add deterministic headline hash variation (up to $0.000099 / 99 units)
+  let hash = 0;
+  for (let i = 0; i < headline.length; i++) {
+    hash = (hash << 5) - hash + headline.charCodeAt(i);
+    hash |= 0;
+  }
+  const variation = Math.abs(hash % 100) / 1000000;
+  price = Number((price + variation).toFixed(6));
+
+  return Math.min(0.001, Math.max(0.000001, price));
+};
+
 const buildStories = async (articles) => {
   const stories = articles.map((article, index) => {
     const category = inferCategory(article, article.category);
+    const type = article.type || "news";
 
-    return {
+    const story = {
       id: index + 1,
       headline: stripHtml(article.headline),
       category,
@@ -4254,8 +4299,14 @@ const buildStories = async (articles) => {
       postedAt: relativeTime(article.publishedAt),
       accent: accentForCategory(category),
       saved: false,
-      type: article.type || "news"
+      type
     };
+
+    if (type === "news") {
+      story.unlockPriceUsdc = calculateAutonomousUnlockPrice(story);
+    }
+
+    return story;
   });
 
   if (shouldAutoSummarizeWith0G) {
@@ -6477,13 +6528,14 @@ const warmGatewayBalanceInBackground = (privateKey, minimumUsdc) => {
   })();
 };
 
-const payWithLocalX402Script = async (privateKey, targetUrl) => {
+const payWithLocalX402Script = async (privateKey, targetUrl, customPriceUsdc = null) => {
+  const priceToUse = customPriceUsdc !== null ? customPriceUsdc : x402PriceUsdc;
   const scriptPath = resolve(root, "scripts", "x402-local-pay.mjs");
   const env = {
     ...process.env,
     X402_PRIVATE_KEY: privateKey,
     X402_TARGET_URL: targetUrl,
-    X402_AUTO_DEPOSIT_USDC: process.env.X402_AUTO_DEPOSIT_USDC || x402PriceUsdc.toFixed(6)
+    X402_AUTO_DEPOSIT_USDC: process.env.X402_AUTO_DEPOSIT_USDC || priceToUse.toFixed(6)
   };
   const { stdout, stderr } = await execFileAsync(process.execPath, [scriptPath], {
     cwd: root,
@@ -7409,6 +7461,21 @@ const hasValidSummaryUnlock = (sourceUrl, walletAddress, token) => {
     && (!entry.walletAddress || entry.walletAddress === normalizeWalletAddress(walletAddress));
 };
 
+const findStoryPriceByUrl = (sourceUrl) => {
+  const categories = ["Sports", "Gaming", "Politics", "Crypto", "All"];
+  const normalizedTarget = String(sourceUrl || "").trim().toLowerCase();
+  for (const category of categories) {
+    const snapshot = readPublishedSnapshot(category);
+    if (snapshot?.top_stories) {
+      const match = snapshot.top_stories.find(s => String(s.sourceUrl || "").trim().toLowerCase() === normalizedTarget);
+      if (match && typeof match.unlockPriceUsdc === "number") {
+        return match.unlockPriceUsdc;
+      }
+    }
+  }
+  return aiBriefingUnlockUsdc;
+};
+
 async function verifyAiBriefingUnlockPayment({ sourceUrl, walletAddress, txHash }) {
   const cleanWallet = normalizeWalletAddress(walletAddress);
   const cleanTreasury = normalizeWalletAddress(aiBriefingTreasuryAddress);
@@ -7427,7 +7494,8 @@ async function verifyAiBriefingUnlockPayment({ sourceUrl, walletAddress, txHash 
   const receipt = await leaderboardProvider.getTransactionReceipt(txHash);
   if (!receipt || receipt.status !== 1) throw new Error("Unlock transaction is not confirmed");
 
-  const requiredAmount = parseUnits(aiBriefingUnlockUsdc.toFixed(6), 6);
+  const storyPrice = findStoryPriceByUrl(sourceUrl);
+  const requiredAmount = parseUnits(storyPrice.toFixed(6), 6);
   const paid = receipt.logs.some((log) => {
     if (String(log.address).toLowerCase() !== ARC_TESTNET_USDC.toLowerCase()) return false;
     if (log.topics?.[0] !== erc20TransferTopic) return false;
@@ -9509,7 +9577,7 @@ const server = createServer(async (request, response) => {
     try {
       const body = await readJsonBody(request);
       const sessionToken = String(body.sessionToken || "");
-      const amountUsdc = aiBriefingUnlockUsdc;
+      const amountUsdc = findStoryPriceByUrl(body.sourceUrl || body.topic || "");
       const treasuryAddress = normalizeWalletAddress(body.treasuryAddress || aiBriefingTreasuryAddress);
       const topic = String(body.topic || body.sourceUrl || "Siftle AI briefing").slice(0, 140);
       const user = await getBackendWalletUserBySession(sessionToken);
@@ -9538,14 +9606,14 @@ const server = createServer(async (request, response) => {
             throw new Error("x402 seller did not advertise a compatible payment option");
           }
 
-          warmGatewayBalanceInBackground(user.privateKey, x402PriceUsdc);
-          await ensureGatewayAvailableBalance(buyer, x402PriceUsdc);
-          const paid = await payWithLocalX402Script(user.privateKey, targetUrl);
+          warmGatewayBalanceInBackground(user.privateKey, amountUsdc);
+          await ensureGatewayAvailableBalance(buyer, amountUsdc);
+          const paid = await payWithLocalX402Script(user.privateKey, targetUrl, amountUsdc);
           const txHash = `0xmockunlockx402${Math.random().toString(16).slice(2)}`;
           console.log("[AI BRIEFING] x402 payment completed", {
             walletAddress: user.address,
             targetUrl,
-            paymentAmount: paid.paymentAmount || x402PriceUsdc
+            paymentAmount: paid.paymentAmount || amountUsdc
           });
 
           let bonus = null;
@@ -10575,6 +10643,20 @@ const server = createServer(async (request, response) => {
     sendJson(response, 200, {
       enabled: aiBriefingUnlockUsdc > 0,
       amountUsdc: backendWalletUseX402 ? x402PriceUsdc : aiBriefingUnlockUsdc,
+      treasuryAddress: aiBriefingTreasuryAddress
+    });
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/summary/price" && request.method === "GET") {
+    const sourceUrl = requestUrl.searchParams.get("sourceUrl");
+    if (!sourceUrl) {
+      sendJson(response, 400, { error: "Missing sourceUrl query parameter" });
+      return;
+    }
+    const price = findStoryPriceByUrl(sourceUrl);
+    sendJson(response, 200, {
+      priceUsdc: price,
       treasuryAddress: aiBriefingTreasuryAddress
     });
     return;

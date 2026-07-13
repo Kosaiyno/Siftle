@@ -923,9 +923,23 @@ const unlockAndLoadStorySummary = async (story: BriefingTarget, force = false): 
       throw new Error(config.error || "AI briefing is not configured");
     }
 
+    // Query the autonomous pricing agent for this specific article's price
+    let amountToPay = Number(config.amountUsdc) || 0.05;
+    try {
+      const priceRes = await fetch(apiUrl(`/api/summary/price?sourceUrl=${encodeURIComponent(story.sourceUrl)}`));
+      if (priceRes.ok) {
+        const priceData = await priceRes.json();
+        if (typeof priceData.priceUsdc === "number") {
+          amountToPay = priceData.priceUsdc;
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to retrieve autonomous price, falling back to default:", (err as any).message);
+    }
+
     const txHash = await payAiBriefingUnlock(
       config.treasuryAddress,
-      Number(config.amountUsdc) || 0.05,
+      amountToPay,
       (status) => {
         if (menuStatus) menuStatus.textContent = status;
         state.briefingStatusByUrl[story.sourceUrl] = status;
@@ -934,9 +948,7 @@ const unlockAndLoadStorySummary = async (story: BriefingTarget, force = false): 
       { sourceUrl: story.sourceUrl, topic: story.headline }
     );
 
-    state.briefingStatusByUrl[story.sourceUrl] = config.x402Enabled
-      ? `Payment successful. Loading AI briefing paid with ${config.amountUsdc} testnet USDC through x402.`
-      : `Payment successful. Loading AI briefing paid with ${config.amountUsdc} testnet USDC.`;
+    state.briefingStatusByUrl[story.sourceUrl] = `Briefing unlocked! Charged ${amountToPay} USDC (priced by Siftle AI Agent)`;
     render();
 
     const unlockRes = await fetch(apiUrl("/api/summary/unlock"), {

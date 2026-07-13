@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/writeClientConfig.mjs && tsc --noEmit && node scripts/buildClient.mjs",
-    "start": "node scripts/serve.mjs",
+    "start": "node --max-old-space-size=4096 scripts/serve.mjs",
     "test": "node --test scripts/*.test.mjs",
     "x402:server": "node scripts/x402-local-server.mjs",
     "x402:pay": "node scripts/x402-local-pay.mjs"

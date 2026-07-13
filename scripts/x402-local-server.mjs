@@ -37,7 +37,48 @@ if (!sellerAddress && process.env.ARC_DEPLOYER_PRIVATE_KEY) {
     sellerAddress = "";
   }
 }
-const price = process.env.X402_PRICE || "$0.001";
+const calculateAutonomousUnlockPrice = (topic) => {
+  const headline = String(topic || "").toLowerCase();
+  let price = 0.000010; // base price: 10 units ($0.000010)
+
+  const premiumKeywords = [
+    "injury", "injured", "ruled out", "fracture", "torn", "acl", "hamstring",
+    "transfer", "signing", "agreement", "medical", "here we go", "deal", "bid", "agree",
+    "win", "defeat", "victory", "eliminate", "knockout", "semifinal", "semi-final", "final", "qualify",
+    "champions league", "world cup", "mbappe", "yamal", "haaland", "kane", "bellingham"
+  ];
+
+  const mediumKeywords = [
+    "lineup", "tactics", "preview", "weather", "kick-off", "kickoff", "stadium"
+  ];
+
+  let matchesPremium = 0;
+  for (const kw of premiumKeywords) {
+    if (headline.includes(kw)) matchesPremium++;
+  }
+
+  let matchesMedium = 0;
+  for (const kw of mediumKeywords) {
+    if (headline.includes(kw)) matchesMedium++;
+  }
+
+  if (matchesPremium > 0) {
+    price += Math.min(0.0008, matchesPremium * 0.0002);
+  } else if (matchesMedium > 0) {
+    price += Math.min(0.0001, matchesMedium * 0.00005);
+  }
+
+  // Add deterministic headline hash variation (up to $0.000099 / 99 units)
+  let hash = 0;
+  for (let i = 0; i < headline.length; i++) {
+    hash = (hash << 5) - hash + headline.charCodeAt(i);
+    hash |= 0;
+  }
+  const variation = Math.abs(hash % 100) / 1000000;
+  price = Number((price + variation).toFixed(6));
+
+  return Math.min(0.001, Math.max(0.000001, price));
+};
 
 if (!/^0x[a-fA-F0-9]{40}$/.test(sellerAddress)) {
   console.error("Set X402_SELLER_ADDRESS to the EVM address that should receive x402 payments.");
@@ -52,10 +93,15 @@ const gateway = createGatewayMiddleware({
 });
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true, service: "siftle-x402-seller", price });
+  res.json({ ok: true, service: "siftle-x402-seller", price: "dynamic" });
 });
 
-app.get("/x402/ai-briefing", gateway.require(price), (req, res) => {
+app.get("/x402/ai-briefing", (req, res, next) => {
+  const topic = String(req.query.topic || "World Cup market news").slice(0, 140);
+  const storyPrice = calculateAutonomousUnlockPrice(topic);
+  const priceStr = `$${storyPrice.toFixed(6)}`;
+  gateway.require(priceStr)(req, res, next);
+}, (req, res) => {
   const topic = String(req.query.topic || "World Cup market news").slice(0, 140);
   const paid = req.payment || {};
   console.log("[X402 SELLER] Paid AI briefing", {
