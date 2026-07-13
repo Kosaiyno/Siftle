@@ -91,23 +91,26 @@ The agent operates in three distinct phases:
 
 ## Prediction Markets
 
-Siftle markets are simple Yes/No questions tied to real events.
+Siftle’s prediction markets are not limited to simple Yes/No questions. They are designed to capture complex, multi-outcome sports dynamics by structuring pool-based prediction mechanics directly on the Arc L1 network.
 
-Users can:
+### Multi-Option and Volume-Based Markets
+Instead of binary outcomes, Siftle supports multi-option prediction pools. This is used to predict continuous metrics such as attacking volume, player performance, and match statistics:
+- **Attacking Volume (Multi-Option)**: e.g., *"How many total shots on target will be recorded in Spain vs. France?"* with bracketed ranges:
+  - `0 to 7 shots`
+  - `8 to 10 shots`
+  - `11 to 13 shots`
+  - `14+ shots`
+- **Player & Team Performance**: Specialized outcomes such as *"Which team will qualify?"* or *"First Team to Score"*.
+- **Pool Split Mechanics**: Users buy shares in their predicted option. When the market resolves, the total pool accumulated from all losing options is split proportionally among the winning share-holders based on their purchase volume.
 
-- Connect a Circle wallet
-- Claim testnet USDC
-- Buy Yes or No shares
-- Exit shares before resolution when the market is still open
-- Claim after the market resolves if they are on the winning side
-- Earn leaderboard points from resolved Daily markets
+### Automated On-Chain Rules Engine
+Market outcomes are resolved automatically using Siftle's backend rules engine (`scripts/marketThreadRules.mjs`). 
+- **Continuous Feeds**: Markets are bound to live game threads and news channels.
+- **Rule Verification**: The engine evaluates real-time sports feed data and verifies outcomes on-chain using official metrics (excluding penalty shootouts for match stats).
+- **Automated Payouts**: Once verified, the smart contracts execute the pool split and distribute payouts dynamically to winning wallets on Arc L1.
 
-Markets are designed to be easy to understand:
-
-- Winning side splits the final pool.
-- Losing side funds the winning side.
-- Resolved markets cannot be traded.
-- Payout is shown as projected payout while the market is open.
+### The Informational Moat
+Siftle connects prediction directly to our paid AI briefings. A user reads the dynamic-price AI briefings (which compile team news, injury statuses, or tactical changes) to gain an informational edge, allowing them to make highly informed predictions on multi-option volume brackets before pools lock.
 
 ## Leaderboard
 
