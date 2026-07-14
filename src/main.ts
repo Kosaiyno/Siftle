@@ -4962,6 +4962,7 @@ const fetchUnlockConfig = async (): Promise<void> => {
 render();
 renderWalletState();
 void fetchUnlockConfig();
+ensureFeedLoaded(state.activeCategory);
 void loadMarkets().then(() => {
   reportStoredLocalMarketTraders();
   render();
