@@ -53,7 +53,7 @@ const threadReviewSameDayCandidateLimit = Number(process.env.THREAD_REVIEW_SAME_
 const threadReviewCandidatesPerDay = Number(process.env.THREAD_REVIEW_CANDIDATES_PER_DAY ?? 3);
 const threadHistoryWindowHours = Number(process.env.THREAD_HISTORY_WINDOW_HOURS ?? 48);
 const enableFeedThreadPreviews = process.env.ENABLE_FEED_THREAD_PREVIEWS === "true";
-const allowMockFeeds = process.env.ALLOW_MOCK_FEEDS === "true";
+const allowMockFeeds = process.env.ALLOW_MOCK_FEEDS !== "false";
 
 const loadEnv = () => {
   const envPath = join(root, ".env");
