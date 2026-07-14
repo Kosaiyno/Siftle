@@ -31,6 +31,8 @@ import {
 import { analyzeFeedSnapshot, isDevelopmentFallbackStory } from "./feedQuality.mjs";
 import { marketThreadRules, storyMatchesMarketThreadRule } from "./marketThreadRules.mjs";
 import { isWithinThreadHistoryWindow } from "./threadWindow.mjs";
+let archiveFileCache = new Map();
+let threadHistorySnapshotCache = new Map();
 
 const root = resolve(process.cwd());
 const execFileAsync = promisify(execFile);
@@ -233,17 +235,21 @@ const backendWalletUsersFile = join(root, ".siftle", "backend-wallet-users.json"
 const backendWalletSessionsFile = join(root, ".siftle", "backend-wallet-sessions.json");
 const backendWalletMigrationsFile = join(root, ".siftle", "backend-wallet-migrations.json");
 
+let appDateFormatter = null;
 const getAppDate = (value = new Date()) => {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return null;
 
-  const parts = new Intl.DateTimeFormat("en", {
-    timeZone: appTimeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).formatToParts(date);
+  if (!appDateFormatter) {
+    appDateFormatter = new Intl.DateTimeFormat("en", {
+      timeZone: appTimeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    });
+  }
 
+  const parts = appDateFormatter.formatToParts(date);
   const year = parts.find((part) => part.type === "year")?.value;
   const month = parts.find((part) => part.type === "month")?.value;
   const day = parts.find((part) => part.type === "day")?.value;
@@ -1279,7 +1285,10 @@ export const isCandidatePrior = (candidate, story) => {
 
 export const getHistoricalThreadCandidates = (story, currentStories = []) => {
   const currentDate = storyDateKey(story, getTodayKey());
-  const currentTime = new Date(story?.publishedAt || 0).getTime();
+  const storyPublishedDate = story?.publishedAt ? new Date(story.publishedAt) : new Date(getTodayKey() + "T00:00:00");
+  const currentTime = Number.isNaN(storyPublishedDate.getTime())
+    ? new Date(getTodayKey() + "T00:00:00").getTime()
+    : storyPublishedDate.getTime();
   const hasCurrentTime = !Number.isNaN(currentTime);
   const minCandidateDate = hasCurrentTime
     ? new Date(currentTime - Math.max(1, threadHistoryWindowHours) * 60 * 60 * 1000).toISOString().slice(0, 10)
@@ -1346,8 +1355,15 @@ export const getHistoricalThreadCandidates = (story, currentStories = []) => {
         if (categorySlug.toLowerCase() !== "all" && categorySlug.toLowerCase() !== story.category.toLowerCase()) continue;
 
         try {
+          const filePath = join(archiveDir, filename);
+          let snapshot = archiveFileCache.get(filePath);
+          if (!snapshot) {
+            console.log(`[DIAGNOSTIC] Parsing archive file: ${filename} (date: ${date}, minDate: ${minCandidateDate}, curDate: ${currentDate})`);
+            snapshot = JSON.parse(readFileSync(filePath, "utf8"));
+            archiveFileCache.set(filePath, snapshot);
+          }
           cachedSnapshots.push({
-            snapshot: JSON.parse(readFileSync(join(archiveDir, filename), "utf8")),
+            snapshot,
             fallbackDate: date
           });
         } catch {
@@ -1364,7 +1380,13 @@ export const getHistoricalThreadCandidates = (story, currentStories = []) => {
         if (categorySlug.toLowerCase() !== "all" && categorySlug.toLowerCase() !== story.category.toLowerCase()) continue;
 
         try {
-          const snapshot = JSON.parse(readFileSync(join(publishedDir, filename), "utf8"));
+          const filePath = join(publishedDir, filename);
+          let snapshot = archiveFileCache.get(filePath);
+          if (!snapshot) {
+            console.log(`[DIAGNOSTIC] Parsing published file: ${filename}`);
+            snapshot = JSON.parse(readFileSync(filePath, "utf8"));
+            archiveFileCache.set(filePath, snapshot);
+          }
           if (currentDate && snapshot.date > currentDate) continue;
           if (minCandidateDate && snapshot.date && snapshot.date < minCandidateDate) continue;
           cachedSnapshots.push({ snapshot, fallbackDate: snapshot.date });
@@ -1537,13 +1559,13 @@ const getLocalThreadForStory = (story, currentStories = []) => {
 };
 
 let threadReviewBudgetRemaining = threadReviewBudgetPerRefresh;
-let threadHistorySnapshotCache = new Map();
 
 const resetThreadReviewBudget = () => {
   threadReviewBudgetRemaining = Math.max(0, threadReviewBudgetPerRefresh);
 };
 
 const resetThreadHistorySnapshotCache = () => {
+  archiveFileCache = new Map();
   threadHistorySnapshotCache = new Map();
 };
 
@@ -2436,7 +2458,7 @@ const extractAttribute = (value = "", attribute) => {
   return match?.[1] ?? "";
 };
 
-const isTruncatedHeadline = (headline = "") => /\.\.\.$|…$/.test(headline.trim());
+const isTruncatedHeadline = (headline = "") => /\.\.\.$|\u2026$/.test(headline.trim());
 
 const titleFromUrlSlug = (url = "") => {
   try {
@@ -2586,21 +2608,34 @@ const isFreshArticle = (article) => {
   return ageHours >= 0 && ageHours <= maxArticleAgeHours;
 };
 
-const isArticleOnAppDate = (article, date) => {
-  const articleDate = getAppDate(article.publishedAt);
-  if (!articleDate) return true;
-  if (articleDate === date) return true;
-
+const appDateKeysCache = new Map();
+const getAppDateKeys = (date) => {
+  if (appDateKeysCache.has(date)) return appDateKeysCache.get(date);
   try {
     const today = new Date(date + "T00:00:00");
     const yesterday = new Date(today.getTime() - 24 * 3600 * 1000);
     const dayBefore = new Date(today.getTime() - 2 * 24 * 3600 * 1000);
     const yesterdayKey = getAppDate(yesterday);
     const dayBeforeKey = getAppDate(dayBefore);
-    return articleDate === yesterdayKey || articleDate === dayBeforeKey;
+    const keys = { yesterdayKey, dayBeforeKey };
+    appDateKeysCache.set(date, keys);
+    return keys;
   } catch {
-    return false;
+    return { yesterdayKey: null, dayBeforeKey: null };
   }
+};
+
+const isArticleOnAppDate = (article, date) => {
+  const articleDate = getAppDate(article.publishedAt);
+  if (!articleDate) return true;
+
+  const targetYear = date.slice(0, 4);
+  const normalizedArticleDate = targetYear + articleDate.slice(4);
+
+  if (normalizedArticleDate === date) return true;
+
+  const { yesterdayKey, dayBeforeKey } = getAppDateKeys(date);
+  return normalizedArticleDate === yesterdayKey || normalizedArticleDate === dayBeforeKey;
 };
 
 const filterStoriesByAppDate = (stories = [], date) =>
