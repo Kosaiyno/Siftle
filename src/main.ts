@@ -166,7 +166,7 @@ const state: {
   briefingStatusByUrl: Record<string, string>;
   claimingMarketIds: Record<string, boolean>;
 } = {
-  activeSurface: "markets",
+  activeSurface: "feed",
   profileUsername: null,
   selectedMarketId: null,
   marketOrderMode: "buy",
