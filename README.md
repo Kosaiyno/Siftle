@@ -65,7 +65,7 @@ Why this matters:
 
 The current implementation uses Arc testnet USDC for product validation. Testnet funds have no real financial value.
 
-## Autonomous AI Pricing Agent (Lepton Scale)
+## Autonomous AI Pricing Agent
 
 Siftle implements an **Autonomous AI Pricing Agent** that dynamically values news briefings down to the micro-scale of **0.000001 USDC** (1 unit) to **0.001000 USDC** (1000 units), capturing the literal Greek definition of a lepton (one millionth of a dollar).
 
