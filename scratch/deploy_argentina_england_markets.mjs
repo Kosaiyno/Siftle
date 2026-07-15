@@ -1,4 +1,10 @@
-[
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+const root = "C:/Users/user/Desktop/Siftle";
+const activePath = join(root, "data", "active_markets.json");
+
+const newMarkets = [
   {
     "id": "wc-argentina-england-qualify",
     "category": "Sports",
@@ -6,14 +12,8 @@
     "optionMarket": true,
     "question": "Which team will qualify in Argentina vs England?",
     "options": [
-      {
-        "id": "argentina",
-        "label": "Argentina"
-      },
-      {
-        "id": "england",
-        "label": "England"
-      }
+      { "id": "argentina", "label": "Argentina" },
+      { "id": "england", "label": "England" }
     ],
     "probability": 0,
     "kickoffAt": "2026-07-15T19:00:00Z",
@@ -34,18 +34,9 @@
     "optionMarket": true,
     "question": "Who will receive the higher match rating: Lionel Messi or Jude Bellingham?",
     "options": [
-      {
-        "id": "messi",
-        "label": "Lionel Messi"
-      },
-      {
-        "id": "bellingham",
-        "label": "Jude Bellingham"
-      },
-      {
-        "id": "tie",
-        "label": "Tie / Exact equal rating"
-      }
+      { "id": "messi", "label": "Lionel Messi" },
+      { "id": "bellingham", "label": "Jude Bellingham" },
+      { "id": "tie", "label": "Tie / Exact equal rating" }
     ],
     "probability": 0,
     "kickoffAt": "2026-07-15T19:00:00Z",
@@ -66,22 +57,10 @@
     "optionMarket": true,
     "question": "How many total combined shots on target will be recorded in Argentina vs England?",
     "options": [
-      {
-        "id": "0-6",
-        "label": "0 to 6 shots"
-      },
-      {
-        "id": "7-9",
-        "label": "7 to 9 shots"
-      },
-      {
-        "id": "10-12",
-        "label": "10 to 12 shots"
-      },
-      {
-        "id": "13-plus",
-        "label": "13+ shots"
-      }
+      { "id": "0-6", "label": "0 to 6 shots" },
+      { "id": "7-9", "label": "7 to 9 shots" },
+      { "id": "10-12", "label": "10 to 12 shots" },
+      { "id": "13-plus", "label": "13+ shots" }
     ],
     "probability": 0,
     "kickoffAt": "2026-07-15T19:00:00Z",
@@ -102,22 +81,10 @@
     "optionMarket": true,
     "question": "What will be the method of victory in Argentina vs England?",
     "options": [
-      {
-        "id": "argentina-regular",
-        "label": "Argentina in regular time"
-      },
-      {
-        "id": "england-regular",
-        "label": "England in regular time"
-      },
-      {
-        "id": "either-et",
-        "label": "Either team in extra time"
-      },
-      {
-        "id": "either-penalties",
-        "label": "Either team via penalty shootout"
-      }
+      { "id": "argentina-regular", "label": "Argentina in regular time" },
+      { "id": "england-regular", "label": "England in regular time" },
+      { "id": "either-et", "label": "Either team in extra time" },
+      { "id": "either-penalties", "label": "Either team via penalty shootout" }
     ],
     "probability": 0,
     "kickoffAt": "2026-07-15T19:00:00Z",
@@ -131,4 +98,7 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80"
   }
-]
+];
+
+writeFileSync(activePath, JSON.stringify(newMarkets, null, 2), "utf8");
+console.log("Deployed 4 new Argentina vs England daily prediction markets to active_markets.json.");
