@@ -102,6 +102,8 @@ if (ARC_TESTNET_RPC_URL === "https://rpc.testnet.arc.network") {
   ARC_TESTNET_RPC_URL = "https://5042002.rpc.thirdweb.com";
 }
 const leaderboardProvider = new JsonRpcProvider(ARC_TESTNET_RPC_URL, ARC_TESTNET_CHAIN_ID);
+const logsProvider = new JsonRpcProvider("https://rpc.testnet.arc.network", ARC_TESTNET_CHAIN_ID);
+const fallbackLogsProvider = new JsonRpcProvider("https://5042002.rpc.thirdweb.com", ARC_TESTNET_CHAIN_ID);
 const LOCAL_TEST_MARKET_ADDRESS = "0x0000000000000000000000000000000000000101";
 const isLocalTestMarketAddress = (address) => /^0x0{36}01[0-9a-f]{2}$/i.test(String(address || ""));
 const marketAddresses = {
@@ -8081,7 +8083,12 @@ async function collectMarketTradeSignals(marketAddress, fromBlockHint = null) {
   const firstActivityBlocks = new Map();
 
   const processLogsChunked = async (topic, onLog) => {
-    const latest = await leaderboardProvider.getBlockNumber();
+    let latest;
+    try {
+      latest = await logsProvider.getBlockNumber();
+    } catch {
+      latest = await leaderboardProvider.getBlockNumber();
+    }
     const safeChunk = leaderboardLogChunkSize;
     const lookback = leaderboardLogLookbackBlocks;
     const hintedStart = Number(fromBlockHint);
@@ -8091,12 +8098,23 @@ async function collectMarketTradeSignals(marketAddress, fromBlockHint = null) {
 
     for (let fromBlock = start; fromBlock <= latest; fromBlock += safeChunk) {
       const toBlock = Math.min(fromBlock + safeChunk - 1, latest);
-      const logs = await leaderboardProvider.getLogs({
-        address: marketAddress,
-        topics: [topic],
-        fromBlock,
-        toBlock
-      });
+      let logs;
+      try {
+        logs = await logsProvider.getLogs({
+          address: marketAddress,
+          topics: [topic],
+          fromBlock,
+          toBlock
+        });
+      } catch (err) {
+        console.warn("[LEADERBOARD] Primary logsProvider failed, using fallback:", err.message);
+        logs = await fallbackLogsProvider.getLogs({
+          address: marketAddress,
+          topics: [topic],
+          fromBlock,
+          toBlock
+        });
+      }
       for (const log of logs) {
         onLog(log);
       }
