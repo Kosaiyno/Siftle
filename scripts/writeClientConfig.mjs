@@ -18,7 +18,10 @@ const apiBase = (publicValue("SIFTLE_API_BASE") || publicValue("PUBLIC_API_BASE_
 const reownProjectId = publicValue("REOWN_PROJECT_ID") || publicValue("WALLETCONNECT_PROJECT_ID");
 const circleAppId = publicValue("CIRCLE_APP_ID");
 const arcUsdcAddress = publicValue("ARC_TESTNET_USDC_ADDRESS");
-const arcRpcUrl = publicValue("ARC_TESTNET_RPC_URL");
+let arcRpcUrl = publicValue("ARC_TESTNET_RPC_URL");
+if (!arcRpcUrl || arcRpcUrl === "https://rpc.testnet.arc.network") {
+  arcRpcUrl = "https://5042002.rpc.thirdweb.com";
+}
 const marketAddresses = {
   "wc-spain-austria-spread": publicValue("SIFTLE_MARKET_SPAIN_AUSTRIA_SPREAD_ADDRESS") || "0x123580A3Af7E22a591a460E249346a3beeCEd930",
   "wc-ronaldo-score-assist-croatia": publicValue("SIFTLE_MARKET_RONALDO_CROATIA_ADDRESS") || "0xBccb9DC161C1260F3074752f4D1579a74bD86490",
