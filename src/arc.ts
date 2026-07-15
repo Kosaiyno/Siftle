@@ -7,9 +7,13 @@ export const ARC_TESTNET_USDC =
   "0x3600000000000000000000000000000000000000";
 export const ARC_TESTNET_EXPLORER = "https://testnet.arcscan.app";
 export const ARC_TESTNET_FAUCET = "https://faucet.circle.com/";
-export const ARC_TESTNET_RPC_URL =
-  (window as any).ARC_TESTNET_RPC_URL ||
-  "https://5042002.rpc.thirdweb.com";
+export const ARC_TESTNET_RPC_URL = (() => {
+  const url = (window as any).ARC_TESTNET_RPC_URL;
+  if (!url || url === "https://rpc.testnet.arc.network") {
+    return "https://5042002.rpc.thirdweb.com";
+  }
+  return url;
+})();
 
 let apiBase = ((window as any).SIFTLE_API_BASE || "").replace(/\/$/, "");
 if (!apiBase && typeof window !== "undefined") {
