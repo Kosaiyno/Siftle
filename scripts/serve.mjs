@@ -1298,9 +1298,12 @@ export const getHistoricalThreadCandidates = (story, currentStories = []) => {
   const cacheKey = `${String(story.category || "")}:${currentDate || ""}:${minCandidateDate || ""}`;
 
   const addSnapshotStories = (snapshot, fallbackDate) => {
-    const threadContextByUrl = new Map();
+     const threadContextByUrl = new Map();
     const archivedThreadStories = Object.values(snapshot?.threads ?? {}).flatMap((thread) => {
-      const items = [...(thread?.current ? [thread.current] : []), ...(thread?.items ?? [])];
+      const items = [
+        ...(thread?.current ? [stripStoryTempFields(thread.current)] : []),
+        ...(thread?.items ?? []).map(stripStoryTempFields)
+      ];
       const context = {
         topic: thread?.topic ?? "",
         reviewed_by: thread?.reviewed_by ?? "",
@@ -1330,7 +1333,7 @@ export const getHistoricalThreadCandidates = (story, currentStories = []) => {
 
       seen.add(url);
       candidates.push({
-        ...candidate,
+        ...stripStoryTempFields(candidate),
         ...(threadContextByUrl.has(url) ? { __threadContext: threadContextByUrl.get(url) } : {}),
         postedAt: candidate.publishedAt ? formatArchiveStoryDate(candidate.publishedAt, candidateDate ?? fallbackDate) : candidate.postedAt
       });
@@ -5186,6 +5189,14 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
     return { skipped: false, error: err.message, status: publishStatus };
   } finally {
     publishStatus.is_running = false;
+    resetThreadHistorySnapshotCache();
+    if (global.gc) {
+      try {
+        global.gc();
+      } catch (err) {
+        // ignore
+      }
+    }
   }
 };
 
