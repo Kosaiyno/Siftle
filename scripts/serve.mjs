@@ -97,7 +97,10 @@ if (process.env.ARC_DEPLOYER_PRIVATE_KEY) {
 }
 const resolverAddress = (process.env.SIFTLE_MARKET_RESOLVER ?? "").toLowerCase();
 const ARC_TESTNET_CHAIN_ID = Number(process.env.ARC_TESTNET_CHAIN_ID ?? 5042002);
-const ARC_TESTNET_RPC_URL = process.env.ARC_TESTNET_RPC_URL || "https://5042002.rpc.thirdweb.com";
+let ARC_TESTNET_RPC_URL = process.env.ARC_TESTNET_RPC_URL || "https://5042002.rpc.thirdweb.com";
+if (ARC_TESTNET_RPC_URL === "https://rpc.testnet.arc.network") {
+  ARC_TESTNET_RPC_URL = "https://5042002.rpc.thirdweb.com";
+}
 const leaderboardProvider = new JsonRpcProvider(ARC_TESTNET_RPC_URL, ARC_TESTNET_CHAIN_ID);
 const LOCAL_TEST_MARKET_ADDRESS = "0x0000000000000000000000000000000000000101";
 const isLocalTestMarketAddress = (address) => /^0x0{36}01[0-9a-f]{2}$/i.test(String(address || ""));
@@ -6550,7 +6553,8 @@ const warmGatewayBalanceInBackground = (privateKey, minimumUsdc) => {
     try {
       const buyer = new GatewayClient({
         chain: "arcTestnet",
-        privateKey
+        privateKey,
+        rpcUrl: ARC_TESTNET_RPC_URL
       });
       walletAddress = buyer.address.toLowerCase();
       if (activeWarmups.has(walletAddress)) {
@@ -9649,7 +9653,8 @@ const server = createServer(async (request, response) => {
           const targetUrl = `${x402TargetUrlBase}?topic=${encodeURIComponent(topic)}`;
           const buyer = new GatewayClient({
             chain: "arcTestnet",
-            privateKey: user.privateKey
+            privateKey: user.privateKey,
+            rpcUrl: ARC_TESTNET_RPC_URL
           });
           const support = await buyer.supports(targetUrl).catch(err => {
             console.error("[AI BRIEFING] buyer.supports threw error:", err, "cause:", err?.cause);
