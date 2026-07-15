@@ -8,6 +8,9 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 setDefaultResultOrder("ipv4first");
+process.on("unhandledRejection", (reason, promise) => {
+  console.warn("[UNHANDLED REJECTION] Promise:", promise, "Reason:", reason);
+});
 import nodemailer from "nodemailer";
 import { createZGComputeNetworkReadOnlyBroker } from "@0gfoundation/0g-compute-ts-sdk";
 import { GatewayClient } from "@circle-fin/x402-batching/client";
