@@ -7,7 +7,9 @@ export const ARC_TESTNET_USDC =
   "0x3600000000000000000000000000000000000000";
 export const ARC_TESTNET_EXPLORER = "https://testnet.arcscan.app";
 export const ARC_TESTNET_FAUCET = "https://faucet.circle.com/";
-export const ARC_TESTNET_RPC_URL = "https://rpc.testnet.arc.network";
+export const ARC_TESTNET_RPC_URL =
+  (window as any).ARC_TESTNET_RPC_URL ||
+  "https://5042002.rpc.thirdweb.com";
 
 let apiBase = ((window as any).SIFTLE_API_BASE || "").replace(/\/$/, "");
 if (!apiBase && typeof window !== "undefined") {
