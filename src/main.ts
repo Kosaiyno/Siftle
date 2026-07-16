@@ -1184,8 +1184,8 @@ function syncStoryFromHash(): void {
     return;
   }
 
-  // Fallback default: Markets first
-  state.activeSurface = "markets";
+  // Fallback default: News first
+  state.activeSurface = "feed";
   state.selectedMarketId = null;
   state.selectedStoryId = null;
   state.selectedThreadUrl = null;
