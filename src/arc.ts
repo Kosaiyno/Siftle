@@ -225,19 +225,29 @@ const injectStyles = () => {
       backdrop-filter: blur(20px);
     }
     .circle-auth-close {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      background: none;
-      border: none;
-      color: #94a3b8;
-      font-size: 28px;
-      cursor: pointer;
-      line-height: 1;
-      transition: color 0.2s;
+      position: absolute !important;
+      top: 16px !important;
+      right: 16px !important;
+      width: 32px !important;
+      height: 32px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      background: rgba(255, 255, 255, 0.05) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      border-radius: 50% !important;
+      color: #94a3b8 !important;
+      font-size: 20px !important;
+      cursor: pointer !important;
+      line-height: 1 !important;
+      transition: all 0.2s ease !important;
+      box-shadow: none !important;
     }
     .circle-auth-close:hover {
-      color: #f8fafc;
+      background: rgba(255, 255, 255, 0.1) !important;
+      border-color: rgba(255, 255, 255, 0.2) !important;
+      color: #f8fafc !important;
+      transform: scale(1.05) !important;
     }
     .circle-auth-logo {
       display: flex;
@@ -246,9 +256,11 @@ const injectStyles = () => {
       margin-bottom: 24px;
     }
     .circle-auth-logo img {
-      width: 64px;
-      height: 64px;
-      margin-bottom: 12px;
+      width: 56px !important;
+      height: 56px !important;
+      border-radius: 12px !important;
+      box-shadow: 0 8px 16px rgba(59, 130, 246, 0.25) !important;
+      margin-bottom: 12px !important;
     }
     .circle-auth-logo h2 {
       font-family: 'Space Grotesk', sans-serif;
@@ -300,26 +312,29 @@ const injectStyles = () => {
       box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
     }
     .circle-auth-btn {
-      width: 100%;
-      height: 48px;
-      background: linear-gradient(135deg, #4f46e5, #6366f1);
-      border: none;
-      border-radius: 12px;
-      color: #ffffff;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.2s, transform 0.1s;
+      width: 100% !important;
+      height: 48px !important;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+      border: none !important;
+      border-radius: 12px !important;
+      color: #ffffff !important;
+      font-size: 15px !important;
+      font-weight: 600 !important;
+      cursor: pointer !important;
+      transition: all 0.2s ease !important;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25) !important;
     }
     .circle-auth-btn:hover {
-      opacity: 0.95;
+      opacity: 0.95 !important;
+      transform: translateY(-1px) !important;
+      box-shadow: 0 6px 16px rgba(59, 130, 246, 0.35) !important;
     }
     .circle-auth-btn:active {
-      transform: scale(0.98);
+      transform: scale(0.98) !important;
     }
     .circle-auth-btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
+      opacity: 0.6 !important;
+      cursor: not-allowed !important;
     }
     .circle-auth-back {
       background: none;

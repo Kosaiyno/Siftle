@@ -10439,14 +10439,22 @@ html, body, .app-shell, main {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #3b82f6;
-  color: #ffffff;
-  font-weight: bold;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  font-size: 0.82rem;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+  font-size: 0.85rem !important;
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2) !important;
+}
+.guide-step-desc {
+  margin: 0 !important;
+  font-size: 0.82rem !important;
+  color: #94a3b8 !important;
+  line-height: 1.55 !important;
+  text-align: left !important;
 }
 
 /* Light theme overrides for Guide Modal */
@@ -10460,8 +10468,11 @@ html, body, .app-shell, main {
   box-shadow: 0 24px 48px rgba(16, 21, 34, 0.15) !important;
 }
 [data-theme="light"] .guide-step-num {
-  background: #3b82f6 !important;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
   color: #ffffff !important;
+}
+[data-theme="light"] .guide-step-desc {
+  color: #475569 !important;
 }
 
 

@@ -442,45 +442,45 @@ const openGuideModal = (): void => {
       <button class="circle-auth-close" id="guideClose" type="button">&times;</button>
       <div class="circle-auth-logo">
         <img src="./assets/siftle-logo-small.png" alt="Siftle logo" />
-        <h2>Welcome to Siftle!</h2>
+        <h2 style="font-family: Outfit, sans-serif; font-weight: 700; letter-spacing: -0.02em;">Welcome to Siftle!</h2>
       </div>
-      <p class="circle-auth-subtitle" style="margin-bottom: 20px;">Siftle is an AI-powered prediction and news briefing platform. Here is how to get started in 4 simple steps:</p>
+      <p class="circle-auth-subtitle" style="margin-bottom: 24px; font-family: Inter, sans-serif; line-height: 1.5; font-size: 0.88rem;">Siftle is an AI-powered prediction and news briefing platform. Here is how to get started in 4 simple steps:</p>
       
       <div class="guide-steps-list">
         <div class="guide-step-item">
           <span class="guide-step-num">1</span>
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <h4 style="margin: 0; font-size: 0.92rem; font-weight: bold; color: var(--market-text-main, #ffffff);">Sign In (No Passwords)</h4>
-            <p style="margin: 0; font-size: 0.8rem; color: var(--market-text-sub, #94a3b8); line-height: 1.4; text-align: left;">Tap <strong>"Sign in"</strong> in the top right, enter your email, and verify. We instantly generate a secure Web3 wallet for you.</p>
+          <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
+            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--market-text-main, #ffffff); font-family: Outfit, sans-serif; text-align: left;">Sign In (No Passwords)</h4>
+            <p class="guide-step-desc">Tap <strong>"Sign in"</strong> in the top right, enter your email, and verify. We instantly generate a secure Web3 wallet for you.</p>
           </div>
         </div>
         
         <div class="guide-step-item">
           <span class="guide-step-num">2</span>
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <h4 style="margin: 0; font-size: 0.92rem; font-weight: bold; color: var(--market-text-main, #ffffff);">Claim Free Testnet USDC</h4>
-            <p style="margin: 0; font-size: 0.8rem; color: var(--market-text-sub, #94a3b8); line-height: 1.4; text-align: left;">Go to the <strong>Portfolio</strong> tab (bottom nav) and click <strong>"Claim Faucet"</strong>. You will receive free testnet USDC to use across the app.</p>
+          <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
+            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--market-text-main, #ffffff); font-family: Outfit, sans-serif; text-align: left;">Claim Free Testnet USDC</h4>
+            <p class="guide-step-desc">Go to the <strong>Portfolio</strong> tab (bottom nav) and click <strong>"Claim Faucet"</strong>. You will receive free testnet USDC to use across the app.</p>
           </div>
         </div>
         
         <div class="guide-step-item">
           <span class="guide-step-num">3</span>
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <h4 style="margin: 0; font-size: 0.92rem; font-weight: bold; color: var(--market-text-main, #ffffff);">Unlock AI Briefings</h4>
-            <p style="margin: 0; font-size: 0.8rem; color: var(--market-text-sub, #94a3b8); line-height: 1.4; text-align: left;">Click <strong>"AI briefing"</strong> on any news card to unlock a quick AI summary of what happened, key points, and takeaways (cost: 0.001 USDC).</p>
+          <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
+            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--market-text-main, #ffffff); font-family: Outfit, sans-serif; text-align: left;">Unlock AI Briefings</h4>
+            <p class="guide-step-desc">Click <strong>"AI briefing"</strong> on any news card to unlock a quick AI summary of what happened, key points, and takeaways (cost: 0.001 USDC).</p>
           </div>
         </div>
         
         <div class="guide-step-item">
           <span class="guide-step-num">4</span>
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <h4 style="margin: 0; font-size: 0.92rem; font-weight: bold; color: var(--market-text-main, #ffffff);">Predict on Markets & Earn</h4>
-            <p style="margin: 0; font-size: 0.8rem; color: var(--market-text-sub, #94a3b8); line-height: 1.4; text-align: left;">Visit the <strong>Markets</strong> tab to place predictions using your USDC. Trade shares to climb the <strong>Leaderboard</strong> and win prizes.</p>
+          <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
+            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--market-text-main, #ffffff); font-family: Outfit, sans-serif; text-align: left;">Predict on Markets & Earn</h4>
+            <p class="guide-step-desc">Visit the <strong>Markets</strong> tab to place predictions using your USDC. Trade shares to climb the <strong>Leaderboard</strong> and win prizes.</p>
           </div>
         </div>
       </div>
       
-      <button id="guideStartBtn" class="circle-auth-btn" type="button" style="width: 100%;">Get Started</button>
+      <button id="guideStartBtn" class="circle-auth-btn" type="button" style="width: 100%; font-family: Outfit, sans-serif;">Get Started</button>
     </div>
   `;
 
