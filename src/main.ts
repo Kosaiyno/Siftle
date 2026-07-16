@@ -450,7 +450,7 @@ const openGuideModal = (): void => {
         <div class="guide-step-item">
           <span class="guide-step-num">1</span>
           <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
-            <h4 class="guide-step-title">Sign In (No Passwords)</h4>
+            <h4 class="guide-step-title">Sign In</h4>
             <p class="guide-step-desc">Tap <strong>"Sign in"</strong> in the top right, enter your email, and verify. We instantly generate a secure Web3 wallet for you.</p>
           </div>
         </div>
@@ -459,7 +459,7 @@ const openGuideModal = (): void => {
           <span class="guide-step-num">2</span>
           <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
             <h4 class="guide-step-title">Get Free USDC</h4>
-            <p class="guide-step-desc">We auto-fund your wallet with <strong>0.02 USDC</strong> (covers 200 AI briefings) upon sign-in so you can start reading immediately! No manual faucet claiming needed.</p>
+            <p class="guide-step-desc">We automatically fund your wallet with <strong>0.02 USDC</strong> upon sign-in so you can start reading immediately with no manual setup.</p>
           </div>
         </div>
         
@@ -467,7 +467,7 @@ const openGuideModal = (): void => {
           <span class="guide-step-num">3</span>
           <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
             <h4 class="guide-step-title">Unlock AI Briefings</h4>
-            <p class="guide-step-desc">Click <strong>"AI briefing"</strong> on any news card to unlock a quick AI summary of what happened, key points, and takeaways (cost: 0.0001 USDC).</p>
+            <p class="guide-step-desc">Click <strong>"AI briefing"</strong> on any news card to unlock a quick AI summary of what happened, key points, and takeaways.</p>
           </div>
         </div>
       </div>

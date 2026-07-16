@@ -431,11 +431,9 @@ export const connectArcWallet = async (): Promise<string> => {
             <h2>Sign in to Siftle</h2>
           </div>
           <p class="circle-auth-subtitle">Confirm your email to receive a login verification code.</p>
-          
           <div class="circle-auth-banner">
-            💡 <strong>Quick Start:</strong> Sign in with email ➡️ We auto-fund your wallet with <strong>0.02 USDC</strong> (covers 200 AI briefings) ➡️ Unlock briefings instantly!
+            <strong>Quick Start:</strong> Sign in with your email to receive a secure, auto-funded wallet containing 0.02 USDC. You can then unlock AI briefings instantly.
           </div>
-          
           <!-- Step 1: Request Code -->
           <div id="backendWalletStepEmail" class="circle-auth-step">
             <div class="circle-auth-field">
