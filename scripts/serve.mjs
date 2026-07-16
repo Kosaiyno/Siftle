@@ -9677,6 +9677,23 @@ const server = createServer(async (request, response) => {
         sendJson(response, 401, { error: "Session expired. Please sign in again." });
         return;
       }
+
+      // Auto-fund user if their balance is lower than the required amount
+      try {
+        const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, leaderboardProvider);
+        const userBalanceRaw = await usdc.balanceOf(user.address);
+        const requiredAmountRaw = parseUnits(amountUsdc.toFixed(6), 6);
+        if (userBalanceRaw < requiredAmountRaw) {
+          console.log(`[AUTO-FUND] User ${user.address} balance (${formatUnits(userBalanceRaw, 6)} USDC) is too low for unlock cost (${amountUsdc} USDC). Transferring 0.02 USDC...`);
+          const fundSigner = new Wallet(process.env.ARC_DEPLOYER_PRIVATE_KEY, leaderboardProvider);
+          const deployerUsdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, fundSigner);
+          const fundTx = await deployerUsdc.transfer(user.address, parseUnits("0.02", 6));
+          await fundTx.wait();
+          console.log(`[AUTO-FUND] Auto-funded user ${user.address} during unlock.`);
+        }
+      } catch (fundErr) {
+        console.error(`[AUTO-FUND] Failed to auto-fund user ${user.address} during unlock:`, fundErr.message);
+      }
       if (!treasuryAddress) {
         sendJson(response, 400, { error: "AI briefing treasury is not configured" });
         return;

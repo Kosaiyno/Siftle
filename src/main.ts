@@ -931,6 +931,7 @@ const getMarketTradeLockMessage = (market: MarketPreview, snapshot: ArcMarketSna
 const renderLockedBriefing = (story: BriefingTarget, isUnlocking: boolean): string => {
   const price = state.unlockConfig ? `${state.unlockConfig.amountUsdc} USDC` : "0.05 USDC";
   const isX402 = state.unlockConfig?.x402Enabled;
+  const isLoggedIn = !!state.walletAddress;
 
   return `
     <div class="briefing-section">
@@ -941,13 +942,19 @@ const renderLockedBriefing = (story: BriefingTarget, isUnlocking: boolean): stri
         `
         : `
           <p class="briefing-text">
-            ${isX402
-              ? `Pay a <strong>${price}</strong> <strong>testnet USDC</strong> nanopayment through <strong>Circle x402</strong> to unlock what happened, key points, and takeaway.`
-              : `Pay <strong>${price}</strong> in <strong>testnet USDC</strong> for the key points, what happened, and takeaway.`
+            ${isLoggedIn
+              ? (isX402
+                  ? `Pay a <strong>${price}</strong> <strong>testnet USDC</strong> nanopayment through <strong>Circle x402</strong> to unlock what happened, key points, and takeaway.`
+                  : `Pay <strong>${price}</strong> in <strong>testnet USDC</strong> for the key points, what happened, and takeaway.`
+                )
+              : `Sign in to access AI briefings.`
             }
           </p>
           <button type="button" class="source-button" data-unlock-briefing-url="${encodeURIComponent(story.sourceUrl)}">
-            ${isX402 ? "Unlock via Circle x402" : "AI briefing"}
+            ${isLoggedIn
+              ? (isX402 ? "Unlock via Circle x402" : "AI briefing")
+              : "Sign in and access AI briefing"
+            }
           </button>
         `}
     </div>
