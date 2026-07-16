@@ -444,7 +444,7 @@ const openGuideModal = (): void => {
         <img src="./assets/siftle-logo-small.png" alt="Siftle logo" />
         <h2 style="font-family: Outfit, sans-serif; font-weight: 700; letter-spacing: -0.02em;">Welcome to Siftle!</h2>
       </div>
-      <p class="circle-auth-subtitle" style="margin-bottom: 24px; font-family: Inter, sans-serif; line-height: 1.5; font-size: 0.88rem;">Siftle is an AI-powered prediction and news briefing platform. Here is how to get started in 3 simple steps:</p>
+      <p class="circle-auth-subtitle" style="margin-bottom: 24px; font-family: Inter, sans-serif; line-height: 1.5; font-size: 0.88rem;">Siftle is the home of latest football news with AI briefings. Here is how to get started in 3 simple steps:</p>
       
       <div class="guide-steps-list">
         <div class="guide-step-item">

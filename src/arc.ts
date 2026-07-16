@@ -636,7 +636,7 @@ export const connectArcWallet = async (): Promise<string> => {
           <img src="./assets/siftle-logo-small.png" alt="Siftle logo" />
           <h2>Sign In to Siftle</h2>
         </div>
-        <p class="circle-auth-subtitle">No password needed. We send a 6-digit code to your email so you can manage predictions and trade.</p>
+        <p class="circle-auth-subtitle">No password needed. We send a 6-digit code to your email so you can view AI briefings and read news.</p>
         
         <div id="circleAuthStepEmail" class="circle-auth-step">
           <div class="circle-auth-field">
@@ -666,7 +666,7 @@ export const connectArcWallet = async (): Promise<string> => {
         </div>
 
         <div id="circleAuthStepPin" class="circle-auth-step" style="display: none;">
-          <p class="circle-auth-info">First time signing in? You will need to set up a secure wallet PIN to authorize trades.</p>
+          <p class="circle-auth-info">First time signing in? You will need to set up a secure wallet PIN to authorize secure unlocks.</p>
           <button id="circleAuthPinBtn" class="circle-auth-btn" type="button">Set Up Wallet PIN</button>
         </div>
 
