@@ -353,6 +353,46 @@ const injectStyles = () => {
       from { opacity: 0; }
       to { opacity: 1; }
     }
+    
+    [data-theme="light"] .circle-auth-card {
+      background: rgba(255, 255, 255, 0.95) !important;
+      border: 1px solid rgba(0, 0, 0, 0.08) !important;
+      color: #334155 !important;
+      box-shadow: 0 24px 48px rgba(16, 21, 34, 0.15) !important;
+    }
+    [data-theme="light"] .circle-auth-logo h2 {
+      color: #0f172a !important;
+    }
+    [data-theme="light"] .circle-auth-subtitle {
+      color: #64748b !important;
+    }
+    [data-theme="light"] .circle-auth-field label {
+      color: #64748b !important;
+    }
+    [data-theme="light"] .circle-auth-field input {
+      background: rgba(241, 245, 249, 0.8) !important;
+      border: 1px solid rgba(0, 0, 0, 0.1) !important;
+      color: #0f172a !important;
+    }
+    [data-theme="light"] .circle-auth-close {
+      color: #64748b !important;
+    }
+    [data-theme="light"] .circle-auth-close:hover {
+      color: #0f172a !important;
+    }
+    [data-theme="light"] .circle-auth-back {
+      color: #64748b !important;
+    }
+    [data-theme="light"] .circle-auth-back:hover {
+      color: #0f172a !important;
+    }
+    [data-theme="light"] .circle-auth-overlay {
+      background: rgba(241, 245, 249, 0.6) !important;
+    }
+    [data-theme="light"] .circle-auth-onboarding {
+      background: rgba(99, 102, 241, 0.04) !important;
+      border: 1px dashed rgba(99, 102, 241, 0.2) !important;
+    }
   `;
   document.head.appendChild(style);
 };
@@ -376,6 +416,16 @@ export const connectArcWallet = async (): Promise<string> => {
             <h2>Sign in to Siftle</h2>
           </div>
           <p class="circle-auth-subtitle">Confirm your email to receive a login verification code.</p>
+          
+          <details class="circle-auth-onboarding" style="text-align: left; margin-bottom: 20px; background: rgba(99, 102, 241, 0.08); border: 1px dashed rgba(99, 102, 241, 0.3); border-radius: 12px; padding: 12px; box-sizing: border-box; width: 100%;">
+            <summary style="cursor: pointer; color: #818cf8; font-size: 13px; font-weight: 600; display: list-item; list-style: disclosure-closed; outline: none; user-select: none;">New to Siftle? Quick start guide</summary>
+            <ol style="margin: 8px 0 0 16px; padding: 0; font-size: 0.78rem; color: #94a3b8; line-height: 1.5;">
+              <li style="margin-bottom: 6px;"><strong style="color: #818cf8;">Verify Email:</strong> Enter your email below to instantly generate your secure embedded wallet.</li>
+              <li style="margin-bottom: 6px;"><strong style="color: #818cf8;">Get Free USDC:</strong> Go to the <strong>Portfolio</strong> tab (bottom nav) and click <strong>"Claim Faucet"</strong>.</li>
+              <li style="margin-bottom: 6px;"><strong style="color: #818cf8;">Unlock Briefings:</strong> Tap <strong>"AI briefing"</strong> on any news card to unlock a summary (cost: 0.001 USDC).</li>
+              <li style="margin-bottom: 0;"><strong style="color: #818cf8;">Predict & Earn:</strong> Use your USDC in the <strong>Markets</strong> tab to make predictions and climb the Leaderboard.</li>
+            </ol>
+          </details>
           
           <!-- Step 1: Request Code -->
           <div id="backendWalletStepEmail" class="circle-auth-step">

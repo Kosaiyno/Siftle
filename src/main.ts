@@ -384,6 +384,7 @@ const topNewsButton = document.querySelector<HTMLButtonElement>("[data-surface='
 const topPortfolioButton = document.querySelector<HTMLButtonElement>("[data-surface='portfolio']");
 const walletButton = document.querySelector<HTMLButtonElement>("#walletButton");
 const themeToggleButton = document.querySelector<HTMLButtonElement>("[data-theme-toggle]");
+const guideToggleButton = document.getElementById("guideToggleButton") as HTMLButtonElement | null;
 const bottomNavButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-bottom-nav]"));
 
 let toastTimer: number | undefined;
@@ -428,6 +429,74 @@ window.addEventListener("resize", renderWalletState);
 themeToggleButton?.addEventListener("click", () => {
   applyTheme(currentTheme === "light" ? "dark" : "light");
 });
+
+guideToggleButton?.addEventListener("click", () => {
+  openGuideModal();
+});
+
+const openGuideModal = (): void => {
+  const overlay = document.createElement("div");
+  overlay.className = "guide-overlay";
+  overlay.innerHTML = `
+    <div class="guide-card">
+      <button class="circle-auth-close" id="guideClose" type="button">&times;</button>
+      <div class="circle-auth-logo">
+        <img src="./assets/siftle-logo-small.png" alt="Siftle logo" />
+        <h2>Welcome to Siftle!</h2>
+      </div>
+      <p class="circle-auth-subtitle" style="margin-bottom: 20px;">Siftle is an AI-powered prediction and news briefing platform. Here is how to get started in 4 simple steps:</p>
+      
+      <div class="guide-steps-list">
+        <div class="guide-step-item">
+          <span class="guide-step-num">1</span>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <h4 style="margin: 0; font-size: 0.92rem; font-weight: bold; color: var(--market-text-main, #ffffff);">Sign In (No Passwords)</h4>
+            <p style="margin: 0; font-size: 0.8rem; color: var(--market-text-sub, #94a3b8); line-height: 1.4; text-align: left;">Tap <strong>"Sign in"</strong> in the top right, enter your email, and verify. We instantly generate a secure Web3 wallet for you.</p>
+          </div>
+        </div>
+        
+        <div class="guide-step-item">
+          <span class="guide-step-num">2</span>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <h4 style="margin: 0; font-size: 0.92rem; font-weight: bold; color: var(--market-text-main, #ffffff);">Claim Free Testnet USDC</h4>
+            <p style="margin: 0; font-size: 0.8rem; color: var(--market-text-sub, #94a3b8); line-height: 1.4; text-align: left;">Go to the <strong>Portfolio</strong> tab (bottom nav) and click <strong>"Claim Faucet"</strong>. You will receive free testnet USDC to use across the app.</p>
+          </div>
+        </div>
+        
+        <div class="guide-step-item">
+          <span class="guide-step-num">3</span>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <h4 style="margin: 0; font-size: 0.92rem; font-weight: bold; color: var(--market-text-main, #ffffff);">Unlock AI Briefings</h4>
+            <p style="margin: 0; font-size: 0.8rem; color: var(--market-text-sub, #94a3b8); line-height: 1.4; text-align: left;">Click <strong>"AI briefing"</strong> on any news card to unlock a quick AI summary of what happened, key points, and takeaways (cost: 0.001 USDC).</p>
+          </div>
+        </div>
+        
+        <div class="guide-step-item">
+          <span class="guide-step-num">4</span>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <h4 style="margin: 0; font-size: 0.92rem; font-weight: bold; color: var(--market-text-main, #ffffff);">Predict on Markets & Earn</h4>
+            <p style="margin: 0; font-size: 0.8rem; color: var(--market-text-sub, #94a3b8); line-height: 1.4; text-align: left;">Visit the <strong>Markets</strong> tab to place predictions using your USDC. Trade shares to climb the <strong>Leaderboard</strong> and win prizes.</p>
+          </div>
+        </div>
+      </div>
+      
+      <button id="guideStartBtn" class="circle-auth-btn" type="button" style="width: 100%;">Get Started</button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const closeBtn = overlay.querySelector("#guideClose") as HTMLButtonElement;
+  const startBtn = overlay.querySelector("#guideStartBtn") as HTMLButtonElement;
+
+  const dismiss = () => overlay.remove();
+
+  closeBtn.addEventListener("click", dismiss);
+  startBtn.addEventListener("click", dismiss);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) dismiss();
+  });
+};
 
 const bindPendingReferral = async (walletAddress: string): Promise<void> => {
   const referralCode = localStorage.getItem("siftle_pending_referral_code");
@@ -906,7 +975,8 @@ const renderUnavailableBriefing = (story: BriefingTarget): string => `
 
 const unlockAndLoadStorySummary = async (story: BriefingTarget, force = false): Promise<void> => {
   if (!state.walletAddress) {
-    showActionToast("Please sign in first.");
+    showActionToast("Please sign in to unlock this briefing.");
+    void connectWallet();
     return;
   }
   if (state.unlockingSummaryUrl === story.sourceUrl && !force) return;
@@ -975,7 +1045,13 @@ const unlockAndLoadStorySummary = async (story: BriefingTarget, force = false): 
   } catch (error) {
     trackEvent("ai_unlock_failed");
     delete state.briefingStatusByUrl[story.sourceUrl];
-    showActionToast(error instanceof Error ? error.message : "AI briefing failed");
+    const rawMsg = error instanceof Error ? error.message : String(error || "");
+    let friendlyMsg = rawMsg;
+    const lower = rawMsg.toLowerCase();
+    if (lower.includes("balance") || lower.includes("exceeds balance") || lower.includes("transfer amount exceeds")) {
+      friendlyMsg = "Your USDC balance is too low to unlock this briefing. Please go to the Portfolio tab and click 'Claim Faucet' to get free testnet USDC.";
+    }
+    showActionToast(friendlyMsg);
   } finally {
     state.unlockingSummaryUrl = null;
     render();

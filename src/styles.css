@@ -10357,3 +10357,111 @@ html, body, .app-shell, main {
   color: #536471 !important;
 }
 
+/* Light Theme Contrast Overrides */
+:root[data-theme="light"] .site-header .wallet-button.connected .wallet-button-label {
+  color: #334155 !important;
+}
+:root[data-theme="light"] .detail-summary strong {
+  color: #0f172a !important;
+}
+
+/* Onboarding Guide Icon Button & Modal Styles */
+.guide-toggle-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-right: 8px;
+}
+.guide-toggle-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #f8fafc;
+  transform: scale(1.05);
+}
+:root[data-theme="light"] .guide-toggle-button {
+  background: rgba(16, 21, 34, 0.05) !important;
+  border-color: rgba(16, 21, 34, 0.1) !important;
+  color: #475569 !important;
+}
+:root[data-theme="light"] .guide-toggle-button:hover {
+  background: rgba(16, 21, 34, 0.08) !important;
+  border-color: rgba(16, 21, 34, 0.15) !important;
+  color: #0f172a !important;
+}
+.guide-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 8, 12, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 20px;
+  animation: circleFadeIn 0.3s ease-out;
+}
+.guide-card {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  background: rgba(20, 20, 28, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 24px;
+  padding: 40px 32px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+  font-family: 'Inter', -apple-system, sans-serif;
+  color: #cbd5e1;
+  text-align: center;
+  backdrop-filter: blur(20px);
+}
+.guide-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.guide-step-item {
+  display: flex;
+  gap: 14px;
+  text-align: left;
+  align-items: flex-start;
+}
+.guide-step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #3b82f6;
+  color: #ffffff;
+  font-weight: bold;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  font-size: 0.82rem;
+}
+
+/* Light theme overrides for Guide Modal */
+[data-theme="light"] .guide-overlay {
+  background: rgba(241, 245, 249, 0.6) !important;
+}
+[data-theme="light"] .guide-card {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #334155 !important;
+  box-shadow: 0 24px 48px rgba(16, 21, 34, 0.15) !important;
+}
+[data-theme="light"] .guide-step-num {
+  background: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+
