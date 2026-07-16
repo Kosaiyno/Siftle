@@ -432,15 +432,9 @@ export const connectArcWallet = async (): Promise<string> => {
           </div>
           <p class="circle-auth-subtitle">Confirm your email to receive a login verification code.</p>
           
-          <details class="circle-auth-onboarding" style="text-align: left; margin-bottom: 20px; background: rgba(99, 102, 241, 0.08); border: 1px dashed rgba(99, 102, 241, 0.3); border-radius: 12px; padding: 12px; box-sizing: border-box; width: 100%;">
-            <summary style="cursor: pointer; color: #818cf8; font-size: 13px; font-weight: 600; display: list-item; list-style: disclosure-closed; outline: none; user-select: none;">New to Siftle? Quick start guide</summary>
-            <ol style="margin: 8px 0 0 16px; padding: 0; font-size: 0.78rem; color: #94a3b8; line-height: 1.5;">
-              <li style="margin-bottom: 6px;"><strong style="color: #818cf8;">Verify Email:</strong> Enter your email below to instantly generate your secure embedded wallet.</li>
-              <li style="margin-bottom: 6px;"><strong style="color: #818cf8;">Get Free USDC:</strong> Go to the <strong>Portfolio</strong> tab (bottom nav) and click <strong>"Claim Faucet"</strong>.</li>
-              <li style="margin-bottom: 6px;"><strong style="color: #818cf8;">Unlock Briefings:</strong> Tap <strong>"AI briefing"</strong> on any news card to unlock a summary (cost: 0.001 USDC).</li>
-              <li style="margin-bottom: 0;"><strong style="color: #818cf8;">Predict & Earn:</strong> Use your USDC in the <strong>Markets</strong> tab to make predictions and climb the Leaderboard.</li>
-            </ol>
-          </details>
+          <div class="circle-auth-banner">
+            💡 <strong>Quick Start:</strong> Sign in with email ➡️ We auto-fund your wallet with <strong>0.02 USDC</strong> (covers 200 AI briefings) ➡️ Unlock briefings instantly!
+          </div>
           
           <!-- Step 1: Request Code -->
           <div id="backendWalletStepEmail" class="circle-auth-step">

@@ -10475,4 +10475,116 @@ html, body, .app-shell, main {
   color: #475569 !important;
 }
 
+/* Highly specific overrides to prevent Siftle global theme selectors from breaking close and start buttons */
+.guide-overlay .circle-auth-close,
+.circle-auth-overlay .circle-auth-close {
+  position: absolute !important;
+  top: 16px !important;
+  right: 16px !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 50% !important;
+  color: #94a3b8 !important;
+  font-size: 20px !important;
+  cursor: pointer !important;
+  line-height: 1 !important;
+  transition: all 0.2s ease !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.guide-overlay .circle-auth-close:hover,
+.circle-auth-overlay .circle-auth-close:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  color: #f8fafc !important;
+  transform: scale(1.05) !important;
+}
+
+.guide-overlay .circle-auth-btn,
+.circle-auth-overlay .circle-auth-btn {
+  width: 100% !important;
+  height: 48px !important;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  color: #ffffff !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25) !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.guide-overlay .circle-auth-btn:hover,
+.circle-auth-overlay .circle-auth-btn:hover {
+  opacity: 0.95 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.35) !important;
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+}
+
+.guide-overlay .circle-auth-btn:active,
+.circle-auth-overlay .circle-auth-btn:active {
+  transform: scale(0.98) !important;
+}
+
+/* Step titles and banners styles */
+.guide-step-title {
+  margin: 0 !important;
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  font-family: Outfit, sans-serif !important;
+  text-align: left !important;
+}
+
+.circle-auth-banner {
+  text-align: left !important;
+  margin-bottom: 20px !important;
+  background: rgba(59, 130, 246, 0.08) !important;
+  border-radius: 12px !important;
+  padding: 12px !important;
+  font-size: 0.8rem !important;
+  color: #94a3b8 !important;
+  line-height: 1.45 !important;
+  font-family: Inter, sans-serif !important;
+  border: 1px solid rgba(59, 130, 246, 0.15) !important;
+}
+
+/* Light Theme specificity fixes */
+[data-theme="light"] .guide-overlay .circle-auth-close,
+[data-theme="light"] .circle-auth-overlay .circle-auth-close {
+  background: rgba(16, 21, 34, 0.05) !important;
+  border: 1px solid rgba(16, 21, 34, 0.1) !important;
+  color: #475569 !important;
+}
+
+[data-theme="light"] .guide-overlay .circle-auth-close:hover,
+[data-theme="light"] .circle-auth-overlay .circle-auth-close:hover {
+  background: rgba(16, 21, 34, 0.08) !important;
+  border-color: rgba(16, 21, 34, 0.15) !important;
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .guide-step-title {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .circle-auth-banner {
+  background: rgba(59, 130, 246, 0.06) !important;
+  color: #475569 !important;
+  border: 1px solid rgba(59, 130, 246, 0.12) !important;
+}
+
 

@@ -444,13 +444,13 @@ const openGuideModal = (): void => {
         <img src="./assets/siftle-logo-small.png" alt="Siftle logo" />
         <h2 style="font-family: Outfit, sans-serif; font-weight: 700; letter-spacing: -0.02em;">Welcome to Siftle!</h2>
       </div>
-      <p class="circle-auth-subtitle" style="margin-bottom: 24px; font-family: Inter, sans-serif; line-height: 1.5; font-size: 0.88rem;">Siftle is an AI-powered prediction and news briefing platform. Here is how to get started in 4 simple steps:</p>
+      <p class="circle-auth-subtitle" style="margin-bottom: 24px; font-family: Inter, sans-serif; line-height: 1.5; font-size: 0.88rem;">Siftle is an AI-powered prediction and news briefing platform. Here is how to get started in 3 simple steps:</p>
       
       <div class="guide-steps-list">
         <div class="guide-step-item">
           <span class="guide-step-num">1</span>
           <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
-            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--market-text-main, #ffffff); font-family: Outfit, sans-serif; text-align: left;">Sign In (No Passwords)</h4>
+            <h4 class="guide-step-title">Sign In (No Passwords)</h4>
             <p class="guide-step-desc">Tap <strong>"Sign in"</strong> in the top right, enter your email, and verify. We instantly generate a secure Web3 wallet for you.</p>
           </div>
         </div>
@@ -458,24 +458,16 @@ const openGuideModal = (): void => {
         <div class="guide-step-item">
           <span class="guide-step-num">2</span>
           <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
-            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--market-text-main, #ffffff); font-family: Outfit, sans-serif; text-align: left;">Claim Free Testnet USDC</h4>
-            <p class="guide-step-desc">Go to the <strong>Portfolio</strong> tab (bottom nav) and click <strong>"Claim Faucet"</strong>. You will receive free testnet USDC to use across the app.</p>
+            <h4 class="guide-step-title">Get Free USDC</h4>
+            <p class="guide-step-desc">We auto-fund your wallet with <strong>0.02 USDC</strong> (covers 200 AI briefings) upon sign-in so you can start reading immediately! No manual faucet claiming needed.</p>
           </div>
         </div>
         
         <div class="guide-step-item">
           <span class="guide-step-num">3</span>
           <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
-            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--market-text-main, #ffffff); font-family: Outfit, sans-serif; text-align: left;">Unlock AI Briefings</h4>
-            <p class="guide-step-desc">Click <strong>"AI briefing"</strong> on any news card to unlock a quick AI summary of what happened, key points, and takeaways (cost: 0.001 USDC).</p>
-          </div>
-        </div>
-        
-        <div class="guide-step-item">
-          <span class="guide-step-num">4</span>
-          <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
-            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--market-text-main, #ffffff); font-family: Outfit, sans-serif; text-align: left;">Predict on Markets & Earn</h4>
-            <p class="guide-step-desc">Visit the <strong>Markets</strong> tab to place predictions using your USDC. Trade shares to climb the <strong>Leaderboard</strong> and win prizes.</p>
+            <h4 class="guide-step-title">Unlock AI Briefings</h4>
+            <p class="guide-step-desc">Click <strong>"AI briefing"</strong> on any news card to unlock a quick AI summary of what happened, key points, and takeaways (cost: 0.0001 USDC).</p>
           </div>
         </div>
       </div>

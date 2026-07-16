@@ -9201,7 +9201,20 @@ const server = createServer(async (request, response) => {
         ? await applyBackendWalletMigration(email, user.address)
         : null;
       const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, leaderboardProvider);
-      const balanceRaw = await usdc.balanceOf(user.address);
+      let balanceRaw = await usdc.balanceOf(user.address);
+      if (balanceRaw === 0n) {
+        try {
+          const signer = new Wallet(process.env.ARC_DEPLOYER_PRIVATE_KEY, leaderboardProvider);
+          const deployerUsdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
+          console.log(`[AUTO-FUND] User ${user.address} has 0 balance. Auto-funding 0.02 USDC...`);
+          const fundTx = await deployerUsdc.transfer(user.address, parseUnits("0.02", 6));
+          await fundTx.wait();
+          balanceRaw = await usdc.balanceOf(user.address);
+          console.log(`[AUTO-FUND] Funded user ${user.address}. New balance: ${formatUnits(balanceRaw, 6)} USDC`);
+        } catch (fundErr) {
+          console.error(`[AUTO-FUND] Failed to auto-fund user ${user.address}:`, fundErr.message);
+        }
+      }
       sendJson(response, 200, {
         sessionToken: token,
         email,
