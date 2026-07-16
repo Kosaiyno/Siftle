@@ -9159,6 +9159,9 @@ const server = createServer(async (request, response) => {
       }
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       writeVerificationCode(email, code);
+      console.log(`\n========================================`);
+      console.log(`[DEVELOPER OTP] OTP for ${email} is: ${code}`);
+      console.log(`========================================\n`);
       await sendVerificationCodeEmail(email, code);
       sendJson(response, 200, { success: true });
     } catch (err) {
@@ -9860,6 +9863,9 @@ const server = createServer(async (request, response) => {
       
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       setOtp(email, otp);
+      console.log(`\n========================================`);
+      console.log(`[DEVELOPER OTP] OTP for ${email} is: ${otp}`);
+      console.log(`========================================\n`);
 
       const formattedOtp = otp;
       const expiryMinutes = Math.round(otpTtlMs / 60000);

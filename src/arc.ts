@@ -1017,7 +1017,7 @@ export const readArcUsdcBalance = async (account: string): Promise<string> => {
     { to: ARC_TESTNET_USDC, data: `${BALANCE_OF_SELECTOR}${encodedAccount}` },
     "latest"
   ]);
-  return (Number(BigInt(result || "0x0")) / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return (Number(BigInt(result || "0x0")) / 1_000_000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
 };
 
 export const isWalletConnectConfigured = (): boolean => true;
