@@ -6541,6 +6541,14 @@ async function payoutOptionMarketClaims(data, market, options = {}) {
 
 const ensureGatewayAvailableBalance = async (buyer, requiredUsdc) => {
   const requiredBaseUnits = parseUnits(requiredUsdc.toFixed(6), 6);
+  for (let i = 0; i < 8; i++) {
+    let balances = await buyer.getBalances();
+    if ((balances.gateway?.available || 0n) >= requiredBaseUnits) {
+      return balances;
+    }
+    console.log(`[X402] Gateway available balance not ready yet (try ${i + 1}/8). Waiting 1s...`);
+    await new Promise(r => setTimeout(r, 1000));
+  }
   let balances = await buyer.getBalances();
   if ((balances.gateway?.available || 0n) >= requiredBaseUnits) {
     return balances;
@@ -6573,14 +6581,26 @@ const warmGatewayBalanceInBackground = (privateKey, minimumUsdc) => {
       if ((balances.gateway?.available || 0n) >= requiredBaseUnits) return;
 
       const walletBalanceRaw = BigInt(balances.wallet?.balance || "0");
-      const depositBaseUnits = parseUnits(Number(depositAmount).toFixed(6), 6);
+      let depositBaseUnits = parseUnits(Number(depositAmount).toFixed(6), 6);
+      let finalDepositAmount = depositAmount;
       if (walletBalanceRaw < depositBaseUnits) {
-        console.warn(`[X402] Gateway warmup skipped: wallet balance (${formatUnits(walletBalanceRaw, 6)} USDC) is less than required deposit amount (${depositAmount} USDC)`);
-        return;
+        const halfWalletBalance = Number(formatUnits(walletBalanceRaw, 6)) / 2;
+        if (halfWalletBalance >= minimumUsdc) {
+          finalDepositAmount = halfWalletBalance.toFixed(6);
+          depositBaseUnits = parseUnits(finalDepositAmount, 6);
+          console.log(`[X402] Adjusting gateway deposit amount to ${finalDepositAmount} USDC because wallet balance (${formatUnits(walletBalanceRaw, 6)} USDC) is less than default deposit amount (${depositAmount} USDC)`);
+        } else if (walletBalanceRaw >= requiredBaseUnits) {
+          finalDepositAmount = formatUnits(walletBalanceRaw, 6);
+          depositBaseUnits = walletBalanceRaw;
+          console.log(`[X402] Adjusting gateway deposit amount to max available ${finalDepositAmount} USDC`);
+        } else {
+          console.warn(`[X402] Gateway warmup skipped: wallet balance (${formatUnits(walletBalanceRaw, 6)} USDC) is less than required deposit amount (${depositAmount} USDC)`);
+          return;
+        }
       }
 
-      console.log(`[X402] Auto-depositing ${depositAmount} USDC into Gateway for ${walletAddress}...`);
-      await buyer.deposit(depositAmount);
+      console.log(`[X402] Auto-depositing ${finalDepositAmount} USDC into Gateway for ${walletAddress}...`);
+      await buyer.deposit(finalDepositAmount);
     } catch (error) {
       console.warn("[X402] Gateway warmup failed:", error?.message || error);
     } finally {
