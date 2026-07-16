@@ -23,11 +23,19 @@ const before = await client.getBalances();
 console.log(`Wallet USDC: ${before.wallet.formatted}`);
 console.log(`Gateway available: ${before.gateway.formattedAvailable}`);
 
+const support = await client.supports(targetUrl);
+if (!support.supported) {
+  console.error("Target does not advertise a compatible Circle Gateway x402 payment option.");
+  console.error(support);
+  process.exit(1);
+}
+
+const requiredPriceBaseUnits = support.price || 100n; // fallback to 0.0001 USDC
+
 if (autoDeposit) {
-  const threshold = 100n; // 0.0001 USDC in base units (6 decimals)
   const currentAvailable = before.gateway?.available || 0n;
-  if (currentAvailable < threshold) {
-    console.log(`Gateway available balance (${before.gateway.formattedAvailable}) is below threshold. Depositing ${autoDeposit} USDC...`);
+  if (currentAvailable < requiredPriceBaseUnits) {
+    console.log(`Gateway available balance (${before.gateway.formattedAvailable}) is below required price (${support.priceFormatted || "0.0001"} USDC). Depositing ${autoDeposit} USDC...`);
     const deposit = await client.deposit(autoDeposit);
     console.log(`Deposit tx: ${deposit.depositTxHash}`);
     const warmed = await client.getBalances();
@@ -35,13 +43,6 @@ if (autoDeposit) {
   } else {
     console.log(`Gateway available balance (${before.gateway.formattedAvailable}) is sufficient. Skipping auto-deposit.`);
   }
-}
-
-const support = await client.supports(targetUrl);
-if (!support.supported) {
-  console.error("Target does not advertise a compatible Circle Gateway x402 payment option.");
-  console.error(support);
-  process.exit(1);
 }
 
 const paid = await client.pay(targetUrl);
