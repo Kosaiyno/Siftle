@@ -10609,4 +10609,14 @@ html, body, .app-shell, main {
   background: linear-gradient(135deg, #7c3aed, #4f46e5) !important;
 }
 
+.market-side.option.active {
+  background: rgba(59, 130, 246, 0.16) !important;
+  border-color: #3b82f6 !important;
+  color: #3b82f6 !important;
+}
 
+:root[data-theme="light"] .market-side.option.active {
+  background: rgba(59, 130, 246, 0.1) !important;
+  border-color: #2563eb !important;
+  color: #2563eb !important;
+}
