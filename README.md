@@ -147,6 +147,24 @@ REOWN_PROJECT_ID=
 ARC_DEPLOYER_PRIVATE_KEY=
 ```
 
+### ⚓ Arc Testnet Deployed Contracts & Key Wallet Addresses
+
+For review and verifying Siftle's on-chain activity/traction:
+
+* **Market Factory Contract:** `0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E`
+* **Admin / Resolver Wallet Address:** `0x2f5fc4f223875b5F453C5534C50f926b114091B7`
+* **x402 Seller / USDC Paywall Receiver Address:** `0x2f5fc4f223875b5F453C5534C50f926b114091B7`
+* **Shelby Storage Account (On-chain storage):** `0x8f2bddb9c936062fd7ac1bbb0b7d21e2e76662c1c0224f0263feefef1e0f7fb9`
+
+#### Active Prediction Market Contracts:
+* Bellingham vs Messi/Ronaldo: `0x4aBc5E6Adcf26E35d70A2b38506896CEd8170a09`
+* Vinicius vs Japan: `0xa7886aF4C0D359bA16DD63017962D5CD125a5E7F`
+* Haaland vs Mbappe: `0x74f77d841d1a3e664Ba6C70f13a6E93E95dEA9D9`
+* France vs Sweden: `0x18EF2D26ec18a4cd2835216E736a6655fFB8136D`
+* Morocco vs Netherlands: `0x1c358D8f0cFBaF6Adb2c85Ebd16fcf8F8fa88B7d`
+* Paraguay vs Germany: `0xcC0A41d7B8Ae967c28e981F96BFc9c833B7B0e75`
+* Ivory Coast vs Norway: `0xA9ba7b00F60dc541c1C73917Aba92577F3d1A252`
+
 Market addresses are exposed through `dist/client-config.js` after running:
 
 ```bash
