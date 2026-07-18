@@ -3779,13 +3779,18 @@ const overlayFreshSportsTweets = async (snapshot) => {
 };
 
 const fetchNewsDataWithCustomQuery = async (query, category) => {
-  if (!process.env.NEWSDATA_API_KEY) return [];
+  if (!process.env.NEWSDATA_API_KEY || !query) return [];
+
+  let safeQuery = query.trim();
+  if (safeQuery.length > 95) {
+    safeQuery = safeQuery.slice(0, 95);
+  }
 
   const params = new URLSearchParams({
     apikey: process.env.NEWSDATA_API_KEY,
     language: "en",
-    size: "15",
-    q: query
+    size: "10",
+    q: safeQuery
   });
 
   try {
@@ -3793,7 +3798,7 @@ const fetchNewsDataWithCustomQuery = async (query, category) => {
       signal: AbortSignal.timeout(15000)
     });
     if (!response.ok) {
-      console.warn(`NewsData custom query returned ${response.status}`);
+      console.warn(`NewsData custom query returned ${response.status} (Query: ${safeQuery})`);
       return [];
     }
 
