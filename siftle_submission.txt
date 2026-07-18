@@ -1,0 +1,78 @@
+========================================================================
+                          SIFTLE - HACKATHON SUBMISSION
+========================================================================
+
+PROJECT TITLE: Siftle
+SUBMITTED TRACK: Track 4 - Best Agentic Economy Experience on Arc
+CIRCLE DEVELOPER EMAIL: (Input your Circle account email here)
+
+GITHUB REPOSITORY: https://github.com/Kosaiyno/Siftle
+LIVE WEB APP DEMO: https://siftle.onrender.com
+VIDEO DEMO LINK: (Input your Loom video URL here)
+
+------------------------------------------------------------------------
+1. PROJECT OVERVIEW
+------------------------------------------------------------------------
+Siftle is a real-time football news platform built around fast, paid AI context. Instead of forcing users into expensive monthly subscriptions, Siftle introduces a pay-per-read model where readers pay a fraction of a cent to unlock specific AI-generated briefings.
+
+The core of our submission is our Autonomous AI Pricing Agent. The agent inspects incoming football news, dynamically calculates the exact value of each briefing down to the lepton scale ($0.000001 USDC), and executes sub-second settlements directly on-chain using Circle's x402 protocol and Arc L1's BFT Malachite consensus.
+
+------------------------------------------------------------------------
+2. CORE FEATURES
+------------------------------------------------------------------------
+- Autonomous AI Pricing Agent: Dynamically scales content pricing ($0.000001 - $0.001000) using semantic rules and deterministic hashing.
+- Sub-Second Paywall Settlement: Clears transaction and drops the paywall in under 500 milliseconds.
+- Developer controlled Email/OTP Wallets: Frictionless Web2 onboarding with backend-managed user transaction execution.
+- 0G Compute summarization: Requests and serves AI briefings generated dynamically via the 0G Compute Network on-demand.
+
+------------------------------------------------------------------------
+3. ARCHITECTURE DIAGRAM
+------------------------------------------------------------------------
+[Incoming RSS Feeds]
+       │
+       ▼
+[Autonomous AI Pricing Agent] ──(Sets dynamic price $0.000001 - $0.001000)
+       │
+       ▼
+[Siftle Frontend Paywall]
+       │
+       ▼ (Taps to Unlock)
+[Circle x402 Gateway Client] ──(Signs micro-USDC transaction)
+       │
+       ▼ (Malachite BFT Consensus <800ms)
+[Arc L1 Blockchain]
+       │
+       ▼ (Transaction Cleared)
+[0G Compute Network] ──(Generates & delivers AI news briefing to user)
+
+------------------------------------------------------------------------
+4. CIRCLE PRODUCT FEEDBACK
+------------------------------------------------------------------------
+
+* Why we chose these products for our use case:
+  We chose Circle x402 Gateway and Arc L1 because they are the only production-ready infrastructure capable of supporting stablecoin nanopayments. Siftle sells individual context updates for as low as $0.000036 USDC. Traditional credit card models (with a $0.30 flat fee) are mathematically impossible for this model. Circle Wallets provided the Web2 email/OTP flow necessary to shield non-crypto-native football fans from Web3 complexity.
+
+* What worked well:
+  The x402 batching client was extremely simple to integrate. Settlement times on Arc L1 are incredibly fast—often under 500ms—enabling a paywall checkout experience that matches standard Web2 latency. The Circle Developer Console is clean and makes it easy to monitor testnet wallet creation, balances, and API credentials.
+
+* What could be improved & recommendations (Simplified Developer Experience):
+  1. Built-in Email/OTP Service for Wallets: Setting up programmable wallets requires developers to configure and pay for third-party email APIs (like Resend) just to send login OTP codes to users. It would be a massive developer experience boost if Circle offered a built-in, hosted email OTP service directly inside the Programmable Wallets SDK.
+  2. Local Sandbox for x402 Testing: To test dynamic micro-payments locally, developers currently have to build custom mock gateways and local pricing server code. Circle should provide a unified local sandbox CLI or mock gateway simulator inside their SDK to easily test paywall events offline.
+
+------------------------------------------------------------------------
+5. ARC TESTNET DEPLOYED CONTRACTS & KEY WALLET ADDRESSES
+------------------------------------------------------------------------
+- Market Factory Contract: `0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E`
+- Admin / Resolver Wallet: `0x2f5fc4f223875b5F453C5534C50f926b114091B7`
+- x402 Seller / USDC Paywall Receiver Wallet: `0x2f5fc4f223875b5F453C5534C50f926b114091B7`
+- Shelby Storage Account (On-chain storage): `0x8f2bddb9c936062fd7ac1bbb0b7d21e2e76662c1c0224f0263feefef1e0f7fb9`
+
+Active Arc Testnet Prediction Markets:
+- Bellingham vs Messi/Ronaldo: `0x4aBc5E6Adcf26E35d70A2b38506896CEd8170a09`
+- Vinicius vs Japan: `0xa7886aF4C0D359bA16DD63017962D5CD125a5E7F`
+- Haaland vs Mbappe: `0x74f77d841d1a3e664Ba6C70f13a6E93E95dEA9D9`
+- France vs Sweden: `0x18EF2D26ec18a4cd2835216E736a6655fFB8136D`
+- Morocco vs Netherlands: `0x1c358D8f0cFBaF6Adb2c85Ebd16fcf8F8fa88B7d`
+- Paraguay vs Germany: `0xcC0A41d7B8Ae967c28e981F96BFc9c833B7B0e75`
+- Ivory Coast vs Norway: `0xA9ba7b00F60dc541c1C73917Aba92577F3d1A252`
+
