@@ -172,7 +172,7 @@ const state: {
   marketOrderMode: "buy",
   marketTradeSide: "yes",
   marketTradeOptionId: null,
-  marketTradeAmount: 5,
+  marketTradeAmount: 2,
   marketSnapshots: {},
   marketPositions: {},
   marketEvidenceOverrides: {},
@@ -1630,7 +1630,7 @@ const getTradeAmountBounds = (
     };
   }
 
-  return { min: 5, max: 10, fallback: 5 };
+  return { min: 2, max: 10, fallback: 2 };
 };
 
 const normalizeMarketTradeAmount = (

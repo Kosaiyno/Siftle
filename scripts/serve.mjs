@@ -8372,6 +8372,8 @@ async function recomputeLeaderboardFromChain(data) {
         }
       );
 
+      const basePoints = Number(market.points) || 100;
+
       for (const position of positions) {
         const address = position.address;
         const resultAddress = canonicalAddress(address);
@@ -8381,13 +8383,14 @@ async function recomputeLeaderboardFromChain(data) {
 
         const hasPosition = position.yesSharesUsdc > 0 || position.noSharesUsdc > 0;
         const hasSwitched = switched.has(address);
+        const winPoints = hasSwitched ? Math.round(basePoints / 2) : basePoints;
 
         if (outcome === 1 && position.yesSharesUsdc > 0) {
-          resolvedResults[resultAddress][marketId] = { result: "win", points: hasSwitched ? 50 : 100 };
+          resolvedResults[resultAddress][marketId] = { result: "win", points: winPoints };
         } else if (outcome === 2 && position.noSharesUsdc > 0) {
-          resolvedResults[resultAddress][marketId] = { result: "win", points: hasSwitched ? 50 : 100 };
+          resolvedResults[resultAddress][marketId] = { result: "win", points: winPoints };
         } else if ((outcome === 1 || outcome === 2) && redeemed.has(address)) {
-          resolvedResults[resultAddress][marketId] = { result: "win", points: hasSwitched ? 50 : 100 };
+          resolvedResults[resultAddress][marketId] = { result: "win", points: winPoints };
         } else if (hasPosition) {
           resolvedResults[resultAddress][marketId] = { result: "loss", points: 0 };
         }
@@ -8402,7 +8405,7 @@ async function recomputeLeaderboardFromChain(data) {
           if (!resolvedResults[resultAddress][marketId]) {
             resolvedResults[resultAddress][marketId] = {
               result: "win",
-              points: switched.has(address) ? 50 : 100
+              points: switched.has(address) ? Math.round(basePoints / 2) : basePoints
             };
           }
         });
@@ -9406,8 +9409,8 @@ const server = createServer(async (request, response) => {
         sendJson(response, 400, { error: "marketId, optionId and amount are required" });
         return;
       }
-      if (mode === "buy" && (amountUsdc < 5 || amountUsdc > 10)) {
-        sendJson(response, 400, { error: "Trade amount must be between $5 and $10" });
+      if (mode === "buy" && (amountUsdc < 2 || amountUsdc > 10)) {
+        sendJson(response, 400, { error: "Trade amount must be between $2 and $10" });
         return;
       }
 
