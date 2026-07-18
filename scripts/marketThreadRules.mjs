@@ -317,6 +317,96 @@ export const marketThreadRules = {
       ["world cup", "match", "game", "preview", "shots", "shots on target", "shot", "target", "attack", "attacking", "volume"]
     ],
     reject: ["women", "futsal", "olympics"]
+  },
+  "wc-france-england-corners": {
+    category: "Sports",
+    topic: "France vs England Corner Count",
+    includeAnySets: [
+      ["france", "england", "french"],
+      ["world cup", "match", "game", "preview", "corner", "corners", "kick", "kicks", "bronze"]
+    ],
+    reject: ["women", "futsal", "olympics"]
+  },
+  "wc-france-england-cards": {
+    category: "Sports",
+    topic: "France vs England Discipline Watch",
+    includeAnySets: [
+      ["france", "england", "french"],
+      ["world cup", "match", "game", "preview", "cards", "card", "discipline", "yellow", "red", "referee", "bronze"]
+    ],
+    reject: ["women", "futsal", "olympics"]
+  },
+  "wc-france-england-halftime": {
+    category: "Sports",
+    topic: "France vs England Half-Time Battle",
+    includeAnySets: [
+      ["france", "england", "french"],
+      ["world cup", "match", "game", "preview", "halftime", "half-time", "first half", "bronze"]
+    ],
+    reject: ["women", "futsal", "olympics"]
+  },
+  "wc-france-england-fouls": {
+    category: "Sports",
+    topic: "France vs England Discipline Watch",
+    includeAnySets: [
+      ["france", "england", "french"],
+      ["world cup", "match", "game", "preview", "fouls", "foul", "discipline", "bronze"]
+    ],
+    reject: ["women", "futsal", "olympics"]
+  },
+  "wc-france-england-bronze-winner": {
+    category: "Sports",
+    topic: "France vs England Bronze Medal Winner",
+    includeAnySets: [
+      ["france", "england", "french"],
+      ["world cup", "match", "game", "preview", "bronze", "winner", "medal", "third place", "play-off", "playoff"]
+    ],
+    reject: ["women", "futsal", "olympics"]
+  },
+  "wc-france-england-goals": {
+    category: "Sports",
+    topic: "France vs England Goal Fest",
+    includeAnySets: [
+      ["france", "england", "french"],
+      ["world cup", "match", "game", "preview", "goals", "goal", "score", "scores", "bronze"]
+    ],
+    reject: ["women", "futsal", "olympics"]
+  },
+  "wc-france-england-rating-duel": {
+    category: "Sports",
+    topic: "Bellingham vs Mbappé Player Rating Duel",
+    includeAnySets: [
+      ["france", "england", "bellingham", "mbappe", "mbappé"],
+      ["world cup", "match", "game", "preview", "rating", "ratings", "performance", "duel", "bronze"]
+    ],
+    reject: ["women", "futsal", "olympics"]
+  },
+  "wc-france-england-victory-method": {
+    category: "Sports",
+    topic: "France vs England Victory Method Watch",
+    includeAnySets: [
+      ["france", "england", "french"],
+      ["world cup", "match", "game", "preview", "victory", "method", "penalties", "extra time", "shootout", "bronze"]
+    ],
+    reject: ["women", "futsal", "olympics"]
+  },
+  "wc-france-england-mbappe-goals": {
+    category: "Sports",
+    topic: "Kylian Mbappé Golden Boot Pursuit",
+    includeAnySets: [
+      ["france", "mbappe", "mbappé"],
+      ["world cup", "match", "game", "preview", "goals", "goal", "scorer", "golden boot", "bronze"]
+    ],
+    reject: ["women", "futsal", "olympics"]
+  },
+  "wc-france-england-exact-score": {
+    category: "Sports",
+    topic: "France vs England Exact Scoreline Prediction",
+    includeAnySets: [
+      ["france", "england", "french"],
+      ["world cup", "match", "game", "preview", "score", "scores", "scoreline", "exact", "bronze"]
+    ],
+    reject: ["women", "futsal", "olympics"]
   }
 };
 
