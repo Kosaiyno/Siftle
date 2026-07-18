@@ -5049,10 +5049,33 @@ const fetchUnlockConfig = async (): Promise<void> => {
   }
 };
 
+const startMarketPolling = (): void => {
+  window.setInterval(async () => {
+    try {
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 3500);
+      const res = await fetch(apiUrl("/api/markets"), { signal: controller.signal });
+      window.clearTimeout(timeout);
+      if (res.ok) {
+        const markets = await res.json();
+        if (Array.isArray(markets) && markets.length > 0) {
+          marketPreviews = markets;
+          if (state.activeSurface === "markets") {
+            render();
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Background market poll failed:", err);
+    }
+  }, 30000);
+};
+
 render();
 renderWalletState();
 void fetchUnlockConfig();
 ensureFeedLoaded(state.activeCategory);
+startMarketPolling();
 void loadMarkets().then(() => {
   reportStoredLocalMarketTraders();
   render();
