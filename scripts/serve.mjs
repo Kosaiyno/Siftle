@@ -3649,7 +3649,7 @@ const getActiveMarketQueriesStr = (category) => {
       ? markets 
       : markets.filter(m => m.category === category);
     
-    const phrases = categoryMarkets.map(m => {
+    const uniquePhrases = Array.from(new Set(categoryMarkets.map(m => {
       if (m.id === "wc-spain-austria-spread") return `"Spain" "Austria" "World Cup"`;
       if (m.id === "wc-ronaldo-score-assist-croatia") return `"Cristiano Ronaldo" "Croatia" "World Cup"`;
       if (m.id === "wc-portugal-croatia-extra-time") return `"Portugal" "Croatia" "World Cup"`;
@@ -3657,10 +3657,10 @@ const getActiveMarketQueriesStr = (category) => {
       if (m.id === "transfer-guimaraes-arsenal") return `"Bruno Guimarães" "Arsenal"`;
       if (m.id === "wc-mbappe-haaland-goals") return `"Mbappé" "Haaland"`;
       return m.threadTopic;
-    });
+    }).filter(Boolean)));
 
-    if (phrases.length === 0) return "";
-    return phrases.join(" OR ");
+    if (uniquePhrases.length === 0) return "";
+    return uniquePhrases.slice(0, 3).join(" OR ");
   } catch (e) {
     console.error("Failed to read active markets for queries:", e);
     return "";

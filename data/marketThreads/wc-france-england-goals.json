@@ -1,55 +1,70 @@
 {
   "topic": "France vs England Goal Fest",
   "current": {
-    "headline": "Deschamps and Southgate Prepare for Bronze Medal Battle in Dallas",
+    "id": 1,
+    "headline": "World Cup 2026 latest: Trump criticises Tuchel, buildup to France v England and Spain v Argentina final",
     "category": "Sports",
-    "summary": "France and England prepare to contest the World Cup Third Place Play-off in Dallas. Both managers face selection decisions as they search for a positive end to their campaigns.",
-    "source": "bbc.co.uk",
-    "sourceUrl": "https://www.bbc.co.uk/sport/football/articles/france-england-bronze-preview",
-    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "publishedAt": "2026-07-18T11:53:30.894Z",
-    "readTime": "3 min read",
-    "postedAt": "5m ago",
+    "summary": "Sunday’s World Cup final between Spain and Argentina looms closer while England and France get ready to play for the bronze medal in Miami",
+    "source": "The Guardian",
+    "sourceUrl": "https://www.theguardian.com/football/live/2026/jul/18/world-cup-latest-buildup-france-england-third-place-spain-argentina",
+    "imageUrl": "https://media.guim.co.uk/c9b9c37bfaf78ea2202e30d96512f272b6399e35/45_0_5773_4619/500.jpg",
+    "publishedAt": "2026-07-18T12:04:25Z",
+    "readTime": "1 min read",
+    "postedAt": "10m",
     "accent": "blue",
     "saved": false,
     "type": "news",
-    "id": 1
+    "unlockPriceUsdc": 0.000501,
+    "thread": {
+      "count": 5,
+      "topic": "England / Argentina"
+    }
   },
   "items": [
     {
-      "headline": "Mbappé Fit and Chasing World Cup Golden Boot in Play-off",
+      "id": 66,
+      "headline": "Defiant Tuchel defends decisions and says loss is 'scar we carry now'",
       "category": "Sports",
-      "summary": "Kylian Mbappé is expected to start for France against England as he looks to secure the tournament's top scorer award and the Golden Boot.",
-      "source": "theguardian.com",
-      "sourceUrl": "https://www.theguardian.com/football/2026/jul/17/kylian-mbappe-golden-boot-france-england",
-      "imageUrl": "https://images.unsplash.com/photo-1518063319789-7217e6706b04?auto=format&fit=crop&w=1200&q=80",
-      "publishedAt": "2026-07-18T11:48:30.894Z",
-      "readTime": "2 min read",
-      "postedAt": "10m ago",
-      "accent": "teal",
+      "summary": "England head coach Thomas Tuchel defends his tactical decisions during the World Cup semi-final defeat by Argentina in a tense news conference.",
+      "source": "feeds.bbci.co.uk",
+      "sourceUrl": "https://www.bbc.co.uk/sport/football/articles/c3r0l4zn9jpo?at_medium=RSS&at_campaign=rss",
+      "imageUrl": "https://ichef.bbci.co.uk/ace/standard/240/cpsprodpb/cde5/live/09ccb3a0-8279-11f1-bee8-53ce494e1abc.jpg",
+      "publishedAt": "Sat, 18 Jul 2026 02:50:36 GMT",
+      "readTime": "1 min read",
+      "postedAt": "9h",
+      "accent": "blue",
       "saved": false,
       "type": "news",
-      "id": 2
+      "unlockPriceUsdc": 0.000896,
+      "thread": {
+        "count": 16,
+        "topic": "Vozinha Argentina Save Watch"
+      }
     },
     {
-      "headline": "Bellingham and Kane Vow to Finish World Cup on High Note",
+      "id": 89,
+      "headline": "Deschamps responds to Rabiot controversy after France lose World Cup semi final",
       "category": "Sports",
-      "summary": "Jude Bellingham and Harry Kane speaking ahead of England's Third Place Play-off against France, outlining their determination to win the bronze medal.",
-      "source": "skysports.com",
-      "sourceUrl": "https://www.skysports.com/football/news/12026/07/17/jude-bellingham-harry-kane-england-bronze",
-      "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
-      "publishedAt": "2026-07-18T11:43:30.894Z",
-      "readTime": "3 min read",
-      "postedAt": "15m ago",
-      "accent": "violet",
+      "summary": "France coach Didier Deschamps hit back at criticism over his World Cup semi-final decisions against...",
+      "source": "football-italia.net",
+      "sourceUrl": "https://football-italia.net/deschamps-rabiot-controversy-france-world-cup/",
+      "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Fri, 17 Jul 2026 17:34:24 +0000",
+      "readTime": "1 min read",
+      "postedAt": "18h",
+      "accent": "blue",
       "saved": false,
       "type": "news",
-      "id": 3
+      "unlockPriceUsdc": 0.000658,
+      "thread": {
+        "count": 13,
+        "topic": "Spain vs France Qualify Watch"
+      }
     }
   ],
   "reviewed_by": "feed-market-bridge",
   "count": 3,
   "market_id": "wc-france-england-goals",
   "saved_market_thread": true,
-  "saved_at": "2026-07-18T11:58:30.915Z"
+  "saved_at": "2026-07-18T12:21:15.597Z"
 }
