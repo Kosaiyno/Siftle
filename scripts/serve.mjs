@@ -9409,8 +9409,8 @@ const server = createServer(async (request, response) => {
         sendJson(response, 400, { error: "marketId, optionId and amount are required" });
         return;
       }
-      if (mode === "buy" && (amountUsdc < 2 || amountUsdc > 10)) {
-        sendJson(response, 400, { error: "Trade amount must be between $2 and $10" });
+      if (mode === "buy" && amountUsdc !== 2) {
+        sendJson(response, 400, { error: "Trade amount must be exactly $2 USDC" });
         return;
       }
 

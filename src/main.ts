@@ -247,6 +247,7 @@ interface MarketPreview {
   traderCount?: number;
   liquidity: string;
   imageUrl?: string;
+  points?: number;
   evidence: {
     date: string;
     source: string;
@@ -1630,7 +1631,7 @@ const getTradeAmountBounds = (
     };
   }
 
-  return { min: 2, max: 10, fallback: 2 };
+  return { min: 2, max: 2, fallback: 2 };
 };
 
 const normalizeMarketTradeAmount = (
@@ -3141,6 +3142,7 @@ const renderMarketCard = (market: MarketPreview): string => {
         <div style="display: flex; gap: 8px; align-items: center;">
           <span class="category-chip ${market.category}">${displayCategory(market.category)}</span>
           <span class="timeframe-chip ${market.timeframe}">${market.timeframe === "Sagas" ? "Sagas" : market.timeframe}</span>
+          ${market.points ? `<span class="points-chip">+${market.points} pts</span>` : ""}
         </div>
         <span class="market-card-updates">${view.evidence.length} updates</span>
       </div>
@@ -3164,6 +3166,19 @@ const renderMarketCard = (market: MarketPreview): string => {
         <span>Market activity</span>
         <strong>Hidden</strong>
       </div>
+      ${view.evidence && view.evidence.length > 0 ? `
+      <div class="market-card-news" style="margin: 12px 0 8px; width: 100%; border-top: 1px dashed var(--market-border); padding-top: 10px; box-sizing: border-box;">
+        <span style="font-size: 0.72rem; font-weight: 700; color: var(--market-text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px; text-align: left;">Related News</span>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          ${view.evidence.slice(0, 2).map((item) => `
+            <div style="display: flex; align-items: flex-start; gap: 6px; font-size: 0.76rem; text-align: left; line-height: 1.35; padding: 4px 0;">
+              <span style="background: rgba(59, 130, 246, 0.08); color: var(--market-accent); border: 1px solid rgba(59, 130, 246, 0.15); border-radius: 4px; padding: 1px 4px; font-size: 0.62rem; font-weight: 700; text-transform: uppercase; flex-shrink: 0; line-height: 1;">${escapeHtml(item.source)}</span>
+              <span style="color: var(--market-text-main); font-weight: 500;">${escapeHtml(item.headline)}</span>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+      ` : ""}
       <div class="market-card-footer">
         <span>${view.evidence.length} related news</span>
         <span>${market.timeframe === "Daily" ? `Locks ${lockLabel}` : `Closes ${lockLabel}`}</span>
@@ -3212,7 +3227,7 @@ const renderMarketDetail = (market: MarketPreview): void => {
     ? { min: 0, max: optionExitAmount }
     : getTradeAmountBounds(state.marketOrderMode, state.marketTradeSide, position);
   const amountHint = state.marketOrderMode === "buy"
-    ? "$5-$10 USDC"
+    ? "exactly $2.00 USDC"
     : `Up to $${formatMoney(amountBounds.max)} USDC`;
   const positionReady = !state.walletAddress || state.hasLoadedPortfolioPositions;
   const marketResolved = isMarketResolved(market, snapshot);
@@ -3446,7 +3461,7 @@ const renderMarketDetail = (market: MarketPreview): void => {
             <label for="marketAmountInput">Trade Amount <span style="color: var(--market-text-muted); font-size: 0.72rem; text-transform: none; letter-spacing: 0;">${amountHint}</span></label>
             <div class="market-amount-input-row">
               <span>$</span>
-              <input id="marketAmountInput" type="number" min="${amountBounds.min.toFixed(2)}" max="${Math.max(amountBounds.min, amountBounds.max).toFixed(2)}" step="0.01" inputmode="decimal" value="${amount}" data-market-amount ${marketResolved || marketTradeLocked ? "disabled" : ""} />
+              <input id="marketAmountInput" type="number" min="${amountBounds.min.toFixed(2)}" max="${Math.max(amountBounds.min, amountBounds.max).toFixed(2)}" step="0.01" inputmode="decimal" value="${amount}" data-market-amount ${marketResolved || marketTradeLocked || state.marketOrderMode === "buy" ? "disabled" : ""} style="${state.marketOrderMode === "buy" ? "opacity: 0.7; cursor: not-allowed;" : ""}" />
               <span>USDC</span>
             </div>
           </div>

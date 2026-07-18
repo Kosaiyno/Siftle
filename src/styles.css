@@ -10587,4 +10587,26 @@ html, body, .app-shell, main {
   border: 1px solid rgba(59, 130, 246, 0.12) !important;
 }
 
+.points-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #a855f7, #6366f1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 6px !important;
+  padding: 2px 8px !important;
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  line-height: 1.25 !important;
+  white-space: nowrap !important;
+}
+
+:root[data-theme="light"] .points-chip {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5) !important;
+}
+
 
