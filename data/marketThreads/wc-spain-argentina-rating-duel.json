@@ -1,0 +1,55 @@
+{
+  "topic": "Messi vs Yamal Final Showdown",
+  "current": {
+    "headline": "Lamine Yamal and Lionel Messi Face Off in Generation Clash Final",
+    "category": "Sports",
+    "summary": "The teenage sensation Lamine Yamal faces his idol Lionel Messi in a historic rating duel. Both playmakers hold the keys to unlocking the opposition's defense.",
+    "source": "bbc.co.uk",
+    "sourceUrl": "https://www.bbc.co.uk/sport/football/articles/messi-yamal-generation-final",
+    "imageUrl": "https://images.unsplash.com/photo-1518063319789-7217e6706b04?auto=format&fit=crop&w=1200&q=80",
+    "publishedAt": "2026-07-19T13:34:19.473Z",
+    "readTime": "2 min read",
+    "postedAt": "10m ago",
+    "accent": "teal",
+    "saved": false,
+    "type": "news",
+    "id": 2
+  },
+  "items": [
+    {
+      "headline": "Spain and Argentina Prepare for World Cup Final Clash in New Jersey",
+      "category": "Sports",
+      "summary": "La Roja and the Albiceleste go head-to-head at MetLife Stadium for the ultimate crown. Messi aims to seal his final legacy while Spain's young generation looks to make history.",
+      "source": "theguardian.com",
+      "sourceUrl": "https://www.theguardian.com/football/2026/jul/19/spain-argentina-world-cup-final-preview",
+      "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "2026-07-19T13:39:19.473Z",
+      "readTime": "3 min read",
+      "postedAt": "5m ago",
+      "accent": "blue",
+      "saved": false,
+      "type": "news",
+      "id": 1
+    },
+    {
+      "headline": "Referee Jesús Valenzuela Warns of High Intensity Final Clash",
+      "category": "Sports",
+      "summary": "Match officials prepare for a high-intensity duel between the physical Argentine defense and Spain's technical attack. Bookmakers anticipate cards and early fouls.",
+      "source": "skysports.com",
+      "sourceUrl": "https://www.skysports.com/football/news/12026/07/19/world-cup-final-disciplinary-referee-jesus-valenzuela",
+      "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "2026-07-19T13:29:19.473Z",
+      "readTime": "3 min read",
+      "postedAt": "15m ago",
+      "accent": "violet",
+      "saved": false,
+      "type": "news",
+      "id": 3
+    }
+  ],
+  "reviewed_by": "feed-market-bridge",
+  "count": 3,
+  "market_id": "wc-spain-argentina-rating-duel",
+  "saved_market_thread": true,
+  "saved_at": "2026-07-19T13:44:19.498Z"
+}
