@@ -5020,6 +5020,9 @@ const publishStatus = {
   categories: {}
 };
 
+let lastShelbyExtensionTime = 0;
+const SHELBY_EXTENSION_INTERVAL = 12 * 60 * 60 * 1000; // 12 hours
+
 export const extendShelbyBlobsIfNeeded = async (overrides = {}) => {
   const isConfigured = overrides.isShelbyArchiveConfigured ?? isShelbyArchiveConfigured;
   const listFiles = overrides.listShelbyArchiveFiles ?? listShelbyArchiveFiles;
@@ -5027,6 +5030,16 @@ export const extendShelbyBlobsIfNeeded = async (overrides = {}) => {
 
   if (!isConfigured()) {
     return;
+  }
+
+  const now = Date.now();
+  const force = overrides.force ?? (overrides.listShelbyArchiveFiles !== undefined);
+  if (!force && (now - lastShelbyExtensionTime < SHELBY_EXTENSION_INTERVAL)) {
+    console.log("[SHELBY RENEWAL] Skipping lease extension scan (already ran recently).");
+    return;
+  }
+  if (!force) {
+    lastShelbyExtensionTime = now;
   }
 
   console.log("[SHELBY RENEWAL] Scanning Shelby blobs for lease extension...");

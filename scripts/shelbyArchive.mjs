@@ -201,7 +201,7 @@ export const listShelbyArchiveFiles = async () => {
   const blobs = [];
   const limit = 200;
 
-  for (let offset = 0; offset < 5000; offset += limit) {
+  for (let offset = 0; offset < 1000; offset += limit) {
     const page = await client.coordination.getAccountBlobs({
       account,
       pagination: { limit, offset }
@@ -298,7 +298,7 @@ export const restoreAnalyticsFromShelby = async () => {
     const blobs = [];
     const limit = 200;
 
-    for (let offset = 0; offset < 5000; offset += limit) {
+    for (let offset = 0; offset < 1000; offset += limit) {
       const page = await client.coordination.getAccountBlobs({
         account,
         pagination: { limit, offset }
