@@ -7768,7 +7768,7 @@ function getConfiguredMarketAddress(marketId) {
 }
 
 function getSeasonId() {
-  return "season-1-world-cup-2026";
+  return process.env.SIFTLE_SEASON_ID || "preseason-season-2";
 }
 
 function getStoredDivisionAssignments(data, seasonId = getSeasonId()) {
@@ -8313,9 +8313,11 @@ async function recomputeLeaderboardFromChain(data) {
   const tradersMap = leaderboard.traders;
   const resolvedResults = leaderboard.resolvedResults;
 
+  const currentSeason = getSeasonId();
   const dailyMarkets = getKnownMarkets().filter((market) => {
     const marketAddress = normalizeWalletAddress(market.marketAddress) || getConfiguredMarketAddress(market.id);
-    return market.timeframe === "Daily" && Boolean(marketAddress);
+    const marketSeason = market.season || "season-1-world-cup-2026";
+    return market.timeframe === "Daily" && Boolean(marketAddress) && marketSeason === currentSeason;
   });
 
   const allTraders = new Set(
