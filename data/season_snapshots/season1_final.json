@@ -1,0 +1,407 @@
+[
+  {
+    "wallet_address": "0x7085c1a472b60df2ce171c866804b5a90631481f",
+    "username": "SoloHeat",
+    "points": 3390,
+    "wins": 28,
+    "losses": 27,
+    "total_trades": 55,
+    "ai_briefing_unlocks": 163
+  },
+  {
+    "wallet_address": "0x0f76d927cd1c72636858e7d732830a42f611e11b",
+    "username": "Kosi",
+    "points": 2420,
+    "wins": 18,
+    "losses": 44,
+    "total_trades": 62,
+    "ai_briefing_unlocks": 185
+  },
+  {
+    "wallet_address": "0xfb23a22ca0858a9ce56e83f995e2d1e730c6cf92",
+    "username": "AGU",
+    "points": 1820,
+    "wins": 15,
+    "losses": 30,
+    "total_trades": 45,
+    "ai_briefing_unlocks": 67
+  },
+  {
+    "wallet_address": "0xd9ee1a46220e1455a9752f7ca6836cc7d6e1fc8a",
+    "username": "Welly",
+    "points": 1660,
+    "wins": 16,
+    "losses": 22,
+    "total_trades": 38,
+    "ai_briefing_unlocks": 14
+  },
+  {
+    "wallet_address": "0x0d3a404f8f6a07bc1545ba1861af298611a1db4a",
+    "username": "Jigga",
+    "points": 1260,
+    "wins": 9,
+    "losses": 29,
+    "total_trades": 38,
+    "ai_briefing_unlocks": 76
+  },
+  {
+    "wallet_address": "0x3e001fce7d5557cfe1cc3c424123120241af4685",
+    "username": "Sop",
+    "points": 1180,
+    "wins": 10,
+    "losses": 29,
+    "total_trades": 39,
+    "ai_briefing_unlocks": 35
+  },
+  {
+    "wallet_address": "0x15c09b933ce438afba09e126ef111b8b6ae97093",
+    "username": "Realman",
+    "points": 860,
+    "wins": 8,
+    "losses": 12,
+    "total_trades": 20,
+    "ai_briefing_unlocks": 10
+  },
+  {
+    "wallet_address": "0x18383bbf6b0fa0e1e7cebcaf91be4c3cfc86e656",
+    "username": "Kosi",
+    "points": 810,
+    "wins": 7,
+    "losses": 4,
+    "total_trades": 11,
+    "ai_briefing_unlocks": 3
+  },
+  {
+    "wallet_address": "0x272cd7eb1a6a3ba299717e10f9d25f31cdec0145",
+    "username": "Kosi",
+    "points": 810,
+    "wins": 7,
+    "losses": 5,
+    "total_trades": 12,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0x816ed3f849ac305dff8b22fb379857427dd05c39",
+    "username": "Hertz",
+    "points": 600,
+    "wins": 6,
+    "losses": 17,
+    "total_trades": 23,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0xaf20691cca5a7af6ae36b12055fb552c1e768130",
+    "username": "Exchange",
+    "points": 490,
+    "wins": 4,
+    "losses": 12,
+    "total_trades": 16,
+    "ai_briefing_unlocks": 111
+  },
+  {
+    "wallet_address": "0x121198c5653f0f31f3681156f4ee33e083dd5bae",
+    "username": "Onye Odinaka",
+    "points": 400,
+    "wins": 4,
+    "losses": 1,
+    "total_trades": 5,
+    "ai_briefing_unlocks": 1
+  },
+  {
+    "wallet_address": "0x7f1f00b9cb8c5e26c26f5122b7f78223477c9212",
+    "username": "Onye Odinaka",
+    "points": 300,
+    "wins": 3,
+    "losses": 0,
+    "total_trades": 3,
+    "ai_briefing_unlocks": 1
+  },
+  {
+    "wallet_address": "0x3c1c358a5b352ea18c3f02c2df7a7233cf63b804",
+    "username": "HIM",
+    "points": 300,
+    "wins": 3,
+    "losses": 0,
+    "total_trades": 3,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0x09284c2ba341a25d20d3fd0f65f609f0c04f40db",
+    "username": "Realman",
+    "points": 300,
+    "wins": 3,
+    "losses": 3,
+    "total_trades": 6,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0x931c56a3d3a4a6af3618b29fcf131152ea966e15",
+    "username": "AGU",
+    "points": 300,
+    "wins": 3,
+    "losses": 1,
+    "total_trades": 4,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0x91f8c5d4482963754b79c1ddca656ffec9a7a621",
+    "username": "SoloHeat",
+    "points": 260,
+    "wins": 2,
+    "losses": 2,
+    "total_trades": 4,
+    "ai_briefing_unlocks": 18
+  },
+  {
+    "wallet_address": "0x3e2a19ba46ecd946d9de3114eb0a194db9782850",
+    "username": "Sect",
+    "points": 250,
+    "wins": 2,
+    "losses": 1,
+    "total_trades": 3,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0xd3eaf6cd4cf20189d6b27888c875d3fa315c9b38",
+    "username": "Sect",
+    "points": 250,
+    "wins": 2,
+    "losses": 1,
+    "total_trades": 3,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0x627e6a29e1668566194b22ee65b4eecb321769af",
+    "username": "Sop",
+    "points": 200,
+    "wins": 2,
+    "losses": 4,
+    "total_trades": 6,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0x65bb7104be6f11519a67953acc9a7ce2fb324fce",
+    "username": "BIG SMOKE",
+    "points": 200,
+    "wins": 2,
+    "losses": 1,
+    "total_trades": 3,
+    "ai_briefing_unlocks": 1
+  },
+  {
+    "wallet_address": "0x579c5215aea56aa586164c7d2d2ae1da5f865419",
+    "username": "Tiago",
+    "points": 130,
+    "wins": 1,
+    "losses": 1,
+    "total_trades": 2,
+    "ai_briefing_unlocks": 5
+  },
+  {
+    "wallet_address": "0x17c89c7b96ad41ac2030ed1aa123e50642e671f5",
+    "username": "messi",
+    "points": 100,
+    "wins": 1,
+    "losses": 0,
+    "total_trades": 1,
+    "ai_briefing_unlocks": 2
+  },
+  {
+    "wallet_address": "0xdec6ad340e1c79809c9138ca4e249c888238285a",
+    "username": "Tiago",
+    "points": 100,
+    "wins": 1,
+    "losses": 1,
+    "total_trades": 2,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0x09e4deee7e744cb722e795f62e8e83a82bb52654",
+    "username": "Welly",
+    "points": 100,
+    "wins": 1,
+    "losses": 0,
+    "total_trades": 1,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0x9985c1113b3bc3e0259d6edbc1e94288c74ce701",
+    "username": "Hertz",
+    "points": 100,
+    "wins": 1,
+    "losses": 1,
+    "total_trades": 2,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0x7502acbb6b5cc32d1df51da5a92f63e8fbc9e226",
+    "username": "cherry",
+    "points": 100,
+    "wins": 1,
+    "losses": 1,
+    "total_trades": 2,
+    "ai_briefing_unlocks": 2
+  },
+  {
+    "wallet_address": "0xff11d76f1c3483b3074cce7802f510afd0b1feca",
+    "username": "",
+    "points": 30,
+    "wins": 0,
+    "losses": 0,
+    "total_trades": 0,
+    "ai_briefing_unlocks": 17
+  },
+  {
+    "wallet_address": "0x9fdebf3fdcdf8917ed580657a0f3752da27b2ffe",
+    "username": "",
+    "points": 30,
+    "wins": 0,
+    "losses": 2,
+    "total_trades": 2,
+    "ai_briefing_unlocks": 7
+  },
+  {
+    "wallet_address": "0x891533cb102224375d1346443b29d3b9c4ff2c6f",
+    "username": "",
+    "points": 30,
+    "wins": 0,
+    "losses": 0,
+    "total_trades": 0,
+    "ai_briefing_unlocks": 10
+  },
+  {
+    "wallet_address": "0x3929729d497ddf5dad6549b88a6f21a5957c30f6",
+    "username": "cheat",
+    "points": 0,
+    "wins": 0,
+    "losses": 0,
+    "total_trades": 0,
+    "ai_briefing_unlocks": 2
+  },
+  {
+    "wallet_address": "0x3ac570927453f7ab064c67a09d8fd1add127caa2",
+    "username": "Petereinstein",
+    "points": 0,
+    "wins": 0,
+    "losses": 0,
+    "total_trades": 0,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0xd25a1e010f5dd88ec9592a708c4c8b4b10d5d061",
+    "username": "",
+    "points": 0,
+    "wins": 0,
+    "losses": 0,
+    "total_trades": 0,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0x3299ae1a140ae224a4bf89267f4eb3509a92d107",
+    "username": "",
+    "points": 0,
+    "wins": 0,
+    "losses": 0,
+    "total_trades": 0,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0xe56fdb00895b9e321b2647c0eb2e588f5058d7be",
+    "username": "kelvin",
+    "points": 0,
+    "wins": 0,
+    "losses": 0,
+    "total_trades": 0,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0xe6a7324b3a9aca48c02118dde6c601745ecb342b",
+    "username": "Fire",
+    "points": 0,
+    "wins": 0,
+    "losses": 0,
+    "total_trades": 0,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0x25c6117cf880287015df7241a34896883087bc08",
+    "username": "messi",
+    "points": 0,
+    "wins": 0,
+    "losses": 0,
+    "total_trades": 0,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0xead208a76b689df5817d40cd48e259575b99dc68",
+    "username": "MIkel",
+    "points": 0,
+    "wins": 0,
+    "losses": 0,
+    "total_trades": 0,
+    "ai_briefing_unlocks": 2
+  },
+  {
+    "wallet_address": "0x9de80de53254ad3bc1c2ae76fb9ab4d89200b4bd",
+    "username": "",
+    "points": 0,
+    "wins": 0,
+    "losses": 0,
+    "total_trades": 0,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0x3f835299d80015f66682fd4bc5079737db7a2c4f",
+    "username": "cheat",
+    "points": 0,
+    "wins": 0,
+    "losses": 0,
+    "total_trades": 0,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0xeebec226d07bb0ab4dec03ad433903842d3f4efd",
+    "username": "",
+    "points": 0,
+    "wins": 0,
+    "losses": 0,
+    "total_trades": 0,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0xd8ea69b0d3e318db2ca5e296c88b739d37badccb",
+    "username": "Jigga",
+    "points": 0,
+    "wins": 0,
+    "losses": 2,
+    "total_trades": 2,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0x0924ce91b634b92914a602c81499408167a88266",
+    "username": "David",
+    "points": 0,
+    "wins": 0,
+    "losses": 1,
+    "total_trades": 1,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0x30e649bcfdc900af70c8012d1b9b88efa9f7e40e",
+    "username": "",
+    "points": 0,
+    "wins": 0,
+    "losses": 0,
+    "total_trades": 0,
+    "ai_briefing_unlocks": 0
+  },
+  {
+    "wallet_address": "0x0c20c1d64e4ef25e4767fc0b8945a2c09d342e9e",
+    "username": "david",
+    "points": 0,
+    "wins": 0,
+    "losses": 0,
+    "total_trades": 0,
+    "ai_briefing_unlocks": 0
+  }
+]

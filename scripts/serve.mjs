@@ -6447,7 +6447,7 @@ function exitOptionMarketPosition(data, market, walletAddress) {
   return exit;
 }
 
-function resolveOptionMarketInData(data, market, winningOptionId) {
+export function resolveOptionMarketInData(data, market, winningOptionId) {
   const option = getMarketOptions(market).find((entry) => entry.id === winningOptionId);
   if (!option) throw new Error("Choose a valid winning option");
   const store = ensureOptionMarketStore(data);
@@ -6474,7 +6474,7 @@ function resolveOptionMarketInData(data, market, winningOptionId) {
     if (!leaderboard.resolvedResults[cleanWallet]) leaderboard.resolvedResults[cleanWallet] = {};
     leaderboard.resolvedResults[cleanWallet][market.id] = {
       result: position.optionId === option.id ? "win" : "loss",
-      points: position.optionId === option.id ? 100 : 0,
+      points: position.optionId === option.id ? (typeof market.points === "number" ? market.points : 100) : 0,
       option_id: position.optionId,
       winning_option_id: option.id
     };
@@ -8043,7 +8043,7 @@ function marketLockCutoffMs(market) {
   return Number.POSITIVE_INFINITY;
 }
 
-function applyReferralWinBonuses(data) {
+export function applyReferralWinBonuses(data) {
   if (referralWinBonusPoints <= 0 || referralWinBonusMaxRefsPerMarket <= 0 || referralWinBonusMaxUsesPerReferral <= 0) return;
   const leaderboard = ensureLeaderboardState(data);
   const dailyMarkets = getKnownMarkets().filter((market) => market?.timeframe === "Daily" && market?.id);
@@ -8054,6 +8054,7 @@ function applyReferralWinBonuses(data) {
     const referrerResults = leaderboard.resolvedResults?.[referrer] || {};
 
     dailyMarkets.forEach((market) => {
+      if (market.points === 0) return;
       const referrerResult = referrerResults[market.id];
       if (referrerResult?.result !== "win") return;
 
