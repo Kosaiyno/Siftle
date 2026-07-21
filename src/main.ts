@@ -220,6 +220,8 @@ const state: {
 
 let selectedLeaderboardDivision: number | null = null;
 let selectedLeaderboardView: "division" | "global" = "global";
+let selectedSeason1View: "division" | "global" = "global";
+let isSeason1ArchiveExpanded = false;
 let seasonTimerInterval: any = null;
 let archiveIndexRequested = false;
 let feedWarmupRequested = false;
@@ -3688,8 +3690,8 @@ const renderLeaderboard = (): void => {
     <section class="leaderboard-surface">
       <header class="leaderboard-header">
         <span>Siftle Seasonal Arena</span>
-        <h1>Seasonal Leaderboard</h1>
-        <p>Compete with other traders. Points are earned from Daily markets: +100 pts for finishing on the winning side of resolved markets, or +50 pts if you switched sides before resolution.</p>
+        <h1>Preseason Leaderboard</h1>
+        <p>Compete with other traders. Preseason points are earned by unlocking daily AI Briefings to read news and stay updated.</p>
       </header>
 
       <div class="leaderboard-faucet-box">
@@ -3701,40 +3703,21 @@ const renderLeaderboard = (): void => {
       </div>
 
       <div class="season-countdown-banner">
-        <span class="countdown-label">Season 1 (World Cup)</span>
-        <span id="seasonTimer" class="countdown-value">Loading...</span>
+        <span class="countdown-label">Preseason Active</span>
+        <span class="countdown-value">Build up points for Season 2!</span>
       </div>
 
-      <div class="leaderboard-mode-tabs" role="tablist" aria-label="Leaderboard views">
-        <button class="leaderboard-mode-tab ${selectedLeaderboardView === "global" ? "active" : ""}" type="button" data-leaderboard-view="global">Global</button>
-        <button class="leaderboard-mode-tab ${selectedLeaderboardView === "division" ? "active" : ""}" type="button" data-leaderboard-view="division">Division</button>
-      </div>
-
-      <div class="global-prize-box" id="globalPrizeBox" ${selectedLeaderboardView === "global" ? "" : "hidden"}>
+      <div class="global-prize-box" id="globalPrizeBox">
         <div>
-          <span>Global Season Race</span>
-          <strong>Top 10 share a 150 USDC prize pool</strong>
-        </div>
-        <div>
-          <span>Next season</span>
-          <strong>Top 6 to Division 1, next 6 to Division 2</strong>
+          <span>Preseason Race</span>
+          <strong>Ranked by preseason points</strong>
         </div>
       </div>
 
-      <div class="division-title-container" id="divisionControls" ${selectedLeaderboardView === "division" ? "" : "hidden"}>
-        <div class="division-title-left" style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap !important; flex-shrink: 0 !important;">
-          <h2 id="divisionTitleText" style="margin: 0; white-space: nowrap !important;">Division 1</h2>
-          <button class="how-it-works-btn" id="howItWorksBtn" type="button" style="background: rgba(255,255,255,0.06) !important; border: 1px solid #1e1f2b !important; color: #ffffff !important; border-radius: 6px !important; padding: 4px 10px !important; font-size: 0.82rem !important; font-weight: 600 !important; cursor: pointer !important; font-family: 'Space Grotesk', sans-serif !important; white-space: nowrap !important; flex-shrink: 0 !important;">How it works</button>
-        </div>
-        <select id="divisionSelector" class="division-select-menu">
-          <option value="1">Division 1</option>
-        </select>
-      </div>
-
-      <div class="global-title-container" id="globalControls" ${selectedLeaderboardView === "global" ? "" : "hidden"}>
+      <div class="global-title-container" id="globalControls">
         <div>
-          <h2>Global Leaderboard</h2>
-          <p>Everyone ranked by points, wins, fewer losses, then earliest market activity.</p>
+          <h2>Preseason rankings</h2>
+          <p>Everyone ranked by preseason points. Unlock at least 3 briefings daily to earn 30 points. Points carry forward to Season 2.</p>
         </div>
       </div>
 
@@ -3750,6 +3733,50 @@ const renderLeaderboard = (): void => {
               <div style="width: 60px; height: 16px; background: rgba(255,255,255,0.05); border-radius: 4px;"></div>
             </div>
           `).join("")}
+        </div>
+      </div>
+
+      <!-- Season 1 Archive Collapsible Accordion -->
+      <div class="leaderboard-archive-section" style="margin-top: 32px; border-top: 1px solid var(--market-border); padding-top: 24px;">
+        <button id="archiveExpandBtn" class="archive-expand-btn" type="button" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: var(--market-card-bg); border: 1px solid var(--market-border); border-radius: 10px; color: var(--market-text-main); font-weight: 600; cursor: pointer; font-family: 'Space Grotesk', sans-serif; font-size: 1rem; transition: background 0.2s;">
+          <span style="display: flex; align-items: center; gap: 8px;">📂 View Season 1 (World Cup) Leaderboard Archive</span>
+          <span id="archiveChevron" style="transition: transform 0.2s; font-size: 0.8rem; transform: ${isSeason1ArchiveExpanded ? "rotate(180deg)" : "rotate(0deg)"}; color: var(--market-text-main);">▼</span>
+        </button>
+        
+        <div id="archiveContent" style="display: ${isSeason1ArchiveExpanded ? "block" : "none"}; padding: 8px 4px 0 4px;">
+          <div class="leaderboard-mode-tabs" role="tablist" aria-label="Season 1 views" style="margin-top: 20px; display: flex; gap: 8px;">
+            <button class="leaderboard-mode-tab ${selectedSeason1View === "global" ? "active" : ""}" type="button" data-season1-view="global" style="flex: 1;">Global</button>
+            <button class="leaderboard-mode-tab ${selectedSeason1View === "division" ? "active" : ""}" type="button" data-season1-view="division" style="flex: 1;">Division</button>
+          </div>
+
+          <div class="global-prize-box" id="season1PrizeBox" ${selectedSeason1View === "global" ? "" : "hidden"} style="margin-top: 16px; display: grid; grid-template-columns: 1fr; gap: 12px;">
+            <div>
+              <span>Global Season Race</span>
+              <strong>Top 10 share a 150 USDC prize pool</strong>
+            </div>
+          </div>
+
+          <div class="division-title-container" id="season1DivisionControls" ${selectedSeason1View === "division" ? "" : "hidden"} style="margin-top: 16px;">
+            <div class="division-title-left" style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap !important; flex-shrink: 0 !important;">
+              <h2 id="season1DivisionTitleText" style="margin: 0; white-space: nowrap !important;">Division 1</h2>
+              <button class="how-it-works-btn" id="season1HowItWorksBtn" type="button" style="background: var(--market-card-bg) !important; border: 1px solid var(--market-border) !important; color: var(--market-text-main) !important; border-radius: 6px !important; padding: 4px 10px !important; font-size: 0.82rem !important; font-weight: 600 !important; cursor: pointer !important; font-family: 'Space Grotesk', sans-serif !important; white-space: nowrap !important; flex-shrink: 0 !important;">How it works</button>
+            </div>
+            <select id="season1DivisionSelector" class="division-select-menu">
+              <option value="1">Division 1</option>
+              <option value="2">Division 2</option>
+            </select>
+          </div>
+
+          <div class="global-title-container" id="season1GlobalControls" ${selectedSeason1View === "global" ? "" : "hidden"} style="margin-top: 16px;">
+            <div>
+              <h2>Season 1 Final Rankings</h2>
+              <p>Everyone ranked by points, wins, fewer losses, then earliest market activity.</p>
+            </div>
+          </div>
+
+          <div class="leaderboard-list" id="season1LeaderboardListContainer" role="list" style="margin-top: 16px;">
+            <!-- Render skeleton or rows -->
+          </div>
         </div>
       </div>
     </section>
@@ -3883,18 +3910,39 @@ const renderLeaderboard = (): void => {
     `;
   }).join("");
 
-  const setLeaderboardView = (view: "division" | "global") => {
-    selectedLeaderboardView = view;
-    document.querySelectorAll<HTMLElement>("[data-leaderboard-view]").forEach((button) => {
-      button.classList.toggle("active", button.dataset.leaderboardView === view);
-    });
-    document.getElementById("divisionControls")?.toggleAttribute("hidden", view !== "division");
-    document.getElementById("globalControls")?.toggleAttribute("hidden", view !== "global");
-    document.getElementById("globalPrizeBox")?.toggleAttribute("hidden", view !== "global");
-  };
+  const renderPreseasonLeaderboardRows = (players: any[]) => players.map((player: any, idx: number) => {
+    const rank = idx + 1;
+    const wallet = String(player.username || "");
+    const isUser = Boolean(state.walletAddress && wallet.toLowerCase() === state.walletAddress.toLowerCase());
+    const resolvedUsername = isUser && state.profileUsername
+      ? state.profileUsername
+      : (player.displayName || wallet);
+    const displayName = isUser
+      ? `${state.profileUsername ? resolvedUsername : shortenAddress(wallet)} (You)`
+      : (resolvedUsername.startsWith("0x") && resolvedUsername.length === 42 ? shortenAddress(resolvedUsername) : resolvedUsername);
+    const safeDisplayName = escapeHtml(displayName);
+    const unlockCount = Number(player.unlocks) || 0;
+    const points = Number(player.points) || 0;
+    const playerStatus = player.status || `${unlockCount} briefing unlock${unlockCount === 1 ? "" : "s"}`;
 
-  const renderLeaderboardSkeleton = (rows: number) => {
-    const listContainer = document.getElementById("leaderboardListContainer");
+    return `
+      <div class="leaderboard-row global-row ${isUser ? 'user-highlight' : ''}" role="listitem">
+        <div class="leaderboard-row-left">
+          <span class="leaderboard-rank rank-${rank}">${rank}</span>
+          <span class="leaderboard-username">${safeDisplayName}</span>
+        </div>
+        <div class="leaderboard-row-score">
+          <strong>${points} pts</strong>
+          <span>${playerStatus}</span>
+        </div>
+        <div class="leaderboard-row-right">
+          <span style="color: #34d399; font-weight: 600;">Preseason</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  const renderLeaderboardSkeleton = (listContainer: HTMLElement | null, rows: number) => {
     if (!listContainer) return;
     listContainer.innerHTML = `
       <div class="leaderboard-skeleton" style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
@@ -3911,181 +3959,119 @@ const renderLeaderboard = (): void => {
     `;
   };
 
-  const fetchAndRenderGlobal = () => {
-    setLeaderboardView("global");
+  const fetchAndRenderPreseason = () => {
     const listContainer = document.getElementById("leaderboardListContainer");
-    const cacheKey = "global";
-    const cached = getLeaderboardCache(cacheKey);
-    if (cached && listContainer) {
-      listContainer.innerHTML = renderLeaderboardSyncNote() + renderGlobalLeaderboardRows(cached.players);
-      if (cached.seasonEndsAt) startSeasonTimer(cached.seasonEndsAt);
-    } else {
-      renderLeaderboardSkeleton(10);
-    }
-    const params = new URLSearchParams();
-    if (state.walletAddress) params.set("walletAddress", state.walletAddress);
-    const query = params.toString();
-
-    fetch(apiUrl(`/api/leaderboard/global${query ? `?${query}` : ""}`))
+    renderLeaderboardSkeleton(listContainer, 6);
+    fetch(apiUrl("/api/leaderboard/preseason"))
       .then(res => res.json())
       .then((data: any) => {
-        const players = stabilizeLeaderboardPlayers(data.players || [], cached?.players || [], true);
+        const players = data.players || [];
         if (listContainer) {
           listContainer.innerHTML = players.length === 0
-            ? `<p style="color: var(--market-text-muted); text-align: center; padding: 24px 0; font-family: 'Space Grotesk', sans-serif;">No players on the global leaderboard yet.</p>`
-            : renderGlobalLeaderboardRows(players);
+            ? `<p style="color: var(--market-text-muted); text-align: center; padding: 24px 0; font-family: 'Space Grotesk', sans-serif;">No players on the preseason leaderboard yet. Unlock a daily AI briefing to join!</p>`
+            : renderPreseasonLeaderboardRows(players);
         }
-
-        setLeaderboardCache(cacheKey, { players, seasonEndsAt: data.seasonEndsAt });
-        startSeasonTimer(data.seasonEndsAt);
       })
       .catch(err => {
-        console.error("Failed to load global leaderboard:", err);
+        console.error("Failed to load preseason leaderboard:", err);
         if (listContainer) {
-          listContainer.innerHTML = `<p style="color: var(--market-text-muted); text-align: center; padding: 24px 0; font-family: 'Space Grotesk', sans-serif;">Error loading global leaderboard. Please try again.</p>`;
+          listContainer.innerHTML = `<p style="color: var(--market-text-muted); text-align: center; padding: 24px 0; font-family: 'Space Grotesk', sans-serif;">Error loading preseason leaderboard. Please try again.</p>`;
         }
       });
   };
 
-  const fetchAndRenderDivision = (targetDivNum?: number) => {
-    setLeaderboardView("division");
-    const listContainer = document.getElementById("leaderboardListContainer");
-    const cacheKey = `division_${targetDivNum || selectedLeaderboardDivision || "current"}`;
-    const cached = getLeaderboardCache(cacheKey);
-    if (cached && listContainer) {
-      listContainer.innerHTML = renderLeaderboardSyncNote() + renderDivisionLeaderboardRows(cached.players);
-      if (cached.divisionNumber) selectedLeaderboardDivision = cached.divisionNumber;
-      if (cached.seasonEndsAt) startSeasonTimer(cached.seasonEndsAt);
-    } else if (listContainer && targetDivNum !== undefined) {
-      listContainer.innerHTML = `
-        <div class="leaderboard-skeleton" style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
-          ${Array.from({ length: 6 }).map(() => `
-            <div style="height: 52px; background: rgba(255,255,255,0.02); border: 1px solid #1e1f2b; border-radius: 8px; width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0 16px;">
-              <div style="display: flex; align-items: center; gap: 12px; width: 60%;">
-                <div style="width: 24px; height: 24px; background: rgba(255,255,255,0.05); border-radius: 50%;"></div>
-                <div style="width: 100px; height: 16px; background: rgba(255,255,255,0.05); border-radius: 4px;"></div>
-              </div>
-              <div style="width: 60px; height: 16px; background: rgba(255,255,255,0.05); border-radius: 4px;"></div>
-            </div>
-          `).join("")}
-        </div>
-      `;
-    }
-
-    const params = new URLSearchParams();
-    if (state.walletAddress) params.set("walletAddress", state.walletAddress);
-    if (targetDivNum) params.set("division", String(targetDivNum));
-    const query = params.toString();
-
-    fetch(apiUrl(`/api/leaderboard/division${query ? `?${query}` : ""}`))
+  const fetchAndRenderSeason1 = () => {
+    const listContainer = document.getElementById("season1LeaderboardListContainer");
+    renderLeaderboardSkeleton(listContainer, 6);
+    fetch(apiUrl("/api/leaderboard/season1"))
       .then(res => res.json())
-      .then((data: any) => {
-        const divisionNumber = data.divisionNumber || 1;
-        const players = stabilizeLeaderboardPlayers(data.players || [], cached?.players || [], false);
-        const totalDivisions = data.totalDivisions || 1;
-        const seasonEndsAt = data.seasonEndsAt;
-
-        selectedLeaderboardDivision = divisionNumber;
-
-        const divisionTitleText = document.getElementById("divisionTitleText");
-        if (divisionTitleText) divisionTitleText.innerText = `Division ${divisionNumber}`;
-
-        const divisionSelector = document.getElementById("divisionSelector") as HTMLSelectElement | null;
-        if (divisionSelector) {
-          divisionSelector.innerHTML = Array.from({ length: totalDivisions }, (_, i) => i + 1).map(divNum => `
-            <option value="${divNum}" ${divNum === divisionNumber ? 'selected' : ''}>Division ${divNum}</option>
-          `).join("");
-        }
+      .then((data: any[]) => {
+        const players = data.map((p, idx) => {
+          const rank = idx + 1;
+          let nextSeasonDivision = null;
+          if (rank <= 6) nextSeasonDivision = 1;
+          else if (rank <= 12) nextSeasonDivision = 2;
+          return {
+            username: p.wallet_address,
+            displayName: p.username,
+            points: p.points,
+            status: `${p.wins} wins, ${p.losses} losses`,
+            globalRank: rank,
+            prizeEligible: rank <= 10,
+            nextSeasonDivision
+          };
+        });
 
         if (listContainer) {
-          if (players.length === 0) {
-            listContainer.innerHTML = `<p style="color: var(--market-text-muted); text-align: center; padding: 24px 0; font-family: 'Space Grotesk', sans-serif;">No active players in this division.</p>`;
+          if (selectedSeason1View === "global") {
+            listContainer.innerHTML = players.length === 0
+              ? `<p style="color: var(--market-text-muted); text-align: center; padding: 24px 0; font-family: 'Space Grotesk', sans-serif;">No players in Season 1.</p>`
+              : renderGlobalLeaderboardRows(players);
           } else {
-            listContainer.innerHTML = players.map((player: any, idx: number) => {
-              const rank = idx + 1;
-              const isUser = state.walletAddress && player.username.toLowerCase() === state.walletAddress.toLowerCase();
-              const resolvedUsername = isUser && state.profileUsername
-                ? state.profileUsername
-                : (player.displayName || player.username);
-              const playerStatus = escapeHtml(formatLeaderboardStatus(player.status));
-              const displayName = isUser
-                ? `${state.profileUsername ? resolvedUsername : shortenAddress(player.username)} (You)`
-                : (resolvedUsername.startsWith("0x") && resolvedUsername.length === 42 ? shortenAddress(resolvedUsername) : resolvedUsername);
-              const safeDisplayName = escapeHtml(displayName);
-
-              let zoneClass = "safety-zone";
-              let arrowHtml = '<span style="color: transparent; font-weight: bold; font-size: 0.85rem; margin-right: 4px; display: inline-block; width: 10px;">•</span>';
-              if (rank <= 2) {
-                zoneClass = "promotion-zone";
-                arrowHtml = '<span style="color: #34d399; font-weight: bold; font-size: 0.85rem; margin-right: 4px; display: inline-block; width: 10px;">▲</span>';
-              } else if (rank >= 5) {
-                zoneClass = "relegation-zone";
-                arrowHtml = '<span style="color: #ef4444; font-weight: bold; font-size: 0.85rem; margin-right: 4px; display: inline-block; width: 10px;">▼</span>';
-              }
-
-              return `
-                <div class="leaderboard-row ${isUser ? 'user-highlight' : ''} ${zoneClass}" role="listitem" style="display: flex !important; align-items: center !important; justify-content: space-between !important; padding: 12px 16px !important; border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important; margin-bottom: 0 !important; background: transparent !important; font-family: 'Space Grotesk', sans-serif !important;">
-                  <!-- Left Side: Arrow + Rank + Username -->
-                  <div style="flex: 1.5; display: flex; align-items: center; gap: 8px; min-width: 0;">
-                    ${arrowHtml}
-                    <span class="leaderboard-rank rank-${rank}" style="flex-shrink: 0; margin-right: 4px;">${rank}</span>
-                    <span class="leaderboard-username" style="font-weight: 600; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${safeDisplayName}</span>
-                  </div>
-                  <!-- Center Side: Points -->
-                  <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
-                    <span style="color: #ffffff; font-weight: 750; font-size: 0.95rem; white-space: nowrap;">${player.points} pts</span>
-                  </div>
-                  <!-- Right Side: Status -->
-                  <div style="flex: 1.5; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; text-align: right; min-width: 0;">
-                    <span style="font-size: 0.78rem; color: #8e8e93; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${playerStatus}</span>
-                  </div>
-                </div>
-              `;
-            }).join("");
+            const divisionSelector = document.getElementById("season1DivisionSelector") as HTMLSelectElement | null;
+            const targetDiv = divisionSelector ? Number(divisionSelector.value) : 1;
+            const filtered = players.filter(p => p.nextSeasonDivision === targetDiv);
+            listContainer.innerHTML = filtered.length === 0
+              ? `<p style="color: var(--market-text-muted); text-align: center; padding: 24px 0; font-family: 'Space Grotesk', sans-serif;">No players in this division.</p>`
+              : renderDivisionLeaderboardRows(filtered);
           }
         }
-
-        setLeaderboardCache(cacheKey, {
-          players,
-          divisionNumber,
-          totalDivisions,
-          seasonEndsAt
-        });
-        setLeaderboardCache(`division_${divisionNumber}`, {
-          players,
-          divisionNumber,
-          totalDivisions,
-          seasonEndsAt
-        });
-        startSeasonTimer(seasonEndsAt);
       })
       .catch(err => {
-        console.error("Failed to load division leaderboard:", err);
+        console.error("Failed to load Season 1 archive:", err);
         if (listContainer) {
-          listContainer.innerHTML = `<p style="color: var(--market-text-muted); text-align: center; padding: 24px 0; font-family: 'Space Grotesk', sans-serif;">Error loading division leaderboard. Please try again.</p>`;
+          listContainer.innerHTML = `<p style="color: var(--market-text-muted); text-align: center; padding: 24px 0; font-family: 'Space Grotesk', sans-serif;">Error loading Season 1 leaderboard archive. Please try again.</p>`;
         }
       });
   };
 
-  if (selectedLeaderboardView === "division") {
-    fetchAndRenderDivision(selectedLeaderboardDivision || undefined);
-  } else {
-    fetchAndRenderGlobal();
+  const setSeason1View = (view: "division" | "global") => {
+    selectedSeason1View = view;
+    document.querySelectorAll<HTMLElement>("[data-season1-view]").forEach((button) => {
+      button.classList.toggle("active", button.dataset.season1View === view);
+    });
+    document.getElementById("season1DivisionControls")?.toggleAttribute("hidden", view !== "division");
+    document.getElementById("season1GlobalControls")?.toggleAttribute("hidden", view !== "global");
+    document.getElementById("season1PrizeBox")?.toggleAttribute("hidden", view !== "global");
+    fetchAndRenderSeason1();
+  };
+
+  fetchAndRenderPreseason();
+
+  if (isSeason1ArchiveExpanded) {
+    setSeason1View(selectedSeason1View);
   }
 
-  document.querySelectorAll<HTMLElement>("[data-leaderboard-view]").forEach((button) => {
+  // Attach event listener for archive collapsible
+  const archiveExpandBtn = document.getElementById("archiveExpandBtn");
+  const archiveContent = document.getElementById("archiveContent");
+  const archiveChevron = document.getElementById("archiveChevron");
+
+  archiveExpandBtn?.addEventListener("click", () => {
+    isSeason1ArchiveExpanded = !isSeason1ArchiveExpanded;
+    if (archiveContent) {
+      archiveContent.style.display = isSeason1ArchiveExpanded ? "block" : "none";
+    }
+    if (archiveChevron) {
+      archiveChevron.style.transform = isSeason1ArchiveExpanded ? "rotate(180deg)" : "rotate(0deg)";
+    }
+    if (isSeason1ArchiveExpanded) {
+      setSeason1View(selectedSeason1View);
+    }
+  });
+
+  // Attach event listeners for Season 1 view tabs
+  document.querySelectorAll<HTMLElement>("[data-season1-view]").forEach((button) => {
     button.addEventListener("click", () => {
-      const view = button.dataset.leaderboardView === "division" ? "division" : "global";
-      if (view === "division") fetchAndRenderDivision(selectedLeaderboardDivision || undefined);
-      else fetchAndRenderGlobal();
+      const view = button.dataset.season1View === "division" ? "division" : "global";
+      setSeason1View(view);
     });
   });
 
-  // Attach event listener for division selector change
-  const divisionSelector = document.getElementById("divisionSelector") as HTMLSelectElement | null;
-  divisionSelector?.addEventListener("change", (e) => {
-    const val = Number((e.target as HTMLSelectElement).value);
-    fetchAndRenderDivision(val);
+  // Attach event listener for Season 1 division selector change
+  const season1DivisionSelector = document.getElementById("season1DivisionSelector") as HTMLSelectElement | null;
+  season1DivisionSelector?.addEventListener("change", () => {
+    fetchAndRenderSeason1();
   });
 
   // Attach event listener for faucet claim button

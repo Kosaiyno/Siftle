@@ -8699,7 +8699,11 @@ body::before {
    ========================================================================== */
 
 /* 1. Typography & Classy Pairing */
-*, *::before, *::after, html, body, button, input, select, textarea, span, p, strong, small, a, div, section, header, nav, article, h1, h2, h3, h4, h5, h6, .brand-lockup span, .site-header .brand-lockup span {
+*, *::before, *::after, html, body, button, input, select, textarea, span, p, strong, small, a, div, section, header, nav, article {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+h1, h2, h3, h4, h5, h6, .brand-lockup span, .site-header .brand-lockup span {
   font-family: 'Cormorant Garamond', 'Times New Roman', serif !important;
 }
 

@@ -9171,6 +9171,90 @@ function getAnalyticsHtml() {
 </html>`;
 }
 
+export function buildPreseasonLeaderboardPlayers(data, profiles, unlocks) {
+  const profileMap = new Map();
+  if (profiles && profiles.length > 0) {
+    profiles.forEach(p => {
+      const clean = normalizeWalletAddress(p.wallet_address);
+      if (clean) profileMap.set(clean, p.username || "");
+    });
+  }
+  Object.entries(data.leaderboard?.traders || {}).forEach(([addr, info]) => {
+    const clean = normalizeWalletAddress(addr);
+    if (clean && info.username && !profileMap.has(clean)) {
+      profileMap.set(clean, info.username);
+    }
+  });
+
+  const dailyUnlocks = new Map(); // walletAddress -> Map<dateKey, count>
+
+  if (unlocks && unlocks.length > 0) {
+    unlocks.forEach(unlock => {
+      const addr = normalizeWalletAddress(unlock.wallet_address);
+      if (!addr || isAdminWallet(addr)) return;
+      
+      let dateKey = unlock.date_key;
+      if (!dateKey && unlock.created_at) {
+        dateKey = unlock.created_at.substring(0, 10);
+      }
+      if (!dateKey) return;
+
+      if (!dailyUnlocks.has(addr)) {
+        dailyUnlocks.set(addr, new Map());
+      }
+      const userDays = dailyUnlocks.get(addr);
+      userDays.set(dateKey, (userDays.get(dateKey) || 0) + 1);
+    });
+  } else {
+    const localUnlocks = data.leaderboard?.aiBriefingUnlocks || {};
+    for (const [key, list] of Object.entries(localUnlocks)) {
+      const parts = key.split(":");
+      const addr = normalizeWalletAddress(parts[0]);
+      const dateKey = parts[1];
+      if (!addr || isAdminWallet(addr) || !dateKey || dateKey < "2026-07-20") continue;
+      
+      const validList = (Array.isArray(list) ? list : []).filter(item => {
+        const createdAt = item?.createdAt || item?.created_at || "";
+        return !createdAt || createdAt >= "2026-07-20T00:00:00Z";
+      });
+      if (validList.length > 0) {
+        if (!dailyUnlocks.has(addr)) {
+          dailyUnlocks.set(addr, new Map());
+        }
+        const userDays = dailyUnlocks.get(addr);
+        userDays.set(dateKey, (userDays.get(dateKey) || 0) + validList.length);
+      }
+    }
+  }
+
+  const countMap = new Map();
+  const daysMap = new Map();
+  for (const [addr, userDays] of dailyUnlocks.entries()) {
+    let daysWithTarget = 0;
+    for (const [dateKey, count] of userDays.entries()) {
+      if (count >= 3) {
+        daysWithTarget++;
+      }
+    }
+    if (daysWithTarget > 0) {
+      daysMap.set(addr, daysWithTarget);
+      countMap.set(addr, daysWithTarget * 30);
+    }
+  }
+
+  return Array.from(countMap.entries()).map(([address, points]) => {
+    const username = profileMap.get(address) || "";
+    const days = daysMap.get(address) || 0;
+    return {
+      username: address,
+      displayName: username,
+      unlocks: days * 3,
+      points: points,
+      status: `${days} day${days === 1 ? "" : "s"} completed`
+    };
+  }).sort((a, b) => b.points - a.points);
+}
+
 const server = createServer(async (request, response) => {
   const requestUrl = new URL(request.url ?? "/", `http://${request.headers.host}`);
 
@@ -10723,6 +10807,117 @@ const server = createServer(async (request, response) => {
     }, {
       "Cache-Control": `public, max-age=${leaderboardBrowserCacheSeconds}, stale-while-revalidate=60`
     });
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/leaderboard/preseason" && request.method === "GET") {
+    try {
+      const data = await getLeaderboardAnalyticsFresh();
+      
+      let unlocks = [];
+      let profiles = [];
+      try {
+        [profiles, unlocks] = await Promise.all([
+          supabaseRequest("profiles?select=wallet_address,username"),
+          supabaseRequest("ai_briefing_unlocks?select=wallet_address,created_at,date_key&created_at=gte.2026-07-20T00:00:00Z&limit=10000")
+        ]);
+      } catch (err) {
+        console.warn("[SUPABASE] Preseason leaderboard fetch failed, falling back to local:", err.message);
+      }
+
+      const players = buildPreseasonLeaderboardPlayers(data, profiles, unlocks);
+
+      sendJson(response, 200, { players }, {
+        "Cache-Control": `public, max-age=${leaderboardBrowserCacheSeconds}, stale-while-revalidate=60`
+      });
+    } catch (err) {
+      console.error("Failed to load preseason leaderboard:", err);
+      sendJson(response, 500, { error: err.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/leaderboard/season1" && request.method === "GET") {
+    try {
+      const content = readFileSync(join(root, "data", "season_snapshots", "season1_final.json"), "utf8");
+      let players = JSON.parse(content);
+
+      // Load migrations to identify and filter out migrated/duplicate wallets
+      const migrationMap = new Map();
+      
+      // 1. Load local migrations
+      try {
+        if (existsSync(backendWalletMigrationsFile)) {
+          const localMigrations = JSON.parse(readFileSync(backendWalletMigrationsFile, "utf8"));
+          Object.values(localMigrations || {}).forEach((entry) => {
+            const oldWallet = normalizeWalletAddress(entry?.oldWalletAddress);
+            const newWallet = normalizeWalletAddress(entry?.newWalletAddress);
+            if (oldWallet && newWallet && oldWallet !== newWallet) {
+              migrationMap.set(oldWallet, newWallet);
+            }
+          });
+        }
+      } catch (err) {
+        console.warn("[MIGRATIONS] Failed to load local migrations for Season 1:", err.message);
+      }
+
+      // 2. Load Supabase migrations
+      if (isSupabaseConfigured) {
+        try {
+          const remoteMigrations = await loadBackendWalletMigrationsFromSupabase();
+          Object.values(remoteMigrations || {}).forEach((entry) => {
+            const oldWallet = normalizeWalletAddress(entry?.oldWalletAddress);
+            const newWallet = normalizeWalletAddress(entry?.newWalletAddress);
+            if (oldWallet && newWallet && oldWallet !== newWallet) {
+              migrationMap.set(oldWallet, newWallet);
+            }
+          });
+        } catch (err) {
+          console.warn("[SUPABASE] Failed to load migrations for Season 1:", err.message);
+        }
+      }
+
+      const canonicalAddress = (addr) => {
+        const clean = normalizeWalletAddress(addr);
+        return clean ? migrationMap.get(clean) || clean : "";
+      };
+
+      // Differentiate/deduplicate by canonicalized address, keeping highest points entry
+      const playersByAddr = new Map();
+      players.forEach(p => {
+        const rawAddr = normalizeWalletAddress(p.wallet_address);
+        if (!rawAddr) return;
+        const addr = canonicalAddress(rawAddr);
+        const existing = playersByAddr.get(addr);
+        if (!existing || (Number(p.points) || 0) > (Number(existing.points) || 0)) {
+          playersByAddr.set(addr, { ...p, wallet_address: addr });
+        }
+      });
+
+      // Deduplicate by case-insensitive username/displayName, keeping the highest score entry
+      const playersByName = new Map();
+      playersByAddr.forEach(p => {
+        const name = String(p.username || "").trim().toLowerCase();
+        if (!name) {
+          playersByName.set(`wallet:${p.wallet_address}`, p);
+          return;
+        }
+        const key = `name:${name}`;
+        const existing = playersByName.get(key);
+        if (!existing || (Number(p.points) || 0) > (Number(existing.points) || 0)) {
+          playersByName.set(key, p);
+        }
+      });
+
+      const cleanPlayers = Array.from(playersByName.values()).sort((a, b) => (Number(b.points) || 0) - (Number(a.points) || 0));
+
+      sendJson(response, 200, cleanPlayers, {
+        "Cache-Control": "public, max-age=3600"
+      });
+    } catch (err) {
+      console.error("Failed to read Season 1 snapshot:", err);
+      sendJson(response, 500, { error: "Failed to load Season 1 leaderboard archive" });
+    }
     return;
   }
 
