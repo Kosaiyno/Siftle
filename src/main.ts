@@ -3845,7 +3845,12 @@ const renderLeaderboard = (): void => {
       ? `${state.profileUsername ? resolvedUsername : shortenAddress(wallet)} (You)`
       : (resolvedUsername.startsWith("0x") && resolvedUsername.length === 42 ? shortenAddress(resolvedUsername) : resolvedUsername);
     const safeDisplayName = escapeHtml(displayName);
-    const playerStatus = escapeHtml(formatLeaderboardStatus(player.status));
+    let rawStatus = formatLeaderboardStatus(player.status);
+    if (player.totalTrades !== undefined && player.aiBriefingUnlocks !== undefined) {
+      const stats = parseLeaderboardNumbers(player.status);
+      rawStatus = `${stats.wins}W - ${stats.losses}L · ${player.totalTrades} trades · ${player.aiBriefingUnlocks} unlocks`;
+    }
+    const playerStatus = escapeHtml(rawStatus);
     const nextSeason = player.nextSeasonDivision ? `Division ${player.nextSeasonDivision}` : "Qualify";
     const zoneClass = rank <= 10 ? "promotion-zone" : "safety-zone";
     const arrowHtml = rank <= 12
@@ -3877,7 +3882,12 @@ const renderLeaderboard = (): void => {
     const resolvedUsername = isUser && state.profileUsername
       ? state.profileUsername
       : (player.displayName || wallet);
-    const playerStatus = escapeHtml(formatLeaderboardStatus(player.status));
+    let rawStatus = formatLeaderboardStatus(player.status);
+    if (player.totalTrades !== undefined && player.aiBriefingUnlocks !== undefined) {
+      const stats = parseLeaderboardNumbers(player.status);
+      rawStatus = `${stats.wins}W - ${stats.losses}L · ${player.totalTrades} trades · ${player.aiBriefingUnlocks} unlocks`;
+    }
+    const playerStatus = escapeHtml(rawStatus);
     const displayName = isUser
       ? `${state.profileUsername ? resolvedUsername : shortenAddress(wallet)} (You)`
       : (resolvedUsername.startsWith("0x") && resolvedUsername.length === 42 ? shortenAddress(resolvedUsername) : resolvedUsername);
@@ -3996,6 +4006,8 @@ const renderLeaderboard = (): void => {
             displayName: p.username,
             points: p.points,
             status: `${p.wins} wins, ${p.losses} losses`,
+            totalTrades: p.total_trades,
+            aiBriefingUnlocks: p.ai_briefing_unlocks,
             globalRank: rank,
             prizeEligible: rank <= 10,
             nextSeasonDivision
