@@ -6204,6 +6204,7 @@ h4 {
 
 /* Share to Twitter button */
 .share-briefing-container {
+  gap: 10px;
   display: flex;
   justify-content: flex-end;
   margin-top: 18px;

@@ -5142,6 +5142,22 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
       console.log("[STARTUP] Skipping Shelby snapshot pre-population. Set SHELBY_PREPOPULATE_ON_STARTUP=true to re-enable it.");
     }
 
+    if (reason === "startup") {
+      let allExist = true;
+      for (const cat of sourceCategories) {
+        if (!existsSync(getLatestSnapshotPath(cat))) {
+          allExist = false;
+          break;
+        }
+      }
+      if (allExist) {
+        console.log("[STARTUP] Local category snapshots found. Skipping initial feed generation at startup to save memory.");
+        publishStatus.is_running = false;
+        publishStatus.last_finished_at = new Date().toISOString();
+        return { skipped: false, status: publishStatus };
+      }
+    }
+
     console.log(`Publishing feeds every ${refreshIntervalMinutes} minutes (${reason})...`);
     let failureCount = 0;
 
@@ -5170,6 +5186,11 @@ const refreshPublishedFeeds = async (reason = "scheduled") => {
       }
       // Yield to the event loop between category generations to prevent CPU starvation
       await new Promise(resolve => setTimeout(resolve, 500));
+      if (global.gc) {
+        try {
+          global.gc();
+        } catch (_) {}
+      }
     }
 
     const allSnapshot = await buildAllSnapshotFromCategories();
@@ -6754,10 +6775,14 @@ function normalizeAnalytics(data = {}) {
     totals[key] = hasDailyRows ? (Number(dailyTotals[key]) || 0) : (Number(storedTotals[key]) || 0);
   });
 
+  const sources_daily = data.sources_daily && typeof data.sources_daily === "object" ? data.sources_daily : {};
+
   return {
     ...data,
     totals,
     daily,
+    sources_daily,
+    profiles: data.profiles && typeof data.profiles === "object" ? data.profiles : {},
     emails: Array.isArray(data.emails) ? data.emails : []
   };
 }
@@ -6924,6 +6949,26 @@ async function loadAnalyticsFromSupabase(localData = loadAnalytics()) {
       });
       data.daily[dateKey] = merged;
     });
+
+    try {
+      const sourceRows = await supabaseRequest("analytics_sources_daily?select=date_key,source,app_open,sign_up,ai_unlock_success");
+      (sourceRows || []).forEach((row) => {
+        const dateKey = String(row.date_key || "").trim();
+        const source = String(row.source || "").trim();
+        if (!dateKey || !source) return;
+
+        data.sources_daily[dateKey] = data.sources_daily[dateKey] || {};
+        const existing = data.sources_daily[dateKey][source] || { app_open: 0, sign_up: 0, ai_unlock_success: 0 };
+        data.sources_daily[dateKey][source] = {
+          app_open: Math.max(Number(existing.app_open) || 0, Number(row.app_open) || 0),
+          sign_up: Math.max(Number(existing.sign_up) || 0, Number(row.sign_up) || 0),
+          ai_unlock_success: Math.max(Number(existing.ai_unlock_success) || 0, Number(row.ai_unlock_success) || 0)
+        };
+      });
+    } catch (sourceDbErr) {
+      console.warn("[SUPABASE] Source analytics read failed; using local fallback:", sourceDbErr.message);
+    }
+
     return normalizeAnalytics(data);
   } catch (err) {
     console.warn("[SUPABASE] Analytics read failed; using local fallback:", err.message);
@@ -8582,6 +8627,76 @@ function trackAnalyticsEvent(event, email = null) {
   return incrementAnalyticsEventInSupabase(cleanEvent, email);
 }
 
+export const sanitizeTrafficSource = (source) => {
+  const clean = String(source || "organic").trim().toLowerCase();
+  const allowed = ["x", "ig", "wa", "dc", "google", "organic", "briefing"];
+  return allowed.includes(clean) ? clean : "organic";
+};
+
+
+
+async function trackTrafficSourceEvent(source, event) {
+  const cleanSource = sanitizeTrafficSource(source);
+  const cleanEvent = String(event || "").trim();
+  
+  const allowedEvents = ["app_open", "sign_up", "ai_unlock_success"];
+  if (!allowedEvents.includes(cleanEvent)) {
+    return { saved: false, skipped: true };
+  }
+
+  // Update local fallback
+  const data = normalizeAnalytics(loadAnalytics());
+  if (!data.sources_daily) {
+    data.sources_daily = {};
+  }
+  const dateKey = getTodayKey();
+  if (!data.sources_daily[dateKey]) {
+    data.sources_daily[dateKey] = {};
+  }
+  if (!data.sources_daily[dateKey][cleanSource]) {
+    data.sources_daily[dateKey][cleanSource] = {
+      app_open: 0,
+      sign_up: 0,
+      ai_unlock_success: 0
+    };
+  }
+  
+  data.sources_daily[dateKey][cleanSource][cleanEvent] = (data.sources_daily[dateKey][cleanSource][cleanEvent] || 0) + 1;
+  saveAnalytics(data);
+
+  if (!isSupabaseConfigured) {
+    return { saved: false, skipped: true };
+  }
+
+  try {
+    const encodedDate = encodeURIComponent(dateKey);
+    const encodedSource = encodeURIComponent(cleanSource);
+    const existingRows = await supabaseRequest(`analytics_sources_daily?date_key=eq.${encodedDate}&source=eq.${encodedSource}&select=app_open,sign_up,ai_unlock_success`);
+    const existing = existingRows?.[0] || {};
+    
+    const nextRow = {
+      date_key: dateKey,
+      source: cleanSource,
+      app_open: Number(existing.app_open) || 0,
+      sign_up: Number(existing.sign_up) || 0,
+      ai_unlock_success: Number(existing.ai_unlock_success) || 0,
+      updated_at: new Date().toISOString()
+    };
+    
+    nextRow[cleanEvent] += 1;
+    
+    await supabaseRequest("analytics_sources_daily?on_conflict=date_key,source", {
+      method: "POST",
+      prefer: "resolution=merge-duplicates,return=minimal",
+      body: [nextRow]
+    });
+    return { saved: true };
+  } catch (err) {
+    console.warn("[SUPABASE] Analytics source write failed; local JSON fallback kept:", err.message);
+    return { saved: false, error: err.message };
+  }
+}
+
 function getAnalyticsHtml() {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -9017,6 +9132,21 @@ function getAnalyticsHtml() {
         <tbody id="breakdownBody"></tbody>
       </table>
     </div>
+
+    <div class="table-container" style="margin-top: 2rem;">
+      <div class="table-title">Traffic Sources Breakdown</div>
+      <table id="sourcesTable" style="display: none;">
+        <thead>
+          <tr>
+            <th>Traffic Source</th>
+            <th>App Opens</th>
+            <th>USDC Signups</th>
+            <th>AI Briefing Unlocks</th>
+          </tr>
+        </thead>
+        <tbody id="sourcesBody"></tbody>
+      </table>
+    </div>
   </div>
 
   <script>
@@ -9150,8 +9280,56 @@ function getAnalyticsHtml() {
           });
         }
         
+        const sourcesDaily = data.sources_daily || {};
+        const sourceKeys = ["organic", "x", "ig", "wa", "dc", "google", "briefing"];
+        const sourceTotals = {};
+        sourceKeys.forEach(s => {
+          sourceTotals[s] = { app_open: 0, sign_up: 0, ai_unlock_success: 0 };
+        });
+
+        Object.values(sourcesDaily).forEach(dayRow => {
+          Object.entries(dayRow || {}).forEach(([src, counts]) => {
+            const cleanSrc = String(src).toLowerCase();
+            if (!sourceTotals[cleanSrc]) {
+              sourceTotals[cleanSrc] = { app_open: 0, sign_up: 0, ai_unlock_success: 0 };
+            }
+            sourceTotals[cleanSrc].app_open += Number(counts.app_open) || 0;
+            sourceTotals[cleanSrc].sign_up += Number(counts.sign_up) || 0;
+            sourceTotals[cleanSrc].ai_unlock_success += Number(counts.ai_unlock_success) || 0;
+          });
+        });
+
+        const sourcesBody = document.getElementById('sourcesBody');
+        sourcesBody.innerHTML = '';
+        
+        const friendlyNames = {
+          organic: "Organic / Direct",
+          x: "X (Twitter)",
+          ig: "Instagram",
+          wa: "WhatsApp",
+          dc: "Discord",
+          google: "Google Search",
+          briefing: "AI Briefing Share"
+        };
+        
+        const allSources = Array.from(new Set([...sourceKeys, ...Object.keys(sourceTotals)]));
+        allSources.forEach(src => {
+          const totals = sourceTotals[src] || { app_open: 0, sign_up: 0, ai_unlock_success: 0 };
+          const friendlyName = friendlyNames[src] || (src.charAt(0).toUpperCase() + src.slice(1));
+          
+          const tr = document.createElement('tr');
+          tr.innerHTML = \`
+            <td><strong>\${friendlyName}</strong></td>
+            <td>\${(totals.app_open).toLocaleString()}</td>
+            <td>\${(totals.sign_up).toLocaleString()}</td>
+            <td>\${(totals.ai_unlock_success).toLocaleString()}</td>
+          \`;
+          sourcesBody.appendChild(tr);
+        });
+
         loading.style.display = 'none';
         table.style.display = 'table';
+        document.getElementById('sourcesTable').style.display = 'table';
       } catch (err) {
         console.error(err);
         loading.textContent = 'Failed to load analytics data: ' + err.message;
@@ -9162,6 +9340,7 @@ function getAnalyticsHtml() {
     document.getElementById('refreshBtn').addEventListener('click', () => {
       document.getElementById('loadingBreakdown').style.display = 'flex';
       document.getElementById('breakdownTable').style.display = 'none';
+      document.getElementById('sourcesTable').style.display = 'none';
       loadData();
     });
     
@@ -9695,6 +9874,7 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+
   if (requestUrl.pathname === "/api/backend-wallet/trade" && request.method === "POST") {
     if (!requireBackendWalletMode(request, response)) return;
     try {
@@ -9933,11 +10113,20 @@ const server = createServer(async (request, response) => {
       const body = await readJsonBody(request);
       if (body && body.event) {
         const supabaseResult = await trackAnalyticsEvent(body.event);
+        let sourceResult = null;
+        if (body.source || ["app_open", "sign_up", "ai_unlock_success"].includes(body.event)) {
+          try {
+            sourceResult = await trackTrafficSourceEvent(body.source, body.event);
+          } catch (sourceErr) {
+            console.warn("[ANALYTICS] Source tracking warning:", sourceErr.message);
+          }
+        }
         sendJson(response, 200, {
           success: true,
           supabaseConfigured: isSupabaseConfigured,
           supabaseSaved: Boolean(supabaseResult?.saved),
-          supabaseError: supabaseResult?.error || ""
+          supabaseError: supabaseResult?.error || "",
+          sourceTracked: Boolean(sourceResult?.saved)
         });
       } else {
         sendJson(response, 400, { error: "Event name is required" });
@@ -9945,6 +10134,30 @@ const server = createServer(async (request, response) => {
     } catch (err) {
       sendJson(response, 500, { error: err.message });
     }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/redirect" && request.method === "GET") {
+    const targetUrl = requestUrl.searchParams.get("url");
+    const source = requestUrl.searchParams.get("source") || "briefing";
+    
+    if (!targetUrl) {
+      response.writeHead(400, { "Content-Type": "text/plain", ...getCorsHeaders() });
+      response.end("Missing url parameter");
+      return;
+    }
+    
+    try {
+      await trackTrafficSourceEvent(source, "app_open");
+    } catch (err) {
+      console.warn("[ANALYTICS] Redirect tracking warning:", err.message);
+    }
+    
+    response.writeHead(302, {
+      "Location": targetUrl,
+      ...getCorsHeaders()
+    });
+    response.end();
     return;
   }
 
@@ -10236,6 +10449,7 @@ const server = createServer(async (request, response) => {
       const body = await readJsonBody(request);
       const email = normalizeEmail(body.email);
       const otp = normalizeOtpCode(body.otp);
+      const source = body.source || "organic";
 
       if (!email || !otp) {
         sendJson(response, 400, { error: "Email and OTP code are required" });
@@ -10256,6 +10470,7 @@ const server = createServer(async (request, response) => {
         const walletAddress = "0x12793cA4f495f5255C423128b1ED9Cd71B08023D";
         try {
           trackAnalyticsEvent("sign_up", cleanEmail);
+          void trackTrafficSourceEvent(source, "sign_up").catch(err => console.warn("[ANALYTICS] mock source sign_up fail:", err.message));
         } catch (err) {
           console.error("Failed to track mock sign_up event:", err);
         }
@@ -10303,6 +10518,7 @@ const server = createServer(async (request, response) => {
         // 3. No ARC-TESTNET wallet found. Initialize user/wallet.
         try {
           trackAnalyticsEvent("sign_up", cleanEmail);
+          void trackTrafficSourceEvent(source, "sign_up").catch(err => console.warn("[ANALYTICS] real source sign_up fail:", err.message));
         } catch (err) {
           console.error("Failed to track real sign_up event:", err);
         }
@@ -10659,6 +10875,7 @@ const server = createServer(async (request, response) => {
       .catch((error) => sendJson(response, 500, { error: error.message }));
     return;
   }
+
 
   if (requestUrl.pathname === "/api/market-thread" && request.method === "GET") {
     try {
@@ -11095,6 +11312,8 @@ if (isMain) {
   server.listen(port, () => {
     console.log(`Siftle frontend running at http://localhost:${port}`);
     
+
+
     // Diagnostic Circle config check
     const key = process.env.CIRCLE_API_KEY;
     if (key) {

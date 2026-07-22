@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { resolveOptionMarketInData } from "./serve.mjs";
+import { resolveOptionMarketInData, sanitizeTrafficSource } from "./serve.mjs";
 
 test("resolveOptionMarketInData awards default 100 points for normal markets", () => {
   const data = {
@@ -194,4 +194,22 @@ test("buildPreseasonLeaderboardPlayers includes unlocks from yesterday 2026-07-2
   assert.equal(playersSupabase.length, 1);
   assert.equal(playersSupabase[0].points, 30);
 });
+
+test("sanitizeTrafficSource parses and sanitizes source names correctly", () => {
+  // Allowed sources should remain unchanged (lowercased)
+  assert.equal(sanitizeTrafficSource("x"), "x");
+  assert.equal(sanitizeTrafficSource("IG"), "ig");
+  assert.equal(sanitizeTrafficSource("  google  "), "google");
+  assert.equal(sanitizeTrafficSource("briefing"), "briefing");
+  assert.equal(sanitizeTrafficSource("  Briefing  "), "briefing");
+  
+  // Unallowed/unrecognized sources should fall back to organic
+  assert.equal(sanitizeTrafficSource("facebook"), "organic");
+  assert.equal(sanitizeTrafficSource("tiktok"), "organic");
+  assert.equal(sanitizeTrafficSource(""), "organic");
+  assert.equal(sanitizeTrafficSource(null), "organic");
+  assert.equal(sanitizeTrafficSource(undefined), "organic");
+});
+
+
 

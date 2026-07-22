@@ -106,11 +106,61 @@ const readStoredTheme = (): AppTheme => {
 
 let currentTheme: AppTheme = readStoredTheme();
 
+let trafficSource = "organic";
+
+function initTrafficSource() {
+  try {
+    let source = localStorage.getItem("siftle_traffic_source");
+    if (!source) {
+      const params = new URLSearchParams(window.location.search);
+      let ref = params.get("ref") || params.get("utm_source");
+      if (ref) {
+        ref = ref.trim().toLowerCase();
+        if (ref === "twitter") ref = "x";
+        if (ref === "instagram") ref = "ig";
+        if (ref === "whatsapp") ref = "wa";
+        if (ref === "discord") ref = "dc";
+        if (ref === "google_search" || ref === "google-search") ref = "google";
+        
+        if (["x", "ig", "wa", "dc", "google", "organic", "briefing"].includes(ref)) {
+          source = ref;
+        } else {
+          source = ref.slice(0, 20);
+        }
+      } else {
+        const referrer = document.referrer;
+        if (referrer) {
+          if (/twitter\.com|x\.com|t\.co/i.test(referrer)) {
+            source = "x";
+          } else if (/instagram\.com/i.test(referrer)) {
+            source = "ig";
+          } else if (/whatsapp\.com|wa\.me/i.test(referrer)) {
+            source = "wa";
+          } else if (/discord\.com|discordapp\.com/i.test(referrer)) {
+            source = "dc";
+          } else if (/google\.com|google\.co/i.test(referrer)) {
+            source = "google";
+          }
+        }
+      }
+      if (!source) {
+        source = "organic";
+      }
+      localStorage.setItem("siftle_traffic_source", source);
+    }
+    trafficSource = source;
+  } catch (err) {
+    console.error("Failed to initialize traffic source:", err);
+  }
+}
+
+initTrafficSource();
+
 function trackEvent(event: string) {
   fetch(apiUrl("/api/analytics"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ event })
+    body: JSON.stringify({ event, source: trafficSource })
   }).catch((err) => console.error("Failed to track event:", err));
 }
 
@@ -767,6 +817,31 @@ const downloadBriefingCard = (button: HTMLElement | null): void => {
 
 window.downloadBriefingCard = downloadBriefingCard;
 
+const copyBriefingLink = (storyId: number, encodedUrl?: string): void => {
+  let url = '';
+  if (encodedUrl) {
+    try {
+      url = decodeURIComponent(encodedUrl);
+    } catch {
+      url = encodedUrl;
+    }
+  }
+  const origin = window.location.origin;
+  const path = window.location.pathname;
+  const shareUrl = storyId > 0
+    ? `${origin}${path}?utm_source=briefing#story-${storyId}`
+    : (url
+      ? `${origin}/api/redirect?url=${encodeURIComponent(url)}&source=briefing`
+      : `${origin}${path}?utm_source=briefing`);
+  navigator.clipboard.writeText(shareUrl).then(() => {
+    showActionToast('Shareable link copied to clipboard!');
+  }).catch(() => {
+    showActionToast('Unable to copy link');
+  });
+};
+
+(window as any).copyBriefingLink = copyBriefingLink;
+
 const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
   const parts = text.split(/(?:\*\*|__)?(WHAT HAPPENED|KEY POINTS|TAKEAWAY)\s*:?\s*(?:\*\*|__)?\s*:?\s*/i);
   if (parts.length <= 1) {
@@ -831,10 +906,15 @@ const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
   html += '</div>';
 
   if (story) {
+    const linkIconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;vertical-align:middle;margin-right:6px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
     const downloadIconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;vertical-align:middle;margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>`;
 
     html += `
       <div class="share-briefing-container">
+        <button type="button" class="share-briefing-btn copy-link-btn" onclick="window.copyBriefingLink?.(${story.id}, '${encodeURIComponent(story.sourceUrl || "")}')">
+          ${linkIconSvg}
+          <span>Copy Link</span>
+        </button>
         <button type="button" class="share-briefing-btn" onclick="window.downloadBriefingCard?.(event.currentTarget)">
           ${downloadIconSvg}
           <span>Download Card</span>
@@ -4414,6 +4494,7 @@ const renderPortfolio = (): void => {
 
         ${profileNoticeHtml}
 
+
         <div class="portfolio-wallet-balance-row" style="margin-top: 12px !important; padding-top: 12px !important; border-top: 1px solid var(--market-border) !important; display: flex !important; justify-content: space-between !important; align-items: center !important; flex-wrap: wrap !important; gap: 12px !important;">
           <div>
             <span style="font-size: 0.72rem !important; color: var(--market-text-muted) !important; display: block !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; margin-bottom: 2px !important;">Available Balance</span>
@@ -4668,6 +4749,8 @@ todayButton?.addEventListener("click", () => {
   render();
   ensureFeedLoaded(state.activeCategory);
 });
+
+
 
 storyList?.addEventListener("click", async (event) => {
   const target = event.target as HTMLElement;

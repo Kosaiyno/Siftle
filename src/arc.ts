@@ -559,10 +559,11 @@ export const connectArcWallet = async (): Promise<string> => {
         statusDiv.style.display = "none";
 
         try {
+          const source = localStorage.getItem("siftle_traffic_source") || "organic";
           const response = await fetch(apiUrl("/api/backend-wallet/auth"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, code })
+            body: JSON.stringify({ email, code, source })
           });
           const payload = await response.json();
           if (!response.ok) throw new Error(payload.error || "Failed to verify code");
@@ -781,10 +782,11 @@ export const connectArcWallet = async (): Promise<string> => {
       hideStatus();
 
       try {
+        const source = localStorage.getItem("siftle_traffic_source") || "organic";
         const res = await fetch(apiUrl("/api/circle/auth/verify"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, otp })
+          body: JSON.stringify({ email, otp, source })
         });
         const data = await res.json();
         if (!res.ok) {

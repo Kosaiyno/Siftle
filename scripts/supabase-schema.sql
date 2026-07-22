@@ -155,3 +155,16 @@ grant select, insert, update, delete on table option_market_positions to service
 grant select, insert, update, delete on table option_market_resolutions to service_role;
 grant select, insert, update, delete on table analytics_daily to service_role;
 grant select, insert, update, delete on table analytics_signups to service_role;
+
+create table if not exists analytics_sources_daily (
+  date_key text not null,
+  source text not null,
+  app_open integer default 0,
+  sign_up integer default 0,
+  ai_unlock_success integer default 0,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  primary key (date_key, source)
+);
+
+grant select, insert, update, delete on table analytics_sources_daily to service_role;
