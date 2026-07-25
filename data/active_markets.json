@@ -26,7 +26,7 @@
     "traders": "0",
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "points": 500
+    "points": 0
   },
   {
     "id": "transfer-bruno-guimaraes-arsenal",
@@ -55,7 +55,7 @@
     "traders": "0",
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "points": 500
+    "points": 0
   },
   {
     "id": "transfer-bradley-barcola-premier-league",
@@ -84,7 +84,7 @@
     "traders": "0",
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "points": 500
+    "points": 0
   },
   {
     "id": "transfer-orlando-gill-manchester-united",
@@ -113,7 +113,7 @@
     "traders": "0",
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "points": 500
+    "points": 0
   },
   {
     "id": "transfer-vanja-milinkovic-savic-tottenham",
@@ -142,6 +142,6 @@
     "traders": "0",
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "points": 500
+    "points": 0
   }
 ]

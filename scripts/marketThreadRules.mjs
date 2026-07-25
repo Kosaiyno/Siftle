@@ -191,6 +191,56 @@ export const marketThreadRules = {
     ],
     reject: ["tottenham", "chelsea", "liverpool", "manchester united", "barcelona", "real madrid", "bayern", "cricket", "basketball"]
   },
+  "transfer-yan-diomande-real-madrid": {
+    category: "Sports",
+    topic: "Yan Diomande to Real Madrid Saga",
+    includeAnySets: [
+      ["diomande", "yan diomande"],
+      ["real madrid", "madrid", "leipzig", "rb leipzig"],
+      ["transfer", "sign", "deal", "contract", "agree", "fee", "terms", "rumor", "rumours", "talks", "move", "bid", "offer", "door", "doors"]
+    ],
+    reject: ["women", "futsal", "olympics"]
+  },
+  "transfer-bruno-guimaraes-arsenal": {
+    category: "Sports",
+    topic: "Bruno Guimaraes Arsenal Transfer Link",
+    includeAnySets: [
+      ["guimaraes", "bruno guimaraes", "bruno guimarães"],
+      ["arsenal", "gunners", "newcastle"],
+      ["transfer", "sign", "deal", "contract", "agree", "fee", "terms", "rumor", "rumours", "talks", "move", "offer", "bid"]
+    ],
+    reject: ["women", "futsal", "olympics"]
+  },
+  "transfer-bradley-barcola-premier-league": {
+    category: "Sports",
+    topic: "Bradley Barcola Premier League Transfer Link",
+    includeAnySets: [
+      ["barcola", "bradley barcola"],
+      ["psg", "paris saint-germain", "paris saint germain"],
+      ["transfer", "sign", "deal", "contract", "agree", "fee", "terms", "rumor", "rumours", "talks", "move", "offer", "bid", "sale", "selling", "bidding war"]
+    ],
+    reject: ["women", "futsal", "olympics"]
+  },
+  "transfer-orlando-gill-manchester-united": {
+    category: "Sports",
+    topic: "Orlando Gill Man United Transfer Link",
+    includeAnySets: [
+      ["gill", "orlando gill"],
+      ["manchester united", "man utd", "united", "san lorenzo", "olympiacos"],
+      ["transfer", "sign", "deal", "contract", "agree", "fee", "terms", "rumor", "rumours", "talks", "move", "offer", "bid", "contact", "goalkeeper", "keeper"]
+    ],
+    reject: ["women", "futsal", "olympics"]
+  },
+  "transfer-vanja-milinkovic-savic-tottenham": {
+    category: "Sports",
+    topic: "Vanja Milinkovic-Savic Spurs Transfer Link",
+    includeAnySets: [
+      ["milinkovic-savic", "vanja milinkovic-savic", "savic"],
+      ["tottenham", "spurs", "napoli", "torino"],
+      ["transfer", "sign", "deal", "contract", "agree", "fee", "terms", "rumor", "rumours", "talks", "move", "offer", "bid", "negotiat", "goalkeeper", "keeper"]
+    ],
+    reject: ["women", "futsal", "olympics"]
+  },
   "wc-mbappe-haaland-goals": {
     category: "Sports",
     topic: "Mbappé vs Haaland World Cup Clash",
