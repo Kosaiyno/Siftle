@@ -168,3 +168,14 @@ create table if not exists analytics_sources_daily (
 );
 
 grant select, insert, update, delete on table analytics_sources_daily to service_role;
+
+create table if not exists briefing_referrals (
+  story_url text primary key,
+  headline text not null,
+  referrals integer default 0,
+  unlocks integer default 0,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+grant select, insert, update, delete on table briefing_referrals to service_role;

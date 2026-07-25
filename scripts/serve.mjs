@@ -7046,6 +7046,27 @@ async function loadAnalyticsFromSupabase(localData = loadAnalytics()) {
       console.warn("[SUPABASE] Source analytics read failed; using local fallback:", sourceDbErr.message);
     }
 
+    try {
+      const briefingRows = await supabaseRequest("briefing_referrals?select=story_url,headline,referrals,unlocks");
+      if (briefingRows && briefingRows.length > 0) {
+        if (!data.briefing_referrals) {
+          data.briefing_referrals = {};
+        }
+        (briefingRows || []).forEach((row) => {
+          const url = String(row.story_url || "").trim();
+          if (!url) return;
+          const existing = data.briefing_referrals[url] || { referrals: 0, unlocks: 0, headline: row.headline };
+          data.briefing_referrals[url] = {
+            headline: row.headline || existing.headline || "Untitled Story",
+            referrals: Math.max(Number(existing.referrals) || 0, Number(row.referrals) || 0),
+            unlocks: Math.max(Number(existing.unlocks) || 0, Number(row.unlocks) || 0)
+          };
+        });
+      }
+    } catch (briefingDbErr) {
+      console.warn("[SUPABASE] Briefing referral read failed; using local fallback:", briefingDbErr.message);
+    }
+
     return normalizeAnalytics(data);
   } catch (err) {
     console.warn("[SUPABASE] Analytics read failed; using local fallback:", err.message);
@@ -8820,6 +8841,40 @@ async function trackBriefingReferralEvent(storyUrl, headline, event) {
   }
 
   saveAnalytics(data);
+
+  if (isSupabaseConfigured) {
+    try {
+      let existing = null;
+      try {
+        const res = await supabaseRequest(`briefing_referrals?story_url=eq.${encodeURIComponent(cleanUrl)}&select=referrals,unlocks,headline`, {
+          method: "GET"
+        });
+        if (res && res.length > 0) {
+          existing = res[0];
+        }
+      } catch (err) {
+        // Ignore select/not found errors
+      }
+
+      const nextRow = {
+        story_url: cleanUrl,
+        headline: cleanHeadline !== "Untitled Story" && cleanHeadline !== "Archived Story"
+          ? cleanHeadline
+          : (existing?.headline || cleanHeadline),
+        referrals: (existing?.referrals || 0) + (cleanEvent === "briefing_referral" ? 1 : 0),
+        unlocks: (existing?.unlocks || 0) + (cleanEvent === "briefing_unlock" ? 1 : 0),
+        updated_at: new Date().toISOString()
+      };
+
+      await supabaseRequest("briefing_referrals?on_conflict=story_url", {
+        method: "POST",
+        prefer: "resolution=merge-duplicates,return=minimal",
+        body: [nextRow]
+      });
+    } catch (err) {
+      console.warn("[SUPABASE] Briefing referral write failed; local JSON fallback kept:", err.message);
+    }
+  }
 }
 
 function getAnalyticsHtml() {
