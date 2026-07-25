@@ -2743,16 +2743,13 @@ const renderStories = (): void => {
     return;
   }
 
-  const feedUnlockPrice = Number(state.unlockConfig?.amountUsdc) || 0.001;
   const queryLabel = escapeHtml(state.newsSearchQuery.trim());
   const helperText = queryLabel
-    ? `${stories.length} matches for "${queryLabel}".`
-    : `Search saved news by keyword. Unlock an AI briefing with a ${feedUnlockPrice} testnet USDC nanopayment to get what happened, key points, and takeaway without opening the full article.`;
+    ? `<div class="news-feed-search-copy"><p>${stories.length} matches for "${queryLabel}".</p></div>`
+    : "";
   const feedHeader = `
     <section class="news-feed-search-shell">
-      <div class="news-feed-search-copy">
-        <p>${helperText}</p>
-      </div>
+      ${helperText}
       <label class="news-feed-search-bar" for="newsSearchInput">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
         <input id="newsSearchInput" type="search" placeholder="Search all saved news by keyword" value="${escapeHtml(state.newsSearchQuery)}" autocomplete="off" />
