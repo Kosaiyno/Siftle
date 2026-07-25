@@ -1,7 +1,7 @@
 {
   "topic": "Bradley Barcola Premier League Transfer Link",
   "current": {
-    "id": 1001,
+    "id": 29,
     "headline": "PSG put Bradley Barcola up for sale at €150m to trigger Premier League bidding war",
     "category": "Sports",
     "summary": "Paris Saint-Germain have reportedly informed several English clubs that winger Bradley Barcola is available for transfer this summer as they seek to generate a €150m bidding war, with Arsenal, Liverpool and Manchester United interested.",
@@ -10,14 +10,18 @@
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
     "publishedAt": "Sat, 25 Jul 2026 10:30:00 GMT",
     "readTime": "2 min read",
-    "postedAt": "3h",
+    "postedAt": "2h",
     "accent": "blue",
-    "saved": false
+    "saved": false,
+    "thread": {
+      "count": 1,
+      "topic": "Bradley Barcola Premier League Transfer Link"
+    }
   },
   "items": [],
   "reviewed_by": "local-generator",
   "count": 1,
   "market_id": "transfer-bradley-barcola-premier-league",
   "saved_market_thread": true,
-  "saved_at": "2026-07-25T12:44:54.313Z"
+  "saved_at": "2026-07-25T13:13:19.973Z"
 }

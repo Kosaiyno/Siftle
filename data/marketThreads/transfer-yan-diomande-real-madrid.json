@@ -1,24 +1,67 @@
 {
   "topic": "Yan Diomande to Real Madrid Saga",
   "current": {
-    "id": 1,
-    "headline": "Yan Diomande to Real Madrid: Top 15 most expensive African signings",
+    "id": 2,
+    "headline": "Demichelis comments on Yan Diomande transfer saga as Estève makes Leipzig debut",
     "category": "Sports",
-    "summary": "Yan Diomande is one of the most-coveted names in the transfer market with RB Leipzig already rebuffing an initial bid from Liverpool this summer. Now Manchester City and Real Madrid have...",
-    "source": "transfermarkt.co.uk",
-    "sourceUrl": "https://www.transfermarkt.co.uk/man-city-fight-real-madrid-for-yan-diomande-will-he-be-most-expensive-african-signing-ever-/view/news/481675",
-    "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
-    "publishedAt": "Sat, 25 Jul 2026 14:27:12 +0200",
+    "summary": "RB Leipzig continued their preparation for the upcoming season with a narrow win over Ingolstadt.",
+    "source": "bulinews.com",
+    "sourceUrl": "https://bulinews.com/demichelis-comments-yan-diomande-transfer-saga-esteve-makes-leipzig-debut",
+    "imageUrl": "https://bulinews.com/i/320/19103.jpg",
+    "publishedAt": "Sat, 25 Jul 2026 12:44:00 GMT",
     "readTime": "1 min read",
-    "postedAt": "11m",
+    "postedAt": "17m",
     "accent": "blue",
     "saved": false,
     "type": "news",
-    "unlockPriceUsdc": 0.00065
+    "unlockPriceUsdc": 0.000484,
+    "thread": {
+      "count": 6,
+      "topic": "Yan Diomande to Real Madrid Saga"
+    }
   },
   "items": [
     {
-      "id": 2,
+      "id": 7,
+      "headline": "🚨🇨🇮 Manchester City have gone quiet on Yan Diomande days ago after calls to check the situation, same for Arsenal. Diomande has only opened doors to Real Madrid since he agreed personal terms with Paris Saint-Germain in June. Real Madrid now in club to club talks with Leipzig.",
+      "category": "Sports",
+      "summary": "🚨🇨🇮 Manchester City have gone quiet on Yan Diomande days ago after calls to check the situation, same for Arsenal. Diomande has only opened doors to Real Madrid since he agreed personal terms with Paris Saint-Germa...",
+      "source": "@FabrizioRomano",
+      "sourceUrl": "https://x.com/FabrizioRomano/status/2080994682448785819",
+      "imageUrl": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Sat, 25 Jul 2026 12:32:49 GMT",
+      "readTime": "1 min read",
+      "postedAt": "28m",
+      "accent": "blue",
+      "saved": false,
+      "type": "tweet",
+      "thread": {
+        "count": 6,
+        "topic": "Yan Diomande to Real Madrid Saga"
+      }
+    },
+    {
+      "id": 8,
+      "headline": "Yan Diomande to Real Madrid: Top 15 most expensive African signings",
+      "category": "Sports",
+      "summary": "Yan Diomande is one of the most-coveted names in the transfer market with RB Leipzig already rebuffing an initial bid from Liverpool this summer. Now Manchester City and Real Madrid have...",
+      "source": "transfermarkt.co.uk",
+      "sourceUrl": "https://www.transfermarkt.co.uk/man-city-fight-real-madrid-for-yan-diomande-will-he-be-most-expensive-african-signing-ever-/view/news/481675",
+      "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
+      "publishedAt": "Sat, 25 Jul 2026 14:27:12 +0200",
+      "readTime": "1 min read",
+      "postedAt": "33m",
+      "accent": "blue",
+      "saved": false,
+      "type": "news",
+      "unlockPriceUsdc": 0.00065,
+      "thread": {
+        "count": 6,
+        "topic": "Yan Diomande to Real Madrid Saga"
+      }
+    },
+    {
+      "id": 9,
       "headline": "🚨 Manchester City have joined the race for Yan Diomande and are prepared to submit a €100M bid for the RB Leipzig winger. 👀🇨🇮 No official offer has been made yet, but talks between City and Leipzig have already taken place. (Source: @Plettigoal)",
       "category": "Sports",
       "summary": "🚨 Manchester City have joined the race for Yan Diomande and are prepared to submit a €100M bid for the RB Leipzig winger. 👀🇨🇮 No official offer has been made yet, but talks between City and Leipzig have already ta...",
@@ -27,17 +70,17 @@
       "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
       "publishedAt": "Sat, 25 Jul 2026 12:22:00 GMT",
       "readTime": "1 min read",
-      "postedAt": "16m",
+      "postedAt": "39m",
       "accent": "blue",
       "saved": false,
       "type": "tweet",
       "thread": {
         "count": 6,
-        "topic": "Manchester City / City"
+        "topic": "Yan Diomande to Real Madrid Saga"
       }
     },
     {
-      "id": 11,
+      "id": 18,
       "headline": "Sky: Manchester City \"verbally indicate\" willingness to bid for Diomande",
       "category": "Sports",
       "summary": "Manchester City could rival PSG, Real Madrid and Liverpool in the ongoing saga for RB Leipzig’s Yan Diomande.",
@@ -46,18 +89,18 @@
       "imageUrl": "https://bulinews.com/i/320/19101.jpg",
       "publishedAt": "Sat, 25 Jul 2026 12:00:00 GMT",
       "readTime": "1 min read",
-      "postedAt": "38m",
+      "postedAt": "1h",
       "accent": "blue",
       "saved": false,
       "type": "news",
       "unlockPriceUsdc": 0.000301,
       "thread": {
-        "count": 2,
-        "topic": "Sky: Manchester City \"verbally indicate\" willingness to bid for Diomande"
+        "count": 6,
+        "topic": "Yan Diomande to Real Madrid Saga"
       }
     },
     {
-      "id": 31,
+      "id": 39,
       "headline": "Sky: Real Madrid turn attention to Diomande after Bayern’s refusal to negotiate Olise deal",
       "category": "Sports",
       "summary": "Real Madrid are now turning their attention from Michael Olise to Yan Diomande.",
@@ -70,10 +113,14 @@
       "accent": "blue",
       "saved": false,
       "type": "news",
-      "unlockPriceUsdc": 0.000267
+      "unlockPriceUsdc": 0.000267,
+      "thread": {
+        "count": 6,
+        "topic": "Yan Diomande to Real Madrid Saga"
+      }
     },
     {
-      "id": 34,
+      "id": 44,
       "headline": "Yan Diomande opens doors to Real Madrid move as Spanish giants prepare second bid",
       "category": "Sports",
       "summary": "Yan Diomande has opened doors to Real Madrid after RB Leipzig rejected the initial offer from the Spanish giants on Friday.",
@@ -82,18 +129,18 @@
       "imageUrl": "https://bulinews.com/i/320/19085.jpg",
       "publishedAt": "Sat, 25 Jul 2026 08:44:00 GMT",
       "readTime": "1 min read",
-      "postedAt": "3h",
+      "postedAt": "4h",
       "accent": "blue",
       "saved": false,
       "type": "news",
       "unlockPriceUsdc": 0.00024,
       "thread": {
-        "count": 1,
-        "topic": "Yan Diomande opens doors to Real Madrid move as Spanish giants prepare se..."
+        "count": 6,
+        "topic": "Yan Diomande to Real Madrid Saga"
       }
     },
     {
-      "id": 49,
+      "id": 59,
       "headline": "Leipzig reject eye-watering €100m Real Madrid offer for Yan Diomande",
       "category": "Sports",
       "summary": "The Galacticos are the second team to be snubbed by the Bundesliga side after Liverpool offered a similar amount recently.",
@@ -106,12 +153,16 @@
       "accent": "blue",
       "saved": false,
       "type": "news",
-      "unlockPriceUsdc": 0.000057
+      "unlockPriceUsdc": 0.000057,
+      "thread": {
+        "count": 6,
+        "topic": "Yan Diomande to Real Madrid Saga"
+      }
     }
   ],
   "reviewed_by": "local-generator",
-  "count": 6,
+  "count": 8,
   "market_id": "transfer-yan-diomande-real-madrid",
   "saved_market_thread": true,
-  "saved_at": "2026-07-25T12:44:54.310Z"
+  "saved_at": "2026-07-25T13:13:19.970Z"
 }

@@ -181,16 +181,7 @@ export const marketThreadRules = {
     ],
     reject: ["chelsea", "liverpool", "manchester united", "barcelona", "real madrid", "bayern", "cricket", "basketball"]
   },
-  "transfer-guimaraes-arsenal": {
-    category: "Sports",
-    topic: "Bruno Guimarães Arsenal Transfer Link",
-    includeAnySets: [
-      ["guimaraes", "bruno guimarães", "bruno guimaraes"],
-      ["arsenal", "gunners", "newcastle"],
-      ["transfer", "sign", "deal", "contract", "agree", "fee", "terms", "rumor", "rumours", "talks", "move", "offer"]
-    ],
-    reject: ["tottenham", "chelsea", "liverpool", "manchester united", "barcelona", "real madrid", "bayern", "cricket", "basketball"]
-  },
+
   "transfer-yan-diomande-real-madrid": {
     category: "Sports",
     topic: "Yan Diomande to Real Madrid Saga",
