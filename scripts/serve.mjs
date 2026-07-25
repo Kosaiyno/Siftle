@@ -9470,6 +9470,7 @@ function getAnalyticsHtml() {
       document.getElementById('loadingBreakdown').style.display = 'flex';
       document.getElementById('breakdownTable').style.display = 'none';
       document.getElementById('sourcesTable').style.display = 'none';
+      document.getElementById('briefingLinksTable').style.display = 'none';
       loadData();
     });
     
