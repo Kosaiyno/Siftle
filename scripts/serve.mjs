@@ -2017,6 +2017,51 @@ const findStoryInArchives = (sourceUrl) => {
   return null;
 };
 
+const slugify = (text) => {
+  return String(text || "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')           // Replace spaces with -
+    .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+    .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+    .replace(/^-+/, '')             // Trim - from start
+    .replace(/-+$/, '');            // Trim - from end
+};
+
+const findStoryBySlug = (slug) => {
+  if (!slug) return null;
+  const cleanSlug = String(slug).trim().toLowerCase();
+
+  // Search active snapshots first
+  for (const category of categories) {
+    const snapshot = readPublishedSnapshot(category);
+    if (snapshot) {
+      const story = (snapshot.top_stories ?? []).find((item) => slugify(item.headline) === cleanSlug);
+      if (story) return story;
+    }
+  }
+
+  // Search local archive files (from newest to oldest)
+  if (existsSync(archiveDir)) {
+    const files = readdirSync(archiveDir)
+      .filter((file) => file.endsWith(".json"))
+      .sort((a, b) => b.localeCompare(a)); // Sort newest dates first
+
+    for (const filename of files) {
+      try {
+        const filePath = join(archiveDir, filename);
+        const snapshot = JSON.parse(readFileSync(filePath, "utf8"));
+        const story = (snapshot.top_stories ?? []).find((item) => slugify(item.headline) === cleanSlug);
+        if (story) return story;
+      } catch {
+        // Ignore unreadable files
+      }
+    }
+  }
+
+  return null;
+};
+
 const findStoryForThreadRequest = (category, sourceUrl) => {
   return findStoryInArchives(sourceUrl);
 };
@@ -11428,7 +11473,13 @@ const server = createServer(async (request, response) => {
   }
 
   const decodedPath = decodeURIComponent(requestUrl.pathname);
-  const safePath = normalize(decodedPath).replace(/^(\.\.[/\\])+/, "");
+  const isStoryRoute = decodedPath.startsWith("/story/");
+  const isThreadRoute = decodedPath.startsWith("/thread/");
+
+  const safePath = (isStoryRoute || isThreadRoute)
+    ? "index.html"
+    : normalize(decodedPath).replace(/^(\.\.[/\\])+/, "");
+
   let filePath = join(root, safePath);
 
   if (!filePath.startsWith(root)) {
@@ -11455,10 +11506,17 @@ const server = createServer(async (request, response) => {
 
   if (filePath.endsWith("index.html")) {
     const urlParam = requestUrl.searchParams.get("url");
+    let story = null;
     if (urlParam) {
-      const story = findStoryInArchives(urlParam);
-      if (story) {
-        try {
+      story = findStoryInArchives(urlParam);
+    }
+    if (!story && (isStoryRoute || isThreadRoute)) {
+      const slug = decodedPath.split("/").pop();
+      story = findStoryBySlug(slug);
+    }
+
+    if (story) {
+      try {
           let html = readFileSync(filePath, "utf8");
           const escapeHtml = (text) => text.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
           const headline = escapeHtml(story.headline || "Siftle AI Briefing");
@@ -11499,7 +11557,6 @@ const server = createServer(async (request, response) => {
           console.warn("Failed to inject meta tags:", err.message);
         }
       }
-    }
   }
 
   response.writeHead(200, {

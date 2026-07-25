@@ -850,10 +850,10 @@ const copyBriefingLink = (storyId: number, encodedUrl?: string): void => {
   const slug = story ? slugify(story.headline) : (storyId > 0 ? `story-${storyId}` : '');
 
   const shareUrl = storyId > 0
-    ? `${origin}${path}?utm_source=briefing&url=${encodeURIComponent(story?.sourceUrl || url)}#story-${slug}`
+    ? `${origin}/story/${slug}?utm_source=briefing&url=${encodeURIComponent(story?.sourceUrl || url)}`
     : (url
       ? `${origin}/api/redirect?url=${encodeURIComponent(url)}&source=briefing`
-      : `${origin}${path}?utm_source=briefing`);
+      : `${origin}/story/briefing?utm_source=briefing`);
 
   navigator.clipboard.writeText(shareUrl).then(() => {
     showActionToast('Shareable link copied to clipboard!');
@@ -1316,6 +1316,14 @@ const loadStoryThread = async (story: NewsStory): Promise<void> => {
 };
 
 function syncStoryFromHash(): void {
+  const isStoryPath = window.location.pathname.startsWith("/story/");
+  const isThreadPath = window.location.pathname.startsWith("/thread/");
+  if (isStoryPath || isThreadPath) {
+    const slug = window.location.pathname.split("/").pop() || "";
+    const newHash = isStoryPath ? `#story-${slug}` : `#thread-${slug}`;
+    window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}${newHash}`);
+  }
+
   if (window.location.hash === "#resolve-local-yes") {
     const market = marketPreviews.find((item) => item.id === "siftle-local-test-2")
       || marketPreviews.find((item) => item.timeframe === "Daily" && getMarketAddress(item).startsWith("0x00000000000000000000000000000000000001"));
