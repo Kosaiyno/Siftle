@@ -11361,6 +11361,55 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (filePath.endsWith("index.html")) {
+    const urlParam = requestUrl.searchParams.get("url");
+    if (urlParam) {
+      const story = findStoryInArchives(urlParam);
+      if (story) {
+        try {
+          let html = readFileSync(filePath, "utf8");
+          const escapeHtml = (text) => text.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          const headline = escapeHtml(story.headline || "Siftle AI Briefing");
+          const summary = escapeHtml(story.summary || "Read the latest AI-curated briefing on Siftle.");
+          const imageUrl = story.imageUrl || "assets/siftle-logo-small.png";
+
+          const protocol = request.headers["x-forwarded-proto"] || "http";
+          const host = request.headers["host"] || "localhost:5173";
+          const origin = `${protocol}://${host}`;
+          const absoluteImageUrl = (imageUrl.startsWith("http://") || imageUrl.startsWith("https://"))
+            ? imageUrl
+            : `${origin}/${imageUrl.replace(/^\.\//, "")}`;
+
+          const metaTags = `
+    <!-- Twitter Card data -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${headline}" />
+    <meta name="twitter:description" content="${summary}" />
+    <meta name="twitter:image" content="${absoluteImageUrl}" />
+
+    <!-- Open Graph data -->
+    <meta property="og:title" content="${headline}" />
+    <meta property="og:description" content="${summary}" />
+    <meta property="og:image" content="${absoluteImageUrl}" />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="${origin}${request.url}" />
+          `;
+
+          html = html.replace("<head>", `<head>\n${metaTags}`);
+
+          response.writeHead(200, {
+            "Content-Type": "text/html",
+            "Cache-Control": "no-store"
+          });
+          response.end(html);
+          return;
+        } catch (err) {
+          console.warn("Failed to inject meta tags:", err.message);
+        }
+      }
+    }
+  }
+
   response.writeHead(200, {
     "Content-Type": mimeTypes.get(extname(filePath)) ?? "application/octet-stream",
     "Cache-Control": "no-store"
