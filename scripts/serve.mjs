@@ -6806,12 +6806,14 @@ function normalizeAnalytics(data = {}) {
   });
 
   const sources_daily = data.sources_daily && typeof data.sources_daily === "object" ? data.sources_daily : {};
+  const briefing_referrals = data.briefing_referrals && typeof data.briefing_referrals === "object" ? data.briefing_referrals : {};
 
   return {
     ...data,
     totals,
     daily,
     sources_daily,
+    briefing_referrals,
     profiles: data.profiles && typeof data.profiles === "object" ? data.profiles : {},
     emails: Array.isArray(data.emails) ? data.emails : []
   };
@@ -8742,6 +8744,39 @@ async function trackTrafficSourceEvent(source, event) {
   }
 }
 
+async function trackBriefingReferralEvent(storyUrl, headline, event) {
+  if (!storyUrl) return;
+  const cleanUrl = String(storyUrl).trim();
+  const cleanHeadline = String(headline || "Untitled Story").trim();
+  const cleanEvent = String(event).trim();
+
+  const data = normalizeAnalytics(loadAnalytics());
+  if (!data.briefing_referrals) {
+    data.briefing_referrals = {};
+  }
+
+  if (!data.briefing_referrals[cleanUrl]) {
+    data.briefing_referrals[cleanUrl] = {
+      headline: cleanHeadline,
+      referrals: 0,
+      unlocks: 0
+    };
+  }
+
+  // Update headline if it was previously set to fallback
+  if (cleanHeadline && cleanHeadline !== "Untitled Story" && cleanHeadline !== "Archived Story") {
+    data.briefing_referrals[cleanUrl].headline = cleanHeadline;
+  }
+
+  if (cleanEvent === "briefing_referral") {
+    data.briefing_referrals[cleanUrl].referrals += 1;
+  } else if (cleanEvent === "briefing_unlock") {
+    data.briefing_referrals[cleanUrl].unlocks += 1;
+  }
+
+  saveAnalytics(data);
+}
+
 function getAnalyticsHtml() {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -9192,6 +9227,22 @@ function getAnalyticsHtml() {
         <tbody id="sourcesBody"></tbody>
       </table>
     </div>
+
+    <div class="table-container" style="margin-top: 2rem;">
+      <div class="table-title">Briefing Link Performance Details</div>
+      <table id="briefingLinksTable" style="display: none;">
+        <thead>
+          <tr>
+            <th>News Topic</th>
+            <th>Referrals (Hits)</th>
+            <th>AI Unlocks</th>
+            <th>Bounces</th>
+            <th>Conversion Rate</th>
+          </tr>
+        </thead>
+        <tbody id="briefingLinksBody"></tbody>
+      </table>
+    </div>
   </div>
 
   <script>
@@ -9372,9 +9423,42 @@ function getAnalyticsHtml() {
           sourcesBody.appendChild(tr);
         });
 
+        const briefingReferrals = data.briefing_referrals || {};
+        const briefingLinksBody = document.getElementById('briefingLinksBody');
+        briefingLinksBody.innerHTML = '';
+
+        const referralEntries = Object.entries(briefingReferrals);
+        if (referralEntries.length === 0) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = \`
+            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No briefing link traffic recorded yet.</td>
+          \`;
+          briefingLinksBody.appendChild(tr);
+        } else {
+          // Sort by referrals descending
+          referralEntries.sort((a, b) => b[1].referrals - a[1].referrals);
+          referralEntries.forEach(([url, metrics]) => {
+            const referrals = Number(metrics.referrals) || 0;
+            const unlocks = Number(metrics.unlocks) || 0;
+            const bounces = Math.max(0, referrals - unlocks);
+            const conversionRate = referrals > 0 ? ((unlocks / referrals) * 100).toFixed(1) + "%" : "0.0%";
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = \`
+              <td><a href="\${url}" target="_blank" style="color: #6366f1; text-decoration: none;"><strong>\${metrics.headline || 'Archived Story'}</strong></a></td>
+              <td>\${referrals.toLocaleString()}</td>
+              <td>\${unlocks.toLocaleString()}</td>
+              <td>\${bounces.toLocaleString()}</td>
+              <td><span style="color: \${unlocks > 0 ? '#0d9488' : 'var(--text-muted)'}; font-weight: 700;">\${conversionRate}</span></td>
+            \`;
+            briefingLinksBody.appendChild(tr);
+          });
+        }
+
         loading.style.display = 'none';
         table.style.display = 'table';
         document.getElementById('sourcesTable').style.display = 'table';
+        document.getElementById('briefingLinksTable').style.display = 'table';
       } catch (err) {
         console.error(err);
         loading.textContent = 'Failed to load analytics data: ' + err.message;
@@ -10164,6 +10248,13 @@ const server = createServer(async (request, response) => {
             sourceResult = await trackTrafficSourceEvent(body.source, body.event);
           } catch (sourceErr) {
             console.warn("[ANALYTICS] Source tracking warning:", sourceErr.message);
+          }
+        }
+        if (body.event === "briefing_referral" || body.event === "briefing_unlock") {
+          try {
+            await trackBriefingReferralEvent(body.storyUrl, body.headline, body.event);
+          } catch (briefingErr) {
+            console.warn("[ANALYTICS] Briefing tracking warning:", briefingErr.message);
           }
         }
         sendJson(response, 200, {
