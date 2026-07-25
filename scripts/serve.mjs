@@ -1983,21 +1983,42 @@ const prepareSnapshotThreads = async (snapshot) => {
   };
 };
 
-const findStoryForThreadRequest = (category, sourceUrl) => {
-  const selectedCategory = normalizeCategory(category);
+const findStoryInArchives = (sourceUrl) => {
   const url = normalizeStoryUrl(sourceUrl);
   if (!url) return null;
 
-  const snapshots = selectedCategory === "All"
-    ? categories.map(readPublishedSnapshot).filter(Boolean)
-    : [readPublishedSnapshot(selectedCategory), readPublishedSnapshot("All")].filter(Boolean);
+  // Search active snapshots first
+  for (const category of categories) {
+    const snapshot = readPublishedSnapshot(category);
+    if (snapshot) {
+      const story = (snapshot.top_stories ?? []).find((item) => normalizeStoryUrl(item.sourceUrl) === url);
+      if (story) return story;
+    }
+  }
 
-  for (const snapshot of snapshots) {
-    const story = (snapshot.top_stories ?? []).find((item) => normalizeStoryUrl(item.sourceUrl) === url);
-    if (story) return story;
+  // Search local archive files (from newest to oldest)
+  if (existsSync(archiveDir)) {
+    const files = readdirSync(archiveDir)
+      .filter((file) => file.endsWith(".json"))
+      .sort((a, b) => b.localeCompare(a)); // Sort newest dates first
+
+    for (const filename of files) {
+      try {
+        const filePath = join(archiveDir, filename);
+        const snapshot = JSON.parse(readFileSync(filePath, "utf8"));
+        const story = (snapshot.top_stories ?? []).find((item) => normalizeStoryUrl(item.sourceUrl) === url);
+        if (story) return story;
+      } catch {
+        // Ignore unreadable files
+      }
+    }
   }
 
   return null;
+};
+
+const findStoryForThreadRequest = (category, sourceUrl) => {
+  return findStoryInArchives(sourceUrl);
 };
 
 const findPreparedThreadForRequest = (category, sourceUrl) => {
@@ -10802,6 +10823,21 @@ const server = createServer(async (request, response) => {
       }
 
       sendJson(response, 200, thread);
+    } catch (error) {
+      sendJson(response, 500, { error: error.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/story" && request.method === "GET") {
+    try {
+      const sourceUrl = requestUrl.searchParams.get("sourceUrl") ?? "";
+      const story = findStoryInArchives(sourceUrl);
+      if (!story) {
+        sendJson(response, 404, { error: "Story not found" });
+        return;
+      }
+      sendJson(response, 200, story);
     } catch (error) {
       sendJson(response, 500, { error: error.message });
     }

@@ -817,6 +817,18 @@ const downloadBriefingCard = (button: HTMLElement | null): void => {
 
 window.downloadBriefingCard = downloadBriefingCard;
 
+const slugify = (text: string): string => {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')           // Replace spaces with -
+    .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+    .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+    .replace(/^-+/, '')             // Trim - from start
+    .replace(/-+$/, '');            // Trim - from end
+};
+
 const copyBriefingLink = (storyId: number, encodedUrl?: string): void => {
   let url = '';
   if (encodedUrl) {
@@ -828,11 +840,16 @@ const copyBriefingLink = (storyId: number, encodedUrl?: string): void => {
   }
   const origin = window.location.origin;
   const path = window.location.pathname;
+
+  const story = state.stories.find((s) => s.id === storyId || (url && s.sourceUrl === url));
+  const slug = story ? slugify(story.headline) : (storyId > 0 ? `story-${storyId}` : '');
+
   const shareUrl = storyId > 0
-    ? `${origin}${path}?utm_source=briefing#story-${storyId}`
+    ? `${origin}${path}?utm_source=briefing&url=${encodeURIComponent(story?.sourceUrl || url)}#story-${slug}`
     : (url
       ? `${origin}/api/redirect?url=${encodeURIComponent(url)}&source=briefing`
       : `${origin}${path}?utm_source=briefing`);
+
   navigator.clipboard.writeText(shareUrl).then(() => {
     showActionToast('Shareable link copied to clipboard!');
   }).catch(() => {
@@ -1325,19 +1342,72 @@ function syncStoryFromHash(): void {
   }
   if (window.location.hash === "#feed" || window.location.hash.startsWith("#story-") || window.location.hash.startsWith("#thread-")) {
     state.activeSurface = "feed";
-    const storyMatch = window.location.hash.match(/^#story-(\d+)$/);
+    const storyMatch = window.location.hash.match(/^#story-(.+)$/);
     const threadMatch = window.location.hash.match(/^#thread-(\d+)$/);
-    const story = storyMatch ? state.stories.find((item) => item.id === Number(storyMatch[1])) : undefined;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlParam = urlParams.get("url");
+    let story: NewsStory | undefined;
+
+    if (urlParam) {
+      story = state.stories.find((item) => item.sourceUrl === urlParam);
+      if (!story && storyMatch) {
+        const urlToFetch = urlParam;
+        if (state.loadingSummaryUrl !== urlToFetch) {
+          state.loadingSummaryUrl = urlToFetch;
+          fetch(apiUrl(`/api/story?sourceUrl=${encodeURIComponent(urlToFetch)}`))
+            .then((res) => {
+              if (!res.ok) throw new Error();
+              return res.json();
+            })
+            .then((fetchedStory) => {
+              if (!state.stories.some((s) => s.sourceUrl === fetchedStory.sourceUrl)) {
+                fetchedStory.id = Math.max(9999, ...state.stories.map((s) => s.id)) + 1;
+                state.stories.push(fetchedStory);
+              }
+              const finalStory = state.stories.find((s) => s.sourceUrl === fetchedStory.sourceUrl)!;
+              state.selectedStoryId = finalStory.id;
+              render();
+              void loadStorySummary(finalStory);
+            })
+            .catch((err) => {
+              console.warn("Failed to load historical story from backend:", err);
+            })
+            .finally(() => {
+              state.loadingSummaryUrl = null;
+            });
+        }
+      }
+    } else if (storyMatch) {
+      const numericId = Number(storyMatch[1]);
+      if (!isNaN(numericId)) {
+        story = state.stories.find((item) => item.id === numericId);
+      }
+    }
+
     const threadStory = threadMatch ? state.stories.find((item) => item.id === Number(threadMatch[1])) : undefined;
     const wasInDetail = state.selectedStoryId !== null || state.selectedThreadUrl !== null;
-    state.selectedStoryId = story?.id ?? null;
-    state.selectedThreadUrl = threadStory?.sourceUrl ?? null;
-    state.activeThread = null;
-    render();
-    if (story) void loadStorySummary(story);
-    if (threadStory) void loadStoryThread(threadStory);
-    if (!story && !threadStory && wasInDetail) {
-      requestAnimationFrame(() => window.scrollTo({ top: state.feedScrollY, behavior: "auto" }));
+
+    if (story) {
+      state.selectedStoryId = story.id;
+      state.selectedThreadUrl = null;
+      state.activeThread = null;
+      render();
+      void loadStorySummary(story);
+    } else if (threadStory) {
+      state.selectedStoryId = null;
+      state.selectedThreadUrl = threadStory.sourceUrl;
+      state.activeThread = null;
+      render();
+      void loadStoryThread(threadStory);
+    } else if (!urlParam) {
+      state.selectedStoryId = null;
+      state.selectedThreadUrl = null;
+      state.activeThread = null;
+      render();
+      if (wasInDetail) {
+        requestAnimationFrame(() => window.scrollTo({ top: state.feedScrollY, behavior: "auto" }));
+      }
     }
     return;
   }
