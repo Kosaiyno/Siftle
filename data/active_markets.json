@@ -2,7 +2,7 @@
   {
     "id": "transfer-yan-diomande-real-madrid",
     "category": "Sports",
-    "timeframe": "Daily",
+    "timeframe": "Sagas",
     "optionMarket": true,
     "question": "Will Yan Diomande transfer to Real Madrid this summer?",
     "options": [
@@ -31,7 +31,7 @@
   {
     "id": "transfer-bruno-guimaraes-arsenal",
     "category": "Sports",
-    "timeframe": "Daily",
+    "timeframe": "Sagas",
     "optionMarket": true,
     "question": "Will Bruno Guimarães transfer to Arsenal this summer?",
     "options": [
@@ -60,7 +60,7 @@
   {
     "id": "transfer-bradley-barcola-premier-league",
     "category": "Sports",
-    "timeframe": "Daily",
+    "timeframe": "Sagas",
     "optionMarket": true,
     "question": "Will Bradley Barcola transfer to a Premier League club this summer?",
     "options": [
@@ -89,7 +89,7 @@
   {
     "id": "transfer-orlando-gill-manchester-united",
     "category": "Sports",
-    "timeframe": "Daily",
+    "timeframe": "Sagas",
     "optionMarket": true,
     "question": "Will goalkeeper Orlando Gill sign for Manchester United this summer?",
     "options": [
@@ -118,7 +118,7 @@
   {
     "id": "transfer-vanja-milinkovic-savic-tottenham",
     "category": "Sports",
-    "timeframe": "Daily",
+    "timeframe": "Sagas",
     "optionMarket": true,
     "question": "Will goalkeeper Vanja Milinković-Savić sign for Tottenham Hotspur this summer?",
     "options": [
