@@ -1371,6 +1371,9 @@ export const getHistoricalThreadCandidates = (story, currentStories = []) => {
           if (!snapshot) {
             console.log(`[DIAGNOSTIC] Parsing archive file: ${filename} (date: ${date}, minDate: ${minCandidateDate}, curDate: ${currentDate})`);
             snapshot = JSON.parse(readFileSync(filePath, "utf8"));
+            if (archiveFileCache.size >= 10) {
+              archiveFileCache.clear();
+            }
             archiveFileCache.set(filePath, snapshot);
           }
           cachedSnapshots.push({
@@ -1396,6 +1399,9 @@ export const getHistoricalThreadCandidates = (story, currentStories = []) => {
           if (!snapshot) {
             console.log(`[DIAGNOSTIC] Parsing published file: ${filename}`);
             snapshot = JSON.parse(readFileSync(filePath, "utf8"));
+            if (archiveFileCache.size >= 10) {
+              archiveFileCache.clear();
+            }
             archiveFileCache.set(filePath, snapshot);
           }
           if (currentDate && snapshot.date > currentDate) continue;
@@ -1407,6 +1413,9 @@ export const getHistoricalThreadCandidates = (story, currentStories = []) => {
       }
     }
 
+    if (threadHistorySnapshotCache.size >= 10) {
+      threadHistorySnapshotCache.clear();
+    }
     threadHistorySnapshotCache.set(cacheKey, cachedSnapshots);
   }
 
@@ -7590,11 +7599,19 @@ const getSummaryUnlockKey = (sourceUrl = "") =>
   createHash("sha256").update(String(sourceUrl || "").trim()).digest("hex");
 
 const createSummaryUnlockToken = (sourceUrl, walletAddress) => {
+  const now = Date.now();
+  // Evict expired entries to save memory
+  for (const [t, entry] of aiBriefingUnlocks.entries()) {
+    if (entry.expiresAt < now) {
+      aiBriefingUnlocks.delete(t);
+    }
+  }
+
   const token = randomUUID();
   aiBriefingUnlocks.set(token, {
     key: getSummaryUnlockKey(sourceUrl),
     walletAddress: normalizeWalletAddress(walletAddress),
-    expiresAt: Date.now() + 24 * 60 * 60 * 1000
+    expiresAt: now + 24 * 60 * 60 * 1000
   });
   return token;
 };
@@ -8249,8 +8266,15 @@ async function collectMarketTradeSignals(marketAddress, fromBlockHint = null) {
   });
 
   const signals = { traders, switched, redeemed, firstActivityBlocks };
+  const now = Date.now();
+  // Evict expired entries to save memory
+  for (const [key, entry] of leaderboardMarketSignalCache.entries()) {
+    if (entry.expiresAt < now) {
+      leaderboardMarketSignalCache.delete(key);
+    }
+  }
   leaderboardMarketSignalCache.set(cacheKey, {
-    expiresAt: Date.now() + leaderboardMarketSignalCacheMs,
+    expiresAt: now + leaderboardMarketSignalCacheMs,
     signals: cloneTradeSignals(signals)
   });
   return signals;
