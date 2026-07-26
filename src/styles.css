@@ -10633,13 +10633,12 @@ html, body, .app-shell, main {
 
 /* Premium Read More News Button for free landing onboarding page */
 .read-more-news-btn {
-  background: var(--brand-gradient, linear-gradient(135deg, #4f46e5, #3b82f6)) !important;
-  color: #ffffff !important;
-  border: 0 !important;
-  box-shadow: 0 12px 24px rgba(59, 130, 246, 0.22) !important;
-  border-radius: 14px !important;
-  font-weight: 700 !important;
-  font-family: 'Space Grotesk', sans-serif !important;
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #ffffff !important;
+  border-radius: 980px !important;
+  font-weight: 600 !important;
+  font-family: 'Cormorant Garamond', 'Times New Roman', serif !important;
   min-height: 44px;
   padding: 10px 20px;
   cursor: pointer;
@@ -10649,14 +10648,26 @@ html, body, .app-shell, main {
   transition: all 0.2s ease-in-out;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  font-size: 0.88rem;
+  font-size: 0.95rem;
   width: 100%;
   margin-top: 12px;
+  box-shadow: none !important;
 }
 
 .read-more-news-btn:hover {
-  opacity: 0.9 !important;
-  transform: translateY(-1px);
-  box-shadow: 0 14px 28px rgba(59, 130, 246, 0.3) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.9) !important;
+  transform: scale(1.01) !important;
+}
+
+:root[data-theme="light"] .read-more-news-btn {
+  background: #101522 !important;
+  color: #ffffff !important;
+  border-color: #101522 !important;
+}
+
+:root[data-theme="light"] .read-more-news-btn:hover {
+  background: #1d2638 !important;
+  border-color: #1d2638 !important;
 }
 
