@@ -7049,7 +7049,7 @@ async function loadAnalyticsFromSupabase(localData = loadAnalytics()) {
     }
 
     try {
-      const briefingRows = await supabaseRequest("briefing_referrals?select=story_url,headline,referrals,unlocks");
+      const briefingRows = await supabaseRequest("briefing_referrals?select=story_url,headline,referrals,unlocks,read_more,signups,feed_unlocks");
       if (briefingRows && briefingRows.length > 0) {
         if (!data.briefing_referrals) {
           data.briefing_referrals = {};
@@ -7057,11 +7057,14 @@ async function loadAnalyticsFromSupabase(localData = loadAnalytics()) {
         (briefingRows || []).forEach((row) => {
           const url = String(row.story_url || "").trim();
           if (!url) return;
-          const existing = data.briefing_referrals[url] || { referrals: 0, unlocks: 0, headline: row.headline };
+          const existing = data.briefing_referrals[url] || { referrals: 0, unlocks: 0, read_more: 0, signups: 0, feed_unlocks: 0, headline: row.headline };
           data.briefing_referrals[url] = {
             headline: row.headline || existing.headline || "Untitled Story",
             referrals: Math.max(Number(existing.referrals) || 0, Number(row.referrals) || 0),
-            unlocks: Math.max(Number(existing.unlocks) || 0, Number(row.unlocks) || 0)
+            unlocks: Math.max(Number(existing.unlocks) || 0, Number(row.unlocks) || 0),
+            read_more: Math.max(Number(existing.read_more) || 0, Number(row.read_more) || 0),
+            signups: Math.max(Number(existing.signups) || 0, Number(row.signups) || 0),
+            feed_unlocks: Math.max(Number(existing.feed_unlocks) || 0, Number(row.feed_unlocks) || 0)
           };
         });
       }
@@ -9363,7 +9366,8 @@ function getAnalyticsHtml() {
             <th>News Topic</th>
             <th>Referrals (Hits)</th>
             <th>Read More</th>
-            <th>AI Unlocks</th>
+            <th>Signups</th>
+            <th>Feed Unlocks</th>
             <th>Bounces</th>
             <th>Conversion Rate</th>
           </tr>
@@ -9559,7 +9563,7 @@ function getAnalyticsHtml() {
         if (referralEntries.length === 0) {
           const tr = document.createElement('tr');
           tr.innerHTML = \`
-            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No briefing link traffic recorded yet.</td>
+            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No briefing link traffic recorded yet.</td>
           \`;
           briefingLinksBody.appendChild(tr);
         } else {
@@ -9569,17 +9573,25 @@ function getAnalyticsHtml() {
             const referrals = Number(metrics.referrals) || 0;
             const unlocks = Number(metrics.unlocks) || 0;
             const readMore = Number(metrics.read_more) || 0;
-            const bounces = Math.max(0, referrals - unlocks - readMore);
-            const conversionRate = referrals > 0 ? (((unlocks + readMore) / referrals) * 100).toFixed(1) + "%" : "0.0%";
+            const signups = Number(metrics.signups) || 0;
+            const feedUnlocks = Number(metrics.feed_unlocks) || 0;
+            
+            // Bounces excludes anyone who read more, signed up, or unlocked
+            const bounces = Math.max(0, referrals - readMore - signups - feedUnlocks - unlocks);
+            
+            // Conversion rate tracks any positive engagement action
+            const positiveActions = readMore + signups + feedUnlocks + unlocks;
+            const conversionRate = referrals > 0 ? ((positiveActions / referrals) * 100).toFixed(1) + "%" : "0.0%";
 
             const tr = document.createElement('tr');
             tr.innerHTML = \`
               <td><a href="\${url}" target="_blank" style="color: #6366f1; text-decoration: none;"><strong>\${metrics.headline || 'Archived Story'}</strong></a></td>
               <td>\${referrals.toLocaleString()}</td>
               <td>\${readMore.toLocaleString()}</td>
-              <td>\${unlocks.toLocaleString()}</td>
+              <td>\${signups.toLocaleString()}</td>
+              <td>\${feedUnlocks.toLocaleString()}</td>
               <td>\${bounces.toLocaleString()}</td>
-              <td><span style="color: \${(unlocks + readMore) > 0 ? '#0d9488' : 'var(--text-muted)'}; font-weight: 700;">\${conversionRate}</span></td>
+              <td><span style="color: \${positiveActions > 0 ? '#0d9488' : 'var(--text-muted)'}; font-weight: 700;">\${conversionRate}</span></td>
             \`;
             briefingLinksBody.appendChild(tr);
           });

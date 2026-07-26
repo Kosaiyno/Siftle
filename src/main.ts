@@ -597,6 +597,13 @@ const connectWallet = async (): Promise<void> => {
     const account = await connectArcWallet();
     if (account) {
       trackEvent("wallet_connect_success");
+      const landingUrl = sessionStorage.getItem("siftle_landing_url");
+      const landingHeadline = sessionStorage.getItem("siftle_landing_headline");
+      const signupTracked = sessionStorage.getItem("siftle_signup_tracked");
+      if (landingUrl && !signupTracked) {
+        trackEvent("briefing_referral_signup", landingUrl, landingHeadline || undefined);
+        sessionStorage.setItem("siftle_signup_tracked", "true");
+      }
       state.walletAddress = account;
       state.referralData = null;
       state.referralError = null;
@@ -1148,6 +1155,11 @@ const unlockAndLoadStorySummary = async (story: BriefingTarget, force = false): 
 
     localStorage.setItem(briefingUnlockKey(story), unlockData.unlockToken);
     trackEvent("ai_unlock_success");
+    const landingUrl = sessionStorage.getItem("siftle_landing_url");
+    const landingHeadline = sessionStorage.getItem("siftle_landing_headline");
+    if (landingUrl) {
+      trackEvent("briefing_referral_unlock", landingUrl, landingHeadline || undefined);
+    }
     const bonusPoints = Number(unlockData?.bonus?.points) || 0;
     if (bonusPoints > 0) {
       void reportLeaderboardEntry(false).catch(err => console.error("Failed to refresh leaderboard bonus:", err));
@@ -1400,11 +1412,18 @@ function syncStoryFromHash(): void {
     let story: NewsStory | undefined;
 
     if (urlParam) {
+      sessionStorage.setItem("siftle_landing_url", urlParam);
+      const storyFound = state.stories.find((item) => item.sourceUrl === urlParam);
+      if (storyFound?.headline) {
+        sessionStorage.setItem("siftle_landing_headline", storyFound.headline);
+      } else if (!sessionStorage.getItem("siftle_landing_headline")) {
+        sessionStorage.setItem("siftle_landing_headline", "Archived Story");
+      }
+
       // Track referral hit once per session
       const sessionKey = `siftle_ref_tracked_${encodeURIComponent(urlParam)}`;
       if (!sessionStorage.getItem(sessionKey)) {
         sessionStorage.setItem(sessionKey, "true");
-        const storyFound = state.stories.find((item) => item.sourceUrl === urlParam);
         trackEvent("briefing_referral", urlParam, storyFound?.headline || "Archived Story");
       }
 
@@ -1426,6 +1445,7 @@ function syncStoryFromHash(): void {
               const finalStory = state.stories.find((s) => s.sourceUrl === fetchedStory.sourceUrl)!;
               
               // Update referral tracking with the real title now that we fetched it
+              sessionStorage.setItem("siftle_landing_headline", finalStory.headline);
               trackEvent("briefing_referral", urlParam, finalStory.headline);
 
               state.selectedStoryId = finalStory.id;
