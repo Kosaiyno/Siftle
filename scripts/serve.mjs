@@ -7016,7 +7016,7 @@ async function loadAnalyticsFromSupabase(localData = loadAnalytics()) {
   if (!isSupabaseConfigured) return data;
 
   try {
-    const rows = await supabaseRequest(`analytics_daily?select=${analyticsSupabaseSelect}&order=date_key.desc&limit=120`);
+    const rows = await supabaseRequest("analytics_daily?select=*&order=date_key.desc&limit=120");
     (rows || []).forEach((row) => {
       const dateKey = String(row.date_key || "").trim();
       if (!dateKey) return;
@@ -7049,7 +7049,7 @@ async function loadAnalyticsFromSupabase(localData = loadAnalytics()) {
     }
 
     try {
-      const briefingRows = await supabaseRequest("briefing_referrals?select=story_url,headline,referrals,unlocks,read_more,signups,feed_unlocks");
+      const briefingRows = await supabaseRequest("briefing_referrals?select=*");
       if (briefingRows && briefingRows.length > 0) {
         if (!data.briefing_referrals) {
           data.briefing_referrals = {};
@@ -7102,7 +7102,7 @@ async function incrementAnalyticsEventInSupabase(event, email = null) {
 
     const dateKey = getTodayKey();
     const encodedDate = encodeURIComponent(dateKey);
-    const existingRows = await supabaseRequest(`analytics_daily?date_key=eq.${encodedDate}&select=${analyticsSupabaseSelect}`);
+    const existingRows = await supabaseRequest(`analytics_daily?date_key=eq.${encodedDate}&select=*`);
     const existing = existingRows?.[0] || {};
     const nextRow = {
       date_key: dateKey,
@@ -8875,7 +8875,7 @@ async function trackBriefingReferralEvent(storyUrl, headline, event) {
     try {
       let existing = null;
       try {
-        const res = await supabaseRequest(`briefing_referrals?story_url=eq.${encodeURIComponent(cleanUrl)}&select=referrals,unlocks,read_more,headline`, {
+        const res = await supabaseRequest(`briefing_referrals?story_url=eq.${encodeURIComponent(cleanUrl)}&select=*`, {
           method: "GET"
         });
         if (res && res.length > 0) {
