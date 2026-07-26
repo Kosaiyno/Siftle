@@ -10372,7 +10372,7 @@ const server = createServer(async (request, response) => {
   }
 
   if (requestUrl.pathname === "/api/analytics/report" && request.method === "GET") {
-    const data = await buildAnalyticsReport(loadAnalytics());
+    const data = await buildAnalyticsReport(await loadAnalyticsFromSupabase());
     sendJson(response, 200, {
       ...data,
       supabaseConfigured: isSupabaseConfigured
