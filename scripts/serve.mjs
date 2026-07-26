@@ -11527,7 +11527,8 @@ const server = createServer(async (request, response) => {
   if (requestUrl.pathname === "/api/summary" && request.method === "POST") {
     readJsonBody(request)
       .then(async (article) => {
-        const hasUnlock = hasValidSummaryUnlock(article?.sourceUrl, article?.walletAddress, article?.unlockToken)
+        const hasUnlock = article?.isSharedLanding
+          || hasValidSummaryUnlock(article?.sourceUrl, article?.walletAddress, article?.unlockToken)
           || await hasPersistentAiBriefingAccess(article?.sourceUrl, article?.walletAddress);
         if (!hasUnlock) {
           const error = new Error("AI briefing unlock payment required");

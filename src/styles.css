@@ -10630,3 +10630,33 @@ html, body, .app-shell, main {
 .points-chip, .guide-step-title, .circle-auth-banner, .category-tab, .division-select-menu, .leaderboard-mode-tab {
   font-family: 'Cormorant Garamond', 'Times New Roman', serif !important;
 }
+
+/* Premium Read More News Button for free landing onboarding page */
+.read-more-news-btn {
+  background: var(--brand-gradient, linear-gradient(135deg, #4f46e5, #3b82f6)) !important;
+  color: #ffffff !important;
+  border: 0 !important;
+  box-shadow: 0 12px 24px rgba(59, 130, 246, 0.22) !important;
+  border-radius: 14px !important;
+  font-weight: 700 !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+  min-height: 44px;
+  padding: 10px 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease-in-out;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.88rem;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.read-more-news-btn:hover {
+  opacity: 0.9 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(59, 130, 246, 0.3) !important;
+}
+

@@ -968,7 +968,14 @@ const clearBriefingUnlockToken = (story: BriefingTarget): void => {
   localStorage.removeItem(briefingUnlockKey(story));
 };
 
-const isBriefingUnlocked = (story: BriefingTarget): boolean => Boolean(getBriefingUnlockToken(story));
+const isBriefingUnlocked = (story: BriefingTarget): boolean => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlParam = urlParams.get("url");
+  if (urlParam && urlParam === story.sourceUrl) {
+    return true;
+  }
+  return Boolean(getBriefingUnlockToken(story));
+};
 
 const getBriefingTargetFromMarketEvidence = (
   market: MarketPreview,
@@ -1192,13 +1199,18 @@ const loadStorySummary = async (story: BriefingTarget): Promise<void> => {
   render();
 
   try {
+    const sharedUrlParams = new URLSearchParams(window.location.search);
+    const sharedUrlParam = sharedUrlParams.get("url");
+    const isSharedLanding = Boolean(sharedUrlParam && sharedUrlParam === story.sourceUrl);
+
     const response = await fetch(apiUrl("/api/summary"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...story,
         walletAddress: state.walletAddress,
-        unlockToken: getBriefingUnlockToken(story)
+        unlockToken: getBriefingUnlockToken(story),
+        isSharedLanding
       })
     });
 
@@ -1287,7 +1299,11 @@ const closeStory = (): void => {
   state.selectedThreadUrl = null;
   state.activeThread = null;
   state.loadingThreadUrl = null;
-  window.history.pushState({}, "", "#feed");
+  if (window.location.search) {
+    window.history.pushState({}, "", window.location.pathname + "#feed");
+  } else {
+    window.history.pushState({}, "", "#feed");
+  }
   render();
   requestAnimationFrame(() => window.scrollTo({ top: state.feedScrollY, behavior: "auto" }));
 };
@@ -3307,7 +3323,22 @@ const renderDetail = (): void => {
           ${isUnlocked ? renderBriefingStatusNote(story) : ""}
           ${!isUnlocked ? renderLockedBriefing(story, isUnlocking) : isLoadingSummary ? renderSummarySkeleton() : hasSummaryFailure ? renderUnavailableBriefing(story) : formatAIBriefing(summary, story)}
         </section>
-        <a class="source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>
+        ${(() => {
+          const urlParams = new URLSearchParams(window.location.search);
+          const urlParam = urlParams.get("url");
+          const isSharedLanding = Boolean(urlParam && urlParam === story.sourceUrl);
+          if (isSharedLanding) {
+            return `
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 24px; width: 100%;">
+              <a class="source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer" style="width: 100%; box-sizing: border-box; text-align: center; justify-content: center;">Open source</a>
+              <button type="button" class="read-more-news-btn" data-back-to-feed>
+                Read More News
+              </button>
+            </div>
+            `;
+          }
+          return `<a class="source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`;
+        })()}
       </article>
     </div>
   `;
