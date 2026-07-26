@@ -6812,7 +6812,9 @@ const analyticsEventKeys = [
   "ai_unlock_success",
   "ai_unlock_failed",
   "view_summary",
-  "open_source"
+  "open_source",
+  "shared_read_more_click",
+  "feed_story_click"
 ];
 
 function createEmptyAnalyticsCounts() {

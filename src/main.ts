@@ -5033,7 +5033,13 @@ storyList?.addEventListener("click", async (event) => {
 
   if (!storyCard) return;
   if (target.closest("a")) return;
-  openStory(Number(storyCard.dataset.storyId), true);
+  
+  const storyId = Number(storyCard.dataset.storyId);
+  const story = state.stories.find((s) => s.id === storyId);
+  if (story) {
+    trackEvent("feed_story_click", story.sourceUrl, story.headline);
+  }
+  openStory(storyId, true);
 });
 
 storyList?.addEventListener("keydown", (event) => {
@@ -5042,7 +5048,12 @@ storyList?.addEventListener("keydown", (event) => {
   if (!storyCard || (event.key !== "Enter" && event.key !== " ")) return;
 
   event.preventDefault();
-  openStory(Number(storyCard.dataset.storyId));
+  const storyId = Number(storyCard.dataset.storyId);
+  const story = state.stories.find((s) => s.id === storyId);
+  if (story) {
+    trackEvent("feed_story_click", story.sourceUrl, story.headline);
+  }
+  openStory(storyId);
 });
 
 storyDetail?.addEventListener("click", (event) => {
@@ -5158,7 +5169,14 @@ storyDetail?.addEventListener("click", (event) => {
     return;
   }
   const backButton = target.closest<HTMLButtonElement>("[data-back-to-feed]");
-  if (backButton) closeStory();
+  if (backButton) {
+    if (backButton.classList.contains("read-more-news-btn")) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlParam = urlParams.get("url");
+      trackEvent("shared_read_more_click", urlParam || undefined);
+    }
+    closeStory();
+  }
 });
 
 storyDetail?.addEventListener("input", (event) => {

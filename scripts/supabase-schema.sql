@@ -133,6 +133,8 @@ create table if not exists analytics_daily (
   ai_unlock_failed integer default 0,
   view_summary integer default 0,
   open_source integer default 0,
+  shared_read_more_click integer default 0,
+  feed_story_click integer default 0,
   updated_at timestamptz default now()
 );
 
