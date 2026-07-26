@@ -8423,6 +8423,26 @@ async function refreshMarketListCache() {
         continue;
       }
 
+      if (market.optionMarket) {
+        // Option markets do not use contract events for trader count, we can get count from Supabase state or optionState
+        const traderCount = optionState && optionState.optionMarketPositions?.[market.id]
+          ? Object.keys(optionState.optionMarketPositions[market.id] || {}).length
+          : 0;
+        enrichedMarkets.push({
+          ...market,
+          marketAddress,
+          ...(publicOptionSnapshot ? {
+            resolvedOptionId: publicOptionSnapshot.resolvedOptionId || null,
+            outcome: publicOptionSnapshot.outcome || 0,
+            optionPools: publicOptionSnapshot.optionPools,
+            volumeUsdc: publicOptionSnapshot.volumeUsdc
+          } : {}),
+          traderCount,
+          traders: String(traderCount)
+        });
+        continue;
+      }
+
       try {
         const { traders } = await collectMarketTradeSignals(marketAddress, market.deploymentBlock);
         const traderCount = traders.size;
@@ -8485,6 +8505,7 @@ async function recomputeLeaderboardFromChain(data) {
   );
 
   for (const market of dailyMarkets) {
+    if (market.optionMarket) continue;
     const marketAddress = normalizeWalletAddress(market.marketAddress) || getConfiguredMarketAddress(market.id);
     if (!marketAddress) continue;
 
