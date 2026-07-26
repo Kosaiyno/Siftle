@@ -176,6 +176,7 @@ create table if not exists briefing_referrals (
   headline text not null,
   referrals integer default 0,
   unlocks integer default 0,
+  read_more integer default 0,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );

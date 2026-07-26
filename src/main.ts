@@ -5173,7 +5173,8 @@ storyDetail?.addEventListener("click", (event) => {
     if (backButton.classList.contains("read-more-news-btn")) {
       const urlParams = new URLSearchParams(window.location.search);
       const urlParam = urlParams.get("url");
-      trackEvent("shared_read_more_click", urlParam || undefined);
+      const headline = document.querySelector(".detail-card h2")?.textContent || undefined;
+      trackEvent("shared_read_more_click", urlParam || undefined, headline);
     }
     closeStory();
   }

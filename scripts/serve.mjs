@@ -8848,7 +8848,8 @@ async function trackBriefingReferralEvent(storyUrl, headline, event) {
     data.briefing_referrals[cleanUrl] = {
       headline: cleanHeadline,
       referrals: 0,
-      unlocks: 0
+      unlocks: 0,
+      read_more: 0
     };
   }
 
@@ -8861,6 +8862,8 @@ async function trackBriefingReferralEvent(storyUrl, headline, event) {
     data.briefing_referrals[cleanUrl].referrals += 1;
   } else if (cleanEvent === "briefing_unlock") {
     data.briefing_referrals[cleanUrl].unlocks += 1;
+  } else if (cleanEvent === "shared_read_more_click") {
+    data.briefing_referrals[cleanUrl].read_more = (data.briefing_referrals[cleanUrl].read_more || 0) + 1;
   }
 
   saveAnalytics(data);
@@ -8869,7 +8872,7 @@ async function trackBriefingReferralEvent(storyUrl, headline, event) {
     try {
       let existing = null;
       try {
-        const res = await supabaseRequest(`briefing_referrals?story_url=eq.${encodeURIComponent(cleanUrl)}&select=referrals,unlocks,headline`, {
+        const res = await supabaseRequest(`briefing_referrals?story_url=eq.${encodeURIComponent(cleanUrl)}&select=referrals,unlocks,read_more,headline`, {
           method: "GET"
         });
         if (res && res.length > 0) {
@@ -8886,6 +8889,7 @@ async function trackBriefingReferralEvent(storyUrl, headline, event) {
           : (existing?.headline || cleanHeadline),
         referrals: (existing?.referrals || 0) + (cleanEvent === "briefing_referral" ? 1 : 0),
         unlocks: (existing?.unlocks || 0) + (cleanEvent === "briefing_unlock" ? 1 : 0),
+        read_more: (existing?.read_more || 0) + (cleanEvent === "shared_read_more_click" ? 1 : 0),
         updated_at: new Date().toISOString()
       };
 
@@ -9358,6 +9362,7 @@ function getAnalyticsHtml() {
           <tr>
             <th>News Topic</th>
             <th>Referrals (Hits)</th>
+            <th>Read More</th>
             <th>AI Unlocks</th>
             <th>Bounces</th>
             <th>Conversion Rate</th>
@@ -9554,7 +9559,7 @@ function getAnalyticsHtml() {
         if (referralEntries.length === 0) {
           const tr = document.createElement('tr');
           tr.innerHTML = \`
-            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No briefing link traffic recorded yet.</td>
+            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No briefing link traffic recorded yet.</td>
           \`;
           briefingLinksBody.appendChild(tr);
         } else {
@@ -9563,16 +9568,18 @@ function getAnalyticsHtml() {
           referralEntries.forEach(([url, metrics]) => {
             const referrals = Number(metrics.referrals) || 0;
             const unlocks = Number(metrics.unlocks) || 0;
-            const bounces = Math.max(0, referrals - unlocks);
-            const conversionRate = referrals > 0 ? ((unlocks / referrals) * 100).toFixed(1) + "%" : "0.0%";
+            const readMore = Number(metrics.read_more) || 0;
+            const bounces = Math.max(0, referrals - unlocks - readMore);
+            const conversionRate = referrals > 0 ? (((unlocks + readMore) / referrals) * 100).toFixed(1) + "%" : "0.0%";
 
             const tr = document.createElement('tr');
             tr.innerHTML = \`
               <td><a href="\${url}" target="_blank" style="color: #6366f1; text-decoration: none;"><strong>\${metrics.headline || 'Archived Story'}</strong></a></td>
               <td>\${referrals.toLocaleString()}</td>
+              <td>\${readMore.toLocaleString()}</td>
               <td>\${unlocks.toLocaleString()}</td>
               <td>\${bounces.toLocaleString()}</td>
-              <td><span style="color: \${unlocks > 0 ? '#0d9488' : 'var(--text-muted)'}; font-weight: 700;">\${conversionRate}</span></td>
+              <td><span style="color: \${(unlocks + readMore) > 0 ? '#0d9488' : 'var(--text-muted)'}; font-weight: 700;">\${conversionRate}</span></td>
             \`;
             briefingLinksBody.appendChild(tr);
           });
@@ -10374,7 +10381,7 @@ const server = createServer(async (request, response) => {
             console.warn("[ANALYTICS] Source tracking warning:", sourceErr.message);
           }
         }
-        if (body.event === "briefing_referral" || body.event === "briefing_unlock") {
+        if (body.event === "briefing_referral" || body.event === "briefing_unlock" || body.event === "shared_read_more_click") {
           try {
             await trackBriefingReferralEvent(body.storyUrl, body.headline, body.event);
           } catch (briefingErr) {
