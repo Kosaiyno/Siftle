@@ -198,18 +198,12 @@ export const listShelbyArchiveFiles = async () => {
   const { client, signer } = getShelbyClient();
   const prefix = (process.env.SHELBY_ARCHIVE_PREFIX || "siftle/feeds").replace(/^\/+|\/+$/g, "");
   const account = process.env.SHELBY_ACCOUNT_ADDRESS || signer.accountAddress;
-  const blobs = [];
-  const limit = 200;
 
-  for (let offset = 0; offset < 1000; offset += limit) {
-    const page = await client.coordination.getAccountBlobs({
-      account,
-      pagination: { limit, offset }
-    });
-
-    blobs.push(...page);
-    if (page.length < limit) break;
-  }
+  // Limit to the most recent 200 blobs to conserve memory and avoid large JSON payload parsing on Render
+  const blobs = await client.coordination.getAccountBlobs({
+    account,
+    pagination: { limit: 200, offset: 0 }
+  });
 
   return blobs
     .filter((blob) => !blob.isDeleted && blob.blobNameSuffix?.startsWith(`${prefix}/`))
@@ -295,18 +289,11 @@ export const restoreAnalyticsFromShelby = async () => {
   const account = process.env.SHELBY_ACCOUNT_ADDRESS || signer.accountAddress;
 
   try {
-    const blobs = [];
-    const limit = 200;
-
-    for (let offset = 0; offset < 1000; offset += limit) {
-      const page = await client.coordination.getAccountBlobs({
-        account,
-        pagination: { limit, offset }
-      });
-
-      blobs.push(...page);
-      if (page.length < limit) break;
-    }
+    // Limit to the most recent 100 blobs to conserve memory
+    const blobs = await client.coordination.getAccountBlobs({
+      account,
+      pagination: { limit: 100, offset: 0 }
+    });
 
     const backupBlobs = blobs
       .filter((blob) => !blob.isDeleted && blob.blobNameSuffix?.includes("analytics/backup-"))

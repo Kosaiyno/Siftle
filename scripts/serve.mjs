@@ -5095,7 +5095,15 @@ const publishStatus = {
   categories: {}
 };
 
-let lastShelbyExtensionTime = 0;
+const lastExtensionFile = join(root, ".siftle", "last_shelby_extension.txt");
+let lastShelbyExtensionTime = (() => {
+  if (existsSync(lastExtensionFile)) {
+    try {
+      return Number(readFileSync(lastExtensionFile, "utf8").trim()) || 0;
+    } catch (_) {}
+  }
+  return 0;
+})();
 const SHELBY_EXTENSION_INTERVAL = 12 * 60 * 60 * 1000; // 12 hours
 
 export const extendShelbyBlobsIfNeeded = async (overrides = {}) => {
@@ -5115,6 +5123,9 @@ export const extendShelbyBlobsIfNeeded = async (overrides = {}) => {
   }
   if (!force) {
     lastShelbyExtensionTime = now;
+    try {
+      writeFileSync(lastExtensionFile, String(now), "utf8");
+    } catch (_) {}
   }
 
   console.log("[SHELBY RENEWAL] Scanning Shelby blobs for lease extension...");
