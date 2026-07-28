@@ -7125,6 +7125,26 @@ async function incrementAnalyticsEventInSupabase(event, email = null) {
     });
     nextRow[cleanEvent] += 1;
 
+    let schemaKeys = null;
+    if (existingRows && existingRows.length > 0) {
+      schemaKeys = Object.keys(existingRows[0]);
+    } else {
+      try {
+        const sampleRows = await supabaseRequest("analytics_daily?select=*&limit=1");
+        if (sampleRows && sampleRows.length > 0) {
+          schemaKeys = Object.keys(sampleRows[0]);
+        }
+      } catch (_) {}
+    }
+
+    if (schemaKeys) {
+      Object.keys(nextRow).forEach((key) => {
+        if (!schemaKeys.includes(key) && key !== "date_key" && key !== "updated_at") {
+          delete nextRow[key];
+        }
+      });
+    }
+
     await supabaseRequest("analytics_daily?on_conflict=date_key", {
       method: "POST",
       prefer: "resolution=merge-duplicates,return=minimal",
