@@ -33,11 +33,21 @@ const isBackendWalletModeEnabled = async (): Promise<boolean> => {
   if (!backendWalletModeConfigPromise) {
     backendWalletModeConfigPromise = fetch(apiUrl("/api/backend-wallet/config"))
       .then(async (response) => {
-        if (!response.ok) return false;
+        if (!response.ok) {
+          backendWalletModeConfigPromise = null;
+          return false;
+        }
         const payload = await response.json();
-        return Boolean(payload?.enabled);
+        const enabled = Boolean(payload?.enabled);
+        if (!enabled) {
+          backendWalletModeConfigPromise = null;
+        }
+        return enabled;
       })
-      .catch(() => false);
+      .catch(() => {
+        backendWalletModeConfigPromise = null;
+        return false;
+      });
   }
   return backendWalletModeConfigPromise;
 };

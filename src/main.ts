@@ -1171,7 +1171,15 @@ const unlockAndLoadStorySummary = async (story: BriefingTarget, force = false): 
     const rawMsg = error instanceof Error ? error.message : String(error || "");
     let friendlyMsg = rawMsg;
     const lower = rawMsg.toLowerCase();
-    if (lower.includes("balance") || lower.includes("exceeds balance") || lower.includes("transfer amount exceeds")) {
+    if (lower.includes("session expired") || lower.includes("sign in first") || lower.includes("unauthorized")) {
+      try {
+        const arc = await loadArcModule();
+        arc.disconnectArcWallet();
+      } catch (_) {}
+      state.walletAddress = null;
+      state.walletBalance = null;
+      friendlyMsg = "Your session has expired. Please sign in again to unlock this briefing.";
+    } else if (lower.includes("balance") || lower.includes("exceeds balance") || lower.includes("transfer amount exceeds")) {
       friendlyMsg = "Your USDC balance is too low to unlock this briefing. Please go to the Portfolio tab and click 'Claim Faucet' to get free testnet USDC.";
     }
     showActionToast(friendlyMsg);
