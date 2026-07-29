@@ -7070,6 +7070,29 @@ async function supabaseRequest(path, options = {}) {
   return data;
 }
 
+async function fetchAllSupabaseRows(table, selectFields, extraQuery = "") {
+  let allRows = [];
+  let offset = 0;
+  const pageSize = 1000;
+  let hasMore = true;
+
+  while (hasMore) {
+    const suffix = extraQuery ? `&${extraQuery}` : "";
+    const queryPath = `${table}?select=${selectFields}&limit=${pageSize}&offset=${offset}${suffix}`;
+    const rows = await supabaseRequest(queryPath);
+    if (rows && rows.length > 0) {
+      allRows.push(...rows);
+      offset += pageSize;
+      if (rows.length < pageSize) {
+        hasMore = false;
+      }
+    } else {
+      hasMore = false;
+    }
+  }
+  return allRows;
+}
+
 async function loadAnalyticsFromSupabase(localData = loadAnalytics()) {
   const data = normalizeAnalytics(localData);
   if (!isSupabaseConfigured) return data;
@@ -7257,10 +7280,11 @@ async function buildAnalyticsReport(localData = loadAnalytics()) {
 
   if (isSupabaseConfigured) {
     try {
-      const [signupRows, aiUnlockRows, backendWalletRows] = await Promise.all([
-        supabaseRequest("analytics_signups?select=email_hash,date_key,created_at&order=created_at.desc&limit=5000"),
-        supabaseRequest("ai_briefing_unlocks?select=wallet_address,date_key,created_at&order=created_at.desc&limit=10000"),
-        supabaseRequest("backend_wallet_users?select=email,created_at&order=created_at.desc&limit=5000")
+      const [signupRows, aiUnlockRows, backendWalletRows, remoteMigrations] = await Promise.all([
+        fetchAllSupabaseRows("analytics_signups", "email_hash,date_key,created_at"),
+        fetchAllSupabaseRows("ai_briefing_unlocks", "wallet_address,date_key,created_at"),
+        fetchAllSupabaseRows("backend_wallet_users", "email,created_at"),
+        loadBackendWalletMigrationsFromSupabase()
       ]);
 
       (signupRows || []).forEach((row) => {
@@ -7270,11 +7294,24 @@ async function buildAnalyticsReport(localData = loadAnalytics()) {
         addSignupRecord(String(row?.created_at || "").slice(0, 10), row?.email);
       });
 
+      const migrationMap = getWalletMigrationMap(data);
+      Object.values(remoteMigrations || {}).forEach((entry) => {
+        const oldWallet = normalizeWalletAddress(entry?.oldWalletAddress);
+        const newWallet = normalizeWalletAddress(entry?.newWalletAddress);
+        if (oldWallet && newWallet && oldWallet !== newWallet) {
+          migrationMap.set(oldWallet, newWallet);
+        }
+      });
+      const canonicalAddress = (addr) => {
+        const clean = normalizeWalletAddress(addr);
+        return clean ? migrationMap.get(clean) || clean : "";
+      };
+
       const aiWalletSetsByDate = {};
       const allAiWallets = new Set();
       (aiUnlockRows || []).forEach((row) => {
         const dateKey = String(row?.date_key || "").trim();
-        const walletAddress = normalizeWalletAddress(row?.wallet_address || "");
+        const walletAddress = canonicalAddress(row?.wallet_address);
         if (!dateKey || !walletAddress) return;
         if (!aiWalletSetsByDate[dateKey]) aiWalletSetsByDate[dateKey] = new Set();
         aiWalletSetsByDate[dateKey].add(walletAddress);
