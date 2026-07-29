@@ -5598,7 +5598,10 @@ const loadBackendWalletUserFromSupabase = async (email) => {
     const rows = await supabaseRequest(`backend_wallet_users?email=eq.${encodeURIComponent(cleanEmail)}&select=email,wallet_address,private_key,created_at&limit=1`);
     return normalizeBackendWalletUserRow(rows?.[0]);
   } catch (err) {
-    console.warn("[SUPABASE] Backend wallet user read failed; using local fallback:", err.message);
+    console.warn("[SUPABASE] Backend wallet user read failed:", err.message);
+    if (isSupabaseConfigured) {
+      throw err;
+    }
     return null;
   }
 };
