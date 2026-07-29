@@ -2574,11 +2574,19 @@ const extractPageTitle = (html = "") => {
   return stripHtml(decodeHtmlEntities(extractAttribute(ogTitleTag || twitterTitleTag, "content") || titleTag));
 };
 
+const repairedHeadlineCache = new Map();
+
 const fetchFullHeadline = async (article) => {
   if (!isTruncatedHeadline(article.headline) || !article.sourceUrl) {
     return article.headline;
   }
 
+  const cached = repairedHeadlineCache.get(article.sourceUrl);
+  if (cached) {
+    return cached;
+  }
+
+  let finalHeadline = article.headline;
   try {
     const response = await fetch(article.sourceUrl, {
       signal: AbortSignal.timeout(5000),
@@ -2594,15 +2602,23 @@ const fetchFullHeadline = async (article) => {
         .trim();
 
       if (title && title.length > article.headline.length && !isTruncatedHeadline(title)) {
-        return title;
+        finalHeadline = title;
       }
     }
   } catch {
     // Fall back to URL slug when the publisher blocks title fetches.
+    const slugTitle = titleFromUrlSlug(article.sourceUrl);
+    if (slugTitle && slugTitle.length > article.headline.length) {
+      finalHeadline = slugTitle;
+    }
   }
 
-  const slugTitle = titleFromUrlSlug(article.sourceUrl);
-  return slugTitle && slugTitle.length > article.headline.length ? slugTitle : article.headline;
+  repairedHeadlineCache.set(article.sourceUrl, finalHeadline);
+  if (repairedHeadlineCache.size > 200) {
+    const firstKey = repairedHeadlineCache.keys().next().value;
+    if (firstKey) repairedHeadlineCache.delete(firstKey);
+  }
+  return finalHeadline;
 };
 
 const repairTruncatedArticleTitles = async (articles) => {
@@ -3853,12 +3869,22 @@ const overlayFreshSportsTweets = async (snapshot) => {
   };
 };
 
+const newsDataCustomQueryCache = new Map();
+const NEWS_DATA_CUSTOM_TTL = 4 * 60 * 60 * 1000; // 4 hours
+
 const fetchNewsDataWithCustomQuery = async (query, category) => {
   if (!process.env.NEWSDATA_API_KEY || !query) return [];
 
   let safeQuery = query.trim();
   if (safeQuery.length > 95) {
     safeQuery = safeQuery.slice(0, 95);
+  }
+
+  const cacheKey = `${category}:${safeQuery}`;
+  const cached = newsDataCustomQueryCache.get(cacheKey);
+  if (cached && Date.now() < cached.expiresAt) {
+    console.log(`[NEWSDATA CACHE] Returning cached custom query: "${safeQuery}"`);
+    return cached.value;
   }
 
   const params = new URLSearchParams({
@@ -3878,7 +3904,7 @@ const fetchNewsDataWithCustomQuery = async (query, category) => {
     }
 
     const data = await response.json();
-    return (data.results ?? []).map((item) => ({
+    const results = (data.results ?? []).map((item) => ({
       headline: item.title,
       summary: item.description || item.content || item.title,
       source: item.source_name || "NewsData",
@@ -3887,6 +3913,12 @@ const fetchNewsDataWithCustomQuery = async (query, category) => {
       publishedAt: item.pubDate,
       category: inferCategory({ ...item, headline: item.title, summary: item.description }, category)
     }));
+
+    newsDataCustomQueryCache.set(cacheKey, {
+      expiresAt: Date.now() + NEWS_DATA_CUSTOM_TTL,
+      value: results
+    });
+    return results;
   } catch (err) {
     console.warn("NewsData custom query failed:", err.message);
     return [];
@@ -3928,8 +3960,18 @@ const fetchGuardianWithCustomQuery = async (query, category) => {
   }
 };
 
+const newsDataGeneralCache = new Map();
+const NEWS_DATA_GENERAL_TTL = 1 * 60 * 60 * 1000; // 1 hour
+
 const fetchNewsData = async (category) => {
   if (!process.env.NEWSDATA_API_KEY) return [];
+
+  const cacheKey = category;
+  const cached = newsDataGeneralCache.get(cacheKey);
+  if (cached && Date.now() < cached.expiresAt) {
+    console.log(`[NEWSDATA CACHE] Returning cached general news for category: "${category}"`);
+    return cached.value;
+  }
 
   const params = new URLSearchParams({
     apikey: process.env.NEWSDATA_API_KEY,
@@ -3947,7 +3989,7 @@ const fetchNewsData = async (category) => {
   if (!response.ok) throw new Error(`NewsData returned ${response.status}`);
 
   const data = await response.json();
-  return (data.results ?? []).map((item) => ({
+  const results = (data.results ?? []).map((item) => ({
     headline: item.title,
     summary: item.description || item.content || item.title,
     source: item.source_name || "NewsData",
@@ -3956,6 +3998,12 @@ const fetchNewsData = async (category) => {
     publishedAt: item.pubDate,
     category: inferCategory({ ...item, headline: item.title, summary: item.description }, category)
   }));
+
+  newsDataGeneralCache.set(cacheKey, {
+    expiresAt: Date.now() + NEWS_DATA_GENERAL_TTL,
+    value: results
+  });
+  return results;
 };
 
 const fetchGuardian = async (category) => {
