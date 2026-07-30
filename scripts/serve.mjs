@@ -5083,7 +5083,7 @@ const publishSnapshot = async (snapshot) => {
   }
 
   if (isShelbyArchiveConfigured() && archive.provider !== "shelby") {
-    throw new Error(archive.shelby_error || archive.error || "Shelby archive upload did not complete");
+    console.warn("[SHELBY] Archive upload failed, falling back to local-only publishing:", archive.shelby_error || archive.error || "Shelby archive upload did not complete");
   }
 
   const publishedSnapshot = {
