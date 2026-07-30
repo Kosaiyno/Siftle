@@ -9,20 +9,20 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #090b11;
-      --panel-bg: #0f111a;
+      --bg: #000000;
+      --panel-bg: #090e1a;
       --card-bg: rgba(255, 255, 255, 0.02);
-      --card-border: rgba(255, 255, 255, 0.06);
-      --text: #f3f4f6;
-      --text-muted: #9ca3af;
-      --primary: #4f46e5;
-      --primary-light: #6366f1;
-      --emerald: #10b981;
-      --emerald-glow: rgba(16, 185, 129, 0.15);
-      --amber: #f59e0b;
-      --amber-glow: rgba(245, 158, 11, 0.15);
+      --card-border: rgba(37, 99, 235, 0.15);
+      --text: #ffffff;
+      --text-muted: #94a3b8;
+      --primary: #2563eb;
+      --primary-light: #3b82f6;
+      --primary-glow: rgba(37, 99, 235, 0.15);
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.15);
+      --warning: #f59e0b;
+      --warning-glow: rgba(245, 158, 11, 0.15);
       --red: #ef4444;
-      --red-glow: rgba(239, 68, 68, 0.15);
       --font-display: 'Outfit', sans-serif;
       --font-sans: 'Inter', sans-serif;
     }
@@ -36,9 +36,9 @@
     body {
       background-color: var(--bg);
       background-image: 
-        radial-gradient(circle at 5% 5%, rgba(99, 102, 241, 0.05) 0%, transparent 35%),
-        radial-gradient(circle at 95% 95%, rgba(16, 185, 129, 0.05) 0%, transparent 35%),
-        linear-gradient(135deg, #07090e 0%, #0c0f19 100%);
+        radial-gradient(circle at 5% 5%, rgba(37, 99, 235, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 95% 95%, rgba(37, 99, 235, 0.05) 0%, transparent 40%),
+        linear-gradient(135deg, #000000 0%, #050a14 100%);
       color: var(--text);
       font-family: var(--font-sans);
       min-height: 100vh;
@@ -49,8 +49,8 @@
     /* Sidebar Navigation */
     .sidebar {
       width: 260px;
-      background: var(--panel-bg);
-      border-right: 1px solid var(--card-border);
+      background: #040812;
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -69,16 +69,16 @@
       font-family: var(--font-display);
       font-size: 1.35rem;
       font-weight: 700;
-      background: linear-gradient(to right, #a5b4fc, #34d399);
+      background: linear-gradient(to right, #ffffff, #3b82f6);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
     .plan-badge {
       font-size: 0.7rem;
-      background: rgba(99, 102, 241, 0.15);
-      border: 1px solid rgba(99, 102, 241, 0.3);
-      color: #818cf8;
+      background: rgba(37, 99, 235, 0.15);
+      border: 1px solid rgba(37, 99, 235, 0.3);
+      color: #3b82f6;
       padding: 0.15rem 0.5rem;
       border-radius: 4px;
       font-weight: 600;
@@ -104,6 +104,7 @@
       font-size: 0.925rem;
       font-weight: 500;
       transition: all 0.2s ease;
+      cursor: pointer;
     }
 
     .nav-item:hover, .nav-item.active {
@@ -112,16 +113,16 @@
     }
 
     .nav-item.active {
-      background: rgba(99, 102, 241, 0.08);
-      border: 1px solid rgba(99, 102, 241, 0.15);
-      color: #a5b4fc;
+      background: rgba(37, 99, 235, 0.1);
+      border: 1px solid rgba(37, 99, 235, 0.2);
+      color: #3b82f6;
     }
 
     .sidebar-footer {
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
-      border-top: 1px solid var(--card-border);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
       padding-top: 1.5rem;
     }
 
@@ -168,7 +169,7 @@
     .search-input {
       width: 100%;
       background: rgba(255, 255, 255, 0.02);
-      border: 1px solid var(--card-border);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 10px;
       padding: 0.625rem 1rem;
       color: var(--text);
@@ -179,9 +180,9 @@
     }
 
     .search-input:focus {
-      border-color: rgba(99, 102, 241, 0.4);
+      border-color: rgba(37, 99, 235, 0.4);
       background: rgba(255, 255, 255, 0.04);
-      box-shadow: 0 0 12px 0 rgba(99, 102, 241, 0.08);
+      box-shadow: 0 0 12px 0 rgba(37, 99, 235, 0.1);
     }
 
     .user-profile {
@@ -191,9 +192,9 @@
     }
 
     .btn-refresh {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--card-border);
-      color: var(--text);
+      background: rgba(37, 99, 235, 0.1);
+      border: 1px solid rgba(37, 99, 235, 0.3);
+      color: #3b82f6;
       padding: 0.5rem 1rem;
       border-radius: 8px;
       font-weight: 600;
@@ -206,15 +207,15 @@
     }
 
     .btn-refresh:hover {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: rgba(255, 255, 255, 0.15);
+      background: rgba(37, 99, 235, 0.2);
+      border-color: rgba(37, 99, 235, 0.5);
     }
 
     .avatar-container {
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      border-left: 1px solid var(--card-border);
+      border-left: 1px solid rgba(255, 255, 255, 0.05);
       padding-left: 1rem;
     }
 
@@ -222,7 +223,8 @@
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #6366f1 0%, #10b981 100%);
+      background: linear-gradient(135deg, #2563eb 0%, #000000 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -245,6 +247,14 @@
     .avatar-role {
       font-size: 0.7rem;
       color: var(--text-muted);
+      font-family: monospace;
+    }
+
+    /* Views Layout */
+    .dashboard-view {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
     }
 
     /* Info Cards Grid */
@@ -255,7 +265,7 @@
     }
 
     .card {
-      background: var(--card-bg);
+      background: rgba(10, 15, 30, 0.6);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--card-border);
@@ -269,8 +279,9 @@
 
     .card:hover {
       transform: translateY(-2px);
-      border-color: rgba(255, 255, 255, 0.12);
-      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(37, 99, 235, 0.35);
+      box-shadow: 0 0 16px rgba(37, 99, 235, 0.1);
+      background: rgba(10, 15, 30, 0.8);
     }
 
     .card-header-flex {
@@ -306,8 +317,8 @@
     }
 
     .trend-up {
-      background: rgba(16, 185, 129, 0.1);
-      color: #34d399;
+      background: rgba(59, 130, 246, 0.15);
+      color: #3b82f6;
     }
 
     .trend-neutral {
@@ -328,7 +339,7 @@
     }
 
     .visual-panel {
-      background: var(--card-bg);
+      background: rgba(10, 15, 30, 0.6);
       border: 1px solid var(--card-border);
       border-radius: 16px;
       padding: 1.5rem;
@@ -355,7 +366,7 @@
       background: rgba(255, 255, 255, 0.03);
       padding: 0.2rem;
       border-radius: 6px;
-      border: 1px solid var(--card-border);
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .panel-toggle-btn {
@@ -364,15 +375,20 @@
       color: var(--text-muted);
       font-size: 0.75rem;
       font-weight: 600;
-      padding: 0.25rem 0.5rem;
+      padding: 0.35rem 0.65rem;
       border-radius: 4px;
       cursor: pointer;
       font-family: var(--font-sans);
+      transition: all 0.2s;
+    }
+
+    .panel-toggle-btn:hover {
+      color: #ffffff;
     }
 
     .panel-toggle-btn.active {
-      background: rgba(255, 255, 255, 0.05);
-      color: var(--text);
+      background: #2563eb;
+      color: #ffffff;
     }
 
     /* Custom CSS Bar Chart */
@@ -383,7 +399,7 @@
       justify-content: space-between;
       gap: 1rem;
       padding-top: 1rem;
-      border-bottom: 1px solid var(--card-border);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .chart-col {
@@ -408,14 +424,15 @@
     .chart-bar {
       width: 32px;
       border-radius: 4px 4px 0 0;
-      background: linear-gradient(180deg, #6366f1 0%, rgba(99, 102, 241, 0.3) 100%);
-      transition: height 1s cubic-bezier(0.4, 0, 0.2, 1);
+      background: linear-gradient(180deg, #2563eb 0%, rgba(37, 99, 235, 0.15) 100%);
+      transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
       cursor: pointer;
       position: relative;
     }
 
     .chart-bar.highlight {
-      background: linear-gradient(180deg, #10b981 0%, rgba(16, 185, 129, 0.3) 100%);
+      background: linear-gradient(180deg, #3b82f6 0%, rgba(59, 130, 246, 0.2) 100%);
+      border: 1px solid rgba(59, 130, 246, 0.4);
     }
 
     .chart-bar:hover::after {
@@ -424,8 +441,8 @@
       top: -30px;
       left: 50%;
       transform: translateX(-50%);
-      background: #11131e;
-      border: 1px solid var(--card-border);
+      background: #090e1a;
+      border: 1px solid rgba(37, 99, 235, 0.3);
       color: #fff;
       font-size: 0.7rem;
       padding: 0.25rem 0.5rem;
@@ -515,7 +532,7 @@
 
     /* Recent Activity Ledger */
     .ledger-panel {
-      background: var(--card-bg);
+      background: rgba(10, 15, 30, 0.6);
       border: 1px solid var(--card-border);
       border-radius: 16px;
       padding: 1.5rem;
@@ -537,7 +554,7 @@
 
     .btn-action-small {
       background: rgba(255, 255, 255, 0.02);
-      border: 1px solid var(--card-border);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       color: var(--text-muted);
       padding: 0.4rem 0.75rem;
       border-radius: 6px;
@@ -551,8 +568,9 @@
     }
 
     .btn-action-small:hover {
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(37, 99, 235, 0.1);
       color: var(--text);
+      border-color: rgba(37, 99, 235, 0.3);
     }
 
     table {
@@ -568,7 +586,7 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: var(--text-muted);
-      border-bottom: 1px solid var(--card-border);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     td {
@@ -599,24 +617,25 @@
     }
 
     .badge-optimal {
-      background: rgba(16, 185, 129, 0.1);
-      border: 1px solid rgba(16, 185, 129, 0.2);
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.25);
       color: #34d399;
     }
 
     .badge-warning {
-      background: rgba(245, 158, 11, 0.1);
-      border: 1px solid rgba(245, 158, 11, 0.2);
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.25);
       color: #fbbf24;
     }
 
     .wallet-mono {
       font-family: monospace;
-      color: #818cf8;
-      background: rgba(99, 102, 241, 0.08);
+      color: #3b82f6;
+      background: rgba(37, 99, 235, 0.08);
       padding: 0.15rem 0.4rem;
       border-radius: 4px;
       font-size: 0.8rem;
+      border: 1px solid rgba(37, 99, 235, 0.15);
     }
 
     .table-responsive-wrapper {
@@ -636,10 +655,6 @@
       gap: 1.5rem;
     }
 
-    .visual-panel.collapsible {
-      transition: all 0.3s;
-    }
-
     .text-center {
       text-align: center;
     }
@@ -657,7 +672,7 @@
 
     .spinner {
       border: 2px solid rgba(255, 255, 255, 0.05);
-      border-top: 2px solid #6366f1;
+      border-top: 2px solid #2563eb;
       border-radius: 50%;
       width: 18px;
       height: 18px;
@@ -673,7 +688,7 @@
       text-align: center;
       font-size: 0.75rem;
       color: var(--text-muted);
-      border-top: 1px solid var(--card-border);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
       padding-top: 1.5rem;
       margin-top: 1rem;
       display: flex;
@@ -694,6 +709,60 @@
     .footer-links a:hover {
       color: var(--text);
     }
+
+    /* Specific view wrappers */
+    .view-container {
+      display: none;
+    }
+
+    .view-container.active {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .settings-card {
+      background: rgba(10, 15, 30, 0.6);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .settings-title {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 0.75rem;
+    }
+
+    .settings-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+
+    .settings-label {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .settings-val {
+      font-weight: 600;
+      color: var(--text);
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
   </style>
 </head>
 <body>
@@ -701,27 +770,27 @@
   <aside class="sidebar">
     <div class="sidebar-top">
       <div class="sidebar-brand">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #34d399;"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
         <h1>Siftle Analytics</h1>
       </div>
       <nav class="nav-menu">
-        <a href="#" class="nav-item active">
+        <a id="nav-dashboard" class="nav-item active">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
           Dashboard
         </a>
-        <a href="#" class="nav-item">
+        <a id="nav-volume" class="nav-item">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
           Volume & Revenue
         </a>
-        <a href="#" class="nav-item">
+        <a id="nav-segments" class="nav-item">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75z"/></svg>
           User Segments
         </a>
-        <a href="#" class="nav-item">
+        <a id="nav-health" class="nav-item">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
           Network Health
         </a>
-        <a href="#" class="nav-item">
+        <a id="nav-settings" class="nav-item">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           Settings
         </a>
@@ -745,7 +814,7 @@
     <!-- Top Header -->
     <header class="top-header">
       <div class="search-container">
-        <input type="text" class="search-input" placeholder="Search analytics dashboard...">
+        <input type="text" class="search-input" placeholder="Search operational registry...">
       </div>
       <div class="user-profile">
         <button class="btn-refresh" id="refreshBtn">
@@ -753,135 +822,193 @@
           Refresh Data
         </button>
         <div class="avatar-container">
-          <div class="avatar-img">AS</div>
+          <div class="avatar-img">SA</div>
           <div class="avatar-info">
-            <span class="avatar-name">Alexander Sift</span>
-            <span class="avatar-role">Admin</span>
+            <span class="avatar-name">Siftle Admin</span>
+            <span class="avatar-role" id="headerWalletAddress">0x0000...0000</span>
           </div>
         </div>
       </div>
     </header>
 
-    <!-- Info Cards Grid -->
-    <section class="stats-grid">
-      <div class="card">
-        <div class="card-header-flex">
-          <span class="card-label">App Opens</span>
-          <span class="card-trend trend-up">
-            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-            8.2%
-          </span>
-        </div>
-        <span class="card-value" id="valOpens">-</span>
-        <span class="card-footer-desc">Total landing page loads</span>
-      </div>
-      <div class="card">
-        <div class="card-header-flex">
-          <span class="card-label">USDC Signups</span>
-          <span class="card-trend trend-up">
-            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-            12%
-          </span>
-        </div>
-        <span class="card-value" id="valSignups">-</span>
-        <span class="card-footer-desc">Onboarded email-OTP wallets</span>
-      </div>
-      <div class="card">
-        <div class="card-header-flex">
-          <span class="card-label">AI Briefing Revenue</span>
-          <span class="plan-badge">USDC</span>
-        </div>
-        <span class="card-value" id="valRevenue">-</span>
-        <span class="card-footer-desc">Gross sales from pay-per-read</span>
-      </div>
-      <div class="card">
-        <div class="card-header-flex">
-          <span class="card-label">Sponsor Gas Savings</span>
-          <span class="plan-badge" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #34d399;">Gasless</span>
-        </div>
-        <span class="card-value" id="valGasSavings">-</span>
-        <span class="card-footer-desc">User transaction fees saved</span>
-      </div>
-    </section>
-
-    <!-- Visualizations Panel -->
-    <section class="dashboard-visuals">
-      <!-- Daily Breakdown Graph -->
-      <div class="visual-panel">
-        <div class="panel-title-bar">
-          <span class="panel-title">Daily Breakdown</span>
-          <div class="panel-toggle-group">
-            <button class="panel-toggle-btn active">Activity</button>
-            <button class="panel-toggle-btn">Errors</button>
+    <!-- VIEWS CONTAINERS -->
+    
+    <!-- 1. DASHBOARD VIEW -->
+    <div id="viewDashboard" class="view-container active">
+      <!-- Info Cards Grid -->
+      <section class="stats-grid">
+        <div class="card">
+          <div class="card-header-flex">
+            <span class="card-label">App Opens</span>
+            <span class="card-trend trend-up">
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+              8.2%
+            </span>
           </div>
+          <span class="card-value" id="valOpens">-</span>
+          <span class="card-footer-desc">Total landing page loads</span>
         </div>
-        <div class="chart-container" id="dailyChartContainer">
-          <!-- Filled dynamically by script -->
+        <div class="card">
+          <div class="card-header-flex">
+            <span class="card-label">USDC Signups</span>
+            <span class="card-trend trend-up">
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+              12%
+            </span>
+          </div>
+          <span class="card-value" id="valSignups">-</span>
+          <span class="card-footer-desc">Onboarded email-OTP wallets</span>
         </div>
-      </div>
-      
-      <!-- Traffic Doughnut Panel -->
-      <div class="visual-panel">
-        <div class="panel-title-bar">
-          <span class="panel-title">Traffic Sources</span>
+        <div class="card">
+          <div class="card-header-flex">
+            <span class="card-label">AI Briefing Revenue</span>
+            <span class="plan-badge">USDC</span>
+          </div>
+          <span class="card-value" id="valRevenue">-</span>
+          <span class="card-footer-desc">Gross sales from pay-per-read</span>
         </div>
-        <div class="doughnut-visualizer">
-          <div class="circle-container">
-            <!-- Semi-circle ring overlay -->
-            <svg width="100%" height="100%" viewBox="0 0 36 36" style="transform: rotate(-90deg);">
-              <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="rgba(255,255,255,0.03)" stroke-width="3"></circle>
-              <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#6366f1" stroke-width="3" stroke-dasharray="45 55" stroke-dashoffset="0"></circle>
-              <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#10b981" stroke-width="3" stroke-dasharray="25 75" stroke-dashoffset="-45"></circle>
-              <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#f59e0b" stroke-width="3" stroke-dasharray="20 80" stroke-dashoffset="-70"></circle>
-              <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#9ca3af" stroke-width="3" stroke-dasharray="10 90" stroke-dashoffset="-90"></circle>
-            </svg>
-            <div style="position: absolute;" class="circle-text-box">
-              <span class="circle-title" id="valTotalHits">-</span>
-              <span class="circle-sub">Total Hits</span>
+        <div class="card">
+          <div class="card-header-flex">
+            <span class="card-label">Sponsor Gas Savings</span>
+            <span class="plan-badge" style="background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.3); color: #3b82f6;">Gasless</span>
+          </div>
+          <span class="card-value" id="valGasSavings">-</span>
+          <span class="card-footer-desc">User transaction fees saved</span>
+        </div>
+      </section>
+
+      <!-- Visualizations Panel -->
+      <section class="dashboard-visuals">
+        <!-- Daily Breakdown Graph -->
+        <div class="visual-panel">
+          <div class="panel-title-bar">
+            <span class="panel-title">Daily Breakdown</span>
+            <div class="panel-toggle-group" id="chartRangeSelector">
+              <button class="panel-toggle-btn active" data-range="5">5 Days</button>
+              <button class="panel-toggle-btn" data-range="7">1 Week</button>
+              <button class="panel-toggle-btn" data-range="14">2 Weeks</button>
+              <button class="panel-toggle-btn" data-range="30">1 Month</button>
+              <button class="panel-toggle-btn" data-range="all">All</button>
             </div>
           </div>
-          <div class="source-list" id="sourceMetricsList">
-            <!-- Filled dynamically -->
+          <div class="chart-container" id="dailyChartContainer">
+            <!-- Filled dynamically by script -->
           </div>
         </div>
-      </div>
-    </section>
+        
+        <!-- Traffic Doughnut Panel -->
+        <div class="visual-panel">
+          <div class="panel-title-bar">
+            <span class="panel-title">Traffic Sources</span>
+          </div>
+          <div class="doughnut-visualizer">
+            <div class="circle-container">
+              <!-- Semi-circle ring overlay -->
+              <svg width="100%" height="100%" viewBox="0 0 36 36" style="transform: rotate(-90deg);">
+                <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="rgba(255,255,255,0.03)" stroke-width="3"></circle>
+                <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#2563eb" stroke-width="3" stroke-dasharray="45 55" stroke-dashoffset="0"></circle>
+                <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#3b82f6" stroke-width="3" stroke-dasharray="25 75" stroke-dashoffset="-45"></circle>
+                <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#ffffff" stroke-width="3" stroke-dasharray="20 80" stroke-dashoffset="-70"></circle>
+                <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#94a3b8" stroke-width="3" stroke-dasharray="10 90" stroke-dashoffset="-90"></circle>
+              </svg>
+              <div style="position: absolute;" class="circle-text-box">
+                <span class="circle-title" id="valTotalHits">-</span>
+                <span class="circle-sub">Total Hits</span>
+              </div>
+            </div>
+            <div class="source-list" id="sourceMetricsList">
+              <!-- Filled dynamically -->
+            </div>
+          </div>
+        </div>
+      </section>
 
-    <!-- Recent Activity Ledger -->
-    <section class="ledger-panel">
-      <div class="ledger-header">
-        <span class="panel-title">Recent Activity</span>
-        <div class="ledger-actions">
-          <button class="btn-action-small">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-            Filter
-          </button>
-          <button class="btn-action-small">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-            Export
-          </button>
+      <!-- Recent Transactions Ledger -->
+      <section class="ledger-panel">
+        <div class="ledger-header">
+          <span class="panel-title">Recent Activity</span>
+          <div class="ledger-actions">
+            <button class="btn-action-small" onclick="alert('Filtering is only available in advanced segments view')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+              Filter
+            </button>
+            <button class="btn-action-small" onclick="alert('Exporting operational ledger is currently locked for Siftle Admin.')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+              Export
+            </button>
+          </div>
+        </div>
+        <div class="table-responsive-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Date & Time</th>
+                <th>App Opens</th>
+                <th>Trades Executed</th>
+                <th>Errors</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="ledgerBody">
+              <!-- Loaded dynamically from daily data -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- 2. VOLUME & REVENUE VIEW -->
+    <div id="viewVolume" class="view-container">
+      <section class="stats-grid">
+        <div class="card">
+          <span class="card-label">Prediction Market Volume</span>
+          <span class="card-value" id="valPredVolume">-</span>
+          <span class="card-footer-desc">Cumulative USDC traded</span>
+        </div>
+        <div class="card">
+          <span class="card-label">Siftle Protocol Fees</span>
+          <span class="card-value" id="valProtocolFees">-</span>
+          <span class="card-footer-desc">Total 1% fee cut collected</span>
+        </div>
+        <div class="card">
+          <span class="card-label">Briefing Unlock Revenue</span>
+          <span class="card-value" id="valBriefingRevenue">-</span>
+          <span class="card-footer-desc">Gross sales from unlocks</span>
+        </div>
+        <div class="card">
+          <span class="card-label">Total Protocol Revenue</span>
+          <span class="card-value" id="valTotalRevenue">-</span>
+          <span class="card-footer-desc">Fees + unlock sales</span>
+        </div>
+      </section>
+
+      <div class="visual-panel">
+        <span class="panel-title">Detailed Daily Operations Registry</span>
+        <div class="table-responsive-wrapper">
+          <table style="width: 100%;">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>App Opens</th>
+                <th>Signups</th>
+                <th>Briefing Wallets</th>
+                <th>Trades</th>
+                <th>Claims</th>
+                <th>Briefing Unlocks</th>
+                <th>Source Clicks</th>
+                <th>Errors</th>
+              </tr>
+            </thead>
+            <tbody id="breakdownBody">
+              <!-- Loaded dynamically -->
+            </tbody>
+          </table>
         </div>
       </div>
-      <div class="table-responsive-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Date & Time</th>
-              <th>App Opens</th>
-              <th>Trades Executed</th>
-              <th>Errors</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="ledgerBody">
-            <!-- Loaded dynamically from daily data -->
-          </tbody>
-        </table>
-      </div>
-    </section>
+    </div>
 
-    <!-- Extra breakdowns for full audit transparency -->
-    <section class="extra-details-container">
+    <!-- 3. USER SEGMENTS VIEW -->
+    <div id="viewSegments" class="view-container">
       <div class="details-row">
         <!-- Traffic Sources Details -->
         <div class="visual-panel">
@@ -923,49 +1050,195 @@
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Collapsible Detailed Daily Breakdown Ledger -->
+    <!-- 4. NETWORK HEALTH VIEW -->
+    <div id="viewHealth" class="view-container">
+      <section class="stats-grid">
+        <div class="card">
+          <span class="card-label">Onchain Claim Success</span>
+          <span class="card-value" id="valClaimSuccess">-</span>
+          <span class="card-footer-desc">Preseason faucet claims</span>
+        </div>
+        <div class="card">
+          <span class="card-label">Trade Settlement Rate</span>
+          <span class="card-value" id="valTradeSettlement">-</span>
+          <span class="card-footer-desc">Contract execution rate</span>
+        </div>
+        <div class="card">
+          <span class="card-label">Gasless Claims Saved</span>
+          <span class="card-value" id="valGasClaims">-</span>
+          <span class="card-footer-desc">Sponsored faucet runs</span>
+        </div>
+        <div class="card">
+          <span class="card-label">Total Gas Savings</span>
+          <span class="card-value" id="valTotalGasSaved">-</span>
+          <span class="card-footer-desc">USDC sponsored gas value</span>
+        </div>
+      </section>
+
       <div class="visual-panel">
-        <span class="panel-title">Detailed Daily Operations Registry</span>
+        <span class="panel-title">Contract Failures Logs</span>
         <div class="table-responsive-wrapper">
-          <table style="width: 100%;">
+          <table>
             <thead>
               <tr>
-                <th>Date</th>
-                <th>App Opens</th>
-                <th>Signups</th>
-                <th>Briefing Wallets</th>
-                <th>Trades</th>
-                <th>Claims</th>
-                <th>Briefing Unlocks</th>
-                <th>Source Clicks</th>
-                <th>Errors</th>
+                <th>Operation Type</th>
+                <th>Attempted</th>
+                <th>Succeeded</th>
+                <th>Failed</th>
+                <th>Reliability Rate</th>
               </tr>
             </thead>
-            <tbody id="breakdownBody">
+            <tbody id="healthLogsBody">
               <!-- Loaded dynamically -->
             </tbody>
           </table>
         </div>
       </div>
-    </section>
+    </div>
+
+    <!-- 5. SETTINGS VIEW -->
+    <div id="viewSettings" class="view-container">
+      <div class="settings-grid">
+        <div class="settings-card">
+          <span class="settings-title">Active Smart Contracts & Wallets</span>
+          <div class="settings-row">
+            <span class="settings-label">Circle Treasury</span>
+            <span class="settings-val wallet-mono" id="valSettingTreasury">-</span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Arc Deployer & Gas Sponsor</span>
+            <span class="settings-val wallet-mono" id="valSettingDeployer">-</span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Active Database Cluster</span>
+            <span class="settings-val">Supabase cloud-production</span>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <span class="settings-title">Protocol Rules & Parameters</span>
+          <div class="settings-row">
+            <span class="settings-label">x402 Batching Mode</span>
+            <span class="settings-val" id="valSettingX402">-</span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Briefing Payment Mode</span>
+            <span class="settings-val" id="valSettingPayment">-</span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Preseason Season ID</span>
+            <span class="settings-val">preseason-season-2</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Footer -->
     <footer class="footer">
       <span>&copy; 2026 Siftle Analytics. All rights reserved.</span>
       <div class="footer-links">
-        <a href="#">Privacy Policy</a>
-        <a href="#">Terms of Service</a>
+        <a href="/">App Home</a>
+        <a href="https://t.me/siftle" target="_blank">Contact Admin</a>
       </div>
     </footer>
   </main>
 
   <script>
+    let activeRange = 5; // Default range is 5 days
+    let rawReportData = null;
+
+    // View Switching logic
+    const navItems = document.querySelectorAll('.nav-item');
+    const views = {
+      'nav-dashboard': 'viewDashboard',
+      'nav-volume': 'viewVolume',
+      'nav-segments': 'viewSegments',
+      'nav-health': 'viewHealth',
+      'nav-settings': 'viewSettings'
+    };
+
+    navItems.forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetId = item.id;
+        if (!views[targetId]) return;
+
+        // Update active class on nav menu
+        navItems.forEach(nav => nav.classList.remove('active'));
+        item.classList.add('active');
+
+        // Hide all views
+        Object.values(views).forEach(viewId => {
+          document.getElementById(viewId).classList.remove('active');
+        });
+
+        // Show selected view
+        document.getElementById(views[targetId]).classList.add('active');
+      });
+    });
+
+    // Chart Range Selector logic
+    const rangeButtons = document.querySelectorAll('#chartRangeSelector button');
+    rangeButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        rangeButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const range = btn.getAttribute('data-range');
+        activeRange = range === 'all' ? 'all' : parseInt(range, 10);
+        
+        if (rawReportData) {
+          renderDailyChart(rawReportData);
+        }
+      });
+    });
+
+    function renderDailyChart(data) {
+      const daily = data.daily || {};
+      const sortedDates = Object.keys(daily).sort((a, b) => a.localeCompare(b));
+      
+      // Filter dates based on active range selection
+      let chartDates = sortedDates;
+      if (activeRange !== 'all') {
+        chartDates = sortedDates.slice(-activeRange);
+      }
+
+      const chartContainer = document.getElementById('dailyChartContainer');
+      chartContainer.innerHTML = '';
+      
+      let maxVal = 1;
+      chartDates.forEach(date => {
+        const val = daily[date]?.app_open || 0;
+        if (val > maxVal) maxVal = val;
+      });
+
+      const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      chartDates.forEach((date, i) => {
+        const val = daily[date]?.app_open || 0;
+        const pct = (val / maxVal) * 80;
+        const dateObj = new Date(date + 'T00:00:00');
+        const dayName = dayNames[dateObj.getDay()];
+        const isToday = i === chartDates.length - 1;
+
+        const col = document.createElement('div');
+        col.className = 'chart-col';
+        col.innerHTML = `
+          <div class="chart-bar-wrapper">
+            <div class="chart-bar ${isToday ? 'highlight' : ''}" style="height: ${Math.max(4, pct)}%;" data-tooltip="${val.toLocaleString()} hits"></div>
+          </div>
+          <span class="chart-label">${dayName}</span>
+        `;
+        chartContainer.appendChild(col);
+      });
+    }
+
     async function loadData() {
       try {
         const res = await fetch('/api/analytics/report');
         if (!res.ok) throw new Error('API request failed');
         const data = await res.json();
+        rawReportData = data;
 
         const daily = data.daily || {};
         const derived = data.derived || {};
@@ -1013,6 +1286,22 @@
         const uniqueSignups = Number(derived.signupsTotalUnique ?? totals.sign_up ?? 0);
         const briefingRevenue = Number(derived.briefingRevenue ?? 0);
         const gasSavings = Number(derived.sponsorGasSavings ?? 0);
+        const predictionVolume = Number(derived.predictionVolume ?? 0);
+        const protocolFees = Number(derived.protocolFees ?? 0);
+        const totalRevenue = Number(derived.totalRevenue ?? 0);
+
+        // Header Admin Info
+        const deployer = data.deployerAddress || "Not Configured";
+        const shortenedDeployer = deployer !== "Not Configured" ? deployer.slice(0, 6) + "..." + deployer.slice(-4) : "No Wallet";
+        document.getElementById('headerWalletAddress').textContent = shortenedDeployer;
+        document.getElementById('headerWalletAddress').title = deployer;
+
+        // Populate Settings View
+        document.getElementById('valSettingTreasury').textContent = data.treasuryAddress || "0x8f2b...d21e";
+        document.getElementById('valSettingTreasury').title = data.treasuryAddress || "0x8f2bddb9c936062fd7ac1bbb0b7d21e2e76662c1c0224f0263feefef1e0f7fb9";
+        document.getElementById('valSettingDeployer').textContent = deployer;
+        document.getElementById('valSettingX402').textContent = data.backendWalletUseX402 ? "ACTIVE (x402 batching broker)" : "INACTIVE";
+        document.getElementById('valSettingPayment').textContent = data.backendWalletUseX402 ? "$0.0001 USDC (batched cost)" : "$0.05 USDC (direct pay)";
         
         // Populate Top Cards
         document.getElementById('valOpens').textContent = (totals.app_open || 0).toLocaleString();
@@ -1020,39 +1309,53 @@
         document.getElementById('valRevenue').textContent = '$' + briefingRevenue.toFixed(4) + ' USDC';
         document.getElementById('valGasSavings').textContent = '$' + gasSavings.toFixed(3) + ' USDC';
 
-        // 1. Render CSS Bar Chart (Last 7 Days)
-        const sortedDates = Object.keys(daily).sort((a, b) => a.localeCompare(b));
-        const chartDates = sortedDates.slice(-7);
-        const chartContainer = document.getElementById('dailyChartContainer');
-        chartContainer.innerHTML = '';
-        
-        // Find max app opens to scale heights
-        let maxVal = 1;
-        chartDates.forEach(date => {
-          const val = daily[date]?.app_open || 0;
-          if (val > maxVal) maxVal = val;
-        });
+        // Populate Volume & Revenue View Cards
+        document.getElementById('valPredVolume').textContent = '$' + predictionVolume.toFixed(2) + ' USDC';
+        document.getElementById('valProtocolFees').textContent = '$' + protocolFees.toFixed(4) + ' USDC';
+        document.getElementById('valBriefingRevenue').textContent = '$' + briefingRevenue.toFixed(4) + ' USDC';
+        document.getElementById('valTotalRevenue').textContent = '$' + totalRevenue.toFixed(4) + ' USDC';
 
-        const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-        chartDates.forEach((date, i) => {
-          const val = daily[date]?.app_open || 0;
-          const pct = (val / maxVal) * 80; // scale to max 80% height
-          const dateObj = new Date(date + 'T00:00:00');
-          const dayName = dayNames[dateObj.getDay()];
-          const isToday = i === chartDates.length - 1;
+        // Populate Network Health View Cards
+        const totalClaims = (totals.claim_success || 0) + (totals.claim_failed || 0);
+        const claimSuccessRate = totalClaims > 0 ? ((totals.claim_success / totalClaims) * 100).toFixed(1) + '%' : '100%';
+        document.getElementById('valClaimSuccess').textContent = claimSuccessRate;
 
-          const col = document.createElement('div');
-          col.className = 'chart-col';
-          col.innerHTML = `
-            <div class="chart-bar-wrapper">
-              <div class="chart-bar ${isToday ? 'highlight' : ''}" style="height: ${Math.max(4, pct)}%;" data-tooltip="${val.toLocaleString()} hits"></div>
-            </div>
-            <span class="chart-label">${dayName}</span>
-          `;
-          chartContainer.appendChild(col);
-        });
+        const totalTradesOutcome = tradeSuccesses + (totals.trade_failed || 0);
+        const tradeSettlementRate = totalTradesOutcome > 0 ? ((tradeSuccesses / totalTradesOutcome) * 100).toFixed(1) + '%' : '100%';
+        document.getElementById('valTradeSettlement').textContent = tradeSettlementRate;
+        document.getElementById('valGasClaims').textContent = (totals.claim_success || 0).toLocaleString();
+        document.getElementById('valTotalGasSaved').textContent = '$' + gasSavings.toFixed(3) + ' USDC';
 
-        // 2. Render Traffic Sources Breakdown
+        // Render Health logs table
+        const healthLogsBody = document.getElementById('healthLogsBody');
+        healthLogsBody.innerHTML = `
+          <tr>
+            <td class="td-bold-title">Prediction Market Trade</td>
+            <td>${(totals.trade_attempt || 0).toLocaleString()}</td>
+            <td>${tradeSuccesses.toLocaleString()}</td>
+            <td>${(totals.trade_failed || 0).toLocaleString()}</td>
+            <td><span class="badge-status ${totals.trade_failed > 3 ? 'badge-warning' : 'badge-optimal'}">${tradeSettlementRate}</span></td>
+          </tr>
+          <tr>
+            <td class="td-bold-title">Preseason Faucet Claim</td>
+            <td>${(totals.claim_attempt || 0).toLocaleString()}</td>
+            <td>${(totals.claim_success || 0).toLocaleString()}</td>
+            <td>${(totals.claim_failed || 0).toLocaleString()}</td>
+            <td><span class="badge-status ${(totals.claim_failed || 0) > 3 ? 'badge-warning' : 'badge-optimal'}">${claimSuccessRate}</span></td>
+          </tr>
+          <tr>
+            <td class="td-bold-title">AI Briefing Unlock</td>
+            <td>${(totals.ai_unlock_attempt || 0).toLocaleString()}</td>
+            <td>${aiUnlocks.toLocaleString()}</td>
+            <td>${(totals.ai_unlock_failed || 0).toLocaleString()}</td>
+            <td><span class="badge-status ${(totals.ai_unlock_failed || 0) > 3 ? 'badge-warning' : 'badge-optimal'}">${totals.ai_unlock_attempt > 0 ? ((aiUnlocks / totals.ai_unlock_attempt) * 100).toFixed(1) + '%' : '100%'}</span></td>
+          </tr>
+        `;
+
+        // Render CSS Bar Chart
+        renderDailyChart(data);
+
+        // Render Traffic Sources Doughnut Percentage labels
         const sourcesDaily = data.sources_daily || {};
         const sourceKeys = ["organic", "x", "ig", "wa", "dc", "google", "briefing"];
         const sourceTotals = {};
@@ -1084,7 +1387,7 @@
           google: "Google Search",
           briefing: "AI Briefing Share"
         };
-        const colors = ["#6366f1", "#10b981", "#f59e0b", "#9ca3af", "#ec4899", "#8b5cf6", "#3b82f6"];
+        const colors = ["#2563eb", "#3b82f6", "#ffffff", "#94a3b8", "#1e293b", "#475569", "#64748b"];
 
         const sourceList = document.getElementById('sourceMetricsList');
         sourceList.innerHTML = '';
@@ -1108,12 +1411,12 @@
           sourceList.appendChild(row);
         });
 
-        // 3. Render Recent Activity Ledger
+        // Render Recent Activity Ledger
         const ledgerBody = document.getElementById('ledgerBody');
         ledgerBody.innerHTML = '';
         
         const sortedDatesDesc = Object.keys(daily).sort((a, b) => b.localeCompare(a));
-        const ledgerDates = sortedDatesDesc.slice(0, 5); // top 5 recent days
+        const ledgerDates = sortedDatesDesc.slice(0, 5);
 
         ledgerDates.forEach(date => {
           const row = daily[date];
@@ -1133,7 +1436,7 @@
           ledgerBody.appendChild(tr);
         });
 
-        // 4. Render Table Breakdowns
+        // Render Table Breakdowns
         const sourcesBody = document.getElementById('sourcesBody');
         sourcesBody.innerHTML = '';
         Object.keys(sourceTotals).forEach(src => {
@@ -1168,7 +1471,7 @@
               <td class="td-bold-title">${metrics.headline || 'Archived Story'}</td>
               <td>${referrals.toLocaleString()}</td>
               <td>${signups.toLocaleString()}</td>
-              <td><span style="color: #10b981; font-weight: 600;">${conversion}</span></td>
+              <td><span style="color: #3b82f6; font-weight: 600;">${conversion}</span></td>
             `;
             briefingLinksBody.appendChild(tr);
           });

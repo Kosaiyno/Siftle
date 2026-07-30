@@ -7288,7 +7288,7 @@ async function buildAnalyticsReport(localData = loadAnalytics()) {
     try {
       const [signupRows, aiUnlockRows, backendWalletRows, remoteMigrations] = await Promise.all([
         fetchAllSupabaseRows("analytics_signups", "email_hash,date_key,created_at"),
-        fetchAllSupabaseRows("ai_briefing_unlocks", "wallet_address,date_key,created_at"),
+        fetchAllSupabaseRows("ai_briefing_unlocks", "wallet_address,date_key,created_at,tx_hash"),
         fetchAllSupabaseRows("backend_wallet_users", "email,created_at"),
         loadBackendWalletMigrationsFromSupabase()
       ]);
@@ -7313,6 +7313,7 @@ async function buildAnalyticsReport(localData = loadAnalytics()) {
         return clean ? migrationMap.get(clean) || clean : "";
       };
 
+      let briefingRevenue = 0;
       const aiWalletSetsByDate = {};
       const allAiWallets = new Set();
       (aiUnlockRows || []).forEach((row) => {
@@ -7322,16 +7323,29 @@ async function buildAnalyticsReport(localData = loadAnalytics()) {
         if (!aiWalletSetsByDate[dateKey]) aiWalletSetsByDate[dateKey] = new Set();
         aiWalletSetsByDate[dateKey].add(walletAddress);
         allAiWallets.add(walletAddress);
+
+        const tx = String(row?.tx_hash || "");
+        if (tx && !tx.startsWith("0xmock")) {
+          const createdAt = Date.parse(row?.created_at || "") || 0;
+          const cutOff = Date.parse("2026-07-25T00:00:00Z");
+          if (createdAt < cutOff) {
+            briefingRevenue += 0.05;
+          } else {
+            briefingRevenue += 0.0001;
+          }
+        }
       });
       derived.aiBriefingWalletsByDate = Object.fromEntries(
         Object.entries(aiWalletSetsByDate).map(([dateKey, walletSet]) => [dateKey, walletSet.size])
       );
       derived.aiBriefingWalletsTotalUnique = allAiWallets.size;
+      derived.briefingRevenue = briefingRevenue;
     } catch (err) {
       console.warn("[ANALYTICS] Derived analytics query failed; using local fallback:", err.message);
       const localAiMetrics = getLocalAiBriefingWalletMetrics(data);
       derived.aiBriefingWalletsByDate = localAiMetrics.byDate;
       derived.aiBriefingWalletsTotalUnique = localAiMetrics.totalUnique;
+      derived.briefingRevenue = 0;
     }
   } else {
     const localAiMetrics = getLocalAiBriefingWalletMetrics(data);
@@ -7364,9 +7378,41 @@ async function buildAnalyticsReport(localData = loadAnalytics()) {
 
   derived.aiBriefingWalletsToday = Number(derived.aiBriefingWalletsByDate[todayKey]) || 0;
 
+  let totalTrades = 0;
+  let totalClaims = 0;
+  let totalUnlocks = 0;
+  let totalAppOpens = 0;
+  let totalSignups = Number(derived.signupsTotalUnique) || 0;
+
+  Object.values(data.daily || {}).forEach((row) => {
+    totalTrades += (Number(row?.trade_buy_success) || 0) + (Number(row?.trade_sell_success) || 0);
+    totalClaims += Number(row?.claim_success) || 0;
+    totalUnlocks += Number(row?.ai_unlock_success) || 0;
+    totalAppOpens += Number(row?.app_open) || 0;
+  });
+
+  derived.briefingRevenue = Number((derived.briefingRevenue || 0).toFixed(6));
+  derived.predictionVolume = totalTrades * 2;
+  derived.protocolFees = Number((derived.predictionVolume * 0.01).toFixed(6));
+  derived.totalRevenue = Number((derived.briefingRevenue + derived.protocolFees).toFixed(6));
+  derived.sponsorGasSavings = Number(((totalSignups + totalTrades + totalClaims + totalUnlocks) * 0.0015).toFixed(6));
+
+  let deployerAddress = "";
+  if (process.env.ARC_DEPLOYER_PRIVATE_KEY) {
+    try {
+      deployerAddress = new Wallet(process.env.ARC_DEPLOYER_PRIVATE_KEY).address;
+    } catch (err) {
+      console.warn("Failed to derive deployer address:", err.message);
+    }
+  }
+
   return {
     ...data,
-    derived
+    derived,
+    deployerAddress,
+    treasuryAddress: aiBriefingTreasuryAddress,
+    backendWalletUseX402,
+    backendWalletMode
   };
 }
 
