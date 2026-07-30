@@ -9237,6 +9237,7 @@ const server = createServer(async (request, response) => {
       const migration = backendWalletMigrationAutoClaim && migrationPreview.eligible
         ? await applyBackendWalletMigration(email, user.address)
         : null;
+      // === AUTO-FUNDING ENGINE START ===
       const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, leaderboardProvider);
       let balanceRaw = await usdc.balanceOf(user.address);
       if (balanceRaw === 0n) {
@@ -9252,6 +9253,7 @@ const server = createServer(async (request, response) => {
           console.error(`[AUTO-FUND] Failed to auto-fund user ${user.address}:`, fundErr.message);
         }
       }
+      // === AUTO-FUNDING ENGINE END ===
       sendJson(response, 200, {
         sessionToken: token,
         email,
@@ -9270,6 +9272,7 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  // === CIRCLE ONBOARDING RETRIEVAL START ===
   if (requestUrl.pathname === "/api/backend-wallet/session" && request.method === "GET") {
     if (!requireBackendWalletMode(request, response)) return;
     try {
@@ -9294,6 +9297,7 @@ const server = createServer(async (request, response) => {
     }
     return;
   }
+  // === CIRCLE ONBOARDING RETRIEVAL END ===
 
   if (requestUrl.pathname === "/api/backend-wallet/warmup" && request.method === "POST") {
     if (!requireBackendWalletMode(request, response)) return;
@@ -9456,6 +9460,7 @@ const server = createServer(async (request, response) => {
           sendJson(response, 400, { error: "You already picked an option in this market" });
           return;
         }
+        // === USDC PREDICTION MARKET START ===
         await saveOptionMarketPositionToSupabase(market, user.address, option.id, option.label, amountUsdc);
         if (treasuryAddress) {
           try {
@@ -9484,6 +9489,7 @@ const server = createServer(async (request, response) => {
         exitOptionMarketPosition(data, market, user.address);
         await deleteOptionMarketPositionFromSupabase(market, user.address);
       }
+      // === USDC PREDICTION MARKET END ===
 
       saveAnalytics(data);
       leaderboardCache.expiresAt = 0;
@@ -9781,6 +9787,7 @@ const server = createServer(async (request, response) => {
             bonus
           });
           return;
+        // === MICROPAYMENT FALLBACK START ===
         } catch (x402Err) {
           console.warn("[AI BRIEFING] x402 payment unavailable; falling back to USDC transfer:", x402Err.message);
         }
@@ -9796,6 +9803,7 @@ const server = createServer(async (request, response) => {
         txHash,
         amountUsdc
       });
+      // === MICROPAYMENT FALLBACK END ===
 
       let bonus = null;
       try {
