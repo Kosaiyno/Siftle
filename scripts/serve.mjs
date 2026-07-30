@@ -6212,6 +6212,7 @@ const sendVerificationCodeEmail = async (email, otp) => {
   }
 };
 
+// === CIRCLE ONBOARDING WALLET CREATION START ===
 const getOrCreateBackendWalletUser = async (email) => {
   const cleanEmail = normalizeEmail(email);
   if (!cleanEmail) throw new Error("Valid email is required");
@@ -6242,6 +6243,7 @@ const getOrCreateBackendWalletUser = async (email) => {
   await saveBackendWalletUserToSupabase(record);
   return { ...record, isNewSignup: true };
 };
+// === CIRCLE ONBOARDING WALLET CREATION END ===
 
 const getBackendWalletUserBySession = async (token) => {
   const session = await readBackendWalletSession(token);
@@ -9743,6 +9745,7 @@ const server = createServer(async (request, response) => {
         return;
       }
 
+      // === X402 NANOPAYMENT/GATEWAY ENGINE START ===
       if (backendWalletUseX402) {
         try {
           const targetUrl = `${x402TargetUrlBase}?topic=${encodeURIComponent(topic)}`;
@@ -9787,12 +9790,13 @@ const server = createServer(async (request, response) => {
             bonus
           });
           return;
-        // === MICROPAYMENT FALLBACK START ===
         } catch (x402Err) {
           console.warn("[AI BRIEFING] x402 payment unavailable; falling back to USDC transfer:", x402Err.message);
         }
       }
+      // === X402 NANOPAYMENT/GATEWAY ENGINE END ===
 
+      // === MICROPAYMENT FALLBACK START ===
       const signer = new Wallet(user.privateKey, leaderboardProvider);
       const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
       const tx = await usdc.transfer(treasuryAddress, parseUnits(amountUsdc.toFixed(6), 6));
