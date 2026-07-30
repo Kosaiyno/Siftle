@@ -9,20 +9,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #000000;
-      --panel-bg: #090e1a;
-      --card-bg: rgba(255, 255, 255, 0.02);
-      --card-border: rgba(37, 99, 235, 0.15);
-      --text: #ffffff;
-      --text-muted: #94a3b8;
+      --bg: #ffffff;
+      --panel-bg: #f8fafc;
+      --card-bg: #ffffff;
+      --card-border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
       --primary: #2563eb;
       --primary-light: #3b82f6;
-      --primary-glow: rgba(37, 99, 235, 0.15);
+      --primary-glow: rgba(37, 99, 235, 0.05);
       --success: #10b981;
-      --success-glow: rgba(16, 185, 129, 0.15);
       --warning: #f59e0b;
-      --warning-glow: rgba(245, 158, 11, 0.15);
-      --red: #ef4444;
       --font-display: 'Outfit', sans-serif;
       --font-sans: 'Inter', sans-serif;
     }
@@ -35,10 +32,6 @@
     
     body {
       background-color: var(--bg);
-      background-image: 
-        radial-gradient(circle at 5% 5%, rgba(37, 99, 235, 0.1) 0%, transparent 40%),
-        radial-gradient(circle at 95% 95%, rgba(37, 99, 235, 0.05) 0%, transparent 40%),
-        linear-gradient(135deg, #000000 0%, #050a14 100%);
       color: var(--text);
       font-family: var(--font-sans);
       min-height: 100vh;
@@ -49,8 +42,8 @@
     /* Sidebar Navigation */
     .sidebar {
       width: 260px;
-      background: #040812;
-      border-right: 1px solid rgba(255, 255, 255, 0.05);
+      background: #000000;
+      border-right: 1px solid #1e293b;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -69,15 +62,13 @@
       font-family: var(--font-display);
       font-size: 1.35rem;
       font-weight: 700;
-      background: linear-gradient(to right, #ffffff, #3b82f6);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: #ffffff;
     }
 
     .plan-badge {
       font-size: 0.7rem;
-      background: rgba(37, 99, 235, 0.15);
-      border: 1px solid rgba(37, 99, 235, 0.3);
+      background: rgba(37, 99, 235, 0.2);
+      border: 1px solid rgba(37, 99, 235, 0.4);
       color: #3b82f6;
       padding: 0.15rem 0.5rem;
       border-radius: 4px;
@@ -97,7 +88,7 @@
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      color: var(--text-muted);
+      color: #94a3b8;
       text-decoration: none;
       padding: 0.75rem 1rem;
       border-radius: 10px;
@@ -108,13 +99,13 @@
     }
 
     .nav-item:hover, .nav-item.active {
-      color: var(--text);
-      background: rgba(255, 255, 255, 0.03);
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
     }
 
     .nav-item.active {
-      background: rgba(37, 99, 235, 0.1);
-      border: 1px solid rgba(37, 99, 235, 0.2);
+      background: rgba(37, 99, 235, 0.15);
+      border: 1px solid rgba(37, 99, 235, 0.3);
       color: #3b82f6;
     }
 
@@ -122,7 +113,7 @@
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
-      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      border-top: 1px solid #1e293b;
       padding-top: 1.5rem;
     }
 
@@ -130,7 +121,7 @@
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      color: var(--text-muted);
+      color: #94a3b8;
       text-decoration: none;
       font-size: 0.9rem;
       font-weight: 500;
@@ -138,7 +129,7 @@
     }
 
     .sidebar-footer-link:hover {
-      color: var(--text);
+      color: #ffffff;
     }
 
     /* Main Content Area */
@@ -159,6 +150,8 @@
       justify-content: space-between;
       align-items: center;
       gap: 2rem;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 1.5rem;
     }
 
     .search-container {
@@ -168,8 +161,8 @@
 
     .search-input {
       width: 100%;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
       border-radius: 10px;
       padding: 0.625rem 1rem;
       color: var(--text);
@@ -180,9 +173,9 @@
     }
 
     .search-input:focus {
-      border-color: rgba(37, 99, 235, 0.4);
-      background: rgba(255, 255, 255, 0.04);
-      box-shadow: 0 0 12px 0 rgba(37, 99, 235, 0.1);
+      border-color: #2563eb;
+      background: #ffffff;
+      box-shadow: 0 0 12px 0 rgba(37, 99, 235, 0.08);
     }
 
     .user-profile {
@@ -192,9 +185,9 @@
     }
 
     .btn-refresh {
-      background: rgba(37, 99, 235, 0.1);
-      border: 1px solid rgba(37, 99, 235, 0.3);
-      color: #3b82f6;
+      background: #2563eb;
+      border: 1px solid #2563eb;
+      color: #ffffff;
       padding: 0.5rem 1rem;
       border-radius: 8px;
       font-weight: 600;
@@ -207,15 +200,15 @@
     }
 
     .btn-refresh:hover {
-      background: rgba(37, 99, 235, 0.2);
-      border-color: rgba(37, 99, 235, 0.5);
+      background: #1d4ed8;
+      border-color: #1d4ed8;
     }
 
     .avatar-container {
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      border-left: 1px solid rgba(255, 255, 255, 0.05);
+      border-left: 1px solid #e2e8f0;
       padding-left: 1rem;
     }
 
@@ -223,8 +216,8 @@
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #2563eb 0%, #000000 100%);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #000000;
+      border: 1px solid #e2e8f0;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -265,23 +258,20 @@
     }
 
     .card {
-      background: rgba(10, 15, 30, 0.6);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 16px;
       padding: 1.5rem;
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+      transition: all 0.2s ease;
     }
 
     .card:hover {
-      transform: translateY(-2px);
-      border-color: rgba(37, 99, 235, 0.35);
-      box-shadow: 0 0 16px rgba(37, 99, 235, 0.1);
-      background: rgba(10, 15, 30, 0.8);
+      border-color: #2563eb;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.05);
     }
 
     .card-header-flex {
@@ -317,13 +307,8 @@
     }
 
     .trend-up {
-      background: rgba(59, 130, 246, 0.15);
-      color: #3b82f6;
-    }
-
-    .trend-neutral {
-      background: rgba(255, 255, 255, 0.05);
-      color: var(--text-muted);
+      background: rgba(37, 99, 235, 0.08);
+      color: #2563eb;
     }
 
     .card-footer-desc {
@@ -339,13 +324,14 @@
     }
 
     .visual-panel {
-      background: rgba(10, 15, 30, 0.6);
+      background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 16px;
       padding: 1.5rem;
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
     }
 
     .panel-title-bar {
@@ -363,10 +349,10 @@
     .panel-toggle-group {
       display: flex;
       gap: 0.25rem;
-      background: rgba(255, 255, 255, 0.03);
+      background: #f1f5f9;
       padding: 0.2rem;
       border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      border: 1px solid #e2e8f0;
     }
 
     .panel-toggle-btn {
@@ -383,7 +369,7 @@
     }
 
     .panel-toggle-btn:hover {
-      color: #ffffff;
+      color: var(--text);
     }
 
     .panel-toggle-btn.active {
@@ -399,7 +385,7 @@
       justify-content: space-between;
       gap: 1rem;
       padding-top: 1rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid #f1f5f9;
     }
 
     .chart-col {
@@ -424,15 +410,15 @@
     .chart-bar {
       width: 32px;
       border-radius: 4px 4px 0 0;
-      background: linear-gradient(180deg, #2563eb 0%, rgba(37, 99, 235, 0.15) 100%);
+      background: linear-gradient(180deg, #2563eb 0%, rgba(37, 99, 235, 0.1) 100%);
       transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
       cursor: pointer;
       position: relative;
     }
 
     .chart-bar.highlight {
-      background: linear-gradient(180deg, #3b82f6 0%, rgba(59, 130, 246, 0.2) 100%);
-      border: 1px solid rgba(59, 130, 246, 0.4);
+      background: linear-gradient(180deg, #3b82f6 0%, rgba(59, 130, 246, 0.15) 100%);
+      border: 1px solid rgba(59, 130, 246, 0.3);
     }
 
     .chart-bar:hover::after {
@@ -441,8 +427,7 @@
       top: -30px;
       left: 50%;
       transform: translateX(-50%);
-      background: #090e1a;
-      border: 1px solid rgba(37, 99, 235, 0.3);
+      background: #000000;
       color: #fff;
       font-size: 0.7rem;
       padding: 0.25rem 0.5rem;
@@ -532,13 +517,14 @@
 
     /* Recent Activity Ledger */
     .ledger-panel {
-      background: rgba(10, 15, 30, 0.6);
+      background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 16px;
       padding: 1.5rem;
       display: flex;
       flex-direction: column;
       gap: 1.25rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
     }
 
     .ledger-header {
@@ -553,8 +539,8 @@
     }
 
     .btn-action-small {
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
       color: var(--text-muted);
       padding: 0.4rem 0.75rem;
       border-radius: 6px;
@@ -568,9 +554,9 @@
     }
 
     .btn-action-small:hover {
-      background: rgba(37, 99, 235, 0.1);
+      background: #f8fafc;
       color: var(--text);
-      border-color: rgba(37, 99, 235, 0.3);
+      border-color: #cbd5e1;
     }
 
     table {
@@ -586,13 +572,13 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: var(--text-muted);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid #e2e8f0;
     }
 
     td {
       padding: 1rem;
       font-size: 0.85rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid #f1f5f9;
     }
 
     tr:last-child td {
@@ -604,49 +590,18 @@
       color: var(--text);
     }
 
-    .badge-status {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-      padding: 0.2rem 0.5rem;
-      border-radius: 6px;
-      font-size: 0.725rem;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-      text-transform: uppercase;
-    }
-
-    .badge-optimal {
-      background: rgba(16, 185, 129, 0.15);
-      border: 1px solid rgba(16, 185, 129, 0.25);
-      color: #34d399;
-    }
-
-    .badge-warning {
-      background: rgba(245, 158, 11, 0.15);
-      border: 1px solid rgba(245, 158, 11, 0.25);
-      color: #fbbf24;
-    }
-
     .wallet-mono {
       font-family: monospace;
-      color: #3b82f6;
-      background: rgba(37, 99, 235, 0.08);
+      color: #2563eb;
+      background: rgba(37, 99, 235, 0.05);
       padding: 0.15rem 0.4rem;
       border-radius: 4px;
       font-size: 0.8rem;
-      border: 1px solid rgba(37, 99, 235, 0.15);
+      border: 1px solid rgba(37, 99, 235, 0.1);
     }
 
     .table-responsive-wrapper {
       overflow-x: auto;
-    }
-
-    /* Extra Collapsible Tables Section */
-    .extra-details-container {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
     }
 
     .details-row {
@@ -659,36 +614,11 @@
       text-align: center;
     }
 
-    .loading-container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 3rem 0;
-      color: var(--text-muted);
-      font-size: 0.85rem;
-      font-weight: 500;
-      gap: 0.5rem;
-    }
-
-    .spinner {
-      border: 2px solid rgba(255, 255, 255, 0.05);
-      border-top: 2px solid #2563eb;
-      border-radius: 50%;
-      width: 18px;
-      height: 18px;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
     .footer {
       text-align: center;
       font-size: 0.75rem;
       color: var(--text-muted);
-      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      border-top: 1px solid #e2e8f0;
       padding-top: 1.5rem;
       margin-top: 1rem;
       display: flex;
@@ -728,7 +658,7 @@
     }
 
     .settings-card {
-      background: rgba(10, 15, 30, 0.6);
+      background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 16px;
       padding: 1.5rem;
@@ -741,7 +671,7 @@
       font-family: var(--font-display);
       font-size: 1.1rem;
       font-weight: 600;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid #e2e8f0;
       padding-bottom: 0.75rem;
     }
 
@@ -770,7 +700,7 @@
   <aside class="sidebar">
     <div class="sidebar-top">
       <div class="sidebar-brand">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
         <h1>Siftle Analytics</h1>
       </div>
       <nav class="nav-menu">
@@ -870,7 +800,7 @@
         <div class="card">
           <div class="card-header-flex">
             <span class="card-label">Sponsor Gas Savings</span>
-            <span class="plan-badge" style="background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.3); color: #3b82f6;">Gasless</span>
+            <span class="plan-badge" style="background: rgba(37, 99, 235, 0.1); border-color: rgba(37, 99, 235, 0.3); color: #2563eb;">Gasless</span>
           </div>
           <span class="card-value" id="valGasSavings">-</span>
           <span class="card-footer-desc">User transaction fees saved</span>
@@ -905,11 +835,11 @@
             <div class="circle-container">
               <!-- Semi-circle ring overlay -->
               <svg width="100%" height="100%" viewBox="0 0 36 36" style="transform: rotate(-90deg);">
-                <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="rgba(255,255,255,0.03)" stroke-width="3"></circle>
+                <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#f1f5f9" stroke-width="3"></circle>
                 <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#2563eb" stroke-width="3" stroke-dasharray="45 55" stroke-dashoffset="0"></circle>
                 <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#3b82f6" stroke-width="3" stroke-dasharray="25 75" stroke-dashoffset="-45"></circle>
-                <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#ffffff" stroke-width="3" stroke-dasharray="20 80" stroke-dashoffset="-70"></circle>
-                <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#94a3b8" stroke-width="3" stroke-dasharray="10 90" stroke-dashoffset="-90"></circle>
+                <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#000000" stroke-width="3" stroke-dasharray="20 80" stroke-dashoffset="-70"></circle>
+                <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#64748b" stroke-width="3" stroke-dasharray="10 90" stroke-dashoffset="-90"></circle>
               </svg>
               <div style="position: absolute;" class="circle-text-box">
                 <span class="circle-title" id="valTotalHits">-</span>
@@ -942,11 +872,9 @@
           <table>
             <thead>
               <tr>
-                <th>Date & Time</th>
+                <th>Date</th>
                 <th>App Opens</th>
-                <th>Trades Executed</th>
-                <th>Errors</th>
-                <th>Status</th>
+                <th>Briefing Sold</th>
               </tr>
             </thead>
             <tbody id="ledgerBody">
@@ -1387,7 +1315,7 @@
           google: "Google Search",
           briefing: "AI Briefing Share"
         };
-        const colors = ["#2563eb", "#3b82f6", "#ffffff", "#94a3b8", "#1e293b", "#475569", "#64748b"];
+        const colors = ["#2563eb", "#3b82f6", "#000000", "#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0"];
 
         const sourceList = document.getElementById('sourceMetricsList');
         sourceList.innerHTML = '';
@@ -1420,18 +1348,13 @@
 
         ledgerDates.forEach(date => {
           const row = daily[date];
-          const rowTradeSuccesses = (row.trade_buy_success || 0) + (row.trade_sell_success || 0);
-          const errors = (row.wallet_connect_failed || 0) + (row.trade_failed || 0) + (row.claim_failed || 0) + (row.ai_unlock_failed || 0);
-          const statusText = errors > 3 ? 'WARNING' : 'OPTIMAL';
-          const statusClass = errors > 3 ? 'badge-warning' : 'badge-optimal';
+          const unlocks = Number(row?.ai_unlock_success || 0);
 
           const tr = document.createElement('tr');
           tr.innerHTML = `
             <td class="td-bold-title">${date}</td>
             <td>${(row.app_open || 0).toLocaleString()}</td>
-            <td>${rowTradeSuccesses.toLocaleString()}</td>
-            <td>${errors}</td>
-            <td><span class="badge-status ${statusClass}">${statusText}</span></td>
+            <td>${unlocks.toLocaleString()}</td>
           `;
           ledgerBody.appendChild(tr);
         });
@@ -1471,7 +1394,7 @@
               <td class="td-bold-title">${metrics.headline || 'Archived Story'}</td>
               <td>${referrals.toLocaleString()}</td>
               <td>${signups.toLocaleString()}</td>
-              <td><span style="color: #3b82f6; font-weight: 600;">${conversion}</span></td>
+              <td><span style="color: #2563eb; font-weight: 600;">${conversion}</span></td>
             `;
             briefingLinksBody.appendChild(tr);
           });
