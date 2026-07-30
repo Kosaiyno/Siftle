@@ -11,6 +11,9 @@ setDefaultResultOrder("ipv4first");
 process.on("unhandledRejection", (reason, promise) => {
   console.warn("[UNHANDLED REJECTION] Promise:", promise, "Reason:", reason);
 });
+process.on("uncaughtException", (error, origin) => {
+  console.error("[UNCAUGHT EXCEPTION] Origin:", origin, "Error:", error);
+});
 import nodemailer from "nodemailer";
 import { createZGComputeNetworkReadOnlyBroker } from "@0gfoundation/0g-compute-ts-sdk";
 import { GatewayClient } from "@circle-fin/x402-batching/client";
