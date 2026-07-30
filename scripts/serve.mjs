@@ -7324,15 +7324,12 @@ async function buildAnalyticsReport(localData = loadAnalytics()) {
         aiWalletSetsByDate[dateKey].add(walletAddress);
         allAiWallets.add(walletAddress);
 
-        const tx = String(row?.tx_hash || "");
-        if (tx && !tx.startsWith("0xmock")) {
-          const createdAt = Date.parse(row?.created_at || "") || 0;
-          const cutOff = Date.parse("2026-07-25T00:00:00Z");
-          if (createdAt < cutOff) {
-            briefingRevenue += 0.05;
-          } else {
-            briefingRevenue += 0.0001;
-          }
+        const createdAt = Date.parse(row?.created_at || "") || 0;
+        const cutOff = Date.parse("2026-07-25T00:00:00Z");
+        if (createdAt < cutOff) {
+          briefingRevenue += 0.05;
+        } else {
+          briefingRevenue += 0.0001;
         }
       });
       derived.aiBriefingWalletsByDate = Object.fromEntries(
