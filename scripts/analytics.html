@@ -755,7 +755,7 @@
           <div class="avatar-img">SA</div>
           <div class="avatar-info">
             <span class="avatar-name">Siftle Admin</span>
-            <span class="avatar-role" id="headerWalletAddress">0x0000...0000</span>
+            <span class="avatar-role" id="headerWalletAddress">0x8f2b...7fb9</span>
           </div>
         </div>
       </div>
@@ -875,6 +875,7 @@
                 <th>Date</th>
                 <th>App Opens</th>
                 <th>Briefing Sold</th>
+                <th>Briefing Wallets</th>
               </tr>
             </thead>
             <tbody id="ledgerBody">
@@ -984,19 +985,19 @@
     <div id="viewHealth" class="view-container">
       <section class="stats-grid">
         <div class="card">
-          <span class="card-label">Onchain Claim Success</span>
-          <span class="card-value" id="valClaimSuccess">-</span>
-          <span class="card-footer-desc">Preseason faucet claims</span>
-        </div>
-        <div class="card">
           <span class="card-label">Trade Settlement Rate</span>
           <span class="card-value" id="valTradeSettlement">-</span>
           <span class="card-footer-desc">Contract execution rate</span>
         </div>
         <div class="card">
-          <span class="card-label">Gasless Claims Saved</span>
-          <span class="card-value" id="valGasClaims">-</span>
-          <span class="card-footer-desc">Sponsored faucet runs</span>
+          <span class="card-label">Briefing Success Rate</span>
+          <span class="card-value" id="valBriefingSuccessRate">-</span>
+          <span class="card-footer-desc">Successful unlock attempts rate</span>
+        </div>
+        <div class="card">
+          <span class="card-label">Sponsored Trades</span>
+          <span class="card-value" id="valSponsoredTrades">-</span>
+          <span class="card-footer-desc">Sponsored transaction count</span>
         </div>
         <div class="card">
           <span class="card-label">Total Gas Savings</span>
@@ -1219,8 +1220,8 @@
         const totalRevenue = Number(derived.totalRevenue ?? 0);
 
         // Header Admin Info
-        const deployer = data.deployerAddress || "Not Configured";
-        const shortenedDeployer = deployer !== "Not Configured" ? deployer.slice(0, 6) + "..." + deployer.slice(-4) : "No Wallet";
+        const deployer = data.deployerAddress || "0x8f2bddb9c936062fd7ac1bbb0b7d21e2e76662c1c0224f0263feefef1e0f7fb9";
+        const shortenedDeployer = deployer.slice(0, 6) + "..." + deployer.slice(-4);
         document.getElementById('headerWalletAddress').textContent = shortenedDeployer;
         document.getElementById('headerWalletAddress').title = deployer;
 
@@ -1244,14 +1245,15 @@
         document.getElementById('valTotalRevenue').textContent = '$' + totalRevenue.toFixed(4) + ' USDC';
 
         // Populate Network Health View Cards
-        const totalClaims = (totals.claim_success || 0) + (totals.claim_failed || 0);
-        const claimSuccessRate = totalClaims > 0 ? ((totals.claim_success / totalClaims) * 100).toFixed(1) + '%' : '100%';
-        document.getElementById('valClaimSuccess').textContent = claimSuccessRate;
-
         const totalTradesOutcome = tradeSuccesses + (totals.trade_failed || 0);
         const tradeSettlementRate = totalTradesOutcome > 0 ? ((tradeSuccesses / totalTradesOutcome) * 100).toFixed(1) + '%' : '100%';
         document.getElementById('valTradeSettlement').textContent = tradeSettlementRate;
-        document.getElementById('valGasClaims').textContent = (totals.claim_success || 0).toLocaleString();
+
+        const totalBriefingOutcome = aiUnlocks + (totals.ai_unlock_failed || 0);
+        const briefingSuccessRate = totalBriefingOutcome > 0 ? ((aiUnlocks / totalBriefingOutcome) * 100).toFixed(1) + '%' : '100%';
+        document.getElementById('valBriefingSuccessRate').textContent = briefingSuccessRate;
+
+        document.getElementById('valSponsoredTrades').textContent = tradeSuccesses.toLocaleString();
         document.getElementById('valTotalGasSaved').textContent = '$' + gasSavings.toFixed(3) + ' USDC';
 
         // Render Health logs table
@@ -1259,24 +1261,17 @@
         healthLogsBody.innerHTML = `
           <tr>
             <td class="td-bold-title">Prediction Market Trade</td>
-            <td>${(totals.trade_attempt || 0).toLocaleString()}</td>
+            <td>${totalTradesOutcome.toLocaleString()}</td>
             <td>${tradeSuccesses.toLocaleString()}</td>
             <td>${(totals.trade_failed || 0).toLocaleString()}</td>
             <td><span class="badge-status ${totals.trade_failed > 3 ? 'badge-warning' : 'badge-optimal'}">${tradeSettlementRate}</span></td>
           </tr>
           <tr>
-            <td class="td-bold-title">Preseason Faucet Claim</td>
-            <td>${(totals.claim_attempt || 0).toLocaleString()}</td>
-            <td>${(totals.claim_success || 0).toLocaleString()}</td>
-            <td>${(totals.claim_failed || 0).toLocaleString()}</td>
-            <td><span class="badge-status ${(totals.claim_failed || 0) > 3 ? 'badge-warning' : 'badge-optimal'}">${claimSuccessRate}</span></td>
-          </tr>
-          <tr>
             <td class="td-bold-title">AI Briefing Unlock</td>
-            <td>${(totals.ai_unlock_attempt || 0).toLocaleString()}</td>
+            <td>${totalBriefingOutcome.toLocaleString()}</td>
             <td>${aiUnlocks.toLocaleString()}</td>
             <td>${(totals.ai_unlock_failed || 0).toLocaleString()}</td>
-            <td><span class="badge-status ${(totals.ai_unlock_failed || 0) > 3 ? 'badge-warning' : 'badge-optimal'}">${totals.ai_unlock_attempt > 0 ? ((aiUnlocks / totals.ai_unlock_attempt) * 100).toFixed(1) + '%' : '100%'}</span></td>
+            <td><span class="badge-status ${(totals.ai_unlock_failed || 0) > 3 ? 'badge-warning' : 'badge-optimal'}">${briefingSuccessRate}</span></td>
           </tr>
         `;
 
@@ -1349,12 +1344,14 @@
         ledgerDates.forEach(date => {
           const row = daily[date];
           const unlocks = Number(row?.ai_unlock_success || 0);
+          const rowAiWallets = Number(aiWalletsByDate[date] ?? 0);
 
           const tr = document.createElement('tr');
           tr.innerHTML = `
             <td class="td-bold-title">${date}</td>
             <td>${(row.app_open || 0).toLocaleString()}</td>
             <td>${unlocks.toLocaleString()}</td>
+            <td>${rowAiWallets.toLocaleString()}</td>
           `;
           ledgerBody.appendChild(tr);
         });
