@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Siftle Analytics Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090b11;
+      --panel-bg: #0f111a;
+      --card-bg: rgba(255, 255, 255, 0.02);
+      --card-border: rgba(255, 255, 255, 0.06);
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --primary: #4f46e5;
+      --primary-light: #6366f1;
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.15);
+      --amber: #f59e0b;
+      --amber-glow: rgba(245, 158, 11, 0.15);
+      --red: #ef4444;
+      --red-glow: rgba(239, 68, 68, 0.15);
+      --font-display: 'Outfit', sans-serif;
+      --font-sans: 'Inter', sans-serif;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(circle at 5% 5%, rgba(99, 102, 241, 0.05) 0%, transparent 35%),
+        radial-gradient(circle at 95% 95%, rgba(16, 185, 129, 0.05) 0%, transparent 35%),
+        linear-gradient(135deg, #07090e 0%, #0c0f19 100%);
+      color: var(--text);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      overflow-x: hidden;
+    }
+
+    /* Sidebar Navigation */
+    .sidebar {
+      width: 260px;
+      background: var(--panel-bg);
+      border-right: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 2rem 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .sidebar-brand h1 {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 700;
+      background: linear-gradient(to right, #a5b4fc, #34d399);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .plan-badge {
+      font-size: 0.7rem;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: #818cf8;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .nav-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      flex-grow: 1;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      font-size: 0.925rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .nav-item:hover, .nav-item.active {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .nav-item.active {
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px solid rgba(99, 102, 241, 0.15);
+      color: #a5b4fc;
+    }
+
+    .sidebar-footer {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      border-top: 1px solid var(--card-border);
+      padding-top: 1.5rem;
+    }
+
+    .sidebar-footer-link {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .sidebar-footer-link:hover {
+      color: var(--text);
+    }
+
+    /* Main Content Area */
+    .main-content {
+      flex-grow: 1;
+      padding: 2rem 2.5rem;
+      max-width: 1300px;
+      margin: 0 auto;
+      width: calc(100% - 260px);
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    /* Top Header */
+    .top-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 2rem;
+    }
+
+    .search-container {
+      position: relative;
+      width: 400px;
+    }
+
+    .search-input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 0.625rem 1rem;
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 0.875rem;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: rgba(99, 102, 241, 0.4);
+      background: rgba(255, 255, 255, 0.04);
+      box-shadow: 0 0 12px 0 rgba(99, 102, 241, 0.08);
+    }
+
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .btn-refresh {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn-refresh:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .avatar-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-left: 1px solid var(--card-border);
+      padding-left: 1rem;
+    }
+
+    .avatar-img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1 0%, #10b981 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.8rem;
+      color: #fff;
+    }
+
+    .avatar-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .avatar-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .avatar-role {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    /* Info Cards Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .card-header-flex {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .card-value {
+      font-family: var(--font-display);
+      font-size: 1.85rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0.25rem 0;
+    }
+
+    .card-trend {
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+    }
+
+    .trend-up {
+      background: rgba(16, 185, 129, 0.1);
+      color: #34d399;
+    }
+
+    .trend-neutral {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-muted);
+    }
+
+    .card-footer-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Middle Visualizations Layout */
+    .dashboard-visuals {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .visual-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .panel-title-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-title {
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+
+    .panel-toggle-group {
+      display: flex;
+      gap: 0.25rem;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 0.2rem;
+      border-radius: 6px;
+      border: 1px solid var(--card-border);
+    }
+
+    .panel-toggle-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: var(--font-sans);
+    }
+
+    .panel-toggle-btn.active {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+    }
+
+    /* Custom CSS Bar Chart */
+    .chart-container {
+      height: 220px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 1rem;
+      padding-top: 1rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .chart-col {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      height: 100%;
+      justify-content: flex-end;
+    }
+
+    .chart-bar-wrapper {
+      position: relative;
+      width: 100%;
+      height: calc(100% - 20px);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .chart-bar {
+      width: 32px;
+      border-radius: 4px 4px 0 0;
+      background: linear-gradient(180deg, #6366f1 0%, rgba(99, 102, 241, 0.3) 100%);
+      transition: height 1s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      position: relative;
+    }
+
+    .chart-bar.highlight {
+      background: linear-gradient(180deg, #10b981 0%, rgba(16, 185, 129, 0.3) 100%);
+    }
+
+    .chart-bar:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      top: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #11131e;
+      border: 1px solid var(--card-border);
+      color: #fff;
+      font-size: 0.7rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .chart-label {
+      font-size: 0.725rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Circular Doughnut/Percentage Visualizer */
+    .doughnut-visualizer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      height: 220px;
+    }
+
+    .circle-container {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .circle-text-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .circle-title {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .circle-sub {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .source-list {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .source-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+    }
+
+    .source-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-muted);
+    }
+
+    .source-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .source-value {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* Recent Activity Ledger */
+    .ledger-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .ledger-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .ledger-actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .btn-action-small {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 0.4rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.775rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.2s;
+    }
+
+    .btn-action-small:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th {
+      padding: 0.75rem 1rem;
+      font-size: 0.725rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    td {
+      padding: 1rem;
+      font-size: 0.85rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .td-bold-title {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.725rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .badge-optimal {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      color: #34d399;
+    }
+
+    .badge-warning {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+    }
+
+    .wallet-mono {
+      font-family: monospace;
+      color: #818cf8;
+      background: rgba(99, 102, 241, 0.08);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+
+    .table-responsive-wrapper {
+      overflow-x: auto;
+    }
+
+    /* Extra Collapsible Tables Section */
+    .extra-details-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .details-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .visual-panel.collapsible {
+      transition: all 0.3s;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    .loading-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 3rem 0;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 500;
+      gap: 0.5rem;
+    }
+
+    .spinner {
+      border: 2px solid rgba(255, 255, 255, 0.05);
+      border-top: 2px solid #6366f1;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .footer {
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--card-border);
+      padding-top: 1.5rem;
+      margin-top: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    .footer-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+
+    .footer-links a:hover {
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-brand">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #34d399;"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+        <h1>Siftle Analytics</h1>
+      </div>
+      <nav class="nav-menu">
+        <a href="#" class="nav-item active">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+          Dashboard
+        </a>
+        <a href="#" class="nav-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Volume & Revenue
+        </a>
+        <a href="#" class="nav-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75z"/></svg>
+          User Segments
+        </a>
+        <a href="#" class="nav-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          Network Health
+        </a>
+        <a href="#" class="nav-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Settings
+        </a>
+      </nav>
+    </div>
+    <div class="sidebar-footer">
+      <a href="https://t.me/siftle" target="_blank" class="sidebar-footer-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Support & Help
+      </a>
+      <a href="/" class="sidebar-footer-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Sign Out
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+    
+    <!-- Top Header -->
+    <header class="top-header">
+      <div class="search-container">
+        <input type="text" class="search-input" placeholder="Search analytics dashboard...">
+      </div>
+      <div class="user-profile">
+        <button class="btn-refresh" id="refreshBtn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          Refresh Data
+        </button>
+        <div class="avatar-container">
+          <div class="avatar-img">AS</div>
+          <div class="avatar-info">
+            <span class="avatar-name">Alexander Sift</span>
+            <span class="avatar-role">Admin</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Info Cards Grid -->
+    <section class="stats-grid">
+      <div class="card">
+        <div class="card-header-flex">
+          <span class="card-label">App Opens</span>
+          <span class="card-trend trend-up">
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+            8.2%
+          </span>
+        </div>
+        <span class="card-value" id="valOpens">-</span>
+        <span class="card-footer-desc">Total landing page loads</span>
+      </div>
+      <div class="card">
+        <div class="card-header-flex">
+          <span class="card-label">USDC Signups</span>
+          <span class="card-trend trend-up">
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+            12%
+          </span>
+        </div>
+        <span class="card-value" id="valSignups">-</span>
+        <span class="card-footer-desc">Onboarded email-OTP wallets</span>
+      </div>
+      <div class="card">
+        <div class="card-header-flex">
+          <span class="card-label">AI Briefing Revenue</span>
+          <span class="plan-badge">USDC</span>
+        </div>
+        <span class="card-value" id="valRevenue">-</span>
+        <span class="card-footer-desc">Gross sales from pay-per-read</span>
+      </div>
+      <div class="card">
+        <div class="card-header-flex">
+          <span class="card-label">Sponsor Gas Savings</span>
+          <span class="plan-badge" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #34d399;">Gasless</span>
+        </div>
+        <span class="card-value" id="valGasSavings">-</span>
+        <span class="card-footer-desc">User transaction fees saved</span>
+      </div>
+    </section>
+
+    <!-- Visualizations Panel -->
+    <section class="dashboard-visuals">
+      <!-- Daily Breakdown Graph -->
+      <div class="visual-panel">
+        <div class="panel-title-bar">
+          <span class="panel-title">Daily Breakdown</span>
+          <div class="panel-toggle-group">
+            <button class="panel-toggle-btn active">Activity</button>
+            <button class="panel-toggle-btn">Errors</button>
+          </div>
+        </div>
+        <div class="chart-container" id="dailyChartContainer">
+          <!-- Filled dynamically by script -->
+        </div>
+      </div>
+      
+      <!-- Traffic Doughnut Panel -->
+      <div class="visual-panel">
+        <div class="panel-title-bar">
+          <span class="panel-title">Traffic Sources</span>
+        </div>
+        <div class="doughnut-visualizer">
+          <div class="circle-container">
+            <!-- Semi-circle ring overlay -->
+            <svg width="100%" height="100%" viewBox="0 0 36 36" style="transform: rotate(-90deg);">
+              <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="rgba(255,255,255,0.03)" stroke-width="3"></circle>
+              <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#6366f1" stroke-width="3" stroke-dasharray="45 55" stroke-dashoffset="0"></circle>
+              <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#10b981" stroke-width="3" stroke-dasharray="25 75" stroke-dashoffset="-45"></circle>
+              <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#f59e0b" stroke-width="3" stroke-dasharray="20 80" stroke-dashoffset="-70"></circle>
+              <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#9ca3af" stroke-width="3" stroke-dasharray="10 90" stroke-dashoffset="-90"></circle>
+            </svg>
+            <div style="position: absolute;" class="circle-text-box">
+              <span class="circle-title" id="valTotalHits">-</span>
+              <span class="circle-sub">Total Hits</span>
+            </div>
+          </div>
+          <div class="source-list" id="sourceMetricsList">
+            <!-- Filled dynamically -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Recent Activity Ledger -->
+    <section class="ledger-panel">
+      <div class="ledger-header">
+        <span class="panel-title">Recent Activity</span>
+        <div class="ledger-actions">
+          <button class="btn-action-small">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+            Filter
+          </button>
+          <button class="btn-action-small">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Export
+          </button>
+        </div>
+      </div>
+      <div class="table-responsive-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Date & Time</th>
+              <th>App Opens</th>
+              <th>Trades Executed</th>
+              <th>Errors</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="ledgerBody">
+            <!-- Loaded dynamically from daily data -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Extra breakdowns for full audit transparency -->
+    <section class="extra-details-container">
+      <div class="details-row">
+        <!-- Traffic Sources Details -->
+        <div class="visual-panel">
+          <span class="panel-title">Referral Acquisition Breakdown</span>
+          <div class="table-responsive-wrapper">
+            <table style="width: 100%;">
+              <thead>
+                <tr>
+                  <th>Traffic Source</th>
+                  <th>App Opens</th>
+                  <th>USDC Signups</th>
+                  <th>AI Unlocks</th>
+                </tr>
+              </thead>
+              <tbody id="sourcesBody">
+                <!-- Loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Briefing Performance -->
+        <div class="visual-panel">
+          <span class="panel-title">Top Briefing Landing Performance</span>
+          <div class="table-responsive-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>News Topic</th>
+                  <th>Referrals</th>
+                  <th>Signups</th>
+                  <th>Conversion</th>
+                </tr>
+              </thead>
+              <tbody id="briefingLinksBody">
+                <!-- Loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Collapsible Detailed Daily Breakdown Ledger -->
+      <div class="visual-panel">
+        <span class="panel-title">Detailed Daily Operations Registry</span>
+        <div class="table-responsive-wrapper">
+          <table style="width: 100%;">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>App Opens</th>
+                <th>Signups</th>
+                <th>Briefing Wallets</th>
+                <th>Trades</th>
+                <th>Claims</th>
+                <th>Briefing Unlocks</th>
+                <th>Source Clicks</th>
+                <th>Errors</th>
+              </tr>
+            </thead>
+            <tbody id="breakdownBody">
+              <!-- Loaded dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <span>&copy; 2026 Siftle Analytics. All rights reserved.</span>
+      <div class="footer-links">
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    async function loadData() {
+      try {
+        const res = await fetch('/api/analytics/report');
+        if (!res.ok) throw new Error('API request failed');
+        const data = await res.json();
+
+        const daily = data.daily || {};
+        const derived = data.derived || {};
+        const signupByDate = derived.signupsByDate || {};
+        const aiWalletsByDate = derived.aiBriefingWalletsByDate || {};
+        
+        const eventKeys = [
+          'app_open',
+          'wallet_connect_start',
+          'wallet_connect_success',
+          'wallet_connect_failed',
+          'sign_up',
+          'market_view',
+          'trade_drawer_open',
+          'trade_attempt',
+          'trade_buy_success',
+          'trade_sell_success',
+          'trade_failed',
+          'claim_attempt',
+          'claim_success',
+          'claim_failed',
+          'ai_unlock_attempt',
+          'ai_unlock_success',
+          'ai_unlock_failed',
+          'view_summary',
+          'open_source'
+        ];
+        
+        const dailyTotals = Object.values(daily).reduce((acc, row) => {
+          eventKeys.forEach((key) => {
+            acc[key] = (acc[key] || 0) + (Number(row[key]) || 0);
+          });
+          return acc;
+        }, {});
+        
+        const rawTotals = data.totals || {};
+        const hasDailyRows = Object.keys(daily).length > 0;
+        const totals = eventKeys.reduce((acc, key) => {
+          acc[key] = hasDailyRows ? (Number(dailyTotals[key]) || 0) : (Number(rawTotals[key]) || 0);
+          return acc;
+        }, {});
+        
+        const tradeSuccesses = (totals.trade_buy_success || 0) + (totals.trade_sell_success || 0);
+        const aiUnlocks = totals.ai_unlock_success || 0;
+        const uniqueSignups = Number(derived.signupsTotalUnique ?? totals.sign_up ?? 0);
+        const briefingRevenue = Number(derived.briefingRevenue ?? 0);
+        const gasSavings = Number(derived.sponsorGasSavings ?? 0);
+        
+        // Populate Top Cards
+        document.getElementById('valOpens').textContent = (totals.app_open || 0).toLocaleString();
+        document.getElementById('valSignups').textContent = uniqueSignups.toLocaleString();
+        document.getElementById('valRevenue').textContent = '$' + briefingRevenue.toFixed(4) + ' USDC';
+        document.getElementById('valGasSavings').textContent = '$' + gasSavings.toFixed(3) + ' USDC';
+
+        // 1. Render CSS Bar Chart (Last 7 Days)
+        const sortedDates = Object.keys(daily).sort((a, b) => a.localeCompare(b));
+        const chartDates = sortedDates.slice(-7);
+        const chartContainer = document.getElementById('dailyChartContainer');
+        chartContainer.innerHTML = '';
+        
+        // Find max app opens to scale heights
+        let maxVal = 1;
+        chartDates.forEach(date => {
+          const val = daily[date]?.app_open || 0;
+          if (val > maxVal) maxVal = val;
+        });
+
+        const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        chartDates.forEach((date, i) => {
+          const val = daily[date]?.app_open || 0;
+          const pct = (val / maxVal) * 80; // scale to max 80% height
+          const dateObj = new Date(date + 'T00:00:00');
+          const dayName = dayNames[dateObj.getDay()];
+          const isToday = i === chartDates.length - 1;
+
+          const col = document.createElement('div');
+          col.className = 'chart-col';
+          col.innerHTML = `
+            <div class="chart-bar-wrapper">
+              <div class="chart-bar ${isToday ? 'highlight' : ''}" style="height: ${Math.max(4, pct)}%;" data-tooltip="${val.toLocaleString()} hits"></div>
+            </div>
+            <span class="chart-label">${dayName}</span>
+          `;
+          chartContainer.appendChild(col);
+        });
+
+        // 2. Render Traffic Sources Breakdown
+        const sourcesDaily = data.sources_daily || {};
+        const sourceKeys = ["organic", "x", "ig", "wa", "dc", "google", "briefing"];
+        const sourceTotals = {};
+        sourceKeys.forEach(s => {
+          sourceTotals[s] = { app_open: 0, sign_up: 0, ai_unlock_success: 0 };
+        });
+
+        Object.values(sourcesDaily).forEach(dayRow => {
+          Object.entries(dayRow || {}).forEach(([src, counts]) => {
+            const cleanSrc = String(src).toLowerCase();
+            if (!sourceTotals[cleanSrc]) {
+              sourceTotals[cleanSrc] = { app_open: 0, sign_up: 0, ai_unlock_success: 0 };
+            }
+            sourceTotals[cleanSrc].app_open += Number(counts.app_open) || 0;
+            sourceTotals[cleanSrc].sign_up += Number(counts.sign_up) || 0;
+            sourceTotals[cleanSrc].ai_unlock_success += Number(counts.ai_unlock_success) || 0;
+          });
+        });
+
+        const totalOpens = Math.max(1, totals.app_open || 0);
+        document.getElementById('valTotalHits').textContent = (totals.app_open || 0).toLocaleString();
+
+        const friendlyNames = {
+          organic: "Organic / Direct",
+          x: "X (Twitter)",
+          ig: "Instagram",
+          wa: "WhatsApp",
+          dc: "Discord",
+          google: "Google Search",
+          briefing: "AI Briefing Share"
+        };
+        const colors = ["#6366f1", "#10b981", "#f59e0b", "#9ca3af", "#ec4899", "#8b5cf6", "#3b82f6"];
+
+        const sourceList = document.getElementById('sourceMetricsList');
+        sourceList.innerHTML = '';
+        const allSourcesList = Array.from(new Set([...sourceKeys, ...Object.keys(sourceTotals)])).slice(0, 5);
+        
+        allSourcesList.forEach((src, idx) => {
+          const itemTotals = sourceTotals[src] || { app_open: 0, sign_up: 0, ai_unlock_success: 0 };
+          const friendlyName = friendlyNames[src] || (src.charAt(0).toUpperCase() + src.slice(1));
+          const color = colors[idx % colors.length];
+          const pct = ((itemTotals.app_open / totalOpens) * 100).toFixed(0);
+
+          const row = document.createElement('div');
+          row.className = 'source-row';
+          row.innerHTML = `
+            <span class="source-label">
+              <span class="source-dot" style="background: ${color};"></span>
+              ${friendlyName}
+            </span>
+            <span class="source-value">${pct}%</span>
+          `;
+          sourceList.appendChild(row);
+        });
+
+        // 3. Render Recent Activity Ledger
+        const ledgerBody = document.getElementById('ledgerBody');
+        ledgerBody.innerHTML = '';
+        
+        const sortedDatesDesc = Object.keys(daily).sort((a, b) => b.localeCompare(a));
+        const ledgerDates = sortedDatesDesc.slice(0, 5); // top 5 recent days
+
+        ledgerDates.forEach(date => {
+          const row = daily[date];
+          const rowTradeSuccesses = (row.trade_buy_success || 0) + (row.trade_sell_success || 0);
+          const errors = (row.wallet_connect_failed || 0) + (row.trade_failed || 0) + (row.claim_failed || 0) + (row.ai_unlock_failed || 0);
+          const statusText = errors > 3 ? 'WARNING' : 'OPTIMAL';
+          const statusClass = errors > 3 ? 'badge-warning' : 'badge-optimal';
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="td-bold-title">${date}</td>
+            <td>${(row.app_open || 0).toLocaleString()}</td>
+            <td>${rowTradeSuccesses.toLocaleString()}</td>
+            <td>${errors}</td>
+            <td><span class="badge-status ${statusClass}">${statusText}</span></td>
+          `;
+          ledgerBody.appendChild(tr);
+        });
+
+        // 4. Render Table Breakdowns
+        const sourcesBody = document.getElementById('sourcesBody');
+        sourcesBody.innerHTML = '';
+        Object.keys(sourceTotals).forEach(src => {
+          const sTotals = sourceTotals[src];
+          const friendlyName = friendlyNames[src] || (src.charAt(0).toUpperCase() + src.slice(1));
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="td-bold-title">${friendlyName}</td>
+            <td>${sTotals.app_open.toLocaleString()}</td>
+            <td>${sTotals.sign_up.toLocaleString()}</td>
+            <td>${sTotals.ai_unlock_success.toLocaleString()}</td>
+          `;
+          sourcesBody.appendChild(tr);
+        });
+
+        const briefingReferrals = data.briefing_referrals || {};
+        const briefingLinksBody = document.getElementById('briefingLinksBody');
+        briefingLinksBody.innerHTML = '';
+        const referralEntries = Object.entries(briefingReferrals);
+
+        if (referralEntries.length === 0) {
+          briefingLinksBody.innerHTML = '<tr><td colspan="4" class="text-center" style="color: var(--text-muted);">No logs recorded.</td></tr>';
+        } else {
+          referralEntries.sort((a, b) => b[1].referrals - a[1].referrals).slice(0, 5).forEach(([url, metrics]) => {
+            const referrals = Number(metrics.referrals) || 0;
+            const signups = Number(metrics.signups) || 0;
+            const unlocks = Number(metrics.unlocks) || 0;
+            const conversion = referrals > 0 ? ((unlocks / referrals) * 100).toFixed(1) + '%' : '0.0%';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td class="td-bold-title">${metrics.headline || 'Archived Story'}</td>
+              <td>${referrals.toLocaleString()}</td>
+              <td>${signups.toLocaleString()}</td>
+              <td><span style="color: #10b981; font-weight: 600;">${conversion}</span></td>
+            `;
+            briefingLinksBody.appendChild(tr);
+          });
+        }
+
+        const breakdownBody = document.getElementById('breakdownBody');
+        breakdownBody.innerHTML = '';
+        sortedDatesDesc.forEach(date => {
+          const row = daily[date];
+          const rowTradeSuccesses = (row.trade_buy_success || 0) + (row.trade_sell_success || 0);
+          const rowSignups = Number(signupByDate[date] ?? row.sign_up ?? 0);
+          const rowAiWallets = Number(aiWalletsByDate[date] ?? 0);
+          const errors = (row.wallet_connect_failed || 0) + (row.trade_failed || 0) + (row.claim_failed || 0) + (row.ai_unlock_failed || 0);
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="td-bold-title">${date}</td>
+            <td>${(row.app_open || 0).toLocaleString()}</td>
+            <td>${rowSignups.toLocaleString()}</td>
+            <td>${rowAiWallets.toLocaleString()}</td>
+            <td>${rowTradeSuccesses.toLocaleString()}</td>
+            <td>${(row.claim_success || 0).toLocaleString()}</td>
+            <td>${(row.ai_unlock_success || 0).toLocaleString()}</td>
+            <td>${(row.open_source || 0).toLocaleString()}</td>
+            <td>${errors}</td>
+          `;
+          breakdownBody.appendChild(tr);
+        });
+
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+      loadData();
+    });
+    
+    loadData();
+  </script>
+</body>
+</html>
