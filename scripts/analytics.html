@@ -764,6 +764,12 @@
         left: -260px;
         height: 100vh;
         box-shadow: 12px 0 30px rgba(0, 0, 0, 0.15);
+        overflow-y: hidden; /* Prevent scrolling of sidebar on mobile */
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      .sidebar::-webkit-scrollbar {
+        display: none;
       }
 
       .sidebar.active {
@@ -1231,6 +1237,11 @@
     function toggleMobileSidebar() {
       sidebar.classList.toggle('active');
       sidebarOverlay.classList.toggle('active');
+      if (sidebar.classList.contains('active')) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = '';
+      }
     }
 
     if (mobileMenuBtn) {
