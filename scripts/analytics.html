@@ -1073,7 +1073,6 @@
                 <th>Signups</th>
                 <th>Briefing Wallets</th>
                 <th>Trades</th>
-                <th>Claims</th>
                 <th>Briefings Sold</th>
                 <th>Source Clicks</th>
                 <th>Errors</th>
@@ -1099,8 +1098,8 @@
                 <tr>
                   <th>Traffic Source</th>
                   <th>App Opens</th>
-                  <th>USDC Signups</th>
-                  <th>AI Unlocks</th>
+                  <th>Email Signup</th>
+                  <th>Briefing Sold</th>
                 </tr>
               </thead>
               <tbody id="sourcesBody">
@@ -1109,25 +1108,27 @@
             </table>
           </div>
         </div>
+      </div>
 
-        <!-- Briefing Performance -->
-        <div class="visual-panel">
-          <span class="panel-title">Top Briefing Landing Performance</span>
-          <div class="table-responsive-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>News Topic</th>
-                  <th>Referrals</th>
-                  <th>Signups</th>
-                  <th>Conversion</th>
-                </tr>
-              </thead>
-              <tbody id="briefingLinksBody">
-                <!-- Loaded dynamically -->
-              </tbody>
-            </table>
-          </div>
+      <!-- Briefing Performance -->
+      <div class="visual-panel" style="margin-top: 1.5rem;">
+        <span class="panel-title">Top Briefing Landing Performance</span>
+        <div class="table-responsive-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>News Topic</th>
+                <th>Link Clicks</th>
+                <th>Read More Clicks</th>
+                <th>Signups</th>
+                <th>Briefings Sold</th>
+                <th>Conversion</th>
+              </tr>
+            </thead>
+            <tbody id="briefingLinksBody">
+              <!-- Loaded dynamically -->
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -1458,7 +1459,7 @@
 
         // Render Traffic Sources Doughnut Percentage labels
         const sourcesDaily = data.sources_daily || {};
-        const sourceKeys = ["organic", "x", "ig", "wa", "dc", "google", "briefing"];
+        const sourceKeys = ["organic", "x", "google", "briefing"];
         const sourceTotals = {};
         sourceKeys.forEach(s => {
           sourceTotals[s] = { app_open: 0, sign_up: 0, ai_unlock_success: 0 };
@@ -1467,9 +1468,7 @@
         Object.values(sourcesDaily).forEach(dayRow => {
           Object.entries(dayRow || {}).forEach(([src, counts]) => {
             const cleanSrc = String(src).toLowerCase();
-            if (!sourceTotals[cleanSrc]) {
-              sourceTotals[cleanSrc] = { app_open: 0, sign_up: 0, ai_unlock_success: 0 };
-            }
+            if (!sourceKeys.includes(cleanSrc)) return; // Exclude ig, wa, dc!
             sourceTotals[cleanSrc].app_open += Number(counts.app_open) || 0;
             sourceTotals[cleanSrc].sign_up += Number(counts.sign_up) || 0;
             sourceTotals[cleanSrc].ai_unlock_success += Number(counts.ai_unlock_success) || 0;
@@ -1482,17 +1481,14 @@
         const friendlyNames = {
           organic: "Organic / Direct",
           x: "X (Twitter)",
-          ig: "Instagram",
-          wa: "WhatsApp",
-          dc: "Discord",
           google: "Google Search",
           briefing: "AI Briefing Share"
         };
-        const colors = ["#2563eb", "#3b82f6", "#000000", "#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0"];
+        const colors = ["#2563eb", "#000000", "#64748b", "#3b82f6"];
 
         const sourceList = document.getElementById('sourceMetricsList');
         sourceList.innerHTML = '';
-        const allSourcesList = Array.from(new Set([...sourceKeys, ...Object.keys(sourceTotals)])).slice(0, 5);
+        const allSourcesList = Array.from(new Set([...sourceKeys, ...Object.keys(sourceTotals)]));
         
         allSourcesList.forEach((src, idx) => {
           const itemTotals = sourceTotals[src] || { app_open: 0, sign_up: 0, ai_unlock_success: 0 };
@@ -1556,10 +1552,11 @@
         const referralEntries = Object.entries(briefingReferrals);
 
         if (referralEntries.length === 0) {
-          briefingLinksBody.innerHTML = '<tr><td colspan="4" class="text-center" style="color: var(--text-muted);">No logs recorded.</td></tr>';
+          briefingLinksBody.innerHTML = '<tr><td colspan="6" class="text-center" style="color: var(--text-muted);">No logs recorded.</td></tr>';
         } else {
-          referralEntries.sort((a, b) => b[1].referrals - a[1].referrals).slice(0, 5).forEach(([url, metrics]) => {
+          referralEntries.sort((a, b) => b[1].referrals - a[1].referrals).forEach(([url, metrics]) => {
             const referrals = Number(metrics.referrals) || 0;
+            const readMore = Number(metrics.read_more) || 0;
             const signups = Number(metrics.signups) || 0;
             const unlocks = Number(metrics.unlocks) || 0;
             const conversion = referrals > 0 ? ((unlocks / referrals) * 100).toFixed(1) + '%' : '0.0%';
@@ -1568,7 +1565,9 @@
             tr.innerHTML = `
               <td class="td-bold-title">${metrics.headline || 'Archived Story'}</td>
               <td>${referrals.toLocaleString()}</td>
+              <td>${readMore.toLocaleString()}</td>
               <td>${signups.toLocaleString()}</td>
+              <td>${unlocks.toLocaleString()}</td>
               <td><span style="color: #2563eb; font-weight: 600;">${conversion}</span></td>
             `;
             briefingLinksBody.appendChild(tr);
@@ -1591,7 +1590,6 @@
             <td>${rowSignups.toLocaleString()}</td>
             <td>${rowAiWallets.toLocaleString()}</td>
             <td>${rowTradeSuccesses.toLocaleString()}</td>
-            <td>${(row.claim_success || 0).toLocaleString()}</td>
             <td>${(row.ai_unlock_success || 0).toLocaleString()}</td>
             <td>${(row.open_source || 0).toLocaleString()}</td>
             <td>${errors}</td>
