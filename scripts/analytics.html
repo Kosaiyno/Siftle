@@ -1459,7 +1459,7 @@
 
         // Render Traffic Sources Doughnut Percentage labels
         const sourcesDaily = data.sources_daily || {};
-        const sourceKeys = ["organic", "x", "google", "briefing"];
+        const sourceKeys = ["organic", "x", "google"];
         const sourceTotals = {};
         sourceKeys.forEach(s => {
           sourceTotals[s] = { app_open: 0, sign_up: 0, ai_unlock_success: 0 };
@@ -1481,10 +1481,9 @@
         const friendlyNames = {
           organic: "Organic / Direct",
           x: "X (Twitter)",
-          google: "Google Search",
-          briefing: "AI Briefing Share"
+          google: "Google Search"
         };
-        const colors = ["#2563eb", "#000000", "#64748b", "#3b82f6"];
+        const colors = ["#2563eb", "#000000", "#64748b"];
 
         const sourceList = document.getElementById('sourceMetricsList');
         sourceList.innerHTML = '';
