@@ -942,7 +942,7 @@
         </div>
         <div class="card">
           <div class="card-header-flex">
-            <span class="card-label">AI Briefing Revenue</span>
+            <span class="card-label">Briefing Sold Revenue</span>
             <span class="plan-badge">USDC</span>
           </div>
           <span class="card-value" id="valRevenue">-</span>
@@ -1051,7 +1051,7 @@
           <span class="card-footer-desc">Total 1% fee cut collected</span>
         </div>
         <div class="card">
-          <span class="card-label">Briefing Unlock Revenue</span>
+          <span class="card-label">Briefing Sold Revenue</span>
           <span class="card-value" id="valBriefingRevenue">-</span>
           <span class="card-footer-desc">Gross sales from unlocks</span>
         </div>
@@ -1074,7 +1074,7 @@
                 <th>Briefing Wallets</th>
                 <th>Trades</th>
                 <th>Claims</th>
-                <th>Briefing Unlocks</th>
+                <th>Briefings Sold</th>
                 <th>Source Clicks</th>
                 <th>Errors</th>
               </tr>
@@ -1141,7 +1141,7 @@
           <span class="card-footer-desc">Contract execution rate</span>
         </div>
         <div class="card">
-          <span class="card-label">Briefing Success Rate</span>
+          <span class="card-label">Briefing Sold Success Rate</span>
           <span class="card-value" id="valBriefingSuccessRate">-</span>
           <span class="card-footer-desc">Successful unlock attempts rate</span>
         </div>
@@ -1445,7 +1445,7 @@
             <td><span class="badge-status ${totals.trade_failed > 3 ? 'badge-warning' : 'badge-optimal'}">${tradeSettlementRate}</span></td>
           </tr>
           <tr>
-            <td class="td-bold-title">AI Briefing Unlock</td>
+            <td class="td-bold-title">Briefing Sold</td>
             <td>${totalBriefingOutcome.toLocaleString()}</td>
             <td>${aiUnlocks.toLocaleString()}</td>
             <td>${(totals.ai_unlock_failed || 0).toLocaleString()}</td>
