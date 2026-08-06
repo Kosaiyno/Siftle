@@ -1215,7 +1215,7 @@ const loadStorySummary = async (story: BriefingTarget): Promise<void> => {
   }
 
   state.loadingSummaryUrl = story.sourceUrl;
-  state.briefingStatusByUrl[story.sourceUrl] = "Generating briefing...";
+  state.briefingStatusByUrl[story.sourceUrl] = "Generating briefing through 0G...";
   render();
 
   try {
