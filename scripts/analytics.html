@@ -831,46 +831,6 @@
       }
     }
 
-    /* Sidebar Metrics Widget */
-    .sidebar-metrics-panel {
-      margin-top: 1.5rem;
-      padding: 1rem 0.85rem;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-    }
-    .sidebar-metrics-title {
-      font-family: var(--font-display);
-      font-size: 0.725rem;
-      font-weight: 700;
-      color: #94a3b8;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 0.75rem;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-    .sidebar-metric-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.45rem 0;
-      border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
-    }
-    .sidebar-metric-row:last-child {
-      border-bottom: none;
-    }
-    .sidebar-metric-label {
-      font-size: 0.75rem;
-      color: #94a3b8;
-      font-weight: 500;
-    }
-    .sidebar-metric-value {
-      font-size: 0.775rem;
-      font-weight: 700;
-      color: #3b82f6;
-    }
   </style>
 </head>
 <body>
@@ -912,45 +872,15 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
           Network Health
         </a>
+        <a id="nav-totals" class="nav-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          Platform Totals
+        </a>
         <a id="nav-settings" class="nav-item">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           Settings
         </a>
       </nav>
-    </div>
-    <div class="sidebar-metrics-panel">
-      <div class="sidebar-metrics-title">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-        Platform Totals
-      </div>
-      <div class="sidebar-metric-row">
-        <span class="sidebar-metric-label">Total Views</span>
-        <span class="sidebar-metric-value" id="sideTotalViews">-</span>
-      </div>
-      <div class="sidebar-metric-row">
-        <span class="sidebar-metric-label">Email Signups</span>
-        <span class="sidebar-metric-value" id="sideTotalSignups">-</span>
-      </div>
-      <div class="sidebar-metric-row">
-        <span class="sidebar-metric-label">Briefings Sold</span>
-        <span class="sidebar-metric-value" id="sideTotalBriefings">-</span>
-      </div>
-      <div class="sidebar-metric-row">
-        <span class="sidebar-metric-label">Trades Settled</span>
-        <span class="sidebar-metric-value" id="sideTotalTrades">-</span>
-      </div>
-      <div class="sidebar-metric-row">
-        <span class="sidebar-metric-label">USDC Volume</span>
-        <span class="sidebar-metric-value" id="sideTotalVolume">-</span>
-      </div>
-      <div class="sidebar-metric-row">
-        <span class="sidebar-metric-label">USDC Revenue</span>
-        <span class="sidebar-metric-value" id="sideTotalRevenue">-</span>
-      </div>
-      <div class="sidebar-metric-row">
-        <span class="sidebar-metric-label">Gas Sponsoring</span>
-        <span class="sidebar-metric-value" id="sideTotalGas">-</span>
-      </div>
     </div>
     <div class="sidebar-footer">
       <a href="https://x.com/siftleapp" target="_blank" class="sidebar-footer-link">
@@ -1288,7 +1218,71 @@
             <span class="settings-val">preseason-season-2</span>
           </div>
         </div>
-      </div>
+    </div>
+
+    <!-- 6. PLATFORM TOTALS VIEW -->
+    <div id="viewTotals" class="view-container">
+      <section class="stats-grid">
+        <div class="card">
+          <div class="card-header-flex">
+            <span class="card-label">Total Views</span>
+            <span class="plan-badge" style="background: rgba(37, 99, 235, 0.1); border-color: rgba(37, 99, 235, 0.3); color: #2563eb;">Page Loads</span>
+          </div>
+          <span class="card-value" id="valTotalViews">-</span>
+          <span class="card-footer-desc">Cumulative landing page opens</span>
+        </div>
+        <div class="card">
+          <div class="card-header-flex">
+            <span class="card-label">Total Email Signups</span>
+            <span class="plan-badge">Users</span>
+          </div>
+          <span class="card-value" id="valTotalSignups">-</span>
+          <span class="card-footer-desc">Onboarded email-OTP user accounts</span>
+        </div>
+        <div class="card">
+          <div class="card-header-flex">
+            <span class="card-label">Total Briefings Sold</span>
+            <span class="plan-badge">Unlocks</span>
+          </div>
+          <span class="card-value" id="valTotalBriefings">-</span>
+          <span class="card-footer-desc">Cumulative premium content unlocks</span>
+        </div>
+        <div class="card">
+          <div class="card-header-flex">
+            <span class="card-label">Total Trades Settled</span>
+            <span class="plan-badge">Contracts</span>
+          </div>
+          <span class="card-value" id="valTotalTrades">-</span>
+          <span class="card-footer-desc">Executed prediction market trades</span>
+        </div>
+      </section>
+
+      <section class="stats-grid" style="margin-top: 1.5rem;">
+        <div class="card">
+          <div class="card-header-flex">
+            <span class="card-label">Total Prediction Volume</span>
+            <span class="plan-badge">USDC</span>
+          </div>
+          <span class="card-value" id="valTotalVolume">-</span>
+          <span class="card-footer-desc">Cumulative USDC traded in pools</span>
+        </div>
+        <div class="card">
+          <div class="card-header-flex">
+            <span class="card-label">Total Briefing Revenue</span>
+            <span class="plan-badge">USDC</span>
+          </div>
+          <span class="card-value" id="valTotalRevenueVal">-</span>
+          <span class="card-footer-desc">Gross sales from pay-per-read</span>
+        </div>
+        <div class="card">
+          <div class="card-header-flex">
+            <span class="card-label">Total Gas Sponsored</span>
+            <span class="plan-badge" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); color: #10b981;">Gasless</span>
+          </div>
+          <span class="card-value" id="valTotalGas">-</span>
+          <span class="card-footer-desc">Total gas fees saved on behalf of users</span>
+        </div>
+      </section>
     </div>
 
     <!-- Footer -->
@@ -1334,6 +1328,7 @@
       'nav-volume': 'viewVolume',
       'nav-segments': 'viewSegments',
       'nav-health': 'viewHealth',
+      'nav-totals': 'viewTotals',
       'nav-settings': 'viewSettings'
     };
 
@@ -1493,14 +1488,14 @@
         document.getElementById('valRevenueDesc').textContent = 'Gross revenue: $' + briefingRevenue.toFixed(4) + ' USDC';
         document.getElementById('valGasSavings').textContent = '$' + gasSavings.toFixed(3) + ' USDC';
 
-        // Populate Sidebar Metrics Panel
-        document.getElementById('sideTotalViews').textContent = (totals.app_open || 0).toLocaleString();
-        document.getElementById('sideTotalSignups').textContent = uniqueSignups.toLocaleString();
-        document.getElementById('sideTotalBriefings').textContent = aiUnlocks.toLocaleString();
-        document.getElementById('sideTotalTrades').textContent = tradeSuccesses.toLocaleString();
-        document.getElementById('sideTotalVolume').textContent = '$' + predictionVolume.toFixed(2) + ' USDC';
-        document.getElementById('sideTotalRevenue').textContent = '$' + briefingRevenue.toFixed(4) + ' USDC';
-        document.getElementById('sideTotalGas').textContent = '$' + gasSavings.toFixed(3) + ' USDC';
+        // Populate Platform Totals View Cards
+        document.getElementById('valTotalViews').textContent = (totals.app_open || 0).toLocaleString();
+        document.getElementById('valTotalSignups').textContent = uniqueSignups.toLocaleString();
+        document.getElementById('valTotalBriefings').textContent = aiUnlocks.toLocaleString();
+        document.getElementById('valTotalTrades').textContent = tradeSuccesses.toLocaleString();
+        document.getElementById('valTotalVolume').textContent = '$' + predictionVolume.toFixed(2) + ' USDC';
+        document.getElementById('valTotalRevenueVal').textContent = '$' + briefingRevenue.toFixed(4) + ' USDC';
+        document.getElementById('valTotalGas').textContent = '$' + gasSavings.toFixed(3) + ' USDC';
 
         // Populate Volume & Revenue View Cards
         document.getElementById('valPredVolume').textContent = '$' + predictionVolume.toFixed(2) + ' USDC';
