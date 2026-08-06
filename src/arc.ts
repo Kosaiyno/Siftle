@@ -471,6 +471,24 @@ export const connectArcWallet = async (): Promise<string> => {
           </div>
 
           <div id="backendWalletStatus" class="circle-auth-status" style="display: none;"></div>
+
+          <div class="powered-by-section">
+            <span class="powered-by-label">Powered by</span>
+            <div class="logo-carousel">
+              <!-- 0G (Light / Dark) -->
+              <img src="./assets/0G_Black_logo.png" class="powered-logo light-only" alt="0G" />
+              <img src="./assets/0G-Logo-Purple_Hero.png" class="powered-logo dark-only" alt="0G" />
+              <!-- Arc (Light / Dark) -->
+              <img src="./assets/Arc_Logo_Black.png" class="powered-logo light-only" alt="Arc" />
+              <img src="./assets/Arc_Logo_White.png" class="powered-logo dark-only" alt="Arc" />
+              <!-- Shelby (Light / Dark) -->
+              <img src="./assets/Group 1000002712 (2).png" class="powered-logo light-only" alt="Shelby" />
+              <img src="./assets/Group 1000002712 (1).png" class="powered-logo dark-only" alt="Shelby" />
+              <!-- Circle (Light / Dark) -->
+              <img src="./assets/circle-logo.png" class="powered-logo light-only" alt="Circle" />
+              <img src="./assets/circle-logo-ondark.png" class="powered-logo dark-only" alt="Circle" />
+            </div>
+          </div>
         </div>
       `;
 
