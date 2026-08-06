@@ -931,7 +931,7 @@
         </div>
         <div class="card">
           <div class="card-header-flex">
-            <span class="card-label">USDC Signups</span>
+            <span class="card-label">Email Signups</span>
             <span class="card-trend trend-up">
               <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
               12%
@@ -942,11 +942,11 @@
         </div>
         <div class="card">
           <div class="card-header-flex">
-            <span class="card-label">Briefing Sold Revenue</span>
+            <span class="card-label">Briefings Sold</span>
             <span class="plan-badge">USDC</span>
           </div>
           <span class="card-value" id="valRevenue">-</span>
-          <span class="card-footer-desc">Gross sales from pay-per-read</span>
+          <span class="card-footer-desc" id="valRevenueDesc">Gross sales from pay-per-read</span>
         </div>
         <div class="card">
           <div class="card-header-flex">
@@ -1414,7 +1414,8 @@
         // Populate Top Cards
         document.getElementById('valOpens').textContent = (totals.app_open || 0).toLocaleString();
         document.getElementById('valSignups').textContent = uniqueSignups.toLocaleString();
-        document.getElementById('valRevenue').textContent = '$' + briefingRevenue.toFixed(4) + ' USDC';
+        document.getElementById('valRevenue').textContent = aiUnlocks.toLocaleString();
+        document.getElementById('valRevenueDesc').textContent = 'Gross revenue: $' + briefingRevenue.toFixed(4) + ' USDC';
         document.getElementById('valGasSavings').textContent = '$' + gasSavings.toFixed(3) + ' USDC';
 
         // Populate Volume & Revenue View Cards
@@ -1532,8 +1533,16 @@
         // Render Table Breakdowns
         const sourcesBody = document.getElementById('sourcesBody');
         sourcesBody.innerHTML = '';
+        let totalSrcAppOpens = 0;
+        let totalSrcSignups = 0;
+        let totalSrcBriefings = 0;
+        
         Object.keys(sourceTotals).forEach(src => {
           const sTotals = sourceTotals[src];
+          totalSrcAppOpens += sTotals.app_open;
+          totalSrcSignups += sTotals.sign_up;
+          totalSrcBriefings += sTotals.ai_unlock_success;
+          
           const friendlyName = friendlyNames[src] || (src.charAt(0).toUpperCase() + src.slice(1));
           const tr = document.createElement('tr');
           tr.innerHTML = `
@@ -1545,6 +1554,19 @@
           sourcesBody.appendChild(tr);
         });
 
+        // Append Totals row to Referral Acquisition Breakdown
+        const totalSrcTr = document.createElement('tr');
+        totalSrcTr.style.fontWeight = '700';
+        totalSrcTr.style.borderTop = '2px solid var(--card-border)';
+        totalSrcTr.style.backgroundColor = 'var(--panel-bg)';
+        totalSrcTr.innerHTML = `
+          <td class="td-bold-title" style="font-weight: 700;">Total</td>
+          <td style="font-weight: 700;">${totalSrcAppOpens.toLocaleString()}</td>
+          <td style="font-weight: 700;">${totalSrcSignups.toLocaleString()}</td>
+          <td style="font-weight: 700;">${totalSrcBriefings.toLocaleString()}</td>
+        `;
+        sourcesBody.appendChild(totalSrcTr);
+
         const briefingReferrals = data.briefing_referrals || {};
         const briefingLinksBody = document.getElementById('briefingLinksBody');
         briefingLinksBody.innerHTML = '';
@@ -1553,12 +1575,22 @@
         if (referralEntries.length === 0) {
           briefingLinksBody.innerHTML = '<tr><td colspan="6" class="text-center" style="color: var(--text-muted);">No logs recorded.</td></tr>';
         } else {
+          let grandReferrals = 0;
+          let grandReadMore = 0;
+          let grandSignups = 0;
+          let grandUnlocks = 0;
+
           referralEntries.sort((a, b) => b[1].referrals - a[1].referrals).forEach(([url, metrics]) => {
             const referrals = Number(metrics.referrals) || 0;
             const readMore = Number(metrics.read_more) || 0;
             const signups = Number(metrics.signups) || 0;
             const unlocks = Number(metrics.unlocks) || 0;
             const conversion = referrals > 0 ? ((unlocks / referrals) * 100).toFixed(1) + '%' : '0.0%';
+
+            grandReferrals += referrals;
+            grandReadMore += readMore;
+            grandSignups += signups;
+            grandUnlocks += unlocks;
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -1571,16 +1603,49 @@
             `;
             briefingLinksBody.appendChild(tr);
           });
+
+          // Append Totals row to Top Briefing Landing Performance
+          const grandConversion = grandReferrals > 0 ? ((grandUnlocks / grandReferrals) * 100).toFixed(1) + '%' : '0.0%';
+          const grandTr = document.createElement('tr');
+          grandTr.style.fontWeight = '700';
+          grandTr.style.borderTop = '2px solid var(--card-border)';
+          grandTr.style.backgroundColor = 'var(--panel-bg)';
+          grandTr.innerHTML = `
+            <td class="td-bold-title" style="font-weight: 700;">Total</td>
+            <td style="font-weight: 700;">${grandReferrals.toLocaleString()}</td>
+            <td style="font-weight: 700;">${grandReadMore.toLocaleString()}</td>
+            <td style="font-weight: 700;">${grandSignups.toLocaleString()}</td>
+            <td style="font-weight: 700;">${grandUnlocks.toLocaleString()}</td>
+            <td><span style="color: #2563eb; font-weight: 700;">${grandConversion}</span></td>
+          `;
+          briefingLinksBody.appendChild(grandTr);
         }
 
         const breakdownBody = document.getElementById('breakdownBody');
         breakdownBody.innerHTML = '';
+        
+        let grandDailyOpens = 0;
+        let grandDailySignups = 0;
+        let grandDailyBriefingWallets = 0;
+        let grandDailyTrades = 0;
+        let grandDailyBriefings = 0;
+        let grandDailyClicks = 0;
+        let grandDailyErrors = 0;
+
         sortedDatesDesc.forEach(date => {
           const row = daily[date];
           const rowTradeSuccesses = (row.trade_buy_success || 0) + (row.trade_sell_success || 0);
           const rowSignups = Number(signupByDate[date] ?? row.sign_up ?? 0);
           const rowAiWallets = Number(aiWalletsByDate[date] ?? 0);
           const errors = (row.wallet_connect_failed || 0) + (row.trade_failed || 0) + (row.claim_failed || 0) + (row.ai_unlock_failed || 0);
+
+          grandDailyOpens += Number(row.app_open || 0);
+          grandDailySignups += rowSignups;
+          grandDailyBriefingWallets += rowAiWallets;
+          grandDailyTrades += rowTradeSuccesses;
+          grandDailyBriefings += Number(row.ai_unlock_success || 0);
+          grandDailyClicks += Number(row.open_source || 0);
+          grandDailyErrors += errors;
 
           const tr = document.createElement('tr');
           tr.innerHTML = `
@@ -1595,6 +1660,23 @@
           `;
           breakdownBody.appendChild(tr);
         });
+
+        // Append Totals row to Detailed Daily Operations Registry
+        const grandDailyTr = document.createElement('tr');
+        grandDailyTr.style.fontWeight = '700';
+        grandDailyTr.style.borderTop = '2px solid var(--card-border)';
+        grandDailyTr.style.backgroundColor = 'var(--panel-bg)';
+        grandDailyTr.innerHTML = `
+          <td class="td-bold-title" style="font-weight: 700;">Total</td>
+          <td style="font-weight: 700;">${grandDailyOpens.toLocaleString()}</td>
+          <td style="font-weight: 700;">${grandDailySignups.toLocaleString()}</td>
+          <td style="font-weight: 700;">${grandDailyBriefingWallets.toLocaleString()}</td>
+          <td style="font-weight: 700;">${grandDailyTrades.toLocaleString()}</td>
+          <td style="font-weight: 700;">${grandDailyBriefings.toLocaleString()}</td>
+          <td style="font-weight: 700;">${grandDailyClicks.toLocaleString()}</td>
+          <td style="font-weight: 700;">${grandDailyErrors.toLocaleString()}</td>
+        `;
+        breakdownBody.appendChild(grandDailyTr);
 
       } catch (err) {
         console.error(err);
