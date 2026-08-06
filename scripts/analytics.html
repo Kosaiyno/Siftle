@@ -830,6 +830,47 @@
         text-align: center;
       }
     }
+
+    /* Sidebar Metrics Widget */
+    .sidebar-metrics-panel {
+      margin-top: 1.5rem;
+      padding: 1rem 0.85rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+    }
+    .sidebar-metrics-title {
+      font-family: var(--font-display);
+      font-size: 0.725rem;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .sidebar-metric-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.45rem 0;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+    }
+    .sidebar-metric-row:last-child {
+      border-bottom: none;
+    }
+    .sidebar-metric-label {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+    .sidebar-metric-value {
+      font-size: 0.775rem;
+      font-weight: 700;
+      color: #3b82f6;
+    }
   </style>
 </head>
 <body>
@@ -876,6 +917,40 @@
           Settings
         </a>
       </nav>
+    </div>
+    <div class="sidebar-metrics-panel">
+      <div class="sidebar-metrics-title">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        Platform Totals
+      </div>
+      <div class="sidebar-metric-row">
+        <span class="sidebar-metric-label">Total Views</span>
+        <span class="sidebar-metric-value" id="sideTotalViews">-</span>
+      </div>
+      <div class="sidebar-metric-row">
+        <span class="sidebar-metric-label">Email Signups</span>
+        <span class="sidebar-metric-value" id="sideTotalSignups">-</span>
+      </div>
+      <div class="sidebar-metric-row">
+        <span class="sidebar-metric-label">Briefings Sold</span>
+        <span class="sidebar-metric-value" id="sideTotalBriefings">-</span>
+      </div>
+      <div class="sidebar-metric-row">
+        <span class="sidebar-metric-label">Trades Settled</span>
+        <span class="sidebar-metric-value" id="sideTotalTrades">-</span>
+      </div>
+      <div class="sidebar-metric-row">
+        <span class="sidebar-metric-label">USDC Volume</span>
+        <span class="sidebar-metric-value" id="sideTotalVolume">-</span>
+      </div>
+      <div class="sidebar-metric-row">
+        <span class="sidebar-metric-label">USDC Revenue</span>
+        <span class="sidebar-metric-value" id="sideTotalRevenue">-</span>
+      </div>
+      <div class="sidebar-metric-row">
+        <span class="sidebar-metric-label">Gas Sponsoring</span>
+        <span class="sidebar-metric-value" id="sideTotalGas">-</span>
+      </div>
     </div>
     <div class="sidebar-footer">
       <a href="https://x.com/siftleapp" target="_blank" class="sidebar-footer-link">
@@ -1417,6 +1492,15 @@
         document.getElementById('valRevenue').textContent = aiUnlocks.toLocaleString();
         document.getElementById('valRevenueDesc').textContent = 'Gross revenue: $' + briefingRevenue.toFixed(4) + ' USDC';
         document.getElementById('valGasSavings').textContent = '$' + gasSavings.toFixed(3) + ' USDC';
+
+        // Populate Sidebar Metrics Panel
+        document.getElementById('sideTotalViews').textContent = (totals.app_open || 0).toLocaleString();
+        document.getElementById('sideTotalSignups').textContent = uniqueSignups.toLocaleString();
+        document.getElementById('sideTotalBriefings').textContent = aiUnlocks.toLocaleString();
+        document.getElementById('sideTotalTrades').textContent = tradeSuccesses.toLocaleString();
+        document.getElementById('sideTotalVolume').textContent = '$' + predictionVolume.toFixed(2) + ' USDC';
+        document.getElementById('sideTotalRevenue').textContent = '$' + briefingRevenue.toFixed(4) + ' USDC';
+        document.getElementById('sideTotalGas').textContent = '$' + gasSavings.toFixed(3) + ' USDC';
 
         // Populate Volume & Revenue View Cards
         document.getElementById('valPredVolume').textContent = '$' + predictionVolume.toFixed(2) + ' USDC';
