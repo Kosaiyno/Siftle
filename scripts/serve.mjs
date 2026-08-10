@@ -9184,6 +9184,47 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  // --- Admin Analytics Email OTP Endpoints ---
+  const ADMIN_EMAIL = "basilkosi10@gmail.com";
+  if (!global._adminOtpStore) {
+    global._adminOtpStore = new Map();
+  }
+
+  if (requestUrl.pathname === "/api/analytics/admin/request-code" && request.method === "POST") {
+    try {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      global._adminOtpStore.set(ADMIN_EMAIL, {
+        code,
+        expiresAt: Date.now() + 15 * 60 * 1000 // 15 minutes
+      });
+      console.log(`\n========================================`);
+      console.log(`[ADMIN ANALYTICS PIN] Code for ${ADMIN_EMAIL} is: ${code}`);
+      console.log(`========================================\n`);
+      await sendVerificationCodeEmail(ADMIN_EMAIL, code);
+      sendJson(response, 200, { success: true, message: `A 6-digit security PIN was sent to ${ADMIN_EMAIL}` });
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/analytics/admin/verify-code" && request.method === "POST") {
+    try {
+      const body = await readJsonBody(request);
+      const code = String(body.code || body.otp || body.pin || "").trim();
+      const stored = global._adminOtpStore.get(ADMIN_EMAIL);
+      if (!stored || stored.code !== code || Date.now() > stored.expiresAt) {
+        sendJson(response, 400, { error: "Invalid or expired PIN. Please request a new code." });
+        return;
+      }
+      global._adminOtpStore.delete(ADMIN_EMAIL);
+      sendJson(response, 200, { success: true, token: "siftle_admin_verified_session" });
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/backend-wallet/auth/request-code" && request.method === "POST") {
     if (!requireBackendWalletMode(request, response)) return;
     try {

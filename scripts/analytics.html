@@ -324,8 +324,20 @@
     /* Middle Visualizations Layout */
     .dashboard-visuals {
       display: grid;
-      grid-template-columns: 2fr 1fr;
+      grid-template-columns: 1fr;
       gap: 1.5rem;
+    }
+
+    body.admin-mode .dashboard-visuals {
+      grid-template-columns: 2fr 1fr;
+    }
+
+    .admin-only-feature {
+      display: none !important;
+    }
+
+    body.admin-mode .admin-only-feature {
+      display: flex !important;
     }
 
     .visual-panel {
@@ -864,7 +876,7 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
           Volume & Revenue
         </a>
-        <a id="nav-segments" class="nav-item">
+        <a id="nav-segments" class="nav-item admin-only-feature">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75z"/></svg>
           User Segments
         </a>
@@ -983,7 +995,7 @@
         </div>
         
         <!-- Traffic Doughnut Panel -->
-        <div class="visual-panel">
+        <div class="visual-panel admin-only-feature" id="panelTrafficSources">
           <div class="panel-title-bar">
             <span class="panel-title">Traffic Sources</span>
           </div>
@@ -1075,12 +1087,10 @@
               <tr>
                 <th>Date</th>
                 <th>App Opens</th>
-                <th>Signups</th>
                 <th>Briefing Wallets</th>
                 <th>Trades</th>
                 <th>Briefings Sold</th>
                 <th>Source Clicks</th>
-                <th>Errors</th>
               </tr>
             </thead>
             <tbody id="breakdownBody">
@@ -1103,8 +1113,7 @@
                 <tr>
                   <th>Traffic Source</th>
                   <th>App Opens</th>
-                  <th>Email Signup</th>
-                  <th>Briefing Sold</th>
+                  <th>Briefings Sold</th>
                 </tr>
               </thead>
               <tbody id="sourcesBody">
@@ -1125,7 +1134,6 @@
                 <th>News Topic</th>
                 <th>Link Clicks</th>
                 <th>Read More Clicks</th>
-                <th>Signups</th>
                 <th>Briefings Sold</th>
                 <th>Conversion</th>
               </tr>
@@ -1322,6 +1330,31 @@
       sidebarOverlay.addEventListener('click', toggleMobileSidebar);
     }
 
+    // Admin / Developer Mode Toggle via Email OTP
+    const isSavedAdmin = Boolean(localStorage.getItem('siftle_analytics_admin_token'));
+    if (isSavedAdmin) {
+      document.body.classList.add('admin-mode');
+    }
+
+    const avatarContainer = document.querySelector('.avatar-container');
+    if (avatarContainer) {
+      avatarContainer.style.cursor = 'pointer';
+      avatarContainer.title = 'Developer Authentication';
+      avatarContainer.addEventListener('click', () => {
+        const isVerified = Boolean(localStorage.getItem('siftle_analytics_admin_token'));
+        if (!isVerified) {
+          if (typeof openAdminModal === 'function') {
+            openAdminModal();
+          }
+        } else {
+          const isNowAdmin = document.body.classList.toggle('admin-mode');
+          if (!isNowAdmin) {
+            alert('Switched to Public Mode (Developer stats hidden). Click avatar again to reveal.');
+          }
+        }
+      });
+    }
+
     // View Switching logic
     const navItems = document.querySelectorAll('.nav-item');
     const views = {
@@ -1454,9 +1487,8 @@
         }, {});
         
         const rawTotals = data.totals || {};
-        const hasDailyRows = Object.keys(daily).length > 0;
         const totals = eventKeys.reduce((acc, key) => {
-          acc[key] = hasDailyRows ? (Number(dailyTotals[key]) || 0) : (Number(rawTotals[key]) || 0);
+          acc[key] = Math.max(Number(rawTotals[key]) || 0, Number(dailyTotals[key]) || 0);
           return acc;
         }, {});
         
@@ -1559,16 +1591,17 @@
         const totalOpens = Math.max(1, totals.app_open || 0);
         document.getElementById('valTotalHits').textContent = (totals.app_open || 0).toLocaleString();
 
+        const colors = ['#2563eb', '#38bdf8', '#818cf8'];
         const friendlyNames = {
-          organic: "Organic / Direct",
-          x: "X (Twitter)",
-          google: "Google Search"
+          organic: 'Organic / Direct',
+          x: 'X (Twitter)',
+          google: 'Google Search'
         };
-        const colors = ["#2563eb", "#000000", "#64748b"];
 
         const sourceList = document.getElementById('sourceMetricsList');
-        sourceList.innerHTML = '';
-        const allSourcesList = Array.from(new Set([...sourceKeys, ...Object.keys(sourceTotals)]));
+        if (sourceList) {
+          sourceList.innerHTML = '';
+          const allSourcesList = Array.from(new Set([...sourceKeys, ...Object.keys(sourceTotals)]));
         
         allSourcesList.forEach((src, idx) => {
           const itemTotals = sourceTotals[src] || { app_open: 0, sign_up: 0, ai_unlock_success: 0 };
@@ -1587,6 +1620,7 @@
           `;
           sourceList.appendChild(row);
         });
+      }
 
         // Render Recent Activity Ledger
         const ledgerBody = document.getElementById('ledgerBody');
@@ -1614,13 +1648,11 @@
         const sourcesBody = document.getElementById('sourcesBody');
         sourcesBody.innerHTML = '';
         let totalSrcAppOpens = 0;
-        let totalSrcSignups = 0;
         let totalSrcBriefings = 0;
         
         Object.keys(sourceTotals).forEach(src => {
           const sTotals = sourceTotals[src];
           totalSrcAppOpens += sTotals.app_open;
-          totalSrcSignups += sTotals.sign_up;
           totalSrcBriefings += sTotals.ai_unlock_success;
           
           const friendlyName = friendlyNames[src] || (src.charAt(0).toUpperCase() + src.slice(1));
@@ -1628,7 +1660,6 @@
           tr.innerHTML = `
             <td class="td-bold-title">${friendlyName}</td>
             <td>${sTotals.app_open.toLocaleString()}</td>
-            <td>${sTotals.sign_up.toLocaleString()}</td>
             <td>${sTotals.ai_unlock_success.toLocaleString()}</td>
           `;
           sourcesBody.appendChild(tr);
@@ -1642,7 +1673,6 @@
         totalSrcTr.innerHTML = `
           <td class="td-bold-title" style="font-weight: 700;">Total</td>
           <td style="font-weight: 700;">${totalSrcAppOpens.toLocaleString()}</td>
-          <td style="font-weight: 700;">${totalSrcSignups.toLocaleString()}</td>
           <td style="font-weight: 700;">${totalSrcBriefings.toLocaleString()}</td>
         `;
         sourcesBody.appendChild(totalSrcTr);
@@ -1653,23 +1683,20 @@
         const referralEntries = Object.entries(briefingReferrals);
 
         if (referralEntries.length === 0) {
-          briefingLinksBody.innerHTML = '<tr><td colspan="6" class="text-center" style="color: var(--text-muted);">No logs recorded.</td></tr>';
+          briefingLinksBody.innerHTML = '<tr><td colspan="5" class="text-center" style="color: var(--text-muted);">No logs recorded.</td></tr>';
         } else {
           let grandReferrals = 0;
           let grandReadMore = 0;
-          let grandSignups = 0;
           let grandUnlocks = 0;
 
           referralEntries.sort((a, b) => b[1].referrals - a[1].referrals).forEach(([url, metrics]) => {
             const referrals = Number(metrics.referrals) || 0;
             const readMore = Number(metrics.read_more) || 0;
-            const signups = Number(metrics.signups) || 0;
             const unlocks = Number(metrics.unlocks) || 0;
             const conversion = referrals > 0 ? ((unlocks / referrals) * 100).toFixed(1) + '%' : '0.0%';
 
             grandReferrals += referrals;
             grandReadMore += readMore;
-            grandSignups += signups;
             grandUnlocks += unlocks;
 
             const tr = document.createElement('tr');
@@ -1677,7 +1704,6 @@
               <td class="td-bold-title">${metrics.headline || 'Archived Story'}</td>
               <td>${referrals.toLocaleString()}</td>
               <td>${readMore.toLocaleString()}</td>
-              <td>${signups.toLocaleString()}</td>
               <td>${unlocks.toLocaleString()}</td>
               <td><span style="color: #2563eb; font-weight: 600;">${conversion}</span></td>
             `;
@@ -1694,7 +1720,6 @@
             <td class="td-bold-title" style="font-weight: 700;">Total</td>
             <td style="font-weight: 700;">${grandReferrals.toLocaleString()}</td>
             <td style="font-weight: 700;">${grandReadMore.toLocaleString()}</td>
-            <td style="font-weight: 700;">${grandSignups.toLocaleString()}</td>
             <td style="font-weight: 700;">${grandUnlocks.toLocaleString()}</td>
             <td><span style="color: #2563eb; font-weight: 700;">${grandConversion}</span></td>
           `;
@@ -1705,38 +1730,30 @@
         breakdownBody.innerHTML = '';
         
         let grandDailyOpens = 0;
-        let grandDailySignups = 0;
         let grandDailyBriefingWallets = 0;
         let grandDailyTrades = 0;
         let grandDailyBriefings = 0;
         let grandDailyClicks = 0;
-        let grandDailyErrors = 0;
 
         sortedDatesDesc.forEach(date => {
           const row = daily[date];
           const rowTradeSuccesses = (row.trade_buy_success || 0) + (row.trade_sell_success || 0);
-          const rowSignups = Number(signupByDate[date] ?? row.sign_up ?? 0);
           const rowAiWallets = Number(aiWalletsByDate[date] ?? 0);
-          const errors = (row.wallet_connect_failed || 0) + (row.trade_failed || 0) + (row.claim_failed || 0) + (row.ai_unlock_failed || 0);
 
           grandDailyOpens += Number(row.app_open || 0);
-          grandDailySignups += rowSignups;
           grandDailyBriefingWallets += rowAiWallets;
           grandDailyTrades += rowTradeSuccesses;
           grandDailyBriefings += Number(row.ai_unlock_success || 0);
           grandDailyClicks += Number(row.open_source || 0);
-          grandDailyErrors += errors;
 
           const tr = document.createElement('tr');
           tr.innerHTML = `
             <td class="td-bold-title">${date}</td>
             <td>${(row.app_open || 0).toLocaleString()}</td>
-            <td>${rowSignups.toLocaleString()}</td>
             <td>${rowAiWallets.toLocaleString()}</td>
             <td>${rowTradeSuccesses.toLocaleString()}</td>
             <td>${(row.ai_unlock_success || 0).toLocaleString()}</td>
             <td>${(row.open_source || 0).toLocaleString()}</td>
-            <td>${errors}</td>
           `;
           breakdownBody.appendChild(tr);
         });
@@ -1747,14 +1764,12 @@
         grandDailyTr.style.borderTop = '2px solid var(--card-border)';
         grandDailyTr.style.backgroundColor = 'var(--panel-bg)';
         grandDailyTr.innerHTML = `
-          <td class="td-bold-title" style="font-weight: 700;">Total</td>
+          <td class="td-bold-title" style="font-weight: 700;">Recent Total</td>
           <td style="font-weight: 700;">${grandDailyOpens.toLocaleString()}</td>
-          <td style="font-weight: 700;">${grandDailySignups.toLocaleString()}</td>
           <td style="font-weight: 700;">${grandDailyBriefingWallets.toLocaleString()}</td>
           <td style="font-weight: 700;">${grandDailyTrades.toLocaleString()}</td>
           <td style="font-weight: 700;">${grandDailyBriefings.toLocaleString()}</td>
           <td style="font-weight: 700;">${grandDailyClicks.toLocaleString()}</td>
-          <td style="font-weight: 700;">${grandDailyErrors.toLocaleString()}</td>
         `;
         breakdownBody.appendChild(grandDailyTr);
 
@@ -1762,12 +1777,149 @@
         console.error(err);
       }
     }
-    
+
     document.getElementById('refreshBtn').addEventListener('click', () => {
       loadData();
     });
     
     loadData();
+  </script>
+    
+  <!-- Developer / Admin Auth Modal -->
+  <div id="adminAuthModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(6px); z-index: 99999; align-items: center; justify-content: center; padding: 1rem;">
+    <div style="background: var(--card-bg, #ffffff); border: 1px solid var(--card-border, #e2e8f0); border-radius: 20px; max-width: 420px; width: 100%; padding: 2rem; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); text-align: center; font-family: inherit;">
+      <div style="width: 52px; height: 52px; border-radius: 14px; background: rgba(37, 99, 235, 0.1); color: #2563eb; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      </div>
+      <h3 style="margin: 0 0 0.5rem; font-size: 1.25rem; font-weight: 700; color: var(--text-primary, #0f172a);">Developer Authentication</h3>
+      <p style="margin: 0 0 1.5rem; font-size: 0.875rem; color: var(--text-muted, #64748b); line-height: 1.5;">
+        Send a 6-digit security PIN to <strong>basilkosi10@gmail.com</strong> to unlock internal traffic and user segment statistics.
+      </p>
+
+      <div id="adminAuthStep1">
+        <button id="btnSendAdminOtp" style="width: 100%; padding: 0.85rem 1.25rem; background: #2563eb; color: #ffffff; border: none; border-radius: 12px; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: all 0.2s;">
+          Send 6-Digit Security PIN
+        </button>
+      </div>
+
+      <div id="adminAuthStep2" style="display: none; margin-top: 1rem;">
+        <div style="margin-bottom: 1rem;">
+          <input type="text" id="adminOtpInput" maxlength="6" placeholder="• • • • • •" style="width: 100%; padding: 0.85rem 1rem; border: 2px solid var(--card-border, #cbd5e1); border-radius: 12px; font-size: 1.5rem; text-align: center; letter-spacing: 6px; font-weight: 700; background: var(--bg-main, #f8fafc); color: var(--text-primary, #0f172a); outline: none;">
+        </div>
+        <button id="btnVerifyAdminOtp" style="width: 100%; padding: 0.85rem 1.25rem; background: #2563eb; color: #ffffff; border: none; border-radius: 12px; font-weight: 600; font-size: 0.95rem; cursor: pointer; margin-bottom: 0.75rem;">
+          Verify & Unlock Admin View
+        </button>
+        <div>
+          <button id="btnResendAdminOtp" style="background: none; border: none; color: #64748b; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
+            Resend code
+          </button>
+        </div>
+      </div>
+
+      <div id="adminAuthStatus" style="margin-top: 1rem; font-size: 0.85rem; font-weight: 500; min-height: 1.2rem;"></div>
+
+      <div style="margin-top: 1.25rem; border-top: 1px solid var(--card-border, #e2e8f0); padding-top: 1rem;">
+        <button id="btnCloseAdminAuth" style="background: none; border: none; color: var(--text-muted, #94a3b8); font-size: 0.875rem; cursor: pointer; font-weight: 600;">
+          Cancel / Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Admin OTP Modal Elements
+    const adminModal = document.getElementById('adminAuthModal');
+    const step1 = document.getElementById('adminAuthStep1');
+    const step2 = document.getElementById('adminAuthStep2');
+    const authStatus = document.getElementById('adminAuthStatus');
+    const otpInput = document.getElementById('adminOtpInput');
+
+    function openAdminModal() {
+      adminModal.style.display = 'flex';
+      step1.style.display = 'block';
+      step2.style.display = 'none';
+      authStatus.textContent = '';
+      authStatus.style.color = '';
+    }
+
+    function closeAdminModal() {
+      adminModal.style.display = 'none';
+      otpInput.value = '';
+    }
+
+    document.getElementById('btnCloseAdminAuth').addEventListener('click', closeAdminModal);
+
+    document.getElementById('btnSendAdminOtp').addEventListener('click', async () => {
+      authStatus.textContent = 'Sending PIN to basilkosi10@gmail.com...';
+      authStatus.style.color = '#2563eb';
+      try {
+        const res = await fetch('/api/analytics/admin/request-code', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          step1.style.display = 'none';
+          step2.style.display = 'block';
+          authStatus.textContent = 'PIN sent! Check your inbox.';
+          authStatus.style.color = '#10b981';
+          otpInput.focus();
+        } else {
+          authStatus.textContent = data.error || 'Failed to send PIN.';
+          authStatus.style.color = '#ef4444';
+        }
+      } catch (err) {
+        authStatus.textContent = 'Network error sending PIN.';
+        authStatus.style.color = '#ef4444';
+      }
+    });
+
+    document.getElementById('btnResendAdminOtp').addEventListener('click', async () => {
+      authStatus.textContent = 'Resending PIN...';
+      authStatus.style.color = '#2563eb';
+      try {
+        const res = await fetch('/api/analytics/admin/request-code', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          authStatus.textContent = 'New PIN sent to your inbox!';
+          authStatus.style.color = '#10b981';
+        } else {
+          authStatus.textContent = data.error || 'Failed to resend PIN.';
+          authStatus.style.color = '#ef4444';
+        }
+      } catch (err) {
+        authStatus.textContent = 'Network error.';
+        authStatus.style.color = '#ef4444';
+      }
+    });
+
+    document.getElementById('btnVerifyAdminOtp').addEventListener('click', async () => {
+      const code = otpInput.value.trim();
+      if (!code || code.length < 6) {
+        authStatus.textContent = 'Please enter the 6-digit PIN.';
+        authStatus.style.color = '#ef4444';
+        return;
+      }
+      authStatus.textContent = 'Verifying PIN...';
+      authStatus.style.color = '#2563eb';
+      try {
+        const res = await fetch('/api/analytics/admin/verify-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          localStorage.setItem('siftle_analytics_admin_token', data.token);
+          document.body.classList.add('admin-mode');
+          closeAdminModal();
+          alert('Verification successful! Developer Mode unlocked.');
+        } else {
+          authStatus.textContent = data.error || 'Invalid PIN code.';
+          authStatus.style.color = '#ef4444';
+        }
+      } catch (err) {
+        authStatus.textContent = 'Error verifying PIN.';
+        authStatus.style.color = '#ef4444';
+      }
+    });
   </script>
 </body>
 </html>
