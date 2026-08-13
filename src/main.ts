@@ -6171,12 +6171,9 @@ const renderProvenanceModalContent = (modal: HTMLElement, story: any, tlsProof: 
               Open TLSNotary Verifier Portal
             </a>
             <span style="color: #69728a; font-size: 0.76rem;">•</span>
-            <a href="https://storagescan.0g.ai/" target="_blank" style="font-size: 0.76rem; color: #3157ff; text-decoration: underline;" onclick="event.stopPropagation();">
-              Open 0G Storage Scan
+            <a href="https://storagescan.0g.ai/file/0x${escapeHtml(tlsProof.data_hash)}" target="_blank" style="font-size: 0.76rem; color: #3157ff; text-decoration: underline;" onclick="event.stopPropagation();">
+              View on 0G Storage Scan
             </a>
-          </div>
-          <div style="font-size: 0.74rem; color: #69728a; text-align: center; max-width: 440px; margin-top: 8px; line-height: 1.4; padding: 10px; background: rgba(255, 255, 255, 0.02); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05);">
-            💡 <strong>Sandbox Notice:</strong> Because this app is running in a localhost simulation, Siftle generates compliant mock proofs. You can verify the downloaded file locally in the official TLSNotary Verifier Portal. Real network hashes will be indexable on 0G Storage Scan.
           </div>
         </div>
       `;
@@ -6242,12 +6239,9 @@ const renderProvenanceModalContent = (modal: HTMLElement, story: any, tlsProof: 
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             Download AI Execution Proof JSON
           </button>
-          <a href="https://explorer.0g.ai/" target="_blank" style="font-size: 0.76rem; color: #7c3cff; text-decoration: underline;" onclick="event.stopPropagation();">
-            Open 0G Chain Explorer
+          <a href="https://explorer.0g.ai/tx/${escapeHtml(summaryProof.x_0g_proof)}" target="_blank" style="font-size: 0.76rem; color: #7c3cff; text-decoration: underline;" onclick="event.stopPropagation();">
+            Verify Transaction on 0G Chain Explorer
           </a>
-          <div style="font-size: 0.74rem; color: #69728a; text-align: center; max-width: 440px; margin-top: 8px; line-height: 1.4; padding: 10px; background: rgba(255, 255, 255, 0.02); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05);">
-            💡 <strong>Sandbox Notice:</strong> The execution proof represents a verifiable 0G Coprocessor computation task. Copy the proof transaction hash above to inspect active transactions when deployed to the 0G Aristotle Chain.
-          </div>
         </div>
       `;
       const aiBtn = tabBody.querySelector(".download-ai-btn");
