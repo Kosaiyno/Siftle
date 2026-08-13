@@ -821,7 +821,9 @@ const cleanSummaryText = (value: string): string => {
     .replace(/^["'{\s]+/, "")
     .replace(/["'}\s]+$/, "")
     .replace(/^summary["'\s]*:[\s"']*/i, "")
-    .replace(/\s+/g, " ")
+    .replace(/[^\S\r\n]+/g, " ")
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 
   if (looksLikeBadSummary(summary)) return "";

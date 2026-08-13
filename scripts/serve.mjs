@@ -3003,7 +3003,7 @@ const summarizeLocally = (article) => {
   return base.length > 220 ? `${base.slice(0, 217).trim()}...` : base;
 };
 
-const summaryPromptVersion = "briefing-v4";
+const summaryPromptVersion = "briefing-v5";
 
 const summarizeLocallyTight = (article) =>
   stripHtml(article?.summary || article?.headline || "")
@@ -3063,7 +3063,9 @@ const cleanSummaryText = (value = "") => {
     .replace(/^["'{\s]+/, "")
     .replace(/["'}\s]+$/, "")
     .replace(/^summary["'\s]*:[\s"']*/i, "")
-    .replace(/\s+/g, " ")
+    .replace(/[^\S\r\n]+/g, " ")
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 
   if (looksLikeBadSummary(summary)) return "";
@@ -3665,7 +3667,7 @@ const summarizeWith0G = async (article, options = {}) => {
       "- [Detailed key point 2]",
       "- [Detailed key point 3]",
       "**TAKEAWAY:** [Analytical takeaway sentence]",
-      "Rules: Stay strictly grounded in the supplied text. No outside facts. Be comprehensive and highly detailed, ensuring the briefing is in-depth and informative. Output only valid JSON."
+      "Rules: Be comprehensive and highly detailed, ensuring the briefing is in-depth and informative. You may draw upon your general knowledge of the football teams, players, and transfer/match context mentioned to expand the briefing and provide full, detailed sections. Output only valid JSON."
     ].join(" ");
     const userPayload = {
       headline: article.headline,
