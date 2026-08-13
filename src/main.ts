@@ -6171,7 +6171,7 @@ const renderProvenanceModalContent = (modal: HTMLElement, story: any, tlsProof: 
               Open TLSNotary Verifier Portal
             </a>
             <span style="color: #69728a; font-size: 0.76rem;">•</span>
-            <a href="https://storagescan.0g.ai/file/0x${escapeHtml(tlsProof.data_hash)}" target="_blank" style="font-size: 0.76rem; color: #3157ff; text-decoration: underline;" onclick="event.stopPropagation();">
+            <a href="https://storagescan-galileo.0g.ai/" target="_blank" style="font-size: 0.76rem; color: #3157ff; text-decoration: underline;" onclick="event.stopPropagation();">
               View on 0G Storage Scan
             </a>
           </div>
@@ -6239,7 +6239,7 @@ const renderProvenanceModalContent = (modal: HTMLElement, story: any, tlsProof: 
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             Download AI Execution Proof JSON
           </button>
-          <a href="https://explorer.0g.ai/tx/${escapeHtml(summaryProof.x_0g_proof)}" target="_blank" style="font-size: 0.76rem; color: #7c3cff; text-decoration: underline;" onclick="event.stopPropagation();">
+          <a href="https://chainscan-galileo.0g.ai/" target="_blank" style="font-size: 0.76rem; color: #7c3cff; text-decoration: underline;" onclick="event.stopPropagation();">
             Verify Transaction on 0G Chain Explorer
           </a>
         </div>
