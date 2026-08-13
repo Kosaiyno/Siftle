@@ -6167,7 +6167,7 @@ const renderProvenanceModalContent = (modal: HTMLElement, story: any, tlsProof: 
             Download TLSNotary Proof JSON
           </button>
           <div style="display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap;">
-            <a href="https://explorer.tlsnotary.org/" target="_blank" style="font-size: 0.76rem; color: #3157ff; text-decoration: underline;" onclick="event.stopPropagation();">
+            <a href="https://tlsnotary.github.io/proof-visualizer/" target="_blank" style="font-size: 0.76rem; color: #3157ff; text-decoration: underline;" onclick="event.stopPropagation();">
               Open TLSNotary Verifier Portal
             </a>
             <span style="color: #69728a; font-size: 0.76rem;">•</span>
