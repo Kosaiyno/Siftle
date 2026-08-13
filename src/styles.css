@@ -175,7 +175,8 @@ body {
   background: rgba(255, 255, 255, 0.06);
 }
 
-.portfolio-section-tabs span {
+.portfolio-section-tabs span,
+.portfolio-section-tabs button {
   flex: 1;
   justify-content: center;
   display: inline-flex;
@@ -188,6 +189,16 @@ body {
   background: rgba(255, 255, 255, 0.78);
   font-size: 0.78rem;
   font-weight: 850;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.portfolio-section-tabs button.active {
+  background: #3B82F6 !important;
+  border-color: #3B82F6 !important;
+  color: #FFFFFF !important;
 }
 
 .portfolio-position-section {
@@ -8069,10 +8080,17 @@ body::before {
   color: #FFFFFF !important;
 }
 
-.portfolio-section-tabs span {
+.portfolio-section-tabs span,
+.portfolio-section-tabs button {
   background: #1E293B !important;
   border: 1px solid #334155 !important;
   color: #94A3B8 !important;
+}
+
+.portfolio-section-tabs button.active {
+  background: #3B82F6 !important;
+  border-color: #3B82F6 !important;
+  color: #FFFFFF !important;
 }
 
 .portfolio-position-section > h2 {
@@ -10257,10 +10275,17 @@ html, body, .app-shell, main {
   color: #101522 !important;
 }
 
-:root[data-theme="light"] .portfolio-section-tabs span {
+:root[data-theme="light"] .portfolio-section-tabs span,
+:root[data-theme="light"] .portfolio-section-tabs button {
   background: #eef2f8 !important;
   border-color: #d9deea !important;
   color: #334155 !important;
+}
+
+:root[data-theme="light"] .portfolio-section-tabs button.active {
+  background: #3B82F6 !important;
+  border-color: #3B82F6 !important;
+  color: #FFFFFF !important;
 }
 
 :root[data-theme="light"] .portfolio-position-stats {

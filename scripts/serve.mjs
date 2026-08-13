@@ -3003,7 +3003,7 @@ const summarizeLocally = (article) => {
   return base.length > 220 ? `${base.slice(0, 217).trim()}...` : base;
 };
 
-const summaryPromptVersion = "briefing-v3";
+const summaryPromptVersion = "briefing-v4";
 
 const summarizeLocallyTight = (article) =>
   stripHtml(article?.summary || article?.headline || "")
@@ -3166,11 +3166,11 @@ const buildLocalStructuredBriefingParts = (article, thread = null) => {
   const sentences = splitIntoSentences(baseText);
   const whatHappened = truncateSentence(
     dedupeNormalizedLines([
-      sentences.slice(0, 2).join(" ").trim(),
+      sentences.slice(0, 3).join(" ").trim(),
       baseText,
       headline
     ])[0] || headline,
-    30
+    80
   );
 
   const whatHappenedLower = whatHappened.toLowerCase();
@@ -3181,13 +3181,13 @@ const buildLocalStructuredBriefingParts = (article, thread = null) => {
   });
 
   const keyPoints = dedupeNormalizedLines([
-    remainingSentences[0] ? truncateSentence(remainingSentences[0], 16) : null,
-    remainingSentences[1] ? truncateSentence(remainingSentences[1], 16) : null,
-    truncateSentence(headline, 14),
-    "Further context will depend on the next verified update in this story thread."
+    remainingSentences[0] ? truncateSentence(remainingSentences[0], 50) : null,
+    remainingSentences[1] ? truncateSentence(remainingSentences[1], 50) : null,
+    remainingSentences[2] ? truncateSentence(remainingSentences[2], 50) : null,
+    truncateSentence(headline, 40)
   ].filter(Boolean));
 
-  const takeaway = truncateSentence(`${headline || "This update"} is the main confirmed signal available right now.`, 22);
+  const takeaway = truncateSentence(`${headline || "This update"} is the main confirmed signal available right now.`, 40);
 
   return { whatHappened, keyPoints, takeaway };
 };
@@ -3659,13 +3659,13 @@ const summarizeWith0G = async (article, options = {}) => {
     const systemPrompt = [
       "You are Siftle's AI Briefing assistant. Return strict JSON with exactly one key: summary.",
       "The summary value must follow this exact structure and nothing else:",
-      "**WHAT HAPPENED:** [1-2 sentences]",
+      "**WHAT HAPPENED:** [Comprehensive, detailed explanation of 1-3 sentences]",
       "**KEY POINTS:**",
-      "- [bullet 1]",
-      "- [bullet 2]",
-      "- [bullet 3]",
-      "**TAKEAWAY:** [1 sentence]",
-      "Rules: Stay strictly grounded in the supplied text. No outside facts. Keep it short and direct. Use exactly 3 key-point bullets. Output only valid JSON."
+      "- [Detailed key point 1]",
+      "- [Detailed key point 2]",
+      "- [Detailed key point 3]",
+      "**TAKEAWAY:** [Analytical takeaway sentence]",
+      "Rules: Stay strictly grounded in the supplied text. No outside facts. Be comprehensive and highly detailed, ensuring the briefing is in-depth and informative. Output only valid JSON."
     ].join(" ");
     const userPayload = {
       headline: article.headline,

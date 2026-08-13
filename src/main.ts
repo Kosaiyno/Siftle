@@ -221,6 +221,7 @@ const state: {
   newsSearchQuery: string;
   briefingStatusByUrl: Record<string, string>;
   claimingMarketIds: Record<string, boolean>;
+  portfolioFilter: "open" | "finalized";
 } = {
   activeSurface: "feed",
   profileUsername: null,
@@ -272,7 +273,8 @@ const state: {
   unlockConfig: null,
   newsSearchQuery: "",
   briefingStatusByUrl: {},
-  claimingMarketIds: {}
+  claimingMarketIds: {},
+  portfolioFilter: "open"
 };
 
 let selectedLeaderboardDivision: number | null = null;
@@ -4802,25 +4804,28 @@ const renderPortfolio = (): void => {
       </div>
       </div>
       <div class="portfolio-section-tabs">
-        <span>Open ${openPositions.length}</span>
-        <span>Finalized ${finalizedPositions.length}</span>
+        <button class="${state.portfolioFilter === "open" ? "active" : ""}" type="button" data-portfolio-filter="open">Open ${openPositions.length}</button>
+        <button class="${state.portfolioFilter === "finalized" ? "active" : ""}" type="button" data-portfolio-filter="finalized">Finalized ${finalizedPositions.length}</button>
       </div>
       ${state.loadingPortfolioPositions
         ? renderPortfolioSkeleton(2)
         : !state.walletAddress
-          ? `<div class="portfolio-empty">Connect your wallet to see open and finalized market positions.</div>`
+          ? `<div class="portfolio-empty">Connect your wallet to see open and finalized market predictions.</div>`
           : portfolioMarkets.length === 0
-            ? `<div class="portfolio-empty">No positions found for this wallet yet. Confirmed trades will appear here after the Arc transaction settles.</div>`
-            : `
-              <section class="portfolio-position-section">
-                <h2>Open positions</h2>
-                ${openPositions.length ? openPositions.map(renderPortfolioPositionCard).join("") : `<div class="portfolio-empty compact">No open positions.</div>`}
-              </section>
-              <section class="portfolio-position-section">
-                <h2>Finalized</h2>
-                ${finalizedPositions.length ? finalizedPositions.map(renderPortfolioPositionCard).join("") : `<div class="portfolio-empty compact">No finalized positions yet.</div>`}
-              </section>
-            `}
+            ? `<div class="portfolio-empty">No predictions found for this wallet yet. Confirmed trades will appear here after the Arc transaction settles.</div>`
+            : state.portfolioFilter === "open"
+              ? `
+                <section class="portfolio-position-section">
+                  <h2>Open Predictions</h2>
+                  ${openPositions.length ? openPositions.map(renderPortfolioPositionCard).join("") : `<div class="portfolio-empty compact">No active predictions open.</div>`}
+                </section>
+              `
+              : `
+                <section class="portfolio-position-section">
+                  <h2>Prediction History (Finalized)</h2>
+                  ${finalizedPositions.length ? finalizedPositions.map(renderPortfolioPositionCard).join("") : `<div class="portfolio-empty compact">No finalized predictions.</div>`}
+                </section>
+              `}
     </section>
   `;
 };
@@ -5503,6 +5508,14 @@ storyList?.addEventListener("click", async (event) => {
         renderPortfolio();
       }
     }
+    return;
+  }
+
+  const portfolioFilterBtn = target.closest<HTMLElement>("[data-portfolio-filter]");
+  if (portfolioFilterBtn) {
+    const filter = portfolioFilterBtn.getAttribute("data-portfolio-filter") as "open" | "finalized";
+    state.portfolioFilter = filter;
+    renderPortfolio();
     return;
   }
 
