@@ -6045,11 +6045,11 @@ document.addEventListener("click", (event) => {
   
   try {
     const encodedUrl = encodeURIComponent(sourceUrl);
-    const storyRes = await fetch(`/api/story?sourceUrl=${encodedUrl}`);
+    const storyRes = await fetch(apiUrl(`/api/story?sourceUrl=${encodedUrl}`));
     if (!storyRes.ok) throw new Error("Story not found");
     const story = await storyRes.ok ? await storyRes.json() : null;
 
-    const proofRes = await fetch(`/api/story/proof?sourceUrl=${encodedUrl}`);
+    const proofRes = await fetch(apiUrl(`/api/story/proof?sourceUrl=${encodedUrl}`));
     if (!proofRes.ok) throw new Error("Provenance proof not found");
     const tlsProof = await proofRes.json();
     
