@@ -1254,9 +1254,12 @@ ${o.message}`},te&&f()}};x?.addEventListener("input",e=>{let a=e.target;if(a.id!
               Open TLSNotary Verifier Portal
             </a>
             <span style="color: #69728a; font-size: 0.76rem;">\u2022</span>
-            <a href="https://storagescan-galileo.0g.ai/" target="_blank" style="font-size: 0.76rem; color: #3157ff; text-decoration: underline;" onclick="event.stopPropagation();">
-              View on 0G Storage Scan
+            <a href="https://storagescan-galileo.0g.ai/submission/194000" target="_blank" style="font-size: 0.76rem; color: #3157ff; text-decoration: underline;" onclick="event.stopPropagation();">
+              View Active Proof on 0G Storage Scan
             </a>
+          </div>
+          <div style="font-size: 0.72rem; color: #69728a; text-align: center; margin-top: 6px;">
+            *(Mock hash generated for preview. Click 'Active Proof' to view a real live page)*
           </div>
         </div>
       `,l.querySelector(".download-tls-btn")?.addEventListener("click",()=>{Ht(`tls_proof_${r.handshake.server_name}.json`,r)});let c=l.querySelector(".copy-hash-btn");c?.addEventListener("click",u=>{u.stopPropagation(),Rt(c.dataset.hash||"",c)})}else if(i==="ai"){if(!o){l.innerHTML=`
@@ -1307,9 +1310,14 @@ ${o.message}`},te&&f()}};x?.addEventListener("input",e=>{let a=e.target;if(a.id!
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             Download AI Execution Proof JSON
           </button>
-          <a href="https://chainscan-galileo.0g.ai/" target="_blank" style="font-size: 0.76rem; color: #7c3cff; text-decoration: underline;" onclick="event.stopPropagation();">
-            Verify Transaction on 0G Chain Explorer
-          </a>
+          <div style="display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap;">
+            <a href="https://chainscan-galileo.0g.ai/" target="_blank" style="font-size: 0.76rem; color: #7c3cff; text-decoration: underline;" onclick="event.stopPropagation();">
+              Open 0G Chain Explorer
+            </a>
+          </div>
+          <div style="font-size: 0.72rem; color: #69728a; text-align: center; margin-top: 6px;">
+            *(Mock transaction generated for preview. Use explorer search to check live status)*
+          </div>
         </div>
       `,l.querySelector(".download-ai-btn")?.addEventListener("click",()=>{Ht(`ai_inference_proof_${o.responseId}.json`,o)});let c=l.querySelector(".copy-hash-btn");c?.addEventListener("click",u=>{u.stopPropagation(),Rt(c.dataset.hash||"",c)})}else if(i==="json"){let d={source_tls_proof:r,ai_inference_proof:o};l.innerHTML=`
         <div class="provenance-json-viewer">
