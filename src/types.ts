@@ -1,4 +1,4 @@
-export type Category = "All" | "Crypto" | "Sports" | "Anime" | "Tech" | "Gaming";
+export type Category = "All" | "Crypto" | "Sports" | "Anime" | "Tech" | "Gaming" | "Personalized";
 
 export interface NewsStory {
   id: number;

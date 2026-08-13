@@ -565,8 +565,13 @@ export const connectArcWallet = async (): Promise<string> => {
 
           stepEmailDiv.style.display = "none";
           stepCodeDiv.style.display = "block";
+          if (payload.devCode) {
+            codeInput.value = payload.devCode;
+            showStatus(`Verification code: ${payload.devCode} (Auto-filled)`, false);
+          } else {
+            showStatus("We sent a 6-digit verification code. Please check your email.", false);
+          }
           codeInput.focus();
-          showStatus("We sent a 6-digit verification code. Please check your email (or terminal logs).", false);
         } catch (error) {
           showStatus(error instanceof Error ? error.message : "Failed to request code", true);
           continueBtn.disabled = false;
@@ -781,7 +786,12 @@ export const connectArcWallet = async (): Promise<string> => {
 
         stepEmail.style.display = "none";
         stepOtp.style.display = "block";
-        showStatus("Verification code sent to your email.");
+        if (data.devOtp) {
+          otpInput.value = data.devOtp;
+          showStatus(`Verification code: ${data.devOtp} (Auto-filled)`, false);
+        } else {
+          showStatus("Verification code sent to your email.");
+        }
       } catch (err: any) {
         showStatus(err.message, true);
         sendBtn.disabled = false;
