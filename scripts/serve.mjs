@@ -3059,6 +3059,8 @@ const cleanSummaryText = (value = "") => {
     break;
   }
 
+  summary = summary.replace(/\\n/g, "\n").replace(/\\r/g, "");
+
   summary = stripHtml(summary)
     .replace(/^["'{\s]+/, "")
     .replace(/["'}\s]+$/, "")
@@ -3219,8 +3221,8 @@ const normalizeStructuredBriefing = (summary, article, thread = null) => {
 
   const rawKeyPoints = String(sections["KEY POINTS"] || "")
     .split(/(?:•|\*|-)\s+/)
-    .map((item) => cleanSummaryText(item))
-    .filter(Boolean);
+    .map((item) => cleanSummaryText(item).replace(/\\n/g, "").trim())
+    .filter((item) => item && item !== "\\n" && item !== "\n");
 
   const keyPoints = rawKeyPoints.length
     ? rawKeyPoints.slice(0, 3)

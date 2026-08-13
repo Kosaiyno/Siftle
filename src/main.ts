@@ -809,6 +809,8 @@ const cleanSummaryText = (value: string): string => {
     break;
   }
 
+  summary = summary.replace(/\\n/g, "\n").replace(/\\r/g, "");
+
   summary = summary
     .replace(/&lt;|&#60;/gi, "<")
     .replace(/&gt;|&#62;/gi, ">")
@@ -946,8 +948,8 @@ const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
     if (header === 'KEY POINTS') {
       const bullets = content
         .split(/(?:•|\*|-)\s+/)
-        .map(b => b.trim())
-        .filter(Boolean);
+        .map(b => b.replace(/\\n/g, "").trim())
+        .filter(b => b && b !== "\\n" && b !== "\n");
 
       if (bullets.length > 0) {
         bodyHtml = `<ul class="briefing-list">${bullets.map(b => `<li>${b}</li>`).join('')}</ul>`;
