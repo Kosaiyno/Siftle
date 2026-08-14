@@ -797,6 +797,18 @@ const cleanSummaryText = (value: string): string => {
     if (!/^\s*\{[\s\S]*\}\s*$/.test(summary)) break;
 
     try {
+      const match = summary.match(/"summary"\s*:\s*"((?:[^"\\]|\\.)*)"/i);
+      if (match) {
+        summary = match[1]
+          .replace(/\\"/g, '"')
+          .replace(/\\n/g, "\n")
+          .replace(/\\r/g, "\r")
+          .replace(/\\t/g, "\t")
+          .replace(/\\\\/g, "\\")
+          .trim();
+        continue;
+      }
+
       const parsed = JSON.parse(summary);
       if (typeof parsed.summary === "string") {
         summary = parsed.summary.trim();

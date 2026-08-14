@@ -3009,7 +3009,7 @@ const summarizeLocally = (article) => {
   return base.length > 220 ? `${base.slice(0, 217).trim()}...` : base;
 };
 
-const summaryPromptVersion = "briefing-v8";
+const summaryPromptVersion = "briefing-v9";
 
 const summarizeLocallyTight = (article) =>
   stripHtml(article?.summary || article?.headline || "")
@@ -3053,6 +3053,18 @@ const cleanSummaryText = (value = "") => {
     if (!jsonText) break;
 
     try {
+      const match = jsonText.match(/"summary"\s*:\s*"((?:[^"\\]|\\.)*)"/i);
+      if (match) {
+        summary = match[1]
+          .replace(/\\"/g, '"')
+          .replace(/\\n/g, "\n")
+          .replace(/\\r/g, "\r")
+          .replace(/\\t/g, "\t")
+          .replace(/\\\\/g, "\\")
+          .trim();
+        continue;
+      }
+
       const parsed = JSON.parse(jsonText);
       if (typeof parsed.summary === "string") {
         summary = parsed.summary.trim();
