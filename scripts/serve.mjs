@@ -3009,7 +3009,7 @@ const summarizeLocally = (article) => {
   return base.length > 220 ? `${base.slice(0, 217).trim()}...` : base;
 };
 
-const summaryPromptVersion = "briefing-v14";
+const summaryPromptVersion = "briefing-v16";
 
 const summarizeLocallyTight = (article) =>
   stripHtml(article?.summary || article?.headline || "")
@@ -3462,7 +3462,7 @@ const getZeroGConfigStatus = () => ({
   api_key: Boolean(process.env.ZERO_G_API_KEY || process.env.OG_COMPUTE_API_KEY),
   provider: Boolean(process.env.OG_COMPUTE_PROVIDER),
   endpoint: Boolean(process.env.OG_COMPUTE_ENDPOINT || process.env.ZERO_G_ENDPOINT || process.env.OG_COMPUTE_URL || process.env.ZERO_G_URL),
-  model: process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "zai-org/GLM-5-FP8"
+  model: process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "deepseek-v4-flash"
 });
 
 const getThreadZeroGConfigStatus = () => {
@@ -3537,7 +3537,7 @@ const estimateSpend = ({ inputTokens, outputTokens, price }) => {
 };
 
 const getZeroGCostEstimate = () => {
-  const summaryModel = process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "zai-org/GLM-5-FP8";
+  const summaryModel = process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "deepseek-v4-flash";
   const threadConfig = getThread0GConfig();
   const threadModel = threadConfig.model;
   const sourceCategoryCount = sourceCategories.length;
@@ -3675,7 +3675,7 @@ const scrapeArticleText = async (url) => {
 
 const summarizeWith0G = async (article, options = {}) => {
   const apiKey = process.env.ZERO_G_API_KEY || process.env.OG_COMPUTE_API_KEY;
-  const model = process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "zai-org/GLM-5-FP8";
+  const model = process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "deepseek-v4-flash";
   const thread = await buildSummaryThreadContext(article);
 
   if (!apiKey) {
@@ -3766,7 +3766,12 @@ const summarizeWith0G = async (article, options = {}) => {
     const extractSummaryFromResponse = (resp) => {
       const content = resp.choices?.[0]?.message?.content ?? "";
       console.log("0G Router Raw Content:", content);
-      return cleanSummaryText(content);
+      const jsonText = content.match(/\{[\s\S]*\}/)?.[0];
+      if (!jsonText) {
+        console.warn("0G Router response contains no complete, closed JSON block. Falling back to local briefing.");
+        return "";
+      }
+      return cleanSummaryText(jsonText);
     };
 
     let summary = extractSummaryFromResponse(data);
@@ -11280,7 +11285,7 @@ const server = createServer(async (request, response) => {
     }
 
     const apiKey = process.env.ZERO_G_API_KEY || process.env.OG_COMPUTE_API_KEY;
-    const model = process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "zai-org/GLM-5-FP8";
+    const model = process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "deepseek-v4-flash";
 
     const allFollowedTerms = expandSearchTerms([
       ...(entities.clubs || []),
