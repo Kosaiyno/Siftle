@@ -3009,7 +3009,7 @@ const summarizeLocally = (article) => {
   return base.length > 220 ? `${base.slice(0, 217).trim()}...` : base;
 };
 
-const summaryPromptVersion = "briefing-v10";
+const summaryPromptVersion = "briefing-v11";
 
 const summarizeLocallyTight = (article) =>
   stripHtml(article?.summary || article?.headline || "")
@@ -3760,15 +3760,7 @@ const summarizeWith0G = async (article, options = {}) => {
     const data = await response.json();
     const extractSummaryFromResponse = (resp) => {
       const content = resp.choices?.[0]?.message?.content ?? "";
-      const jsonText = content.match(/\{[\s\S]*\}/)?.[0];
-      let s = "";
-      if (jsonText) {
-        const parsed = JSON.parse(jsonText);
-        s = cleanSummaryText(parsed.summary || "");
-      } else {
-        s = cleanSummaryText(content);
-      }
-      return s;
+      return cleanSummaryText(content);
     };
 
     let summary = extractSummaryFromResponse(data);
