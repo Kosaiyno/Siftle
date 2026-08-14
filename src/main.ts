@@ -949,7 +949,14 @@ const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
       const bullets = content
         .split(/(?:•|\*|-)\s+/)
         .map(b => b.replace(/\\n/g, "").trim())
-        .filter(b => b && b !== "\\n" && b !== "\n");
+        .filter(b => {
+          if (!b || b === "\\n" || b === "\n") return false;
+          const cleanB = b.trim();
+          const words = cleanB.split(/\s+/).filter(Boolean);
+          if (words.length < 6 || cleanB.length < 30) return false;
+          if (/^according\s+to\s+\w+$/i.test(cleanB.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,""))) return false;
+          return true;
+        });
 
       if (bullets.length > 0) {
         bodyHtml = `<ul class="briefing-list">${bullets.map(b => `<li>${b}</li>`).join('')}</ul>`;

@@ -3009,7 +3009,7 @@ const summarizeLocally = (article) => {
   return base.length > 220 ? `${base.slice(0, 217).trim()}...` : base;
 };
 
-const summaryPromptVersion = "briefing-v6";
+const summaryPromptVersion = "briefing-v7";
 
 const summarizeLocallyTight = (article) =>
   stripHtml(article?.summary || article?.headline || "")
@@ -3067,7 +3067,17 @@ const cleanSummaryText = (value = "") => {
 
   summary = summary.replace(/\\n/g, "\n").replace(/\\r/g, "");
 
-  summary = stripHtml(summary)
+  summary = summary
+    .replace(/&lt;|&#60;/gi, "<")
+    .replace(/&gt;|&#62;/gi, ">")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&quot;/g, "\"")
+    .replace(/&ldquo;|&rdquo;/g, "\"")
+    .replace(/&lsquo;|&rsquo;/g, "'")
+    .replace(/<[^>]+>/g, " ")
     .replace(/^["'{\s]+/, "")
     .replace(/["'}\s]+$/, "")
     .replace(/^summary["'\s]*:[\s"']*/i, "")
@@ -3243,11 +3253,25 @@ const normalizeStructuredBriefing = (summary, article, thread = null) => {
   const rawKeyPoints = String(sections["KEY POINTS"] || "")
     .split(/(?:•|\*|-)\s+/)
     .map((item) => cleanSummaryText(item).replace(/\\n/g, "").trim())
-    .filter((item) => item && item !== "\\n" && item !== "\n");
+    .filter((item) => {
+      if (!item || item === "\\n" || item === "\n") return false;
+      const cleanItem = item.trim();
+      const words = cleanItem.split(/\s+/).filter(Boolean);
+      // Filter out short fragments (e.g. less than 6 words or 30 chars, or simple citation labels)
+      if (words.length < 6 || cleanItem.length < 30) return false;
+      if (/^according\s+to\s+\w+$/i.test(cleanItem.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,""))) return false;
+      return true;
+    });
 
-  const keyPoints = rawKeyPoints.length
-    ? rawKeyPoints.slice(0, 3)
-    : fallback.keyPoints;
+  const keyPoints = [...rawKeyPoints];
+  while (keyPoints.length < 3) {
+    const padItem = fallback.keyPoints[keyPoints.length];
+    if (padItem) {
+      keyPoints.push(padItem);
+    } else {
+      break;
+    }
+  }
 
   const takeaway = cleanSummaryText(sections["TAKEAWAY"] || "") || fallback.takeaway;
 
