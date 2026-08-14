@@ -3009,7 +3009,7 @@ const summarizeLocally = (article) => {
   return base.length > 220 ? `${base.slice(0, 217).trim()}...` : base;
 };
 
-const summaryPromptVersion = "briefing-v16";
+const summaryPromptVersion = "briefing-v18";
 
 const summarizeLocallyTight = (article) =>
   stripHtml(article?.summary || article?.headline || "")
@@ -3462,7 +3462,7 @@ const getZeroGConfigStatus = () => ({
   api_key: Boolean(process.env.ZERO_G_API_KEY || process.env.OG_COMPUTE_API_KEY),
   provider: Boolean(process.env.OG_COMPUTE_PROVIDER),
   endpoint: Boolean(process.env.OG_COMPUTE_ENDPOINT || process.env.ZERO_G_ENDPOINT || process.env.OG_COMPUTE_URL || process.env.ZERO_G_URL),
-  model: process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "deepseek-v4-flash"
+  model: process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "zai-org/GLM-5-FP8"
 });
 
 const getThreadZeroGConfigStatus = () => {
@@ -3537,7 +3537,7 @@ const estimateSpend = ({ inputTokens, outputTokens, price }) => {
 };
 
 const getZeroGCostEstimate = () => {
-  const summaryModel = process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "deepseek-v4-flash";
+  const summaryModel = process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "zai-org/GLM-5-FP8";
   const threadConfig = getThread0GConfig();
   const threadModel = threadConfig.model;
   const sourceCategoryCount = sourceCategories.length;
@@ -3675,7 +3675,7 @@ const scrapeArticleText = async (url) => {
 
 const summarizeWith0G = async (article, options = {}) => {
   const apiKey = process.env.ZERO_G_API_KEY || process.env.OG_COMPUTE_API_KEY;
-  const model = process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "deepseek-v4-flash";
+  const model = process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "zai-org/GLM-5-FP8";
   const thread = await buildSummaryThreadContext(article);
 
   if (!apiKey) {
@@ -3711,6 +3711,9 @@ const summarizeWith0G = async (article, options = {}) => {
       if (scraped && scraped.length > articleText.length) {
         articleText = scraped;
       }
+    }
+    if (articleText.length > 3500) {
+      articleText = articleText.slice(0, 3500) + "...";
     }
 
     const service = await get0GService();
@@ -3750,7 +3753,7 @@ const summarizeWith0G = async (article, options = {}) => {
           },
           {
             role: "user",
-            content: `Please generate Siftle's AI Briefing for this sports story:\nHeadline: ${article.headline}\nCategory: ${article.category}\nSource: ${article.source}\nText:\n${articleText}`
+            content: JSON.stringify(userPayload)
           }
         ],
         temperature: 0.15,
@@ -11285,7 +11288,7 @@ const server = createServer(async (request, response) => {
     }
 
     const apiKey = process.env.ZERO_G_API_KEY || process.env.OG_COMPUTE_API_KEY;
-    const model = process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "deepseek-v4-flash";
+    const model = process.env.ZERO_G_MODEL || process.env.OG_COMPUTE_MODEL || "zai-org/GLM-5-FP8";
 
     const allFollowedTerms = expandSearchTerms([
       ...(entities.clubs || []),
