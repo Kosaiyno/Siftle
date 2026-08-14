@@ -3009,7 +3009,7 @@ const summarizeLocally = (article) => {
   return base.length > 220 ? `${base.slice(0, 217).trim()}...` : base;
 };
 
-const summaryPromptVersion = "briefing-v11";
+const summaryPromptVersion = "briefing-v14";
 
 const summarizeLocallyTight = (article) =>
   stripHtml(article?.summary || article?.headline || "")
@@ -3099,6 +3099,9 @@ const cleanSummaryText = (value = "") => {
     .trim();
 
   if (looksLikeBadSummary(summary)) return "";
+  if (summary.includes("WHAT HAPPENED") || summary.includes("KEY POINTS")) {
+    return summary;
+  }
   return limitSummaryWords(summary);
 };
 
@@ -3229,7 +3232,7 @@ const buildLocalStructuredBriefingParts = (article, thread = null) => {
     truncateSentence(headline, 40)
   ].filter(Boolean));
 
-  const takeaway = truncateSentence(`${headline || "This update"} is the main confirmed signal available right now.`, 40);
+  const takeaway = truncateSentence(headline || "This update represents the key confirmed development in this story.", 40);
 
   return { whatHappened, keyPoints, takeaway };
 };
@@ -3255,7 +3258,7 @@ const extractBriefingSections = (text = "") => {
 const normalizeStructuredBriefing = (summary, article, thread = null) => {
   const fallback = buildLocalStructuredBriefingParts(article, thread);
   const sections = extractBriefingSections(summary);
-  const whatHappened = cleanSummaryText(sections["WHAT HAPPENED"] || "") || fallback.whatHappened;
+  const whatHappened = stripIncompleteSentence(cleanSummaryText(sections["WHAT HAPPENED"] || "")) || fallback.whatHappened;
 
   const rawKeyPoints = String(sections["KEY POINTS"] || "")
     .split(/(?:•|\*|-)\s+/)
@@ -3266,6 +3269,8 @@ const normalizeStructuredBriefing = (summary, article, thread = null) => {
       const words = cleanItem.split(/\s+/).filter(Boolean);
       // Filter out short fragments (e.g. less than 6 words or 30 chars, or simple citation labels)
       if (words.length < 6 || cleanItem.length < 30) return false;
+      // Filter out incomplete fragments (must end with a sentence terminator . ? !)
+      if (!/[.?!]"?'?$/.test(cleanItem)) return false;
       if (/^according\s+to\s+\w+$/i.test(cleanItem.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,""))) return false;
       return true;
     });
@@ -3280,7 +3285,7 @@ const normalizeStructuredBriefing = (summary, article, thread = null) => {
     }
   }
 
-  const takeaway = cleanSummaryText(sections["TAKEAWAY"] || "") || fallback.takeaway;
+  const takeaway = stripIncompleteSentence(cleanSummaryText(sections["TAKEAWAY"] || "")) || fallback.takeaway;
 
   return formatStructuredBriefing({
     whatHappened,
@@ -3745,7 +3750,7 @@ const summarizeWith0G = async (article, options = {}) => {
           },
           {
             role: "user",
-            content: JSON.stringify(userPayload)
+            content: `Please generate Siftle's AI Briefing for this sports story:\nHeadline: ${article.headline}\nCategory: ${article.category}\nSource: ${article.source}\nText:\n${articleText}`
           }
         ],
         temperature: 0.15,
@@ -3760,6 +3765,7 @@ const summarizeWith0G = async (article, options = {}) => {
     const data = await response.json();
     const extractSummaryFromResponse = (resp) => {
       const content = resp.choices?.[0]?.message?.content ?? "";
+      console.log("0G Router Raw Content:", content);
       return cleanSummaryText(content);
     };
 

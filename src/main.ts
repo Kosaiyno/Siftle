@@ -841,6 +841,9 @@ const cleanSummaryText = (value: string): string => {
     .trim();
 
   if (looksLikeBadSummary(summary)) return "";
+  if (summary.includes("WHAT HAPPENED") || summary.includes("KEY POINTS")) {
+    return summary;
+  }
   return limitSummaryWords(summary);
 };
 
@@ -966,6 +969,7 @@ const formatAIBriefing = (text: string, story?: BriefingTarget): string => {
           const cleanB = b.trim();
           const words = cleanB.split(/\s+/).filter(Boolean);
           if (words.length < 6 || cleanB.length < 30) return false;
+          if (!/[.?!]"?'?$/.test(cleanB)) return false;
           if (/^according\s+to\s+\w+$/i.test(cleanB.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,""))) return false;
           return true;
         });
