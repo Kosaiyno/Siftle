@@ -2,7 +2,7 @@
 
 ## 📣 Part 1: Feedback Received from Users (Season 1 Survey)
 
-We surveyed our Season 1 users (who rated their willingness to join Season 2 at **4.8/5**). Here are the core comments and pain points they raised:
+We distributed a feedback Google Form to our early user cohort around July 25th, 2026, to capture their experiences during Season 1. Across all respondents, users rated their willingness to join Season 2 at **4.8/5**. Here are the core comments and pain points they raised:
 
 ### 1. AI Briefings
 * **Positive Sentiment:** 
