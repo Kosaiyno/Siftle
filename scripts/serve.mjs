@@ -3009,7 +3009,7 @@ const summarizeLocally = (article) => {
   return base.length > 220 ? `${base.slice(0, 217).trim()}...` : base;
 };
 
-const summaryPromptVersion = "briefing-v9";
+const summaryPromptVersion = "briefing-v10";
 
 const summarizeLocallyTight = (article) =>
   stripHtml(article?.summary || article?.headline || "")
@@ -3721,7 +3721,7 @@ const summarizeWith0G = async (article, options = {}) => {
       "- [Detailed key point 2]",
       "- [Detailed key point 3]",
       "**TAKEAWAY:** [Analytical takeaway sentence]",
-      "Rules: Stay strictly grounded in the supplied text. Do NOT include any outside facts, assumptions, or external details. Write full, detailed, comprehensive sentences for each section, avoiding short summaries or fragments. Every key point in the KEY POINTS list must be on a single line starting with '- '. Do NOT insert newlines, subheadings, or sub-bullets inside a bullet point. Do NOT write generic placeholder statements (like 'The current article provides details...' or 'Further context is needed...'). Output only valid JSON."
+      "Rules: Stay strictly grounded in the supplied text. Do NOT include any outside facts, assumptions, or external details. Write full, detailed, comprehensive sentences for each section, avoiding short summaries or fragments. You MUST always generate exactly 3 key points in the KEY POINTS list. If the supplied text is short, break down the available details and facts into 3 distinct points (e.g. details of the transaction, the background of negotiations, contract situations, or player context present in the text) instead of combining them. Every key point in the KEY POINTS list must be on a single line starting with '- '. Do NOT insert newlines, subheadings, or sub-bullets inside a bullet point. Do NOT write generic placeholder statements (like 'The current article provides details...' or 'Further context is needed...'). Output only valid JSON."
     ].join(" ");
     const userPayload = {
       headline: article.headline,
