@@ -559,7 +559,14 @@ const rssFeeds = {
     "https://e00-marca.uecdn.es/rss/en/index.xml",
     "https://www.football-espana.net/feed",
     "https://football-italia.net/feed/",
-    "https://bulinews.com/rss.xml"
+    "https://bulinews.com/rss.xml",
+    "https://e00-marca.uecdn.es/rss/en/football/real-madrid.xml",
+    "https://www.barcablaugranes.com/rss/index.xml",
+    "https://www.managingmadrid.com/rss/index.xml",
+    "https://feeds.bbci.co.uk/sport/football/us-major-league/rss.xml",
+    "https://e00-marca.uecdn.es/rss/en/football/mls.xml",
+    "https://www.arabnews.com/cat/49/rss.xml",
+    "https://e00-marca.uecdn.es/rss/en/football/international.xml"
   ]
 };
 
@@ -3003,7 +3010,7 @@ const summarizeLocally = (article) => {
   return base.length > 220 ? `${base.slice(0, 217).trim()}...` : base;
 };
 
-const summaryPromptVersion = "briefing-v5";
+const summaryPromptVersion = "briefing-v6";
 
 const summarizeLocallyTight = (article) =>
   stripHtml(article?.summary || article?.headline || "")
@@ -3164,9 +3171,24 @@ const formatStructuredBriefing = ({ whatHappened, keyPoints, previousUpdates, ta
   ].join("\n");
 };
 
+const stripIncompleteSentence = (text = "") => {
+  let cleaned = String(text || "").trim();
+  cleaned = cleaned.replace(/\s*(?:\.\.\.|…|\[\.\.\.\])\s*$/, "").trim();
+  const lastIndex = Math.max(
+    cleaned.lastIndexOf("."),
+    cleaned.lastIndexOf("?"),
+    cleaned.lastIndexOf("!")
+  );
+  if (lastIndex !== -1 && lastIndex < cleaned.length - 1) {
+    cleaned = cleaned.slice(0, lastIndex + 1).trim();
+  }
+  return cleaned;
+};
+
 const buildLocalStructuredBriefingParts = (article, thread = null) => {
   const headline = stripHtml(article?.headline || "").trim();
-  const baseText = stripHtml(article?.summary || article?.headline || "").replace(/\s+/g, " ").trim();
+  const rawBaseText = stripHtml(article?.summary || article?.headline || "").replace(/\s+/g, " ").trim();
+  const baseText = stripIncompleteSentence(rawBaseText);
   const sentences = splitIntoSentences(baseText);
   const whatHappened = truncateSentence(
     dedupeNormalizedLines([
@@ -3610,7 +3632,7 @@ const scrapeArticleText = async (url) => {
       .replace(/<[^>]+>/g, " ")
       .replace(/\s+/g, " ")
       .trim();
-    return text.slice(0, 8000);
+    return text.slice(0, 18000);
   } catch {
     return "";
   }
@@ -3669,7 +3691,7 @@ const summarizeWith0G = async (article, options = {}) => {
       "- [Detailed key point 2]",
       "- [Detailed key point 3]",
       "**TAKEAWAY:** [Analytical takeaway sentence]",
-      "Rules: Be comprehensive and highly detailed, ensuring the briefing is in-depth and informative. You may draw upon your general knowledge of the football teams, players, and transfer/match context mentioned to expand the briefing and provide full, detailed sections. Output only valid JSON."
+      "Rules: Stay strictly grounded in the supplied text. Do NOT include any outside facts, assumptions, or external details. Write full, detailed, comprehensive sentences for each section, avoiding short summaries or fragments. Every key point in the KEY POINTS list must be on a single line starting with '- '. Do NOT insert newlines, subheadings, or sub-bullets inside a bullet point. Output only valid JSON."
     ].join(" ");
     const userPayload = {
       headline: article.headline,
