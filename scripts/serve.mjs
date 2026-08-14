@@ -3009,7 +3009,7 @@ const summarizeLocally = (article) => {
   return base.length > 220 ? `${base.slice(0, 217).trim()}...` : base;
 };
 
-const summaryPromptVersion = "briefing-v19";
+const summaryPromptVersion = "briefing-v21";
 
 const summarizeLocallyTight = (article) =>
   stripHtml(article?.summary || article?.headline || "")
@@ -3660,7 +3660,12 @@ const scrapeArticleText = async (url) => {
     if (html.includes("Just a moment...") || html.includes("cf-challenge") || html.includes("Cloudflare")) {
       return "";
     }
-    const text = html
+    let contentHtml = html;
+    const articleMatch = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
+    if (articleMatch) {
+      contentHtml = articleMatch[1];
+    }
+    const text = contentHtml
       .replace(/<head[\s\S]*?<\/head>/gi, "")
       .replace(/<script[\s\S]*?<\/script>/gi, "")
       .replace(/<style[\s\S]*?<\/style>/gi, "")
@@ -3715,8 +3720,8 @@ const summarizeWith0G = async (article, options = {}) => {
         articleText = scraped;
       }
     }
-    if (articleText.length > 3500) {
-      articleText = articleText.slice(0, 3500) + "...";
+    if (articleText.length > 1800) {
+      articleText = articleText.slice(0, 1800) + "...";
     }
 
     const service = await get0GService();
@@ -3726,13 +3731,13 @@ const summarizeWith0G = async (article, options = {}) => {
     const systemPrompt = [
       "You are Siftle's AI Briefing assistant. Return strict JSON with exactly one key: summary.",
       "The summary value must follow this exact structure and nothing else:",
-      "**WHAT HAPPENED:** [Ultra-short summary, maximum 18 words]",
+      "**WHAT HAPPENED:** [Comprehensive, detailed explanation of 1-3 sentences]",
       "**KEY POINTS:**",
-      "- [Key point 1, maximum 12 words]",
-      "- [Key point 2, maximum 12 words]",
-      "- [Key point 3, maximum 12 words]",
-      "**TAKEAWAY:** [Analytical takeaway, maximum 15 words]",
-      "Rules: Stay strictly grounded in the supplied text. Do NOT include any outside facts, assumptions, or external details. Write extremely short and concise complete sentences for each section, staying strictly within the maximum word limits (max 18 words for WHAT HAPPENED, max 12 words per bullet point, and max 15 words for TAKEAWAY). You MUST always generate exactly 3 key points in the KEY POINTS list. Every key point in the KEY POINTS list must be a complete concise sentence on a single line starting with '- '. Do NOT insert newlines, subheadings, or sub-bullets inside a bullet point. Output only valid JSON."
+      "- [Detailed key point 1]",
+      "- [Detailed key point 2]",
+      "- [Detailed key point 3]",
+      "**TAKEAWAY:** [Analytical takeaway sentence]",
+      "Rules: Stay strictly grounded in the supplied text. Do NOT include any outside facts, assumptions, or external details. Write full, detailed, comprehensive sentences for each section, avoiding short summaries or fragments. You MUST always generate exactly 3 key points in the KEY POINTS list. If the supplied text is short, break down the available details and facts into 3 distinct points (e.g. details of the transaction, the background of negotiations, contract situations, or player context present in the text) instead of combining them. Every key point in the KEY POINTS list must be on a single line starting with '- '. Do NOT insert newlines, subheadings, or sub-bullets inside a bullet point. Output only valid JSON."
     ].join(" ");
     const userPayload = {
       headline: article.headline,
@@ -3870,7 +3875,6 @@ const summarizeWith0G = async (article, options = {}) => {
       error: error.message
     };
     const summary = normalizeStructuredBriefing(buildLocalStructuredBriefing(article, thread), article, thread);
-    writeFileSync(cachePath, JSON.stringify({ summary, cached_at: new Date().toISOString(), provider: "local-fallback", proof: errorProof, prompt_version: summaryPromptVersion }, null, 2));
     return { summary, provider: "local-fallback", error: error.message, proof: errorProof };
   }
 };
