@@ -565,8 +565,7 @@ const rssFeeds = {
     "https://www.managingmadrid.com/rss/index.xml",
     "https://feeds.bbci.co.uk/sport/football/us-major-league/rss.xml",
     "https://e00-marca.uecdn.es/rss/en/football/mls.xml",
-    "https://www.arabnews.com/cat/49/rss.xml",
-    "https://e00-marca.uecdn.es/rss/en/football/international.xml"
+    "https://www.arabnews.com/cat/49/rss.xml"
   ]
 };
 
