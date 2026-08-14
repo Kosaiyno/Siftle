@@ -3009,7 +3009,7 @@ const summarizeLocally = (article) => {
   return base.length > 220 ? `${base.slice(0, 217).trim()}...` : base;
 };
 
-const summaryPromptVersion = "briefing-v7";
+const summaryPromptVersion = "briefing-v8";
 
 const summarizeLocallyTight = (article) =>
   stripHtml(article?.summary || article?.headline || "")
@@ -3164,11 +3164,6 @@ const buildPreviousUpdatesText = (story, thread) => {
 
 const formatStructuredBriefing = ({ whatHappened, keyPoints, previousUpdates, takeaway }) => {
   const bullets = dedupeNormalizedLines(keyPoints).slice(0, 3);
-  while (bullets.length < 3) {
-    if (bullets.length === 0) bullets.push("Source coverage is limited, so this briefing sticks to the confirmed update.");
-    else if (bullets.length === 1) bullets.push("The current article provides the clearest confirmed details available right now.");
-    else bullets.push("Further context will depend on the next verified update in this story thread.");
-  }
 
   return [
     `**WHAT HAPPENED:** ${String(whatHappened || "").trim()}`,
@@ -3714,7 +3709,7 @@ const summarizeWith0G = async (article, options = {}) => {
       "- [Detailed key point 2]",
       "- [Detailed key point 3]",
       "**TAKEAWAY:** [Analytical takeaway sentence]",
-      "Rules: Stay strictly grounded in the supplied text. Do NOT include any outside facts, assumptions, or external details. Write full, detailed, comprehensive sentences for each section, avoiding short summaries or fragments. Every key point in the KEY POINTS list must be on a single line starting with '- '. Do NOT insert newlines, subheadings, or sub-bullets inside a bullet point. Output only valid JSON."
+      "Rules: Stay strictly grounded in the supplied text. Do NOT include any outside facts, assumptions, or external details. Write full, detailed, comprehensive sentences for each section, avoiding short summaries or fragments. Every key point in the KEY POINTS list must be on a single line starting with '- '. Do NOT insert newlines, subheadings, or sub-bullets inside a bullet point. Do NOT write generic placeholder statements (like 'The current article provides details...' or 'Further context is needed...'). Output only valid JSON."
     ].join(" ");
     const userPayload = {
       headline: article.headline,
