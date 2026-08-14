@@ -3201,6 +3201,9 @@ const stripIncompleteSentence = (text = "") => {
   if (lastIndex !== -1 && lastIndex < cleaned.length - 1) {
     cleaned = cleaned.slice(0, lastIndex + 1).trim();
   }
+  // Strip trailing prepositions, conjunctions, auxiliary verbs, and trailing punctuation
+  cleaned = cleaned.replace(/(?:[\s,;\-\—\–\/\\]+(?:for|with|the|a|and|to|at|on|in|after|before|under|above|of|about|over|by|from|as|but|or|so|yet|who|which|that|is|are|was|were|has|have|had|been|would|should|could|will|shall|can|may|might|about))+$/i, "").trim();
+  cleaned = cleaned.replace(/[\s,;:\-\—\–\/\\]+$/, "").trim();
   return cleaned;
 };
 
@@ -3723,13 +3726,13 @@ const summarizeWith0G = async (article, options = {}) => {
     const systemPrompt = [
       "You are Siftle's AI Briefing assistant. Return strict JSON with exactly one key: summary.",
       "The summary value must follow this exact structure and nothing else:",
-      "**WHAT HAPPENED:** [Concise explanation of 1-2 sentences]",
+      "**WHAT HAPPENED:** [Ultra-short summary, maximum 18 words]",
       "**KEY POINTS:**",
-      "- [Concise key point 1]",
-      "- [Concise key point 2]",
-      "- [Concise key point 3]",
-      "**TAKEAWAY:** [Concise analytical takeaway sentence]",
-      "Rules: Stay strictly grounded in the supplied text. Do NOT include any outside facts, assumptions, or external details. Write concise but complete sentences for each section (typically 12-20 words per sentence), avoiding overly long descriptions or fragments. You MUST always generate exactly 3 key points in the KEY POINTS list. If the supplied text is short, break down the available details and facts into 3 distinct points (e.g. details of the transaction, the background of negotiations, contract situations, or player context present in the text) instead of combining them. Every key point in the KEY POINTS list must be a concise complete sentence on a single line starting with '- '. Do NOT insert newlines, subheadings, or sub-bullets inside a bullet point. Do NOT write generic placeholder statements (like 'The current article provides details...' or 'Further context is needed...'). Output only valid JSON."
+      "- [Key point 1, maximum 12 words]",
+      "- [Key point 2, maximum 12 words]",
+      "- [Key point 3, maximum 12 words]",
+      "**TAKEAWAY:** [Analytical takeaway, maximum 15 words]",
+      "Rules: Stay strictly grounded in the supplied text. Do NOT include any outside facts, assumptions, or external details. Write extremely short and concise complete sentences for each section, staying strictly within the maximum word limits (max 18 words for WHAT HAPPENED, max 12 words per bullet point, and max 15 words for TAKEAWAY). You MUST always generate exactly 3 key points in the KEY POINTS list. Every key point in the KEY POINTS list must be a complete concise sentence on a single line starting with '- '. Do NOT insert newlines, subheadings, or sub-bullets inside a bullet point. Output only valid JSON."
     ].join(" ");
     const userPayload = {
       headline: article.headline,
