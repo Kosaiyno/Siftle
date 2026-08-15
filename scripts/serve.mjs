@@ -123,9 +123,10 @@ let ARC_TESTNET_RPC_URL = process.env.ARC_TESTNET_RPC_URL || "https://5042002.rp
 if (ARC_TESTNET_RPC_URL === "https://rpc.testnet.arc.network") {
   ARC_TESTNET_RPC_URL = "https://5042002.rpc.thirdweb.com";
 }
-const leaderboardProvider = new JsonRpcProvider(ARC_TESTNET_RPC_URL, ARC_TESTNET_CHAIN_ID);
-const logsProvider = new JsonRpcProvider("https://rpc.testnet.arc.network", ARC_TESTNET_CHAIN_ID);
-const fallbackLogsProvider = new JsonRpcProvider("https://5042002.rpc.thirdweb.com", ARC_TESTNET_CHAIN_ID);
+const arcProviderOptions = { staticNetwork: true };
+const leaderboardProvider = new JsonRpcProvider(ARC_TESTNET_RPC_URL, ARC_TESTNET_CHAIN_ID, arcProviderOptions);
+const logsProvider = new JsonRpcProvider(ARC_TESTNET_RPC_URL, ARC_TESTNET_CHAIN_ID, arcProviderOptions);
+const fallbackLogsProvider = new JsonRpcProvider("https://5042002.rpc.thirdweb.com", ARC_TESTNET_CHAIN_ID, arcProviderOptions);
 const LOCAL_TEST_MARKET_ADDRESS = "0x0000000000000000000000000000000000000101";
 const isLocalTestMarketAddress = (address) => /^0x0{36}01[0-9a-f]{2}$/i.test(String(address || ""));
 const marketAddresses = {
@@ -9438,20 +9439,25 @@ const server = createServer(async (request, response) => {
         ? await applyBackendWalletMigration(email, user.address)
         : null;
       // === AUTO-FUNDING ENGINE START ===
-      const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, leaderboardProvider);
-      let balanceRaw = await usdc.balanceOf(user.address);
-      if (balanceRaw === 0n) {
-        try {
-          const signer = new Wallet(process.env.ARC_DEPLOYER_PRIVATE_KEY, leaderboardProvider);
-          const deployerUsdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
-          console.log(`[AUTO-FUND] User ${user.address} has 0 balance. Auto-funding 0.02 USDC...`);
-          const fundTx = await deployerUsdc.transfer(user.address, parseUnits("0.02", 6));
-          await fundTx.wait();
-          balanceRaw = await usdc.balanceOf(user.address);
-          console.log(`[AUTO-FUND] Funded user ${user.address}. New balance: ${formatUnits(balanceRaw, 6)} USDC`);
-        } catch (fundErr) {
-          console.error(`[AUTO-FUND] Failed to auto-fund user ${user.address}:`, fundErr.message);
+      let balanceRaw = 0n;
+      try {
+        const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, leaderboardProvider);
+        balanceRaw = await usdc.balanceOf(user.address);
+        if (balanceRaw === 0n && process.env.ARC_DEPLOYER_PRIVATE_KEY) {
+          try {
+            const signer = new Wallet(process.env.ARC_DEPLOYER_PRIVATE_KEY, leaderboardProvider);
+            const deployerUsdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
+            console.log(`[AUTO-FUND] User ${user.address} has 0 balance. Auto-funding 0.02 USDC...`);
+            const fundTx = await deployerUsdc.transfer(user.address, parseUnits("0.02", 6));
+            await fundTx.wait();
+            balanceRaw = await usdc.balanceOf(user.address);
+            console.log(`[AUTO-FUND] Funded user ${user.address}. New balance: ${formatUnits(balanceRaw, 6)} USDC`);
+          } catch (fundErr) {
+            console.error(`[AUTO-FUND] Failed to auto-fund user ${user.address}:`, fundErr.message);
+          }
         }
+      } catch (balanceErr) {
+        console.error(`[AUTH] Signed in without live USDC balance because Arc RPC failed:`, balanceErr.message);
       }
       // === AUTO-FUNDING ENGINE END ===
       sendJson(response, 200, {

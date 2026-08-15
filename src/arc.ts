@@ -53,7 +53,7 @@ const isBackendWalletModeEnabled = async (): Promise<boolean> => {
 };
 
 const BALANCE_OF_SELECTOR = "0x70a08231";
-const publicProvider = new JsonRpcProvider(ARC_TESTNET_RPC_URL, ARC_TESTNET_CHAIN_ID);
+const publicProvider = new JsonRpcProvider(ARC_TESTNET_RPC_URL, ARC_TESTNET_CHAIN_ID, { staticNetwork: true });
 
 const ERC20_ABI = [
   "function allowance(address owner, address spender) view returns (uint256)",
