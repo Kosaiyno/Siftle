@@ -152,7 +152,11 @@ const triggerWalletListeners = (address: string | null) => {
   });
 };
 
-// Circle Web SDK
+// ============================================================================
+// CIRCLE INTEGRATION: Circle Web3 SDK Setup
+// This initializes the Circle User-Controlled Programmable Wallets SDK (W3SSdk).
+// It manages user session state and triggers secure modals for PIN setup/validation.
+// ============================================================================
 let circleSdk: W3SSdk | null = null;
 
 const getCircleSdk = (): W3SSdk => {
@@ -566,8 +570,7 @@ export const connectArcWallet = async (): Promise<string> => {
           stepEmailDiv.style.display = "none";
           stepCodeDiv.style.display = "block";
           if (payload.devCode) {
-            codeInput.value = payload.devCode;
-            showStatus(`Verification code: ${payload.devCode} (Auto-filled)`, false);
+            showStatus(`Verification code: ${payload.devCode}`, false);
           } else {
             showStatus("We sent a 6-digit verification code. Please check your email.", false);
           }
@@ -787,8 +790,7 @@ export const connectArcWallet = async (): Promise<string> => {
         stepEmail.style.display = "none";
         stepOtp.style.display = "block";
         if (data.devOtp) {
-          otpInput.value = data.devOtp;
-          showStatus(`Verification code: ${data.devOtp} (Auto-filled)`, false);
+          showStatus(`Verification code: ${data.devOtp}`, false);
         } else {
           showStatus("Verification code sent to your email.");
         }
@@ -1323,6 +1325,11 @@ export const readArcMarketState = async (marketAddress: string, account: string)
   return { position, snapshot };
 };
 
+// ============================================================================
+// CIRCLE INTEGRATION: Execute User-Controlled Challenges (PIN/Security)
+// This function executes user-controlled authentication or signing challenges.
+// The SDK renders a secure iframe modal for entering PIN or security answers.
+// ============================================================================
 const runCircleChallenge = (challengeId: string): Promise<void> => {
   return new Promise((resolve, reject) => {
     const sdk = getCircleSdk();

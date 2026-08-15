@@ -10137,6 +10137,10 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  // ============================================================================
+  // CIRCLE INTEGRATION: Passwordless OTP Authentication Initiator
+  // Generates a 6-digit OTP and handles mailing it to the user.
+  // ============================================================================
   if (requestUrl.pathname === "/api/circle/auth/otp" && request.method === "POST") {
     try {
       const body = await readJsonBody(request);
@@ -10429,6 +10433,12 @@ const server = createServer(async (request, response) => {
         return;
       }
 
+      // ============================================================================
+      // CIRCLE INTEGRATION: Circle User-Controlled Wallet Onboarding
+      // 1. Fetches User Session Token & Encryption Key from Circle's W3S API.
+      // 2. Checks if an Arc-Testnet wallet already exists for this user.
+      // 3. Spins up a new wallet challenge if it's a new user.
+      // ============================================================================
       // Real Circle Auth
       try {
         const userId = `siftle_user_${getCircleUserId(cleanEmail)}`;
@@ -10514,6 +10524,11 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  // ============================================================================
+  // CIRCLE INTEGRATION: Execute On-Chain Actions via Circle SDK
+  // Takes contract parameters, contacts Circle's contractExecution endpoint,
+  // and returns a signing challenge ID for the user to sign via PIN.
+  // ============================================================================
   if (requestUrl.pathname === "/api/circle/tx/contract-call" && request.method === "POST") {
     try {
       const body = await readJsonBody(request);

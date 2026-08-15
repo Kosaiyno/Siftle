@@ -86,6 +86,12 @@ if (!/^0x[a-fA-F0-9]{40}$/.test(sellerAddress)) {
 }
 
 const app = express();
+
+// ============================================================================
+// CIRCLE INTEGRATION: Circle x402 Gateway Middleware
+// This sets up the Circle x402 batching server middleware to autonomously enforce
+// micro-USDC pricing rules and instantly clear payments under 500 milliseconds.
+// ============================================================================
 const gateway = createGatewayMiddleware({
   sellerAddress,
   facilitatorUrl: process.env.X402_FACILITATOR_URL || "https://gateway-api-testnet.circle.com",

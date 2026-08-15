@@ -10,6 +10,11 @@ if (!/^0x[a-fA-F0-9]{64}$/.test(privateKey)) {
   process.exit(1);
 }
 
+// ============================================================================
+// CIRCLE INTEGRATION: Circle x402 Gateway Client
+// This initializes the Circle x402 GatewayClient to handle signing and broadcasting
+// micro-USDC payment headers directly from an EOA wallet.
+// ============================================================================
 const client = new GatewayClient({
   chain: "arcTestnet",
   privateKey,
