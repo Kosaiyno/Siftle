@@ -965,14 +965,7 @@
           <span class="card-value" id="valRevenue">-</span>
           <span class="card-footer-desc" id="valRevenueDesc">Gross sales from pay-per-read</span>
         </div>
-        <div class="card">
-          <div class="card-header-flex">
-            <span class="card-label">Sponsor Gas Savings</span>
-            <span class="plan-badge" style="background: rgba(37, 99, 235, 0.1); border-color: rgba(37, 99, 235, 0.3); color: #2563eb;">Gasless</span>
-          </div>
-          <span class="card-value" id="valGasSavings">-</span>
-          <span class="card-footer-desc">User transaction fees saved</span>
-        </div>
+        
       </section>
 
       <!-- Visualizations Panel -->
@@ -1062,21 +1055,13 @@
           <span class="card-value" id="valPredVolume">-</span>
           <span class="card-footer-desc">Cumulative USDC traded</span>
         </div>
-        <div class="card">
-          <span class="card-label">Siftle Protocol Fees</span>
-          <span class="card-value" id="valProtocolFees">-</span>
-          <span class="card-footer-desc">Total 1% fee cut collected</span>
-        </div>
+        
         <div class="card">
           <span class="card-label">Briefing Sold Revenue</span>
           <span class="card-value" id="valBriefingRevenue">-</span>
           <span class="card-footer-desc">Gross sales from unlocks</span>
         </div>
-        <div class="card">
-          <span class="card-label">Total Protocol Revenue</span>
-          <span class="card-value" id="valTotalRevenue">-</span>
-          <span class="card-footer-desc">Fees + unlock sales</span>
-        </div>
+        
       </section>
 
       <div class="visual-panel">
@@ -1283,14 +1268,7 @@
           <span class="card-value" id="valTotalRevenueVal">-</span>
           <span class="card-footer-desc">Gross sales from pay-per-read</span>
         </div>
-        <div class="card">
-          <div class="card-header-flex">
-            <span class="card-label">Total Gas Sponsored</span>
-            <span class="plan-badge" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); color: #10b981;">Gasless</span>
-          </div>
-          <span class="card-value" id="valTotalGas">-</span>
-          <span class="card-footer-desc">Total gas fees saved on behalf of users</span>
-        </div>
+        
       </section>
     </div>
 
@@ -1521,7 +1499,7 @@
         document.getElementById('valSignups').textContent = uniqueSignups.toLocaleString();
         document.getElementById('valRevenue').textContent = exactTotalBriefings.toLocaleString();
         document.getElementById('valRevenueDesc').textContent = 'Gross sales from pay-per-read';
-        document.getElementById('valGasSavings').textContent = '$' + gasSavings.toFixed(3) + ' USDC';
+        
 
         // Populate Platform Totals View Cards
         document.getElementById('valTotalViews').textContent = (totals.app_open || 0).toLocaleString();
@@ -1530,13 +1508,13 @@
         document.getElementById('valTotalTrades').textContent = exactTotalTrades.toLocaleString();
         document.getElementById('valTotalVolume').textContent = '$' + predictionVolume.toFixed(2) + ' USDC';
         document.getElementById('valTotalRevenueVal').textContent = '$' + briefingRevenue.toFixed(4) + ' USDC';
-        document.getElementById('valTotalGas').textContent = '$' + gasSavings.toFixed(3) + ' USDC';
+        
 
         // Populate Volume & Revenue View Cards
         document.getElementById('valPredVolume').textContent = '$' + predictionVolume.toFixed(2) + ' USDC';
-        document.getElementById('valProtocolFees').textContent = '$' + protocolFees.toFixed(4) + ' USDC';
+        
         document.getElementById('valBriefingRevenue').textContent = '$' + briefingRevenue.toFixed(4) + ' USDC';
-        document.getElementById('valTotalRevenue').textContent = '$' + totalRevenue.toFixed(4) + ' USDC';
+        
 
         // Populate Network Health View Cards
         const totalTradesOutcome = tradeSuccesses + (totals.trade_failed || 0);
@@ -1548,7 +1526,7 @@
         document.getElementById('valBriefingSuccessRate').textContent = briefingSuccessRate;
 
         document.getElementById('valSponsoredTrades').textContent = tradeSuccesses.toLocaleString();
-        document.getElementById('valTotalGasSaved').textContent = '$' + gasSavings.toFixed(3) + ' USDC';
+        
 
         // Render Health logs table
         const healthLogsBody = document.getElementById('healthLogsBody');

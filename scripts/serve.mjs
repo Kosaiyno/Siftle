@@ -7419,6 +7419,7 @@ function getLocalAiBriefingWalletMetrics(data = {}) {
 
 async function buildAnalyticsReport(localData = loadAnalytics()) {
   const data = await loadAnalyticsFromSupabase(localData);
+  if (data.derived) { delete data.derived.protocolFees; delete data.derived.totalRevenue; delete data.derived.sponsorGasSavings; }
   const todayKey = getTodayKey();
   const derived = {
     signupsByDate: {},
@@ -7570,9 +7571,9 @@ async function buildAnalyticsReport(localData = loadAnalytics()) {
   derived.totalUniqueTrades = optionPositionsCount > 0 ? optionPositionsCount + binaryContractTradesCount : totalTrades;
   const binaryContractVolume = 182.00; // Exact on-chain volume across 26 factory binary contracts
   derived.predictionVolume = Number((exactOptionVolume > 0 ? exactOptionVolume + binaryContractVolume : totalTrades * 2).toFixed(2));
-  derived.protocolFees = Number((derived.predictionVolume * 0.01).toFixed(6));
-  derived.totalRevenue = Number((derived.briefingRevenue + derived.protocolFees).toFixed(6));
-  derived.sponsorGasSavings = Number(((totalSignups + (derived.totalUniqueTrades || totalTrades) + totalClaims + (derived.totalBriefingUnlocks || totalUnlocks)) * 0.0015).toFixed(6));
+  delete derived.protocolFees;
+  delete derived.totalRevenue;
+  delete derived.sponsorGasSavings;
 
   let deployerAddress = "";
   if (process.env.ARC_DEPLOYER_PRIVATE_KEY) {
