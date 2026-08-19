@@ -12329,3 +12329,259 @@ body {
 .mobile-bottom-nav button.active {
   color: #0052FF !important;
 }
+
+
+/* ==========================================================================
+   CHELSEA FC & ONEFOOTBALL EXACT REPLICA STYLES (Image 2 & 3 Design)
+   ========================================================================== */
+
+/* Global Font & Obsidian Theme Override */
+html, body {
+  background-color: #05070E !important;
+  color: #FFFFFF !important;
+  font-family: 'Outfit', 'Inter', -apple-system, sans-serif !important;
+}
+
+/* --- Image 2: Chelsea News Cards --- */
+.chelsea-news-card {
+  background: #11141D !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+  margin-bottom: 20px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+  cursor: pointer !important;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease !important;
+}
+
+.chelsea-news-card:hover {
+  transform: translateY(-2px) !important;
+  border-color: rgba(0, 82, 255, 0.4) !important;
+}
+
+.chelsea-card-media {
+  position: relative !important;
+  width: 100% !important;
+  height: 220px !important;
+  overflow: hidden !important;
+  background: #080A0F !important;
+}
+
+.chelsea-card-media img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+.chelsea-media-badge {
+  position: absolute !important;
+  top: 14px !important;
+  left: 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  z-index: 2 !important;
+}
+
+.badge-cat {
+  background: #0052FF !important;
+  color: #FFFFFF !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em !important;
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  text-transform: uppercase !important;
+}
+
+.badge-time {
+  background: rgba(8, 10, 15, 0.85) !important;
+  backdrop-filter: blur(8px) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  font-size: 0.7rem !important;
+  font-weight: 750 !important;
+  padding: 4px 8px !important;
+  border-radius: 6px !important;
+}
+
+.chelsea-card-body {
+  padding: 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+}
+
+.chelsea-card-title {
+  font-family: 'Outfit', 'Space Grotesk', sans-serif !important;
+  font-size: 1.25rem !important;
+  font-weight: 800 !important;
+  line-height: 1.25 !important;
+  color: #FFFFFF !important;
+  margin: 0 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.chelsea-card-excerpt {
+  font-size: 0.88rem !important;
+  color: #94A3B8 !important;
+  line-height: 1.45 !important;
+  margin: 0 !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+.chelsea-card-footer {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-top: 6px !important;
+  padding-top: 14px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.chelsea-action-btn {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #FFFFFF !important;
+  border-radius: 8px !important;
+  padding: 8px 14px !important;
+  font-size: 0.76rem !important;
+  font-weight: 800 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.chelsea-action-btn:hover {
+  background: #0052FF !important;
+  border-color: #0052FF !important;
+}
+
+.chelsea-source-tag {
+  font-size: 0.78rem !important;
+  color: #64748B !important;
+  font-weight: 650 !important;
+}
+
+/* --- Image 3: Chelsea Markets & Transfers Hub --- */
+.chelsea-hub-header {
+  margin-bottom: 20px !important;
+}
+
+.chelsea-hub-title {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 1.8rem !important;
+  font-weight: 800 !important;
+  color: #FFFFFF !important;
+  margin: 0 0 4px 0 !important;
+}
+
+.chelsea-hub-subtitle {
+  font-size: 0.88rem !important;
+  color: #8F9BB3 !important;
+  margin: 0 0 16px 0 !important;
+}
+
+.chelsea-filter-bar {
+  display: flex !important;
+  gap: 10px !important;
+  margin-bottom: 20px !important;
+}
+
+.chelsea-filter-pill {
+  background: #0052FF !important;
+  border: 1px solid #0052FF !important;
+  color: #FFFFFF !important;
+  border-radius: 8px !important;
+  padding: 8px 16px !important;
+  font-size: 0.78rem !important;
+  font-weight: 800 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+}
+
+.featured-transfer-card {
+  position: relative !important;
+  border-radius: 20px !important;
+  overflow: hidden !important;
+  margin-bottom: 20px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: linear-gradient(180deg, rgba(14, 20, 36, 0.95), rgba(8, 12, 22, 0.98)) !important;
+  padding: 24px !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5) !important;
+}
+
+.transfer-badge-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 14px !important;
+}
+
+.heat-badge {
+  background: #EAB308 !important;
+  color: #000000 !important;
+  font-weight: 850 !important;
+  font-size: 0.72rem !important;
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+}
+
+.value-badge {
+  font-size: 0.85rem !important;
+  font-weight: 800 !important;
+  color: #FFFFFF !important;
+}
+
+.player-transfer-title {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 1.6rem !important;
+  font-weight: 800 !important;
+  color: #FFFFFF !important;
+  margin: 0 0 4px 0 !important;
+}
+
+.player-club-sub {
+  font-size: 0.85rem !important;
+  color: #8F9BB3 !important;
+  margin-bottom: 18px !important;
+}
+
+.probability-bar-container {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+.probability-label-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  font-size: 0.78rem !important;
+  font-weight: 750 !important;
+  color: #8F9BB3 !important;
+}
+
+.probability-progress-track {
+  width: 100% !important;
+  height: 8px !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 999px !important;
+  overflow: hidden !important;
+}
+
+.probability-progress-fill {
+  height: 100% !important;
+  background: #EAB308 !important;
+  border-radius: 999px !important;
+}

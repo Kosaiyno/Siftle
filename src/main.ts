@@ -2735,118 +2735,30 @@ const renderPortfolioSkeleton = (count = 2): string => `
 `;
 
 const renderStoryCardHtml = (story: NewsStory): string => {
-  const isTweet = story.type === "tweet";
-
-  const twitterSvg = `<svg class="x-logo-svg" viewBox="0 0 24 24" fill="currentColor" style="width: 14px; height: 14px; display: inline-block; vertical-align: text-top; color: var(--color-text-primary);"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
-
-  const twitterSvgMobile = `<svg class="x-logo-svg" viewBox="0 0 24 24" fill="currentColor" style="width: 12px; height: 12px; display: inline-block; vertical-align: text-top; margin-right: 4px;"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
+  const categoryName = displayCategory(story.category).toUpperCase();
+  const timeLabel = getStoryTimeLabel(story).toUpperCase();
+  const excerpt = story.summary ? escapeHtml(story.summary.slice(0, 140)) + '...' : 'Tap to view full AI briefing and on-chain intelligence.';
 
   return `
-    <article class="story-card ${isTweet ? "social-story tweet-card" : isSocialStory(story) ? "social-story" : ""}" data-story-id="${story.id}" role="button" tabindex="0" aria-label="Open summary for ${story.headline}">
-
-      <!-- Desktop layout (visible above 640px) -->
-      <div class="story-topline desktop-only">
-        <div class="story-source">
-          <div>
-            ${isTweet ? `<div style="margin-bottom: 6px;">${twitterSvg}</div>` : ""}
-            <strong>${story.source}</strong>
-            <span>${getStoryTimeLabel(story)} - ${story.readTime}</span>
-          </div>
-        </div>
-        <div class="story-card-actions">
-          <button class="bookmark-button" type="button" data-bookmark-url="${story.sourceUrl}" aria-pressed="${story.saved ? "true" : "false"}" aria-label="${story.saved ? "Remove saved story" : "Save story"}">
-            ${renderBookmarkIcon()}
-          </button>
-          <div class="share-control">
-            <button class="export-button" type="button" aria-label="Export story card" data-export-id="${story.id}" aria-expanded="${state.activeShareStoryId === story.id}">
-              ${renderExportIcon()}
-            </button>
-            <div class="share-menu" ${state.activeShareStoryId === story.id ? "" : "hidden"}>
-              <button type="button" data-export-action="save" data-export-story-id="${story.id}">Save image</button>
-              <button type="button" data-export-action="share" data-export-story-id="${story.id}">Share</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="story-image-frame desktop-only" aria-hidden="true">
+    <article class="chelsea-news-card" data-story-id="${story.id}" role="button" tabindex="0" aria-label="Open ${story.headline}">
+      <div class="chelsea-card-media">
         <img src="${story.imageUrl}" alt="" loading="lazy" />
-      </div>
-
-      <div class="story-copy desktop-only">
-        <span class="category-chip ${story.category}">${displayCategory(story.category)}</span>
-        <h2 class="card-headline">${getStoryCardHeadline(story)}</h2>
-        <p>${isTweet ? "Tap to read the tweet" : "Tap to read the AI briefing."}</p>
-      </div>
-
-      <div class="card-action-row desktop-only">
-        ${isTweet
-          ? `<button class="card-source-button read-tweet-btn" type="button" style="cursor: pointer;">Read Tweet</button>
-             <a class="card-source-button twitter-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()" style="display: inline-flex; align-items: center; gap: 6px;">
-              ${twitterSvg}
-              Open Tweet
-             </a>`
-          : `
-              ${renderDesktopThreadButton(story)}
-              <button class="card-source-button summary-btn" type="button">AI briefing</button>
-              ${/example\\.com/i.test(story.sourceUrl)
-                ? `<a class="card-source-button disabled" href="#" onclick="event.preventDefault(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
-                : `<a class="card-source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
-            `
-        }
-      </div>
-
-      <!-- Mobile layout (visible at 640px and below) -->
-      <div class="mobile-card-inner mobile-only">
-        <div class="mobile-card-body">
-          <div class="mobile-card-text">
-            <div class="mobile-card-topline">
-              ${isTweet ? `
-                <span class="mobile-source-pill ${isSocialStory(story) ? "social" : ""}" style="display: inline-flex; align-items: center; gap: 4px; max-width: 100% !important;">
-                  ${twitterSvgMobile}
-                  ${getStorySourceLabel(story)}
-                </span>
-              ` : `
-                <div class="mobile-source-container">
-                  <span class="mobile-source-pill ${isSocialStory(story) ? "social" : ""}" style="display: inline-flex; align-items: center; gap: 4px; max-width: 100% !important;">
-                    ${getStorySourceLabel(story)}
-                  </span>
-                </div>
-              `}
-              <div class="mobile-icons">
-                <button class="mobile-bookmark-btn" type="button" data-bookmark-url="${story.sourceUrl}" aria-pressed="${story.saved ? "true" : "false"}" aria-label="Save story">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-                </button>
-                <button class="mobile-export-icon" type="button" data-export-action="save" data-export-story-id="${story.id}" aria-label="Save image">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="19"/></svg>
-                </button>
-              </div>
-            </div>
-            <h2 class="card-headline">${getStoryCardHeadline(story)}</h2>
-            <span class="mobile-card-time">${getStoryTimeLabel(story)}</span>
-          </div>
-          <div class="mobile-card-image" aria-hidden="true">
-            <img src="${story.imageUrl}" alt="" loading="lazy" />
-          </div>
-        </div>
-        <div class="mobile-card-actions">
-          ${isTweet
-            ? `<button class="mobile-action-btn read-tweet-btn" type="button" style="width: 50%; cursor: pointer;">Read Tweet</button>
-               <a class="mobile-action-btn source-btn twitter-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 50%;">
-                ${twitterSvgMobile}
-                Open Tweet
-               </a>`
-            : `
-                ${renderMobileThreadButton(story)}
-                ${/example\\.com/i.test(story.sourceUrl)
-                  ? `<a class="mobile-action-btn source-btn disabled" href="#" onclick="event.preventDefault(); event.stopPropagation(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
-                  : `<a class="mobile-action-btn source-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Open source</a>`}
-                <button class="mobile-action-btn summary-btn" type="button">AI briefing</button>
-              `
-          }
+        <div class="chelsea-media-badge">
+          <span class="badge-cat">${categoryName}</span>
+          <span class="badge-time">${timeLabel}</span>
         </div>
       </div>
-
+      <div class="chelsea-card-body">
+        <h2 class="chelsea-card-title">${getStoryCardHeadline(story)}</h2>
+        <p class="chelsea-card-excerpt">${excerpt}</p>
+        <div class="chelsea-card-footer">
+          <button class="chelsea-action-btn summary-btn" type="button">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="#0052FF"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            AI BRIEFING
+          </button>
+          <span class="chelsea-source-tag">${story.source}</span>
+        </div>
+      </div>
     </article>
   `;
 };

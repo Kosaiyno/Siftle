@@ -10,12 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <script>
       (function () {
-        try {
-          var savedTheme = localStorage.getItem("siftle_theme");
-          document.documentElement.dataset.theme = savedTheme === "light" ? "light" : "dark";
-        } catch (error) {
-          document.documentElement.dataset.theme = "dark";
-        }
+        document.documentElement.dataset.theme = "dark";
+        localStorage.setItem("siftle_theme", "dark");
       })();
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
