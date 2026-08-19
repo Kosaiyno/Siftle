@@ -67,6 +67,7 @@ const getShelbyClient = () => {
         apiKey: process.env.SHELBY_API_KEY
       },
       indexer: {
+        baseUrl: process.env.SHELBY_INDEXER_URL || "https://api.shelbynet.shelby.xyz/v1/graphql",
         apiKey: process.env.SHELBY_API_KEY
       },
       orderless: true
@@ -103,11 +104,19 @@ export const uploadShelbySnapshot = async (snapshot) => {
   const blobName = getShelbyBlobName(snapshot.date, snapshot.category);
   const blobData = textEncoder.encode(JSON.stringify(snapshot, null, 2));
 
-  // Check if blob is already registered on-chain
-  const existingBlobMetadata = await client.coordination.getBlobMetadata({
-    account: signer.accountAddress,
-    name: blobName
-  });
+  // Check if blob is already registered on-chain via indexer
+  let existingBlobMetadata = null;
+  try {
+    const blobs = await client.coordination.getAccountBlobs({
+      account: signer.accountAddress,
+      pagination: { limit: 200, offset: 0 }
+    });
+    if (Array.isArray(blobs) && blobs.some((b) => b.blobNameSuffix === blobName && !b.isDeleted)) {
+      existingBlobMetadata = true;
+    }
+  } catch (e) {
+    existingBlobMetadata = null;
+  }
 
   if (existingBlobMetadata) {
     console.log(`[SHELBY ARCHIVE] Blob ${blobName} is already archived on-chain. Skipping upload to prevent overwrite conflict.`);
@@ -123,35 +132,50 @@ export const uploadShelbySnapshot = async (snapshot) => {
   const provider = await client.getProvider();
   const blobCommitments = await generateCommitments(provider, blobData);
   
-  const { transaction: pendingRegisterBlobTransaction } = await client.coordination.registerBlob({
-    account: signer,
-    blobName: blobName,
-    blobMerkleRoot: blobCommitments.blob_merkle_root,
-    size: blobData.length,
-    expirationMicros: getExpirationMicros(),
-    config: provider.config
-  });
+  try {
+    const { transaction: pendingRegisterBlobTransaction } = await client.coordination.registerBlob({
+      account: signer,
+      blobName: blobName,
+      blobMerkleRoot: blobCommitments.blob_merkle_root,
+      size: blobData.length,
+      expirationMicros: getExpirationMicros(),
+      config: provider.config
+    });
 
-  await client.coordination.aptos.waitForTransaction({
-    transactionHash: pendingRegisterBlobTransaction.hash,
-    options: {
-      timeoutSecs: 90
-    }
-  });
+    await client.coordination.aptos.waitForTransaction({
+      transactionHash: pendingRegisterBlobTransaction.hash,
+      options: {
+        timeoutSecs: 90
+      }
+    });
+  } catch (regErr) {
+    console.warn(`[SHELBY ARCHIVE] On-chain register notice for ${blobName}: ${regErr.message}`);
+  }
 
   // Use rpc.putBlob directly to ensure a fresh, non-resumable upload and avoid 400 Bad Request resume errors
-  await client.rpc.putBlob({
-    account: signer.accountAddress,
-    blobName: blobName,
-    blobData: blobData
-  });
-
-  return {
-    provider: "shelby",
-    blob_name: blobName,
-    account: signer.accountAddress.toString(),
-    rpc_url: process.env.SHELBY_RPC_URL
-  };
+  try {
+    await client.rpc.putBlob({
+      account: signer.accountAddress,
+      blobName: blobName,
+      blobData: blobData
+    });
+    return {
+      provider: "shelby",
+      blob_name: blobName,
+      account: signer.accountAddress.toString(),
+      rpc_url: process.env.SHELBY_RPC_URL
+    };
+  } catch (err) {
+    console.warn(`[SHELBY ARCHIVE] Remote Shelby storage node notice for ${blobName}: ${err.message}`);
+    return {
+      provider: "shelby",
+      blob_name: blobName,
+      account: signer.accountAddress.toString(),
+      rpc_url: process.env.SHELBY_RPC_URL,
+      skipped: true,
+      error: err.message
+    };
+  }
 };
 
 export const downloadShelbyBlob = async (blobName) => {
@@ -247,10 +271,18 @@ export const backupAnalyticsToShelby = async (analyticsData) => {
   const blobName = `${prefix}/analytics/backup-${today}.json`;
   const blobData = textEncoder.encode(JSON.stringify(analyticsData, null, 2));
 
-  const existingBlobMetadata = await client.coordination.getBlobMetadata({
-    account: signer.accountAddress,
-    name: blobName
-  });
+  let existingBlobMetadata = null;
+  try {
+    const blobs = await client.coordination.getAccountBlobs({
+      account: signer.accountAddress,
+      pagination: { limit: 200, offset: 0 }
+    });
+    if (Array.isArray(blobs) && blobs.some((b) => b.blobNameSuffix === blobName && !b.isDeleted)) {
+      existingBlobMetadata = true;
+    }
+  } catch (e) {
+    existingBlobMetadata = null;
+  }
 
   if (existingBlobMetadata) {
     console.log(`[ANALYTICS BACKUP] Analytics backup for ${today} already exists on-chain. Skipping upload to conserve gas.`);
@@ -260,27 +292,35 @@ export const backupAnalyticsToShelby = async (analyticsData) => {
   const provider = await client.getProvider();
   const blobCommitments = await generateCommitments(provider, blobData);
   
-  const { transaction: pendingRegisterBlobTransaction } = await client.coordination.registerBlob({
-    account: signer,
-    blobName: blobName,
-    blobMerkleRoot: blobCommitments.blob_merkle_root,
-    size: blobData.length,
-    expirationMicros: getExpirationMicros(),
-    config: provider.config
-  });
+  try {
+    const { transaction: pendingRegisterBlobTransaction } = await client.coordination.registerBlob({
+      account: signer,
+      blobName: blobName,
+      blobMerkleRoot: blobCommitments.blob_merkle_root,
+      size: blobData.length,
+      expirationMicros: getExpirationMicros(),
+      config: provider.config
+    });
 
-  await client.coordination.aptos.waitForTransaction({
-    transactionHash: pendingRegisterBlobTransaction.hash,
-    options: { timeoutSecs: 90 }
-  });
+    await client.coordination.aptos.waitForTransaction({
+      transactionHash: pendingRegisterBlobTransaction.hash,
+      options: { timeoutSecs: 90 }
+    });
+  } catch (regErr) {
+    console.warn(`[ANALYTICS BACKUP] On-chain register notice for ${blobName}: ${regErr.message}`);
+  }
 
-  await client.rpc.putBlob({
-    account: signer.accountAddress,
-    blobName: blobName,
-    blobData: blobData
-  });
-
-  return blobName;
+  try {
+    await client.rpc.putBlob({
+      account: signer.accountAddress,
+      blobName: blobName,
+      blobData: blobData
+    });
+    return blobName;
+  } catch (err) {
+    console.warn(`[ANALYTICS BACKUP] Remote Shelby storage node notice for ${blobName}: ${err.message}`);
+    return null;
+  }
 };
 
 export const restoreAnalyticsFromShelby = async () => {
