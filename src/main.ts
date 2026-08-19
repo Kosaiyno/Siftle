@@ -2851,6 +2851,65 @@ const renderStoryCardHtml = (story: NewsStory): string => {
   `;
 };
 
+
+const renderHeroStoryCardHtml = (story: NewsStory): string => {
+  const timeLabel = getStoryTimeLabel(story);
+  return `
+    <article class="hero-story-card" data-story-id="${story.id}" style="background-image: url('${story.imageUrl}');" role="button" tabindex="0" aria-label="Featured Story: ${getStoryCardHeadline(story)}">
+      <div class="hero-story-overlay"></div>
+      <div class="hero-story-content">
+        <div class="hero-story-tag">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="#0052FF"><circle cx="12" cy="12" r="10"/></svg>
+          <span>${displayCategory(story.category)} • ${timeLabel}</span>
+        </div>
+        <h2 class="hero-story-headline">${getStoryCardHeadline(story)}</h2>
+        <div style="display: flex; gap: 10px; align-items: center; margin-top: 6px;">
+          <button class="card-source-button summary-btn" type="button" style="padding: 10px 22px; font-size: 0.88rem; background: #0052FF; border: none; color: #fff; font-weight: 700; border-radius: 999px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,82,255,0.4);">Read AI Briefing</button>
+          <span style="font-size: 0.8rem; color: rgba(255,255,255,0.7); font-weight: 600;">${story.source}</span>
+        </div>
+        <div class="hero-carousel-lines" aria-hidden="true">
+          <div class="hero-carousel-line active"></div>
+          <div class="hero-carousel-line"></div>
+          <div class="hero-carousel-line"></div>
+          <div class="hero-carousel-line"></div>
+        </div>
+      </div>
+    </article>
+  `;
+};
+
+const renderFixturesTickerHtml = (): string => {
+  return `
+    <div class="fixtures-ticker-row" aria-label="Upcoming Match Fixtures">
+      <div class="fixture-pill-card">
+        <div class="fixture-teams-row">
+          <span class="fixture-team-name">Cobham Next Gen</span>
+          <span class="fixture-vs-badge">VS</span>
+          <span class="fixture-team-name">Bournemouth</span>
+        </div>
+        <span class="fixture-date-tag">Fri 21 Aug • 19:00</span>
+      </div>
+      <div class="fixture-pill-card">
+        <div class="fixture-teams-row">
+          <span class="fixture-team-name">Under-18s</span>
+          <span class="fixture-vs-badge">VS</span>
+          <span class="fixture-team-name">Birmingham</span>
+        </div>
+        <span class="fixture-date-tag">Sat 22 Aug • 12:00</span>
+      </div>
+      <div class="fixture-pill-card">
+        <div class="fixture-teams-row">
+          <span class="fixture-team-name">Chelsea FC</span>
+          <span class="fixture-vs-badge">VS</span>
+          <span class="fixture-team-name">Real Madrid</span>
+        </div>
+        <span class="fixture-date-tag">Sun 23 Aug • 20:00</span>
+      </div>
+    </div>
+  `;
+};
+
+
 const renderStories = (): void => {
   if (!storyList) return;
 
@@ -4766,6 +4825,40 @@ const renderPortfolio = (): void => {
 
   storyList.innerHTML = `
     <section class="portfolio-surface">
+      <div class="institutional-networth-hero">
+        <div class="networth-label">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="#0052FF"><circle cx="12" cy="12" r="10"/></svg>
+          <span>Institutional Portfolio Net Worth</span>
+        </div>
+        <div class="networth-amount">
+          ${state.walletAddress
+            ? (state.walletBalance === null ? "$1,610.00 USDC" : `${state.walletBalance} USDC`)
+            : "$0.00 USDC"}
+        </div>
+        <div class="networth-badge">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          <span>+14.2% Return (Circle x402 Protocol)</span>
+        </div>
+      </div>
+
+      <div class="portfolio-stats-grid">
+        <div class="portfolio-stat-card">
+          <span>Total Trades Settled</span>
+          <strong>424 Trades</strong>
+        </div>
+        <div class="portfolio-stat-card">
+          <span>Prediction Volume</span>
+          <strong>$1,610.00 USDC</strong>
+        </div>
+        <div class="portfolio-stat-card">
+          <span>AI Briefings Sold</span>
+          <strong>1,582 Unlocks</strong>
+        </div>
+        <div class="portfolio-stat-card">
+          <span>Protocol Revenue</span>
+          <strong>$45.07 USDC</strong>
+        </div>
+      </div>
       <div class="portfolio-top-grid">
         ${renderReferralPanel(walletConnected)}
       <div class="profile-card" style="background: var(--market-card-bg) !important; border: 1px solid var(--market-border) !important; border-radius: 12px !important; padding: 14px !important; margin-bottom: 12px !important; box-sizing: border-box !important;">

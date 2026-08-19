@@ -11871,3 +11871,461 @@ html[data-theme="dark"] .provenance-action-link.ai-action-link:hover {
 
 
 
+
+
+/* ==========================================================================
+   SIFTLE MODERN UI/UX OVERHAUL (Chelsea FC & OneFootball Inspired)
+   Brand Colors: Primary Blue (#0052FF / #001489), Crisp White (#FFFFFF), Obsidian Black (#080A0F)
+   ========================================================================== */
+
+/* Dark Mode Theme Variables Overrides */
+html[data-theme="dark"] {
+  --color-bg-base: #080A0F;
+  --color-bg-surface: #0E131F;
+  --color-bg-card: #121724;
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #8F9BB3;
+  --color-accent-blue: #0052FF;
+  --color-accent-navy: #001489;
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-card-border: rgba(255, 255, 255, 0.09);
+  --color-card-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+body {
+  background-color: #080A0F !important;
+  color: #FFFFFF !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Chelsea FC Style Header Lockup --- */
+.site-header {
+  background: rgba(8, 10, 15, 0.92) !important;
+  backdrop-filter: blur(20px) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  padding: 12px 24px !important;
+}
+
+.brand-lockup span {
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+  color: #FFFFFF !important;
+  font-size: 1.4rem !important;
+}
+
+/* Header Icon Buttons */
+.header-icon-button {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #A0AEC0 !important;
+  border-radius: 999px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.header-icon-button:hover,
+.header-icon-button.active {
+  background: #0052FF !important;
+  border-color: #0052FF !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 18px rgba(0, 82, 255, 0.4) !important;
+}
+
+/* Wallet Button */
+.wallet-button {
+  background: linear-gradient(135deg, #0052FF 0%, #001489 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #FFFFFF !important;
+  border-radius: 999px !important;
+  padding: 8px 18px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 20px rgba(0, 82, 255, 0.35) !important;
+}
+
+.wallet-button:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 24px rgba(0, 82, 255, 0.5) !important;
+}
+
+/* --- Hero Featured Card (Chelsea FC App Style) --- */
+.hero-story-card {
+  position: relative !important;
+  width: 100% !important;
+  min-height: 380px !important;
+  border-radius: 24px !important;
+  overflow: hidden !important;
+  margin-bottom: 18px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background-size: cover !important;
+  background-position: center !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-end !important;
+  padding: 28px !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6) !important;
+  cursor: pointer !important;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.hero-story-card:hover {
+  transform: translateY(-2px) !important;
+}
+
+.hero-story-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  background: linear-gradient(to top, #080A0F 0%, rgba(8, 10, 15, 0.75) 50%, rgba(8, 10, 15, 0.15) 100%) !important;
+  pointer-events: none !important;
+}
+
+.hero-story-content {
+  position: relative !important;
+  z-index: 2 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+.hero-story-tag {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 0.76rem !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  color: #60A5FA !important;
+}
+
+.hero-story-headline {
+  font-family: 'Outfit', 'Space Grotesk', sans-serif !important;
+  font-size: clamp(1.4rem, 3vw, 2.2rem) !important;
+  font-weight: 800 !important;
+  line-height: 1.15 !important;
+  color: #FFFFFF !important;
+  margin: 4px 0 8px 0 !important;
+  letter-spacing: -0.02em !important;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5) !important;
+}
+
+.hero-carousel-lines {
+  display: flex !important;
+  gap: 6px !important;
+  margin-top: 14px !important;
+}
+
+.hero-carousel-line {
+  height: 3px !important;
+  flex: 1 !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.25) !important;
+  transition: all 0.3s ease !important;
+}
+
+.hero-carousel-line.active {
+  background: #0052FF !important;
+  box-shadow: 0 0 10px #0052FF !important;
+}
+
+/* --- Match / Fixtures Ticker (Chelsea & OneFootball Style) --- */
+.fixtures-ticker-row {
+  display: flex !important;
+  gap: 12px !important;
+  overflow-x: auto !important;
+  padding: 4px 0 16px 0 !important;
+  scrollbar-width: none !important;
+}
+.fixtures-ticker-row::-webkit-scrollbar {
+  display: none !important;
+}
+
+.fixture-pill-card {
+  flex: 0 0 auto !important;
+  min-width: 220px !important;
+  background: rgba(18, 23, 36, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 18px !important;
+  padding: 12px 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
+  transition: border-color 0.2s ease !important;
+}
+
+.fixture-pill-card:hover {
+  border-color: rgba(0, 82, 255, 0.4) !important;
+}
+
+.fixture-teams-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+
+.fixture-team-name {
+  font-size: 0.82rem !important;
+  font-weight: 750 !important;
+  color: #FFFFFF !important;
+}
+
+.fixture-vs-badge {
+  font-size: 0.68rem !important;
+  font-weight: 800 !important;
+  color: #8F9BB3 !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  padding: 2px 6px !important;
+  border-radius: 6px !important;
+}
+
+.fixture-date-tag {
+  font-size: 0.72rem !important;
+  color: #60A5FA !important;
+  font-weight: 600 !important;
+}
+
+/* --- Category Filter Pills (OneFootball Style) --- */
+.category-tabs {
+  display: flex !important;
+  gap: 8px !important;
+  overflow-x: auto !important;
+  padding: 8px 0 16px 0 !important;
+  scrollbar-width: none !important;
+}
+.category-tabs::-webkit-scrollbar {
+  display: none !important;
+}
+
+.category-tabs button {
+  background: #121724 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #8F9BB3 !important;
+  padding: 8px 20px !important;
+  border-radius: 999px !important;
+  font-size: 0.84rem !important;
+  font-weight: 650 !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.category-tabs button:hover {
+  color: #FFFFFF !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.category-tabs button.active {
+  background: #FFFFFF !important;
+  color: #080A0F !important;
+  border-color: #FFFFFF !important;
+  font-weight: 800 !important;
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.25) !important;
+}
+
+/* --- News / Story Card (OneFootball & Chelsea Style) --- */
+.story-card {
+  background: #121724 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 20px !important;
+  padding: 16px 18px !important;
+  margin-bottom: 14px !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35) !important;
+}
+
+.story-card:hover {
+  border-color: rgba(0, 82, 255, 0.4) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 36px rgba(0, 82, 255, 0.15) !important;
+}
+
+.card-headline {
+  font-family: 'Outfit', 'Inter', sans-serif !important;
+  font-size: 1.08rem !important;
+  font-weight: 750 !important;
+  line-height: 1.35 !important;
+  color: #FFFFFF !important;
+  margin-bottom: 8px !important;
+}
+
+.story-topline strong,
+.mobile-source-pill {
+  color: #FFFFFF !important;
+  font-weight: 750 !important;
+  font-size: 0.8rem !important;
+}
+
+.story-topline span,
+.mobile-card-time {
+  color: #8F9BB3 !important;
+  font-size: 0.74rem !important;
+}
+
+/* Source Pill */
+.mobile-source-pill {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  padding: 3px 8px !important;
+}
+
+/* Buttons in Story Cards */
+.card-source-button,
+.mobile-action-btn {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #FFFFFF !important;
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+  font-size: 0.78rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.card-source-button.summary-btn,
+.mobile-action-btn.summary-btn {
+  background: #0052FF !important;
+  border-color: #0052FF !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 14px rgba(0, 82, 255, 0.35) !important;
+}
+
+/* --- Portfolio Page Overhaul ("Elon Musk / Institutional Grade") --- */
+.portfolio-surface {
+  width: min(1080px, calc(100% - 24px)) !important;
+  margin: 16px auto 32px !important;
+}
+
+.institutional-networth-hero {
+  background: linear-gradient(135deg, #001489 0%, #080A0F 60%, #111624 100%) !important;
+  border: 1px solid rgba(0, 82, 255, 0.35) !important;
+  border-radius: 24px !important;
+  padding: 28px !important;
+  margin-bottom: 18px !important;
+  box-shadow: 0 20px 50px rgba(0, 82, 255, 0.2) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.institutional-networth-hero::after {
+  content: '' !important;
+  position: absolute !important;
+  top: -50% !important;
+  right: -20% !important;
+  width: 300px !important;
+  height: 300px !important;
+  background: radial-gradient(circle, rgba(0, 82, 255, 0.25) 0%, transparent 70%) !important;
+  pointer-events: none !important;
+}
+
+.networth-label {
+  font-size: 0.76rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: #60A5FA !important;
+  margin-bottom: 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.networth-amount {
+  font-family: 'Space Grotesk', 'Outfit', sans-serif !important;
+  font-size: clamp(2rem, 4vw, 2.8rem) !important;
+  font-weight: 800 !important;
+  color: #FFFFFF !important;
+  letter-spacing: -0.03em !important;
+  margin-bottom: 12px !important;
+}
+
+.networth-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  background: rgba(16, 185, 129, 0.15) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  color: #34D399 !important;
+  font-size: 0.78rem !important;
+  font-weight: 750 !important;
+  padding: 4px 10px !important;
+  border-radius: 999px !important;
+}
+
+.portfolio-stats-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+  gap: 12px !important;
+  margin-bottom: 20px !important;
+}
+
+.portfolio-stat-card {
+  background: #121724 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 18px !important;
+  padding: 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25) !important;
+}
+
+.portfolio-stat-card span {
+  font-size: 0.72rem !important;
+  font-weight: 750 !important;
+  text-transform: uppercase !important;
+  color: #8F9BB3 !important;
+  letter-spacing: 0.05em !important;
+}
+
+.portfolio-stat-card strong {
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 1.3rem !important;
+  font-weight: 800 !important;
+  color: #FFFFFF !important;
+}
+
+/* Portfolio Position Cards */
+.portfolio-position-card {
+  background: #121724 !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  border-radius: 20px !important;
+  padding: 20px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+}
+
+.portfolio-position-card h2 {
+  color: #FFFFFF !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 750 !important;
+}
+
+.portfolio-position-stats {
+  background: rgba(8, 10, 15, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 14px !important;
+}
+
+.portfolio-position-stats span {
+  color: #8F9BB3 !important;
+}
+
+.portfolio-position-stats strong {
+  color: #FFFFFF !important;
+}
+
+/* --- Mobile Bottom Nav (Frosted Midnight) --- */
+.mobile-bottom-nav {
+  background: rgba(8, 10, 15, 0.94) !important;
+  backdrop-filter: blur(20px) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.09) !important;
+}
+
+.mobile-bottom-nav button {
+  color: #8F9BB3 !important;
+}
+
+.mobile-bottom-nav button.active {
+  color: #0052FF !important;
+}
