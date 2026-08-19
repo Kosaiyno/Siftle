@@ -2735,92 +2735,102 @@ const renderPortfolioSkeleton = (count = 2): string => `
 `;
 
 const renderStoryCardHtml = (story: NewsStory): string => {
-  const categoryName = displayCategory(story.category).toUpperCase();
-  const timeLabel = getStoryTimeLabel(story).toUpperCase();
-  const excerpt = story.summary ? escapeHtml(story.summary.slice(0, 140)) + '...' : 'Tap to view full AI briefing and on-chain intelligence.';
+  const isTweet = story.type === "tweet";
+
+  const twitterSvg = `<svg class="x-logo-svg" viewBox="0 0 24 24" fill="currentColor" style="width: 14px; height: 14px; display: inline-block; vertical-align: text-top; color: var(--color-text-primary);"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
+
+  const twitterSvgMobile = `<svg class="x-logo-svg" viewBox="0 0 24 24" fill="currentColor" style="width: 12px; height: 12px; display: inline-block; vertical-align: text-top; margin-right: 4px;"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
 
   return `
-    <article class="chelsea-news-card" data-story-id="${story.id}" role="button" tabindex="0" aria-label="Open ${story.headline}">
-      <div class="chelsea-card-media">
+    <article class="story-card ${isTweet ? "social-story tweet-card" : isSocialStory(story) ? "social-story" : ""}" data-story-id="${story.id}" role="button" tabindex="0" aria-label="Open summary for ${story.headline}">
+
+      <!-- Desktop layout (visible above 640px) -->
+      <div class="story-topline desktop-only">
+        <div class="story-source">
+          <div>
+            ${isTweet ? `<div style="margin-bottom: 6px;">${twitterSvg}</div>` : ""}
+            <strong>${story.source}</strong>
+            <span>${getStoryTimeLabel(story)} - ${story.readTime}</span>
+          </div>
+        </div>
+        </div>
+        </div>
+      </div>
+
+      <div class="story-image-frame desktop-only" aria-hidden="true">
         <img src="${story.imageUrl}" alt="" loading="lazy" />
-        <div class="chelsea-media-badge">
-          <span class="badge-cat">${categoryName}</span>
-          <span class="badge-time">${timeLabel}</span>
+      </div>
+
+      <div class="story-copy desktop-only">
+        <span class="category-chip ${story.category}">${displayCategory(story.category)}</span>
+        <h2 class="card-headline">${getStoryCardHeadline(story)}</h2>
+        <p>${isTweet ? "Tap to read the tweet" : "Tap to read the AI briefing."}</p>
+      </div>
+
+      <div class="card-action-row desktop-only">
+        ${isTweet
+          ? `<button class="card-source-button read-tweet-btn" type="button" style="cursor: pointer;">Read Tweet</button>
+             <a class="card-source-button twitter-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()" style="display: inline-flex; align-items: center; gap: 6px;">
+              ${twitterSvg}
+              Open Tweet
+             </a>`
+          : `
+              ${renderDesktopThreadButton(story)}
+              <button class="card-source-button summary-btn" type="button">AI briefing</button>
+              ${/example\\.com/i.test(story.sourceUrl)
+                ? `<a class="card-source-button disabled" href="#" onclick="event.preventDefault(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
+                : `<a class="card-source-button" href="${story.sourceUrl}" target="_blank" rel="noreferrer">Open source</a>`}
+            `
+        }
+      </div>
+
+      <!-- Mobile layout (visible at 640px and below) -->
+      <div class="mobile-card-inner mobile-only">
+        <div class="mobile-card-body">
+          <div class="mobile-card-text">
+            <div class="mobile-card-topline">
+              ${isTweet ? `
+                <span class="mobile-source-pill ${isSocialStory(story) ? "social" : ""}" style="display: inline-flex; align-items: center; gap: 4px; max-width: 100% !important;">
+                  ${twitterSvgMobile}
+                  ${getStorySourceLabel(story)}
+                </span>
+              ` : `
+                <div class="mobile-source-container">
+                  <span class="mobile-source-pill ${isSocialStory(story) ? "social" : ""}" style="display: inline-flex; align-items: center; gap: 4px; max-width: 100% !important;">
+                    ${getStorySourceLabel(story)}
+                  </span>
+                </div>
+              `}
+              
+            </div>
+            <h2 class="card-headline">${getStoryCardHeadline(story)}</h2>
+            <span class="mobile-card-time">${getStoryTimeLabel(story)}</span>
+          </div>
+          <div class="mobile-card-image" aria-hidden="true">
+            <img src="${story.imageUrl}" alt="" loading="lazy" />
+          </div>
+        </div>
+        <div class="mobile-card-actions">
+          ${isTweet
+            ? `<button class="mobile-action-btn read-tweet-btn" type="button" style="width: 50%; cursor: pointer;">Read Tweet</button>
+               <a class="mobile-action-btn source-btn twitter-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 50%;">
+                ${twitterSvgMobile}
+                Open Tweet
+               </a>`
+            : `
+                ${renderMobileThreadButton(story)}
+                ${/example\\.com/i.test(story.sourceUrl)
+                  ? `<a class="mobile-action-btn source-btn disabled" href="#" onclick="event.preventDefault(); event.stopPropagation(); alert('No original source available for this mock story.');" aria-disabled="true">Open source</a>`
+                  : `<a class="mobile-action-btn source-btn" href="${story.sourceUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Open source</a>`}
+                <button class="mobile-action-btn summary-btn" type="button">AI briefing</button>
+              `
+          }
         </div>
       </div>
-      <div class="chelsea-card-body">
-        <h2 class="chelsea-card-title">${getStoryCardHeadline(story)}</h2>
-        <p class="chelsea-card-excerpt">${excerpt}</p>
-        <div class="chelsea-card-footer">
-          <button class="chelsea-action-btn summary-btn" type="button">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="#0052FF"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            AI BRIEFING
-          </button>
-          <span class="chelsea-source-tag">${story.source}</span>
-        </div>
-      </div>
+
     </article>
   `;
 };
-
-
-const renderHeroStoryCardHtml = (story: NewsStory): string => {
-  const timeLabel = getStoryTimeLabel(story);
-  return `
-    <article class="hero-story-card" data-story-id="${story.id}" style="background-image: url('${story.imageUrl}');" role="button" tabindex="0" aria-label="Featured Story: ${getStoryCardHeadline(story)}">
-      <div class="hero-story-overlay"></div>
-      <div class="hero-story-content">
-        <div class="hero-story-tag">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="#0052FF"><circle cx="12" cy="12" r="10"/></svg>
-          <span>${displayCategory(story.category)} • ${timeLabel}</span>
-        </div>
-        <h2 class="hero-story-headline">${getStoryCardHeadline(story)}</h2>
-        <div style="display: flex; gap: 10px; align-items: center; margin-top: 6px;">
-          <button class="card-source-button summary-btn" type="button" style="padding: 10px 22px; font-size: 0.88rem; background: #0052FF; border: none; color: #fff; font-weight: 700; border-radius: 999px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,82,255,0.4);">Read AI Briefing</button>
-          <span style="font-size: 0.8rem; color: rgba(255,255,255,0.7); font-weight: 600;">${story.source}</span>
-        </div>
-        <div class="hero-carousel-lines" aria-hidden="true">
-          <div class="hero-carousel-line active"></div>
-          <div class="hero-carousel-line"></div>
-          <div class="hero-carousel-line"></div>
-          <div class="hero-carousel-line"></div>
-        </div>
-      </div>
-    </article>
-  `;
-};
-
-const renderFixturesTickerHtml = (): string => {
-  return `
-    <div class="fixtures-ticker-row" aria-label="Upcoming Match Fixtures">
-      <div class="fixture-pill-card">
-        <div class="fixture-teams-row">
-          <span class="fixture-team-name">Cobham Next Gen</span>
-          <span class="fixture-vs-badge">VS</span>
-          <span class="fixture-team-name">Bournemouth</span>
-        </div>
-        <span class="fixture-date-tag">Fri 21 Aug • 19:00</span>
-      </div>
-      <div class="fixture-pill-card">
-        <div class="fixture-teams-row">
-          <span class="fixture-team-name">Under-18s</span>
-          <span class="fixture-vs-badge">VS</span>
-          <span class="fixture-team-name">Birmingham</span>
-        </div>
-        <span class="fixture-date-tag">Sat 22 Aug • 12:00</span>
-      </div>
-      <div class="fixture-pill-card">
-        <div class="fixture-teams-row">
-          <span class="fixture-team-name">Chelsea FC</span>
-          <span class="fixture-vs-badge">VS</span>
-          <span class="fixture-team-name">Real Madrid</span>
-        </div>
-        <span class="fixture-date-tag">Sun 23 Aug • 20:00</span>
-      </div>
-    </div>
-  `;
-};
-
 
 const renderStories = (): void => {
   if (!storyList) return;
@@ -4697,6 +4707,71 @@ const renderReferralPanel = (walletConnected: boolean): string => {
   `;
 };
 
+
+const renderMatches = (): void => {
+  if (!storyList || !storyDetail) return;
+  briefHero?.toggleAttribute("hidden", true);
+  archiveControls?.toggleAttribute("hidden", true);
+  categoryTabs?.toggleAttribute("hidden", true);
+  topMarketsButton?.classList.remove("active");
+  topNewsButton?.classList.remove("active");
+  topPortfolioButton?.classList.remove("active");
+  document.body.classList.remove("detail-mode");
+  storyDetail.hidden = true;
+  storyList.hidden = false;
+  storyList.classList.add("markets-list");
+
+  storyList.innerHTML = `
+    <section class="portfolio-surface" style="margin-top: 16px;">
+      <div class="chelsea-hub-header">
+        <h1 class="chelsea-hub-title" style="font-family: Outfit, sans-serif; font-size: 1.8rem; font-weight: 800; margin: 0 0 4px 0;">Match Fixtures & Live Scores</h1>
+        <p class="chelsea-hub-subtitle" style="color: #8F9BB3; font-size: 0.88rem; margin: 0 0 16px 0;">Real-time match schedules, live scores, and team match-ups across top leagues.</p>
+      </div>
+
+      <div class="fixtures-ticker-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-bottom: 24px;">
+        <div class="fixture-pill-card" style="padding: 16px; border-radius: 16px; background: #121724; border: 1px solid rgba(255,255,255,0.08);">
+          <div style="font-size: 0.72rem; font-weight: 800; color: #0052FF; text-transform: uppercase; margin-bottom: 8px;">PREMIER LEAGUE • LIVE</div>
+          <div class="fixture-teams-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <strong style="font-size: 1rem; color: #fff;">Chelsea</strong>
+            <span style="font-size: 1.1rem; font-weight: 800; color: #34D399; background: rgba(52,211,153,0.1); padding: 2px 10px; border-radius: 8px;">2 - 1</span>
+            <strong style="font-size: 1rem; color: #fff;">Arsenal</strong>
+          </div>
+          <div style="font-size: 0.76rem; color: #8F9BB3; display: flex; justify-content: space-between;">
+            <span>74' Minutes</span>
+            <span>Stamford Bridge</span>
+          </div>
+        </div>
+
+        <div class="fixture-pill-card" style="padding: 16px; border-radius: 16px; background: #121724; border: 1px solid rgba(255,255,255,0.08);">
+          <div style="font-size: 0.72rem; font-weight: 800; color: #8F9BB3; text-transform: uppercase; margin-bottom: 8px;">CHAMPIONS LEAGUE • TONIGHT</div>
+          <div class="fixture-teams-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <strong style="font-size: 1rem; color: #fff;">Real Madrid</strong>
+            <span style="font-size: 0.82rem; font-weight: 800; color: #8F9BB3; background: rgba(255,255,255,0.06); padding: 4px 8px; border-radius: 6px;">VS</span>
+            <strong style="font-size: 1rem; color: #fff;">Bayern Munich</strong>
+          </div>
+          <div style="font-size: 0.76rem; color: #60A5FA; display: flex; justify-content: space-between;">
+            <span>20:00 Kickoff</span>
+            <span>Santiago Bernabéu</span>
+          </div>
+        </div>
+
+        <div class="fixture-pill-card" style="padding: 16px; border-radius: 16px; background: #121724; border: 1px solid rgba(255,255,255,0.08);">
+          <div style="font-size: 0.72rem; font-weight: 800; color: #8F9BB3; text-transform: uppercase; margin-bottom: 8px;">LA LIGA • UPCOMING</div>
+          <div class="fixture-teams-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <strong style="font-size: 1rem; color: #fff;">Barcelona</strong>
+            <span style="font-size: 0.82rem; font-weight: 800; color: #8F9BB3; background: rgba(255,255,255,0.06); padding: 4px 8px; border-radius: 6px;">VS</span>
+            <strong style="font-size: 1rem; color: #fff;">Atletico Madrid</strong>
+          </div>
+          <div style="font-size: 0.76rem; color: #60A5FA; display: flex; justify-content: space-between;">
+            <span>Tomorrow • 18:30</span>
+            <span>Camp Nou</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+};
+
 const renderPortfolio = (): void => {
   if (!storyList || !storyDetail) return;
   briefHero?.toggleAttribute("hidden", true);
@@ -4737,40 +4812,6 @@ const renderPortfolio = (): void => {
 
   storyList.innerHTML = `
     <section class="portfolio-surface">
-      <div class="institutional-networth-hero">
-        <div class="networth-label">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="#0052FF"><circle cx="12" cy="12" r="10"/></svg>
-          <span>Institutional Portfolio Net Worth</span>
-        </div>
-        <div class="networth-amount">
-          ${state.walletAddress
-            ? (state.walletBalance === null ? "$1,610.00 USDC" : `${state.walletBalance} USDC`)
-            : "$0.00 USDC"}
-        </div>
-        <div class="networth-badge">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-          <span>+14.2% Return (Circle x402 Protocol)</span>
-        </div>
-      </div>
-
-      <div class="portfolio-stats-grid">
-        <div class="portfolio-stat-card">
-          <span>Total Trades Settled</span>
-          <strong>424 Trades</strong>
-        </div>
-        <div class="portfolio-stat-card">
-          <span>Prediction Volume</span>
-          <strong>$1,610.00 USDC</strong>
-        </div>
-        <div class="portfolio-stat-card">
-          <span>AI Briefings Sold</span>
-          <strong>1,582 Unlocks</strong>
-        </div>
-        <div class="portfolio-stat-card">
-          <span>Protocol Revenue</span>
-          <strong>$45.07 USDC</strong>
-        </div>
-      </div>
       <div class="portfolio-top-grid">
         ${renderReferralPanel(walletConnected)}
       <div class="profile-card" style="background: var(--market-card-bg) !important; border: 1px solid var(--market-border) !important; border-radius: 12px !important; padding: 14px !important; margin-bottom: 12px !important; box-sizing: border-box !important;">
