@@ -1,4 +1,4 @@
-import { Account, Ed25519PrivateKey, Network } from "@aptos-labs/ts-sdk";
+import { Account, Ed25519PrivateKey, Network, Hex } from "@aptos-labs/ts-sdk";
 import { ShelbyNodeClient, generateCommitments } from "@shelby-protocol/sdk/node";
 
 const textEncoder = new TextEncoder();
@@ -132,21 +132,40 @@ export const uploadShelbySnapshot = async (snapshot) => {
   const provider = await client.getProvider();
   const blobCommitments = await generateCommitments(provider, blobData);
   
+  const deployer = process.env.SHELBY_DEPLOYER || "0x85fdb9a176ab8ef1d9d9c1b60d60b3924f0800ac1de1cc2085fb0b8bb4988e6a";
+  const expirationMicros = getExpirationMicros();
+  const numChunksets = 1;
+
+  const payload = {
+    function: `${deployer}::blob_metadata::register_blob`,
+    functionArguments: [
+      blobName,
+      null,
+      null,
+      expirationMicros.toString(),
+      Hex.fromHexString(blobCommitments.blob_merkle_root).toUint8Array(),
+      numChunksets,
+      blobData.length.toString(),
+      0,
+      0,
+      0
+    ]
+  };
+
   try {
-    const { transaction: pendingRegisterBlobTransaction } = await client.coordination.registerBlob({
-      account: signer,
-      blobName: blobName,
-      blobMerkleRoot: blobCommitments.blob_merkle_root,
-      size: blobData.length,
-      expirationMicros: getExpirationMicros(),
-      config: provider.config
+    const rawTx = await client.coordination.aptos.transaction.build.simple({
+      sender: signer.accountAddress,
+      data: payload
+    });
+
+    const pendingTx = await client.coordination.aptos.signAndSubmitTransaction({
+      signer,
+      transaction: rawTx
     });
 
     await client.coordination.aptos.waitForTransaction({
-      transactionHash: pendingRegisterBlobTransaction.hash,
-      options: {
-        timeoutSecs: 90
-      }
+      transactionHash: pendingTx.hash,
+      options: { timeoutSecs: 90 }
     });
   } catch (regErr) {
     console.warn(`[SHELBY ARCHIVE] On-chain register notice for ${blobName}: ${regErr.message}`);
@@ -292,18 +311,39 @@ export const backupAnalyticsToShelby = async (analyticsData) => {
   const provider = await client.getProvider();
   const blobCommitments = await generateCommitments(provider, blobData);
   
+  const deployer = process.env.SHELBY_DEPLOYER || "0x85fdb9a176ab8ef1d9d9c1b60d60b3924f0800ac1de1cc2085fb0b8bb4988e6a";
+  const expirationMicros = getExpirationMicros();
+  const numChunksets = 1;
+
+  const payload = {
+    function: `${deployer}::blob_metadata::register_blob`,
+    functionArguments: [
+      blobName,
+      null,
+      null,
+      expirationMicros.toString(),
+      Hex.fromHexString(blobCommitments.blob_merkle_root).toUint8Array(),
+      numChunksets,
+      blobData.length.toString(),
+      0,
+      0,
+      0
+    ]
+  };
+
   try {
-    const { transaction: pendingRegisterBlobTransaction } = await client.coordination.registerBlob({
-      account: signer,
-      blobName: blobName,
-      blobMerkleRoot: blobCommitments.blob_merkle_root,
-      size: blobData.length,
-      expirationMicros: getExpirationMicros(),
-      config: provider.config
+    const rawTx = await client.coordination.aptos.transaction.build.simple({
+      sender: signer.accountAddress,
+      data: payload
+    });
+
+    const pendingTx = await client.coordination.aptos.signAndSubmitTransaction({
+      signer,
+      transaction: rawTx
     });
 
     await client.coordination.aptos.waitForTransaction({
-      transactionHash: pendingRegisterBlobTransaction.hash,
+      transactionHash: pendingTx.hash,
       options: { timeoutSecs: 90 }
     });
   } catch (regErr) {
