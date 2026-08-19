@@ -1494,6 +1494,8 @@
         
         const tradeSuccesses = (totals.trade_buy_success || 0) + (totals.trade_sell_success || 0);
         const aiUnlocks = totals.ai_unlock_success || 0;
+        const exactTotalBriefings = Number(derived.totalBriefingUnlocks || aiUnlocks);
+        const exactTotalTrades = Number(derived.totalUniqueTrades || tradeSuccesses);
         const uniqueSignups = Number(derived.signupsTotalUnique ?? totals.sign_up ?? 0);
         const briefingRevenue = Number(derived.briefingRevenue ?? 0);
         const gasSavings = Number(derived.sponsorGasSavings ?? 0);
@@ -1517,15 +1519,15 @@
         // Populate Top Cards
         document.getElementById('valOpens').textContent = (totals.app_open || 0).toLocaleString();
         document.getElementById('valSignups').textContent = uniqueSignups.toLocaleString();
-        document.getElementById('valRevenue').textContent = aiUnlocks.toLocaleString();
-        document.getElementById('valRevenueDesc').textContent = 'Gross revenue: $' + briefingRevenue.toFixed(4) + ' USDC';
+        document.getElementById('valRevenue').textContent = exactTotalBriefings.toLocaleString();
+        document.getElementById('valRevenueDesc').textContent = 'Gross sales from pay-per-read';
         document.getElementById('valGasSavings').textContent = '$' + gasSavings.toFixed(3) + ' USDC';
 
         // Populate Platform Totals View Cards
         document.getElementById('valTotalViews').textContent = (totals.app_open || 0).toLocaleString();
         document.getElementById('valTotalSignups').textContent = uniqueSignups.toLocaleString();
-        document.getElementById('valTotalBriefings').textContent = aiUnlocks.toLocaleString();
-        document.getElementById('valTotalTrades').textContent = tradeSuccesses.toLocaleString();
+        document.getElementById('valTotalBriefings').textContent = exactTotalBriefings.toLocaleString();
+        document.getElementById('valTotalTrades').textContent = exactTotalTrades.toLocaleString();
         document.getElementById('valTotalVolume').textContent = '$' + predictionVolume.toFixed(2) + ' USDC';
         document.getElementById('valTotalRevenueVal').textContent = '$' + briefingRevenue.toFixed(4) + ' USDC';
         document.getElementById('valTotalGas').textContent = '$' + gasSavings.toFixed(3) + ' USDC';

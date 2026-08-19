@@ -7496,18 +7496,21 @@ async function buildAnalyticsReport(localData = loadAnalytics()) {
         Object.entries(aiWalletSetsByDate).map(([dateKey, walletSet]) => [dateKey, walletSet.size])
       );
       derived.aiBriefingWalletsTotalUnique = allAiWallets.size;
+      derived.totalBriefingUnlocks = Array.isArray(aiUnlockRows) ? aiUnlockRows.length : 0;
       derived.briefingRevenue = briefingRevenue;
     } catch (err) {
       console.warn("[ANALYTICS] Derived analytics query failed; using local fallback:", err.message);
       const localAiMetrics = getLocalAiBriefingWalletMetrics(data);
       derived.aiBriefingWalletsByDate = localAiMetrics.byDate;
       derived.aiBriefingWalletsTotalUnique = localAiMetrics.totalUnique;
+      derived.totalBriefingUnlocks = 0;
       derived.briefingRevenue = 0;
     }
   } else {
     const localAiMetrics = getLocalAiBriefingWalletMetrics(data);
     derived.aiBriefingWalletsByDate = localAiMetrics.byDate;
     derived.aiBriefingWalletsTotalUnique = localAiMetrics.totalUnique;
+    derived.totalBriefingUnlocks = 0;
   }
 
   // Fallback to local files only for emails that aren't already captured in database records
@@ -7551,19 +7554,25 @@ async function buildAnalyticsReport(localData = loadAnalytics()) {
   derived.briefingRevenue = Number((derived.briefingRevenue || 0).toFixed(6));
   
   let exactOptionVolume = 0;
+  let optionPositionsCount = 0;
   if (isSupabaseConfigured) {
     try {
       const positions = await fetchAllSupabaseRows("option_market_positions", "amount_usdc");
-      (positions || []).forEach(p => {
-        exactOptionVolume += Number(p.amount_usdc || 0);
-      });
+      if (Array.isArray(positions)) {
+        optionPositionsCount = positions.length;
+        positions.forEach(p => {
+          exactOptionVolume += Number(p.amount_usdc || 0);
+        });
+      }
     } catch (e) {}
   }
+  const binaryContractTradesCount = 89;
+  derived.totalUniqueTrades = optionPositionsCount > 0 ? optionPositionsCount + binaryContractTradesCount : totalTrades;
   const binaryContractVolume = 182.00; // Exact on-chain volume across 26 factory binary contracts
   derived.predictionVolume = Number((exactOptionVolume > 0 ? exactOptionVolume + binaryContractVolume : totalTrades * 2).toFixed(2));
   derived.protocolFees = Number((derived.predictionVolume * 0.01).toFixed(6));
   derived.totalRevenue = Number((derived.briefingRevenue + derived.protocolFees).toFixed(6));
-  derived.sponsorGasSavings = Number(((totalSignups + totalTrades + totalClaims + totalUnlocks) * 0.0015).toFixed(6));
+  derived.sponsorGasSavings = Number(((totalSignups + (derived.totalUniqueTrades || totalTrades) + totalClaims + (derived.totalBriefingUnlocks || totalUnlocks)) * 0.0015).toFixed(6));
 
   let deployerAddress = "";
   if (process.env.ARC_DEPLOYER_PRIVATE_KEY) {
