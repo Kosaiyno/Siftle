@@ -8,33 +8,46 @@
 
 ## 📊 Executive Overview
 
-| Siftle Arc Testnet — Verification Package | Column 2 | Column 3 | Column 4 | Column 5 | Column 6 |
-| --- | --- | --- | --- | --- | --- |
-| Verified Overview |  |  | Key Addresses |  |  |
-| Binary markets | 26 | markets | Binary Market Factory | [`0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E`](https://testnet.arcscan.app/address/0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E) |  |
-| Binary trades | 89 | on-chain events | Operator / Resolver EOA | [`0x2f5fc4f223875b5F453C5534C50f926b114091B7`](https://testnet.arcscan.app/address/0x2f5fc4f223875b5F453C5534C50f926b114091B7) |  |
-| Binary volume | $182 | USDC | Arc Testnet USDC | [`0x3600000000000000000000000000000000000000`](https://testnet.arcscan.app/address/0x3600000000000000000000000000000000000000) |  |
-| Option positions | 335 | records |  |  | https://testnet.arcscan.app/address/0x3600000000000000000000000000000000000000 |
-| Option on-chain matches | 335 | matched records |  |  |  |
-| Option volume | $1,428 | USDC |  |  |  |
-| Option resolutions | 51 | records |  |  |  |
-| AI briefing unlocks | 1,575 | records |  |  |  |
-| AI briefing unlock revenue | $44.6167 | USDC |  |  |  |
-| Total prediction trades | 424 | unique trades |  |  |  |
-| Total prediction volume | $1,610 | USDC |  |  |  |
-| How to Verify |  |  |  |  |  |
-| 1. Binary Markets — open any listed contract address on Arcscan and verify its trade events. |  |  |  |  |  |
-| 2. Option On-Chain Matches — use this sheet to match each option position to its corresponding USDC transaction on Arc. |  |  |  |  |  |
-| 3. Arc transaction hash — open the listed transaction hash on Arcscan to compare wallet, amount and timestamp. |  |  |  |  |  |
-| 4. Option Resolutions — review the recorded outcomes for the option markets. |  |  |  |  |  |
-| 5. AI Briefing Unlocks — use the wallet addresses and unlock records as the application-side ledger; trace wallet funding and batching on Arcscan where applicable. |  |  |  |  |  |
-| 6. EOA USDC Transfers — use this as the broader operator-wallet transfer record; it includes transfers unrelated to option volume. |  |  |  |  |  |
-| AI Briefing Payment Model |  |  |  |  |  |
-| Payment evolution | Siftle initially used x402 nanopayments at a fixed $0.05 USDC unlock price. The x402 flow was later changed to dynamic lower pricing, with individual AI unlocks priced below $0.05 USDC. |  |  |  |  |
-| Fallback | The standard $0.05 USDC payment path remains available as a fallback when the x402 nanopayment flow is not used or cannot complete. |  |  |  |  |
-| Unlock records | The AI Briefing Unlocks sheet is the application-side unlock ledger, including wallet, briefing/date reference, source hash and available transaction/reference fields. |  |  |  |  |
-| Unlock revenue | Verified gross AI briefing unlock revenue: $44.6167 USDC. |  |  |  |  |
-| Export count | 1,575 AI briefing unlock records are included in this workbook. |  |  |  |  |
+### Verified Totals Summary
+- **Binary Smart Contracts:** 26 markets
+- **Binary Trade Events:** 89 on-chain events
+- **Binary Volume:** $182.00 USDC
+- **Option Positions:** 335 records
+- **Option On-Chain Matches:** 335 matched records
+- **Option Volume:** $1,428.00 USDC
+- **Option Resolutions:** 51 records
+- **AI Briefing Unlocks:** 1,575 records
+- **AI Briefing Unlock Revenue:** $44.6167 USDC
+- **Total Prediction Trades:** 424 unique trades
+- **Total Prediction Volume:** $1,610.00 USDC
+
+### Key Protocol Addresses
+- **Binary Market Factory:** [`0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E`](https://testnet.arcscan.app/address/0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E)
+- **Operator / Resolver EOA:** [`0x2f5fc4f223875b5F453C5534C50f926b114091B7`](https://testnet.arcscan.app/address/0x2f5fc4f223875b5F453C5534C50f926b114091B7)
+- **Arc Testnet USDC Token:** [`0x3600000000000000000000000000000000000000`](https://testnet.arcscan.app/address/0x3600000000000000000000000000000000000000)
+
+---
+
+## 🔍 How to Verify
+
+1. **Binary Markets** — Open any listed contract address on ArcScan and verify its trade events.
+2. **Option On-Chain Matches** — Use the matching ledger to match each option position to its corresponding USDC transaction on Arc.
+3. **Arc Transaction Hashes** — Open any listed transaction hash on ArcScan to compare wallet, amount, and timestamp.
+4. **Option Resolutions** — Review the recorded outcomes for the option markets.
+5. **AI Briefing Unlocks** — Use wallet addresses and unlock records as the application-side ledger; trace wallet funding and batching on ArcScan where applicable.
+6. **EOA USDC Transfers** — Use this as the broader operator-wallet transfer record (includes transfers unrelated to option volume).
+
+---
+
+## ⚡ AI Briefing Payment Model
+
+- **Payment Evolution:** Siftle initially used x402 nanopayments at a fixed $0.05 USDC unlock price. The x402 flow was later changed to dynamic lower pricing, with individual AI unlocks priced below $0.05 USDC.
+- **Fallback:** The standard $0.05 USDC payment path remains available as a fallback when the x402 nanopayment flow is not used or cannot complete.
+- **Unlock Records:** The AI Briefing Unlocks sheet is the application-side unlock ledger, including wallet, briefing/date reference, source hash, and available transaction/reference fields.
+- **Verified Gross AI Briefing Unlock Revenue:** $44.6167 USDC.
+- **Export Count:** 1,575 AI briefing unlock records included in this package.
+
+---
 
 ## Binary Markets
 
