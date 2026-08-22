@@ -2450,8 +2450,12 @@ function cleanLeagueTitle(name: string): string {
 }
 
 const loadLiveMatches = async (dateParam?: string): Promise<void> => {
-  if (state.loadingLiveMatches) return;
+  const todayStr = formatYyyyMmDd(new Date());
+  const targetDateStr = dateParam || state.activeMatchDate || todayStr;
+  
+  if (state.loadingLiveMatches && targetDateStr === state.activeMatchDate && state.liveMatches.length > 0) return;
   state.loadingLiveMatches = true;
+  state.activeMatchDate = targetDateStr;
   try {
     const todayStr = formatYyyyMmDd(new Date());
     const targetDateStr = dateParam || state.activeMatchDate || todayStr;

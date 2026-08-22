@@ -12304,3 +12304,41 @@ body.matches-mode .story-list,
   width: 100% !important;
   box-sizing: border-box !important;
 }
+
+/* Zero overflow-x and precise flex container bounds for Matches surface */
+body.matches-mode,
+html.matches-mode {
+  overflow-x: hidden !important;
+}
+
+body.matches-mode .app-shell,
+body.matches-mode .brief-board,
+body.matches-mode .story-list,
+.story-list.matches-surface-active {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+}
+
+.matches-surface {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 12px 10px 100px 10px !important;
+  box-sizing: border-box !important;
+  background-color: #030712 !important;
+  overflow-x: hidden !important;
+}
+
+.thick-league-card {
+  background: var(--paper, #12131a) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4) !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
