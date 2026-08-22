@@ -4740,98 +4740,141 @@ const renderMatches = (): void => {
 
   const matches = state.liveMatches;
   const loading = state.loadingLiveMatches && matches.length === 0;
-  const leagues = ["All", ...Array.from(new Set(matches.map((m: any) => m.league as string))).slice(0, 6)];
-  const filteredMatches = state.activeMatchLeague === "All"
-    ? matches
-    : matches.filter((m: any) => m.league === state.activeMatchLeague);
+
+  // Group matches by league name
+  const groupedByLeague = new Map<string, any[]>();
+  matches.forEach((m: any) => {
+    const lg = m.league || "Other Matches";
+    if (!groupedByLeague.has(lg)) groupedByLeague.set(lg, []);
+    groupedByLeague.get(lg)!.push(m);
+  });
+
+  const activeDate = state.activeMatchLeague || "Today"; // reused filter key for date pills
+  const datePills = ["Yesterday", "Today", "Tomorrow"];
 
   storyList.innerHTML = `
-    <section class="matches-surface" style="padding: 16px 12px 100px 12px; box-sizing: border-box; width: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;">
-      <header class="matches-header" style="margin-bottom: 16px;">
-        <h1 style="margin: 0; font-size: 1.5rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.02em;">Live Scores & Fixtures</h1>
-        <p style="margin: 4px 0 0; color: #94a3b8; font-size: 0.85rem; font-weight: 500;">
-          Real-time ESPN sports scores • ${matches.length} matches loaded
-        </p>
+    <section class="matches-surface" style="padding: 16px 12px 110px 12px; box-sizing: border-box; width: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;">
+      
+      <!-- Top Title Header -->
+      <header class="matches-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+        <h1 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: #ffffff; letter-spacing: -0.02em;">Matches</h1>
       </header>
 
-      ${leagues.length > 1 ? `
-        <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 16px; -webkit-overflow-scrolling: touch;">
-          ${leagues.map((lg: any) => {
-            const active = state.activeMatchLeague === lg;
-            return `
-              <button type="button" class="match-league-filter-btn" data-match-league="${escapeHtml(lg)}" style="background: ${active ? '#3b82f6' : 'rgba(255, 255, 255, 0.06)'}; color: ${active ? '#ffffff' : '#94a3b8'}; border: 1px solid ${active ? '#60a5fa' : 'rgba(255, 255, 255, 0.1)'}; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; font-family: inherit;">
-                ${escapeHtml(lg)}
-              </button>
-            `;
-          }).join("")}
-        </div>
-      ` : ""}
+      <!-- Date Filter Pills -->
+      <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 20px; -webkit-overflow-scrolling: touch;">
+        ${datePills.map((dp) => {
+          const isActive = activeDate === dp || (activeDate === "All" && dp === "Today");
+          return `
+            <button type="button" class="match-league-filter-btn" data-match-league="${dp}" style="background: ${isActive ? '#1e293b' : 'rgba(255, 255, 255, 0.04)'}; color: ${isActive ? '#ffffff' : '#94a3b8'}; border: 1.5px solid ${isActive ? '#475569' : 'rgba(255, 255, 255, 0.08)'}; padding: 8px 18px; border-radius: 10px; font-size: 0.85rem; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; font-family: inherit; transition: all 0.2s ease;">
+              ${dp}
+            </button>
+          `;
+        }).join("")}
+      </div>
 
       ${loading ? `
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-          ${Array.from({ length: 4 }).map(() => `<div class="skeleton" style="height: 110px; border-radius: 14px; width: 100%;"></div>`).join("")}
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          ${Array.from({ length: 3 }).map(() => `<div class="skeleton" style="height: 180px; border-radius: 16px; width: 100%;"></div>`).join("")}
         </div>
-      ` : filteredMatches.length === 0 ? `
-        <div style="text-align: center; padding: 48px 16px; color: #94a3b8; font-size: 0.9rem;">
-          No active matches found for ${escapeHtml(state.activeMatchLeague)}.
+      ` : matches.length === 0 ? `
+        <div style="text-align: center; padding: 48px 16px; color: #94a3b8; font-size: 0.95rem; font-weight: 500;">
+          No live matches available at this moment.
         </div>
       ` : `
-        <div class="matches-grid" style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
-          ${filteredMatches.map((m: any) => {
-            const isLive = m.isLive;
-            const isPost = m.isPost;
-            const badgeBg = isLive
-              ? 'background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4);'
-              : isPost
-              ? 'background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2);'
-              : 'background: rgba(59, 130, 246, 0.12); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.25);';
+        <div class="league-groups-container" style="display: flex; flex-direction: column; gap: 20px; width: 100%;">
+          ${Array.from(groupedByLeague.entries()).map(([leagueName, leagueMatches]) => {
+            const leagueCrest = leagueMatches[0]?.homeCrest || "";
 
             return `
-              <article class="live-match-card" style="background: #111827; border: 1px solid ${isLive ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255, 255, 255, 0.08)'}; border-radius: 14px; padding: 14px 16px; width: 100%; box-sizing: border-box;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); padding-bottom: 8px;">
-                  <span style="font-size: 0.75rem; font-weight: 700; color: #60a5fa; text-transform: uppercase; letter-spacing: 0.05em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 65%;">
-                    ${escapeHtml(m.league)}
-                  </span>
-                  <span style="font-size: 0.75rem; font-weight: 800; padding: 2px 8px; border-radius: 10px; ${badgeBg}">
-                    ${isLive ? `🔴 ${escapeHtml(m.statusDetail)}` : escapeHtml(m.statusDetail)}
-                  </span>
-                </div>
-
-                <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
-                      <img src="${m.homeCrest}" alt="" style="width: 28px; height: 28px; max-width: 28px; object-fit: contain; flex-shrink: 0;" />
-                      <span style="font-size: 0.95rem; font-weight: 700; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                        ${escapeHtml(m.homeTeam)}
-                      </span>
-                    </div>
-                    <span style="font-size: 1.15rem; font-weight: 800; color: ${isLive ? '#34d399' : '#f8fafc'}; margin-left: 12px; min-width: 24px; text-align: right;">
-                      ${(isLive || isPost) ? (m.homeScore ?? 0) : '-'}
-                    </span>
+              <!-- Thick Grouped League Container Card -->
+              <div class="thick-league-card" style="background: #181d28; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; padding: 18px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4); width: 100%; box-sizing: border-box;">
+                
+                <!-- League Card Header -->
+                <div style="display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 14px;">
+                  <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255, 255, 255, 0.06); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    ${leagueCrest ? `<img src="${leagueCrest}" alt="" style="width: 22px; height: 22px; object-fit: contain;" />` : '🏆'}
                   </div>
-
-                  <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
-                      <img src="${m.awayCrest}" alt="" style="width: 28px; height: 28px; max-width: 28px; object-fit: contain; flex-shrink: 0;" />
-                      <span style="font-size: 0.95rem; font-weight: 700; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                        ${escapeHtml(m.awayTeam)}
-                      </span>
-                    </div>
-                    <span style="font-size: 1.15rem; font-weight: 800; color: ${isLive ? '#34d399' : '#f8fafc'}; margin-left: 12px; min-width: 24px; text-align: right;">
-                      ${(isLive || isPost) ? (m.awayScore ?? 0) : '-'}
-                    </span>
+                  <div>
+                    <h2 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.01em;">
+                      ${escapeHtml(leagueName)}
+                    </h2>
+                    <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">Matchday Details</span>
                   </div>
                 </div>
 
-                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; color: #64748b; border-top: 1px dashed rgba(255, 255, 255, 0.05); padding-top: 8px; margin-top: 4px;">
-                  <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%;">📍 ${escapeHtml(m.venue)}</span>
-                  <span>📅 ${new Date(m.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                <!-- Matches List Inside League Card -->
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                  ${leagueMatches.map((m: any, idx: number) => {
+                    const isLive = m.isLive;
+                    const isPost = m.isPost;
+                    const isLast = idx === leagueMatches.length - 1;
+                    const timeStr = new Date(m.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+
+                    return `
+                      <div class="match-row-item" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; ${!isLast ? 'border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 14px;' : ''}">
+                        
+                        <!-- Left Side: Team Crests & Names + Scores -->
+                        <div style="display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 0;">
+                          
+                          <!-- Home Team Row -->
+                          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
+                              <img src="${m.homeCrest}" alt="" style="width: 26px; height: 26px; object-fit: contain; flex-shrink: 0;" />
+                              <span style="font-size: 0.95rem; font-weight: 700; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                ${escapeHtml(m.homeTeam)}
+                              </span>
+                            </div>
+                            <span style="font-size: 1.05rem; font-weight: 800; color: ${isLive ? '#34d399' : '#f8fafc'}; min-width: 20px; text-align: right;">
+                              ${(isLive || isPost) ? (m.homeScore ?? 0) : ''}
+                            </span>
+                          </div>
+
+                          <!-- Away Team Row -->
+                          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
+                              <img src="${m.awayCrest}" alt="" style="width: 26px; height: 26px; object-fit: contain; flex-shrink: 0;" />
+                              <span style="font-size: 0.95rem; font-weight: 700; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                ${escapeHtml(m.awayTeam)}
+                              </span>
+                            </div>
+                            <span style="font-size: 1.05rem; font-weight: 800; color: ${isLive ? '#34d399' : '#f8fafc'}; min-width: 20px; text-align: right;">
+                              ${(isLive || isPost) ? (m.awayScore ?? 0) : ''}
+                            </span>
+                          </div>
+
+                        </div>
+
+                        <!-- Vertical Divider Line -->
+                        <div style="width: 1px; height: 42px; background: rgba(255, 255, 255, 0.08); flex-shrink: 0;"></div>
+
+                        <!-- Right Side: Status Badge / Match Time -->
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 75px; flex-shrink: 0; text-align: center;">
+                          ${isLive ? `
+                            <span style="font-size: 0.75rem; font-weight: 800; color: #ef4444; background: rgba(239, 68, 68, 0.18); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.3);">
+                              🔴 ${escapeHtml(m.statusDetail)}
+                            </span>
+                          ` : isPost ? `
+                            <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8;">
+                              Full-Time
+                            </span>
+                          ` : `
+                            <span style="font-size: 0.85rem; font-weight: 700; color: #cbd5e1;">
+                              ${timeStr}
+                            </span>
+                          `}
+                        </div>
+
+                      </div>
+                    `;
+                  }).join("")}
                 </div>
-              </article>
+
+              </div>
             `;
           }).join("")}
         </div>
       `}
+
     </section>
   `;
 };
