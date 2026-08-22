@@ -4025,23 +4025,10 @@ const renderMarkets = (): void => {
   if (!storyList || !storyDetail) return;
   briefHero?.toggleAttribute("hidden", true);
   archiveControls?.toggleAttribute("hidden", true);
-  if (categoryTabs) { categoryTabs.hidden = false; renderCategories(); }
+  categoryTabs?.toggleAttribute("hidden", true); // REMOVE FEED & PERSONALIZED BUTTONS ON MARKETS
   topMarketsButton?.classList.add("active");
   topNewsButton?.classList.remove("active");
   topPortfolioButton?.classList.remove("active");
-
-  if (state.selectedMarketId) {
-    const market = marketPreviews.find((item) => item.id === state.selectedMarketId);
-    if (market) {
-      renderMarketDetail(market);
-      return;
-    }
-    state.selectedMarketId = null;
-    if (window.location.hash.startsWith("#market-")) {
-      window.history.replaceState({}, "", "#markets");
-    }
-    return;
-  }
 
   document.body.classList.remove("detail-mode");
   storyDetail.hidden = true;
@@ -4051,7 +4038,6 @@ const renderMarkets = (): void => {
 
   const activeLeague = state.activeMarketLeagueFilter || "All";
 
-  // Filter markets by active league
   const filteredMarkets = marketPreviews.filter((m: any) => {
     if (activeLeague === "All") return true;
     const lg = (m.league || "").toLowerCase();
@@ -4075,39 +4061,37 @@ const renderMarkets = (): void => {
     league: "Spanish LaLiga"
   };
 
+  // Clean text labels without emojis
   const leaguesList = [
-    { id: "All", label: "All", icon: "🌐" },
-    { id: "EPL", label: "EPL", icon: "🦁" },
-    { id: "La Liga", label: "La Liga", icon: "⚡" },
-    { id: "Champions", label: "Champions", icon: "⭐" },
-    { id: "Serie A", label: "Serie A", icon: "🇮🇹" },
-    { id: "Bundesliga", label: "Bundesliga", icon: "🏆" },
-    { id: "Saudi Pro", label: "Saudi Pro", icon: "🇸🇦" }
+    { id: "All", label: "All" },
+    { id: "EPL", label: "EPL" },
+    { id: "La Liga", label: "La Liga" },
+    { id: "Champions", label: "Champions" },
+    { id: "Serie A", label: "Serie A" },
+    { id: "Bundesliga", label: "Bundesliga" },
+    { id: "Saudi Pro", label: "Saudi Pro" }
   ];
 
   storyList.innerHTML = `
     <section class="markets-surface-redesign" style="padding: 12px 6px 110px 6px; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif; color: #ffffff;">
       
       <!-- Top Title Header -->
-      <header style="margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center;">
-        <h1 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: #ffffff; letter-spacing: -0.02em;">Markets</h1>
-        <a href="${ARC_TESTNET_FAUCET}" target="_blank" rel="noreferrer" style="background: rgba(234, 179, 8, 0.15); color: #38bdf8; border: 1px solid rgba(234, 179, 8, 0.3); font-size: 0.8rem; font-weight: 800; padding: 6px 14px; border-radius: 999px; text-decoration: none;">Get testnet USDC</a>
+      <header style="margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; box-sizing: border-box;">
+        <h1 style="margin: 0; font-size: 1.5rem; font-weight: 800; color: #ffffff; letter-spacing: -0.02em;">Markets</h1>
+        <a href="${ARC_TESTNET_FAUCET}" target="_blank" rel="noreferrer" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); font-size: 0.78rem; font-weight: 800; padding: 6px 12px; border-radius: 999px; text-decoration: none; white-space: nowrap; flex-shrink: 0;">Get testnet USDC</a>
       </header>
 
-      <!-- Popular Featured Card (Matching Reference UI 1) -->
+      <!-- Popular Featured Card -->
       <div style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 18px; margin-bottom: 22px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
         
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 1.1rem;">🔥</span>
-            <h2 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #ffffff;">Popular</h2>
-          </div>
+          <h2 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #ffffff;">Popular</h2>
           <span style="font-size: 0.78rem; font-weight: 700; color: #94a3b8; background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
-            In 1h : 29m 🔥🔥 ⚡
+            In 1h : 29m ⚡
           </span>
         </div>
 
-        <!-- Featured Teams Row (Stacked) -->
+        <!-- Featured Teams Row -->
         <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
           <div style="display: flex; align-items: center; gap: 10px;">
             <img src="${(featuredMarket as any).homeCrest || 'https://a.espncdn.com/i/teamlogos/soccer/500/379.png'}" alt="" style="width: 28px; height: 28px; object-fit: contain;" />
@@ -4119,48 +4103,33 @@ const renderMarkets = (): void => {
           </div>
         </div>
 
-        <div style="text-align: center; font-size: 0.8rem; color: #94a3b8; font-weight: 700; margin-bottom: 10px; letter-spacing: 0.05em; text-transform: uppercase;">
-          Moneyline
-        </div>
-
-        <!-- 3 Cents Odds Trading Boxes (Matching Reference Image) -->
+        <!-- 3 Cents Odds Trading Boxes (Clicking opens Bottom Sheet Betting Modal) -->
         <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
-          <button type="button" class="sporty-odds-btn" data-market-id="${featuredMarket.id}" data-market-option-id="home" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
-            <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8;">${escapeHtml((featuredMarket as any).homeTeam || "Home")}</span>
+          <button type="button" class="siftle-bet-option-btn" data-market-id="${featuredMarket.id}" data-option-id="home" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml((featuredMarket as any).homeTeam || "Home")}</span>
             <span style="font-size: 1.05rem; font-weight: 900; color: #38bdf8;">11.5¢</span>
           </button>
 
-          <button type="button" class="sporty-odds-btn" data-market-id="${featuredMarket.id}" data-market-option-id="draw" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
+          <button type="button" class="siftle-bet-option-btn" data-market-id="${featuredMarket.id}" data-option-id="draw" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
             <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8;">Draw</span>
             <span style="font-size: 1.05rem; font-weight: 900; color: #38bdf8;">20.5¢</span>
           </button>
 
-          <button type="button" class="sporty-odds-btn" data-market-id="${featuredMarket.id}" data-market-option-id="away" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
-            <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8;">${escapeHtml((featuredMarket as any).awayTeam || "Away")}</span>
+          <button type="button" class="siftle-bet-option-btn" data-market-id="${featuredMarket.id}" data-option-id="away" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml((featuredMarket as any).awayTeam || "Away")}</span>
             <span style="font-size: 1.05rem; font-weight: 900; color: #38bdf8;">68.5¢</span>
           </button>
         </div>
 
       </div>
 
-      <!-- Games vs Outrights Toggle (Matching Reference UI) -->
-      <div style="background: rgba(255, 255, 255, 0.04); border-radius: 999px; padding: 4px; display: flex; gap: 4px; margin-bottom: 20px;">
-        <button type="button" style="flex: 1; background: rgba(255,255,255,0.12); color: #ffffff; border: none; padding: 10px 0; border-radius: 999px; font-size: 0.9rem; font-weight: 800; cursor: pointer; text-align: center;">
-          Games
-        </button>
-        <button type="button" style="flex: 1; background: transparent; color: #94a3b8; border: none; padding: 10px 0; border-radius: 999px; font-size: 0.9rem; font-weight: 700; cursor: pointer; text-align: center;">
-          Outrights
-        </button>
-      </div>
-
-      <!-- Horizontal League Selection Icon Nav Bar (Matching Reference UI) -->
+      <!-- Horizontal League Selection Icon Nav Bar (No Emojis) -->
       <div style="display: flex; gap: 14px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 20px; scrollbar-width: none;">
         ${leaguesList.map((lg) => {
           const isActive = activeLeague === lg.id;
           return `
             <button type="button" class="market-league-selector-btn" data-league-id="${lg.id}" style="background: transparent; border: none; color: ${isActive ? '#ffffff' : '#94a3b8'}; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; flex-shrink: 0; padding-bottom: 6px; border-bottom: 2px solid ${isActive ? '#ffffff' : 'transparent'}; font-family: inherit; transition: all 0.2s ease;">
-              <span style="font-size: 1.4rem;">${lg.icon}</span>
-              <span style="font-size: 0.8rem; font-weight: 800; white-space: nowrap;">${lg.label}</span>
+              <span style="font-size: 0.9rem; font-weight: 800; white-space: nowrap;">${lg.label}</span>
             </button>
           `;
         }).join("")}
@@ -4169,15 +4138,9 @@ const renderMarkets = (): void => {
       <!-- Active Filtered Markets List -->
       <div style="display: flex; flex-direction: column; gap: 18px;">
         
-        <!-- League Section Header -->
+        <!-- League Section Header (No Moneyline text) -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 1.2rem;">${leaguesList.find(l => l.id === activeLeague)?.icon || '🏆'}</span>
-            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #ffffff;">${activeLeague}</h3>
-          </div>
-          <span style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; font-size: 0.8rem; font-weight: 700; padding: 6px 12px; border-radius: 10px; cursor: pointer;">
-            Moneyline ∨
-          </span>
+          <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #ffffff;">${activeLeague}</h3>
         </div>
 
         <!-- Market Cards -->
@@ -4211,23 +4174,19 @@ const renderMarkets = (): void => {
                 </div>
               </div>
 
-              <div style="text-align: center; font-size: 0.78rem; color: #94a3b8; font-weight: 700; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em;">
-                Moneyline
-              </div>
-
-              <!-- 3 Outcome Cents Odds Trading Boxes -->
+              <!-- 3 Outcome Cents Odds Trading Boxes (Clicking opens Bottom Sheet Betting Modal) -->
               <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
-                <button type="button" class="sporty-odds-btn" data-market-id="${m.id}" data-market-option-id="home" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
+                <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="home" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
                   <span style="font-size: 0.78rem; font-weight: 700; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml(homeTeam)}</span>
                   <span style="font-size: 1rem; font-weight: 900; color: #38bdf8;">${isLive ? '99.3¢' : '45.0¢'}</span>
                 </button>
 
-                <button type="button" class="sporty-odds-btn" data-market-id="${m.id}" data-market-option-id="draw" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
+                <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="draw" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
                   <span style="font-size: 0.78rem; font-weight: 700; color: #94a3b8;">Draw</span>
                   <span style="font-size: 1rem; font-weight: 900; color: #38bdf8;">${isLive ? '0.6¢' : '25.0¢'}</span>
                 </button>
 
-                <button type="button" class="sporty-odds-btn" data-market-id="${m.id}" data-market-option-id="away" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
+                <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="away" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
                   <span style="font-size: 0.78rem; font-weight: 700; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml(awayTeam)}</span>
                   <span style="font-size: 1rem; font-weight: 900; color: #38bdf8;">${isLive ? '0.3¢' : '30.0¢'}</span>
                 </button>
@@ -4249,6 +4208,17 @@ const renderMarkets = (): void => {
       if (lgId) {
         state.activeMarketLeagueFilter = lgId;
         renderMarkets();
+      }
+    });
+  });
+
+  // Attach Option Click listener to open Bottom Sheet Betting Modal
+  document.querySelectorAll(".siftle-bet-option-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const mId = btn.getAttribute("data-market-id");
+      const optId = btn.getAttribute("data-option-id");
+      if (mId && optId) {
+        (window as any).openSiftleBettingModal(mId, optId);
       }
     });
   });
@@ -5298,6 +5268,125 @@ const openMatchDetailModal = async (matchId: string) => {
 
 let currentEspnMatchSummary: any = null;
 
+
+
+(window as any).openSiftleBettingModal = (marketId: string, optionId: string) => {
+  const market = marketPreviews.find(m => m.id === marketId) || marketPreviews[0] || {
+    id: marketId,
+    question: "Espanyol vs Real Madrid",
+    homeTeam: "Espanyol",
+    awayTeam: "Real Madrid",
+    homeCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/379.png",
+    awayCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/86.png"
+  };
+
+  let optionName = optionId;
+  let priceCents = 50.0;
+  if (optionId === "home") {
+    optionName = (market as any).homeTeam || "Home";
+    priceCents = 11.5;
+  } else if (optionId === "away") {
+    optionName = (market as any).awayTeam || "Away";
+    priceCents = 68.5;
+  } else if (optionId === "draw") {
+    optionName = "Draw";
+    priceCents = 20.5;
+  }
+
+  let modalOverlay = document.getElementById("siftleBettingModalOverlay");
+  if (modalOverlay) modalOverlay.remove();
+
+  modalOverlay = document.createElement("div");
+  modalOverlay.id = "siftleBettingModalOverlay";
+  modalOverlay.style.cssText = "position: fixed; inset: 0; z-index: 999999; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: flex-end;";
+
+  let tradeAmount = 20;
+
+  const updateModalContent = () => {
+    const avgPrice = priceCents;
+    const potentialWin = ((tradeAmount / (avgPrice / 100))).toFixed(2);
+
+    modalOverlay!.innerHTML = `
+      <div style="background: #12131a; border: 1px solid rgba(255, 255, 255, 0.1); border-top-left-radius: 28px; border-top-right-radius: 28px; width: 100%; max-width: 600px; padding: 24px 20px 32px 20px; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; box-shadow: 0 -12px 48px rgba(0,0,0,0.9); animation: slideUp 0.25s ease-out; color: #ffffff;">
+        
+        <!-- Modal Top Sub-Header (Matching Reference UI 2) -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <span style="font-size: 0.85rem; font-weight: 800; color: #34d399; background: rgba(52, 211, 153, 0.15); padding: 4px 12px; border-radius: 8px; border: 1px solid rgba(52, 211, 153, 0.3);">
+            LONG ⬍
+          </span>
+          <button type="button" id="closeBettingModalBtn" style="background: rgba(255, 255, 255, 0.08); border: none; color: #94a3b8; width: 34px; height: 34px; border-radius: 50%; font-size: 1.1rem; font-weight: 700; cursor: pointer;">✕</button>
+        </div>
+
+        <!-- Outcome Selection Details -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.06);">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <img src="${optionId === 'home' ? (market as any).homeCrest : optionId === 'away' ? (market as any).awayCrest : 'https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png'}" alt="" style="width: 38px; height: 38px; object-fit: contain;" />
+            <div>
+              <div style="font-size: 1.1rem; font-weight: 800; color: #ffffff;">${escapeHtml(optionName)}</div>
+              <div style="font-size: 0.82rem; color: #94a3b8; font-weight: 600;">${escapeHtml((market as any).homeTeam || "Home")} vs ${escapeHtml((market as any).awayTeam || "Away")}</div>
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 0.78rem; color: #94a3b8; font-weight: 600;">Balance</div>
+            <div style="font-size: 0.9rem; font-weight: 800; color: #38bdf8;">$100.00 USDC</div>
+          </div>
+        </div>
+
+        <!-- Amount Input Box -->
+        <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+          <button type="button" id="decBetBtn" style="background: rgba(255,255,255,0.08); border: none; color: #ffffff; width: 36px; height: 36px; border-radius: 10px; font-size: 1.2rem; font-weight: 800; cursor: pointer;">-</button>
+          <div style="text-align: center;">
+            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Amount</div>
+            <div style="font-size: 1.6rem; font-weight: 900; color: #ffffff;">$${tradeAmount}</div>
+          </div>
+          <button type="button" id="incBetBtn" style="background: rgba(255,255,255,0.08); border: none; color: #ffffff; width: 36px; height: 36px; border-radius: 10px; font-size: 1.2rem; font-weight: 800; cursor: pointer;">+</button>
+        </div>
+
+        <!-- Quick Amount Pills -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;">
+          ${[10, 20, 50].map((amt) => `
+            <button type="button" class="quick-amt-btn" data-amt="${amt}" style="background: ${tradeAmount === amt ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.04)'}; border: 1.5px solid ${tradeAmount === amt ? '#38bdf8' : 'rgba(255, 255, 255, 0.08)'}; color: ${tradeAmount === amt ? '#38bdf8' : '#ffffff'}; padding: 12px 0; border-radius: 14px; font-weight: 800; cursor: pointer; text-align: center;">
+              $${amt}
+            </button>
+          `).join("")}
+        </div>
+
+        <!-- Payout Calculation Summary -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 0.95rem; font-weight: 800;">
+          <span style="color: #94a3b8;">To Win: <strong style="color: #34d399;">$${potentialWin}</strong></span>
+          <span style="color: #94a3b8;">Avg Price: <strong style="color: #38bdf8;">${priceCents}¢</strong></span>
+        </div>
+
+        <!-- Action Button -->
+        <button type="button" id="confirmTradeBtn" style="width: 100%; background: #38bdf8; color: #0f172a; border: none; padding: 16px; border-radius: 16px; font-size: 1.1rem; font-weight: 900; cursor: pointer; transition: all 0.2s ease;">
+          Place Trade ($${tradeAmount} USDC)
+        </button>
+
+      </div>
+    `;
+
+    document.getElementById("closeBettingModalBtn")?.addEventListener("click", () => modalOverlay?.remove());
+    document.getElementById("decBetBtn")?.addEventListener("click", () => {
+      if (tradeAmount > 5) { tradeAmount -= 5; updateModalContent(); }
+    });
+    document.getElementById("incBetBtn")?.addEventListener("click", () => {
+      tradeAmount += 10; updateModalContent();
+    });
+    document.querySelectorAll(".quick-amt-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        tradeAmount = Number(btn.getAttribute("data-amt")) || 20;
+        updateModalContent();
+      });
+    });
+    document.getElementById("confirmTradeBtn")?.addEventListener("click", () => {
+      alert("Trade of $" + tradeAmount + " USDC on " + optionName + " placed successfully!");
+      modalOverlay?.remove();
+    });
+  };
+
+  updateModalContent();
+  document.body.appendChild(modalOverlay);
+};
 
 (window as any).openSiftleMatchPage = (matchId: string) => {
   console.log("openSiftleMatchPage called for matchId:", matchId);
