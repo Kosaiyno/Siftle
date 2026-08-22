@@ -5222,10 +5222,7 @@ const renderMatchDetailPage = async (matchId: string) => {
           </div>
         </div>
 
-        <div style="display: flex; justify-content: space-between; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">
-          <span>Cala 30' ⚽</span>
-          <span>⚽ Bellingham 9'</span>
-        </div>
+        <div id="heroGoalScorersList" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: #cbd5e1; font-weight: 600; text-align: center;"></div>
 
       </div>
 
@@ -5312,20 +5309,7 @@ const renderMatchDetailPage = async (matchId: string) => {
       <div style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 20px;">
         <h3 style="margin: 0 0 16px 0; font-size: 1.1rem; font-weight: 800; color: #ffffff;">Stats</h3>
 
-        <!-- Match Momentum Bar Chart -->
-        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 16px; margin-bottom: 20px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-            <span style="font-size: 0.95rem; font-weight: 800; color: #ffffff;">Match Momentum</span>
-            <span style="font-size: 0.8rem; color: #34d399; font-weight: 700;">Live Attack Index</span>
-          </div>
-          <div style="display: flex; align-items: flex-end; height: 50px; gap: 4px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">
-            ${Array.from({ length: 30 }).map((_, i) => {
-              const h = Math.floor(Math.sin(i * 0.6) * 20) + 24;
-              const isHome = i % 2 === 0;
-              return `<div style="flex: 1; height: ${h}px; background: ${isHome ? '#3b82f6' : '#34d399'}; border-radius: 3px; opacity: 0.85;"></div>`;
-            }).join("")}
-          </div>
-        </div>
+        
 
         <!-- Possession Bar -->
         <div style="margin-bottom: 18px;">
@@ -5359,19 +5343,24 @@ const renderMatchDetailPage = async (matchId: string) => {
       </div>
 
       <!-- Key Events Section -->
+      <!-- Dynamic Real Key Events Section -->
       <div style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 20px;">
         <h3 style="margin: 0 0 16px 0; font-size: 1.1rem; font-weight: 800; color: #ffffff;">Key events</h3>
         <div style="display: flex; flex-direction: column; gap: 12px;">
-          <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
-            <span style="font-size: 0.85rem; font-weight: 800; color: #38bdf8;">30'</span>
-            <span style="font-size: 1.1rem;">⚽</span>
-            <span style="font-size: 0.9rem; font-weight: 700; color: #ffffff;">Cala Goal (${escapeHtml(match.homeTeam)})</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0;">
-            <span style="font-size: 0.85rem; font-weight: 800; color: #38bdf8;">9'</span>
-            <span style="font-size: 1.1rem;">⚽</span>
-            <span style="font-size: 0.9rem; font-weight: 700; color: #ffffff;">Bellingham Goal (${escapeHtml(match.awayTeam)})</span>
-          </div>
+          ${(() => {
+            const rawEvents = summary.keyEvents || summary.commentary || [];
+            const goals = rawEvents.filter((k: any) => k.type?.text?.toLowerCase().includes("goal") || k.scoringPlay || k.text?.toLowerCase().includes("goal"));
+            if (goals.length === 0) {
+              return `<div style="color: #94a3b8; font-size: 0.9rem;">No goals recorded for this match yet.</div>`;
+            }
+            return goals.map((g: any) => `
+              <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <span style="font-size: 0.85rem; font-weight: 800; color: #38bdf8; min-width: 30px;">${g.clock?.displayValue || g.time?.displayValue || "•"}</span>
+                <span style="font-size: 1.1rem;">⚽</span>
+                <span style="font-size: 0.9rem; font-weight: 700; color: #ffffff;">${escapeHtml(g.text)}</span>
+              </div>
+            `).join("");
+          })()}
         </div>
       </div>
     `;
@@ -5384,7 +5373,7 @@ const renderMatchDetailPage = async (matchId: string) => {
           <div style="text-align: center; color: #94a3b8; padding: 24px 0;">No live commentary available for this match.</div>
         ` : `
           <div style="display: flex; flex-direction: column; gap: 14px;">
-            ${commentaryList.slice(0, 40).map((item: any) => `
+            ${commentaryList.map((item: any) => `
               <div style="display: flex; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05);">
                 <span style="font-size: 0.85rem; font-weight: 800; color: #38bdf8; min-width: 36px;">${item.clock?.displayValue || item.time?.displayValue || "•"}</span>
                 <span style="font-size: 0.9rem; color: #e2e8f0; line-height: 1.4;">${escapeHtml(item.text)}</span>
