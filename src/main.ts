@@ -277,7 +277,10 @@ const state: {
   newsSearchQuery: "",
   briefingStatusByUrl: {},
   claimingMarketIds: {},
-  portfolioFilter: "open"
+  portfolioFilter: "open",
+  liveMatches: [],
+  loadingLiveMatches: false,
+  activeMatchLeague: "All"
 };
 
 let selectedLeaderboardDivision: number | null = null;
