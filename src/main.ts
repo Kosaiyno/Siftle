@@ -2418,6 +2418,27 @@ const loadMarketSnapshot = async (market: MarketPreview): Promise<void> => {
 
 
 
+
+function cleanLeagueTitle(name: string): string {
+  if (!name) return "Soccer Matches";
+  // Remove year prefixes like 2026-27-, 2025-26-, 2026-
+  let clean = name.replace(/^\d{4}(-\d{2,4})?-/g, "");
+  // Replace hyphens with spaces
+  clean = clean.replace(/-/g, " ");
+  // Capitalize words nicely
+  clean = clean.split(" ").map(w => w ? (w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()) : "").join(" ");
+  // Standardize known names
+  if (clean.toLowerCase().includes("premier league") || clean.toLowerCase().includes("eng 1")) return "English Premier League";
+  if (clean.toLowerCase().includes("laliga") || clean.toLowerCase().includes("esp 1")) return "Spanish LaLiga";
+  if (clean.toLowerCase().includes("champions league") || clean.toLowerCase().includes("uefa champions")) return "UEFA Champions League";
+  if (clean.toLowerCase().includes("championship") || clean.toLowerCase().includes("eng 2")) return "EFL Championship";
+  if (clean.toLowerCase().includes("serie a") || clean.toLowerCase().includes("ita 1")) return "Italian Serie A";
+  if (clean.toLowerCase().includes("bundesliga") || clean.toLowerCase().includes("ger 1")) return "German Bundesliga";
+  if (clean.toLowerCase().includes("saudi") || clean.toLowerCase().includes("sau 1")) return "Saudi Pro League";
+  if (clean.toLowerCase().includes("friendly") || clean.toLowerCase().includes("friendlies")) return "Club Friendlies";
+  return clean.trim();
+}
+
 const loadLiveMatches = async (dateParam?: string): Promise<void> => {
   if (state.loadingLiveMatches) return;
   state.loadingLiveMatches = true;
@@ -2430,6 +2451,7 @@ const loadLiveMatches = async (dateParam?: string): Promise<void> => {
       `https://site.api.espn.com/apis/site/v2/sports/soccer/eng.2/scoreboard${datesQuery}`,
       `https://site.api.espn.com/apis/site/v2/sports/soccer/ita.1/scoreboard${datesQuery}`,
       `https://site.api.espn.com/apis/site/v2/sports/soccer/ger.1/scoreboard${datesQuery}`,
+      `https://site.api.espn.com/apis/site/v2/sports/soccer/sau.1/scoreboard${datesQuery}`,
       `https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard${datesQuery}`
     ];
 
@@ -2439,6 +2461,7 @@ const loadLiveMatches = async (dateParam?: string): Promise<void> => {
     responses.forEach((res) => {
       if (res.status === "fulfilled" && res.value && Array.isArray(res.value.events)) {
         const rawLeagueName = res.value.leagues?.[0]?.name;
+        const officialLogo = res.value.leagues?.[0]?.logos?.[0]?.href || "";
         const leagueName = (rawLeagueName && rawLeagueName !== "Soccer") ? rawLeagueName : null;
 
         res.value.events.forEach((e: any) => {
@@ -2450,12 +2473,14 @@ const loadLiveMatches = async (dateParam?: string): Promise<void> => {
           const stateType = e.status?.type?.state;
           const detail = e.status?.type?.detail || e.status?.type?.shortDetail || "Scheduled";
           
-          const eventLeague = leagueName || e.season?.slug || e.league?.name || "Soccer Scoreboard";
+          const rawEventLeague = leagueName || e.season?.slug || e.league?.name || "Soccer Scoreboard";
+          const eventLeague = cleanLeagueTitle(rawEventLeague);
 
           matchMap.set(e.id, {
             id: e.id,
             name: e.name,
             league: eventLeague,
+            leagueLogo: officialLogo,
             statusState: stateType,
             statusDetail: detail,
             isLive: stateType === "in",
@@ -4756,17 +4781,17 @@ const renderMatches = (): void => {
   const matches = state.liveMatches;
   const loading = state.loadingLiveMatches && matches.length === 0;
 
-  // 1. Extract LIVE matches to feature at the VERY TOP
+  // 1. Separate LIVE matches to place at the VERY TOP
   const liveMatches = matches.filter((m: any) => m.isLive);
   const nonLiveMatches = matches.filter((m: any) => !m.isLive);
 
-  // 2. Group non-live matches into separate cards by league name
+  // 2. Group non-live matches by cleaned league name
   const groupedByLeague = new Map<string, any[]>();
   if (liveMatches.length > 0) {
     groupedByLeague.set("🔴 LIVE MATCHES NOW", liveMatches);
   }
   nonLiveMatches.forEach((m: any) => {
-    const lg = m.league || "Other Matches";
+    const lg = cleanLeagueTitle(m.league || "Matches");
     if (!groupedByLeague.has(lg)) groupedByLeague.set(lg, []);
     groupedByLeague.get(lg)!.push(m);
   });
@@ -4777,12 +4802,12 @@ const renderMatches = (): void => {
   storyList.innerHTML = `
     <section class="matches-surface" style="padding: 16px 12px 110px 12px; box-sizing: border-box; width: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;">
       
-      <!-- Top Header Title -->
+      <!-- Top Title Header -->
       <header class="matches-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
         <h1 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: #ffffff; letter-spacing: -0.02em;">Matches</h1>
       </header>
 
-      <!-- Clickable Date Navigation Pills -->
+      <!-- Clickable Date Filter Pills -->
       <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 20px; -webkit-overflow-scrolling: touch;">
         ${datePills.map((dp) => {
           const isActive = activeDate === dp || (activeDate === "All" && dp === "Today");
@@ -4806,25 +4831,25 @@ const renderMatches = (): void => {
         <div class="league-groups-container" style="display: flex; flex-direction: column; gap: 20px; width: 100%;">
           ${Array.from(groupedByLeague.entries()).map(([leagueName, leagueMatches]) => {
             const isLiveGroup = leagueName.includes("LIVE MATCHES");
-            const leagueCrest = leagueMatches[0]?.homeCrest || "";
+            const officialLeagueLogo = leagueMatches[0]?.leagueLogo || "";
 
             return `
-              <!-- Separate Thick Card for EACH League -->
+              <!-- Separate Thick Card per League (News Card Color #12131a) -->
               <div class="thick-league-card" style="background: var(--paper, #12131a); border: 1px solid ${isLiveGroup ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255, 255, 255, 0.08)'}; border-radius: 18px; padding: 18px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4); width: 100%; box-sizing: border-box;">
                 
-                <!-- Authentic League Card Header -->
+                <!-- Authentic League Header with Official League Logo -->
                 <div style="display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 14px;">
                   <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255, 255, 255, 0.06); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    ${leagueCrest ? `<img src="${leagueCrest}" alt="" style="width: 22px; height: 22px; object-fit: contain;" />` : '🏆'}
+                    ${officialLeagueLogo ? `<img src="${officialLeagueLogo}" alt="" style="width: 22px; height: 22px; object-fit: contain;" />` : '🏆'}
                   </div>
                   <div>
                     <h2 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: ${isLiveGroup ? '#ef4444' : '#f8fafc'}; letter-spacing: -0.01em;">
-                      ${escapeHtml(leagueName)}
+                      ${escapeHtml(cleanLeagueTitle(leagueName))}
                     </h2>
                   </div>
                 </div>
 
-                <!-- Matches List Inside This Specific League Card -->
+                <!-- Matches List Inside Card -->
                 <div style="display: flex; flex-direction: column; gap: 16px;">
                   ${leagueMatches.map((m: any, idx: number) => {
                     const isLive = m.isLive;
