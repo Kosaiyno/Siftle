@@ -450,6 +450,7 @@ const archiveControls = document.querySelector<HTMLElement>("#archiveControls");
 const topMarketsButton = document.querySelector<HTMLButtonElement>("[data-surface='markets']");
 const topNewsButton = document.querySelector<HTMLButtonElement>("[data-surface='feed']");
 const topPortfolioButton = document.querySelector<HTMLButtonElement>("[data-surface='portfolio']");
+const topMatchesButton = document.querySelector<HTMLButtonElement>("[data-surface='matches']");
 const walletButton = document.querySelector<HTMLButtonElement>("#walletButton");
 const themeToggleButton = document.querySelector<HTMLButtonElement>("[data-theme-toggle]");
 const guideToggleButton = document.getElementById("guideToggleButton") as HTMLButtonElement | null;
@@ -3978,6 +3979,7 @@ const renderMarkets = (): void => {
   topMarketsButton?.classList.add("active");
   topNewsButton?.classList.remove("active");
   topPortfolioButton?.classList.remove("active");
+  topMatchesButton?.classList.remove("active");
 
   if (state.selectedMarketId) {
     const market = marketPreviews.find((item) => item.id === state.selectedMarketId);
@@ -5470,6 +5472,18 @@ topNewsButton?.addEventListener("click", () => {
   ensureFeedLoaded(state.activeCategory);
 });
 
+topMatchesButton?.addEventListener("click", () => {
+  state.feedScrollY = window.scrollY;
+  state.activeSurface = "matches";
+  state.selectedMarketId = null;
+  state.selectedStoryId = null;
+  state.selectedThreadUrl = null;
+  state.showSaved = false;
+  window.history.pushState({}, "", "#matches");
+  resetFeedScroll();
+  render();
+});
+
 topPortfolioButton?.addEventListener("click", () => {
   state.feedScrollY = window.scrollY;
   state.activeSurface = "portfolio";
@@ -5492,6 +5506,20 @@ walletButton?.addEventListener("click", () => {
 });
 
 document.addEventListener("click", (event) => {
+  const matchesNavTarget = target.closest<HTMLElement>("[data-bottom-nav='matches'], [data-surface='matches']");
+  if (matchesNavTarget) {
+    state.feedScrollY = window.scrollY;
+    state.activeSurface = "matches";
+    state.selectedMarketId = null;
+    state.selectedStoryId = null;
+    state.selectedThreadUrl = null;
+    state.showSaved = false;
+    window.history.pushState({}, "", "#matches");
+    resetFeedScroll();
+    render();
+    return;
+  }
+
   const target = event.target as HTMLElement;
   const copyBtn = target.closest(".copy-address-btn");
   if (copyBtn) {
