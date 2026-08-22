@@ -174,6 +174,7 @@ const state: {
   liveMatches: any[];
   loadingLiveMatches: boolean;
   activeMatchLeague: string;
+  activeMatchDate: string;
   selectedMarketId: string | null;
   marketOrderMode: "buy" | "sell";
   marketTradeSide: "yes" | "no";
@@ -2419,6 +2420,14 @@ const loadMarketSnapshot = async (market: MarketPreview): Promise<void> => {
 
 
 
+
+function formatYyyyMmDd(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}${month}${day}`;
+}
+
 function cleanLeagueTitle(name: string): string {
   if (!name) return "Soccer Matches";
   // Remove year prefixes like 2026-27-, 2025-26-, 2026-
@@ -2443,7 +2452,11 @@ const loadLiveMatches = async (dateParam?: string): Promise<void> => {
   if (state.loadingLiveMatches) return;
   state.loadingLiveMatches = true;
   try {
-    const datesQuery = dateParam ? `?dates=${dateParam}` : "";
+    const todayStr = formatYyyyMmDd(new Date());
+    const targetDateStr = dateParam || state.activeMatchDate || todayStr;
+    state.activeMatchDate = targetDateStr;
+    const datesQuery = `?dates=${targetDateStr}`;
+
     const endpoints = [
       `https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard${datesQuery}`,
       `https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions/scoreboard${datesQuery}`,
@@ -4772,8 +4785,12 @@ const renderMatches = (): void => {
   storyList.classList.remove("markets-list");
   storyList.classList.add("matches-surface-active");
 
+  const todayDate = new Date();
+  const todayStr = formatYyyyMmDd(todayDate);
+  if (!state.activeMatchDate) state.activeMatchDate = todayStr;
+
   if (state.liveMatches.length === 0 && !state.loadingLiveMatches) {
-    void loadLiveMatches().then(() => {
+    void loadLiveMatches(state.activeMatchDate).then(() => {
       if (state.activeSurface === "matches") renderMatches();
     });
   }
@@ -4796,8 +4813,20 @@ const renderMatches = (): void => {
     groupedByLeague.get(lg)!.push(m);
   });
 
-  const activeDate = state.activeMatchLeague || "Today";
-  const datePills = ["Yesterday", "Today", "Tomorrow"];
+  // Generate 7 Dynamic Date Pills: Yesterday (-1), Today (0), Tomorrow (+1), + 4 upcoming days
+  const datePills: { label: string; dateStr: string }[] = [];
+  for (let i = -1; i <= 5; i++) {
+    const d = new Date(todayDate);
+    d.setDate(todayDate.getDate() + i);
+    const dateStr = formatYyyyMmDd(d);
+    let label = "";
+    if (i === -1) label = "Yesterday";
+    else if (i === 0) label = "Today";
+    else if (i === 1) label = "Tomorrow";
+    else label = d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+
+    datePills.push({ label, dateStr });
+  }
 
   storyList.innerHTML = `
     <section class="matches-surface" style="padding: 16px 12px 110px 12px; box-sizing: border-box; width: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;">
@@ -4807,13 +4836,13 @@ const renderMatches = (): void => {
         <h1 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: #ffffff; letter-spacing: -0.02em;">Matches</h1>
       </header>
 
-      <!-- Clickable Date Filter Pills -->
-      <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 20px; -webkit-overflow-scrolling: touch;">
+      <!-- Clickable Date Navigation Pills (7 Days) -->
+      <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 20px; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
         ${datePills.map((dp) => {
-          const isActive = activeDate === dp || (activeDate === "All" && dp === "Today");
+          const isActive = state.activeMatchDate === dp.dateStr;
           return `
-            <button type="button" class="match-league-filter-btn" data-match-league="${dp}" style="background: ${isActive ? '#1e293b' : 'rgba(255, 255, 255, 0.04)'}; color: ${isActive ? '#ffffff' : '#94a3b8'}; border: 1.5px solid ${isActive ? '#475569' : 'rgba(255, 255, 255, 0.08)'}; padding: 8px 18px; border-radius: 10px; font-size: 0.85rem; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; font-family: inherit; transition: all 0.2s ease;">
-              ${dp}
+            <button type="button" class="match-date-pill-btn" data-match-date="${dp.dateStr}" style="background: ${isActive ? '#1e293b' : 'rgba(255, 255, 255, 0.04)'}; color: ${isActive ? '#38bdf8' : '#94a3b8'}; border: 1.5px solid ${isActive ? '#0284c7' : 'rgba(255, 255, 255, 0.08)'}; padding: 8px 18px; border-radius: 10px; font-size: 0.85rem; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; font-family: inherit; transition: all 0.2s ease;">
+              ${escapeHtml(dp.label)}
             </button>
           `;
         }).join("")}
@@ -4825,7 +4854,7 @@ const renderMatches = (): void => {
         </div>
       ` : matches.length === 0 ? `
         <div style="text-align: center; padding: 48px 16px; color: #94a3b8; font-size: 0.95rem; font-weight: 500;">
-          No matches available for this date.
+          No live matches available for this date. Select another date above!
         </div>
       ` : `
         <div class="league-groups-container" style="display: flex; flex-direction: column; gap: 20px; width: 100%;">
@@ -4834,10 +4863,10 @@ const renderMatches = (): void => {
             const officialLeagueLogo = leagueMatches[0]?.leagueLogo || "";
 
             return `
-              <!-- Separate Thick Card per League (News Card Color #12131a) -->
+              <!-- Separate Card per League -->
               <div class="thick-league-card" style="background: var(--paper, #12131a); border: 1px solid ${isLiveGroup ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255, 255, 255, 0.08)'}; border-radius: 18px; padding: 18px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4); width: 100%; box-sizing: border-box;">
                 
-                <!-- Authentic League Header with Official League Logo -->
+                <!-- Official League Card Header -->
                 <div style="display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 14px;">
                   <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255, 255, 255, 0.06); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                     ${officialLeagueLogo ? `<img src="${officialLeagueLogo}" alt="" style="width: 22px; height: 22px; object-fit: contain;" />` : '🏆'}
@@ -5569,6 +5598,21 @@ walletButton?.addEventListener("click", () => {
 
 document.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
+  const datePillBtn = target.closest<HTMLElement>("[data-match-date]");
+  if (datePillBtn) {
+    const targetDate = datePillBtn.getAttribute("data-match-date");
+    if (targetDate && targetDate !== state.activeMatchDate) {
+      state.activeMatchDate = targetDate;
+      state.liveMatches = [];
+      state.loadingLiveMatches = true;
+      renderMatches();
+      void loadLiveMatches(targetDate).then(() => {
+        if (state.activeSurface === "matches") renderMatches();
+      });
+    }
+    return;
+  }
+
   const copyBtn = target.closest(".copy-address-btn");
   if (copyBtn) {
     const address = copyBtn.getAttribute("data-address");
