@@ -3975,7 +3975,7 @@ const renderMarkets = (): void => {
   if (!storyList || !storyDetail) return;
   briefHero?.toggleAttribute("hidden", true);
   archiveControls?.toggleAttribute("hidden", true);
-  categoryTabs?.toggleAttribute("hidden", true);
+  if (categoryTabs) { categoryTabs.hidden = false; renderCategories(); }
   topMarketsButton?.classList.add("active");
   topNewsButton?.classList.remove("active");
   topPortfolioButton?.classList.remove("active");
