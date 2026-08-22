@@ -174,9 +174,6 @@ const state: {
   liveMatches: any[];
   loadingLiveMatches: boolean;
   activeMatchLeague: string;
-  liveMatches: any[];
-  loadingLiveMatches: boolean;
-  activeMatchLeague: string;
   selectedMarketId: string | null;
   marketOrderMode: "buy" | "sell";
   marketTradeSide: "yes" | "no";
@@ -452,7 +449,7 @@ const briefHero = document.querySelector<HTMLElement>(".brief-hero");
 const archiveControls = document.querySelector<HTMLElement>("#archiveControls");
 const topMarketsButton = document.querySelector<HTMLButtonElement>("[data-surface='markets']");
 const topNewsButton = document.querySelector<HTMLButtonElement>("[data-surface='feed']");
-const topPortfolioButton = document.querySelector<HTMLButtonElement>("[data-surface='portfolio']");
+const topPortfolioButton = document.querySelector<HTMLButtonElement>("[data-surface='portfolio']");
 const walletButton = document.querySelector<HTMLButtonElement>("#walletButton");
 const themeToggleButton = document.querySelector<HTMLButtonElement>("[data-theme-toggle]");
 const guideToggleButton = document.getElementById("guideToggleButton") as HTMLButtonElement | null;
