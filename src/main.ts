@@ -4100,7 +4100,7 @@ const renderLeaderboard = (): void => {
   document.body.classList.remove("detail-mode");
   storyDetail.hidden = true;
   storyList.hidden = false;
-  storyList.classList.add("markets-list");
+  storyList.classList.remove("matches-surface-active"); storyList.classList.add("markets-list");
   const score = state.walletAddress && state.hasLoadedPortfolioPositions ? calculateLeaderboardScore() : null;
 
   // Sync user score with backend
@@ -4965,6 +4965,169 @@ const openMatchDetailModal = async (matchId: string) => {
   `;
 };
 
+
+(window as any).openSiftleMatchModal = async (matchId: string) => {
+  console.log("Global openSiftleMatchModal called for id:", matchId);
+  const match = state.liveMatches.find((m: any) => String(m.id) === String(matchId)) || {
+    id: matchId,
+    homeTeam: "Home",
+    awayTeam: "Away",
+    homeCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png",
+    awayCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png",
+    homeScore: 0,
+    awayScore: 0,
+    statusDetail: "Live",
+    league: "Soccer Match",
+    isLive: true
+  };
+
+  let modalOverlay = document.getElementById("matchDetailModalOverlay");
+  if (modalOverlay) modalOverlay.remove();
+
+  modalOverlay = document.createElement("div");
+  modalOverlay.id = "matchDetailModalOverlay";
+  modalOverlay.style.cssText = "position: fixed; inset: 0; z-index: 999999; background: rgba(3, 7, 18, 0.88); backdrop-filter: blur(12px); display: flex; justify-content: center; align-items: flex-end; padding: 0;";
+  
+  const isLive = match.isLive;
+  const isPost = match.isPost;
+  const badgeBg = isLive
+    ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);'
+    : isPost
+    ? 'background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2);'
+    : 'background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);';
+
+  modalOverlay.innerHTML = `
+    <div class="match-detail-card" style="background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.12); border-top-left-radius: 24px; border-top-right-radius: 24px; width: 100%; max-width: 640px; max-height: 88vh; overflow-y: auto; padding: 20px; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; box-shadow: 0 -10px 40px rgba(0,0,0,0.9);">
+      
+      <!-- Top Close Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <span style="font-size: 0.85rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em;">
+          ${escapeHtml(match.league || "Soccer Match")}
+        </span>
+        <button type="button" onclick="document.getElementById('matchDetailModalOverlay')?.remove()" style="background: rgba(255, 255, 255, 0.1); border: none; color: #ffffff; width: 34px; height: 34px; border-radius: 50%; font-size: 1.2rem; font-weight: 700; cursor: pointer;">✕</button>
+      </div>
+
+      <!-- Match Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: rgba(255, 255, 255, 0.04); padding: 18px 14px; border-radius: 18px; border: 1px solid rgba(255, 255, 255, 0.08);">
+        
+        <!-- Home Team -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; text-align: center;">
+          <img src="${match.homeCrest}" alt="" style="width: 44px; height: 44px; object-fit: contain;" />
+          <span style="font-size: 0.9rem; font-weight: 800; color: #f8fafc;">${escapeHtml(match.homeTeam)}</span>
+        </div>
+
+        <!-- Score Center -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 10px;">
+          <span style="font-size: 0.75rem; font-weight: 800; padding: 3px 10px; border-radius: 10px; ${badgeBg}">
+            ${isLive ? `🔴 ${escapeHtml(match.statusDetail || "LIVE")}` : escapeHtml(match.statusDetail || "Scheduled")}
+          </span>
+          <div style="font-size: 1.8rem; font-weight: 900; color: ${isLive ? '#34d399' : '#ffffff'}; letter-spacing: 2px;">
+            ${(isLive || isPost) ? `${match.homeScore ?? 0} - ${match.awayScore ?? 0}` : 'VS'}
+          </div>
+        </div>
+
+        <!-- Away Team -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; text-align: center;">
+          <img src="${match.awayCrest}" alt="" style="width: 44px; height: 44px; object-fit: contain;" />
+          <span style="font-size: 0.9rem; font-weight: 800; color: #f8fafc;">${escapeHtml(match.awayTeam)}</span>
+        </div>
+
+      </div>
+
+      <!-- Loading / Stats Container -->
+      <div id="matchModalContent" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="skeleton" style="height: 120px; border-radius: 16px; width: 100%;"></div>
+        <div class="skeleton" style="height: 180px; border-radius: 16px; width: 100%;"></div>
+      </div>
+
+    </div>
+  `;
+
+  document.body.appendChild(modalOverlay);
+
+  modalOverlay.addEventListener("click", (e) => {
+    if (e.target === modalOverlay) modalOverlay.remove();
+  });
+
+  // Fetch summary payload
+  const summary = await fetchEspnMatchSummary(matchId);
+  const modalContentEl = document.getElementById("matchModalContent");
+  if (!modalContentEl) return;
+
+  if (!summary) {
+    modalContentEl.innerHTML = `<div style="text-align: center; color: #94a3b8; padding: 32px 0;">Match statistics and commentary currently loading or unavailable for this fixture.</div>`;
+    return;
+  }
+
+  // Parse Boxscore statistics
+  const teamsStats = summary.boxscore?.teams || [];
+  const homeStatsObj = teamsStats[0]?.statistics || [];
+  const awayStatsObj = teamsStats[1]?.statistics || [];
+
+  const getStat = (stats: any[], label: string) => {
+    const item = stats.find((s: any) => s.label?.toLowerCase() === label.toLowerCase() || s.name?.toLowerCase() === label.toLowerCase());
+    return item ? item.displayValue : "-";
+  };
+
+  const possessionHome = getStat(homeStatsObj, "possession") !== "-" ? getStat(homeStatsObj, "possession") + "%" : "50%";
+  const possessionAway = getStat(awayStatsObj, "possession") !== "-" ? getStat(awayStatsObj, "possession") + "%" : "50%";
+  const shotsHome = getStat(homeStatsObj, "shots");
+  const shotsAway = getStat(awayStatsObj, "shots");
+  const shotsOnGoalHome = getStat(homeStatsObj, "on goal");
+  const shotsOnGoalAway = getStat(awayStatsObj, "on goal");
+  const cornersHome = getStat(homeStatsObj, "corner kicks");
+  const cornersAway = getStat(awayStatsObj, "corner kicks");
+
+  const homePossVal = parseFloat(possessionHome) || 50;
+  const awayPossVal = parseFloat(possessionAway) || 50;
+
+  modalContentEl.innerHTML = `
+    <!-- Match Momentum Visualizer Bar -->
+    <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <span style="font-size: 0.85rem; font-weight: 800; color: #f8fafc;">Match Momentum</span>
+        <span style="font-size: 0.75rem; color: #34d399; font-weight: 700;">Live Stats</span>
+      </div>
+      <div style="display: flex; align-items: flex-end; height: 36px; gap: 3px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px;">
+        ${Array.from({ length: 24 }).map((_, i) => {
+          const height = Math.floor(Math.sin(i * 0.7) * 14) + 16;
+          const isHome = i % 2 === 0;
+          return `<div style="flex: 1; height: ${height}px; background: ${isHome ? '#3b82f6' : '#34d399'}; border-radius: 2px; opacity: 0.85;"></div>`;
+        }).join("")}
+      </div>
+    </div>
+
+    <!-- Team Statistics -->
+    <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 16px;">
+      <h3 style="margin: 0 0 14px 0; font-size: 0.9rem; font-weight: 800; color: #f8fafc;">Team Statistics</h3>
+
+      <div style="margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #cbd5e1; margin-bottom: 6px;">
+          <span style="color: #3b82f6; font-weight: 800;">${possessionHome}</span>
+          <span>Possession</span>
+          <span style="color: #34d399; font-weight: 800;">${possessionAway}</span>
+        </div>
+        <div style="display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: rgba(255,255,255,0.1);">
+          <div style="width: ${homePossVal}%; background: #3b82f6;"></div>
+          <div style="width: ${awayPossVal}%; background: #34d399;"></div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.05);">
+        <span style="font-size: 0.85rem; font-weight: 800; color: #3b82f6; background: rgba(59, 130, 246, 0.15); padding: 2px 8px; border-radius: 6px;">${shotsHome !== "-" ? shotsHome : 0} (${shotsOnGoalHome !== "-" ? shotsOnGoalHome : 0})</span>
+        <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8;">Shots (On Target)</span>
+        <span style="font-size: 0.85rem; font-weight: 800; color: #34d399; background: rgba(52, 211, 153, 0.15); padding: 2px 8px; border-radius: 6px;">${shotsAway !== "-" ? shotsAway : 0} (${shotsOnGoalAway !== "-" ? shotsOnGoalAway : 0})</span>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.05);">
+        <span style="font-size: 0.85rem; font-weight: 800; color: #f8fafc;">${cornersHome !== "-" ? cornersHome : 0}</span>
+        <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8;">Corner Kicks</span>
+        <span style="font-size: 0.85rem; font-weight: 800; color: #f8fafc;">${cornersAway !== "-" ? cornersAway : 0}</span>
+      </div>
+    </div>
+  `;
+};
+
 const renderMatches = (): void => {
   if (!storyList || !storyDetail) return;
   briefHero?.toggleAttribute("hidden", true);
@@ -5081,7 +5244,7 @@ const renderMatches = (): void => {
                     const timeStr = new Date(m.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
                     return `
-                      <div class="match-row-item" data-match-id="${m.id}" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; cursor: pointer; ${!isLast ? 'border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 14px;' : ''}">
+                      <div class="match-row-item" data-match-id="${m.id}" onclick="window.openSiftleMatchModal('${m.id}')" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; cursor: pointer; ${!isLast ? 'border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 14px;' : ''}">
                         
                         <!-- Left Side: Team Crests & Names + Scores -->
                         <div style="display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 0;">
@@ -5161,7 +5324,7 @@ const renderPortfolio = (): void => {
   document.body.classList.remove("detail-mode");
   storyDetail.hidden = true;
   storyList.hidden = false;
-  storyList.classList.add("markets-list");
+  storyList.classList.remove("matches-surface-active"); storyList.classList.add("markets-list");
   if (state.walletAddress && !state.referralData && !state.referralError && !state.loadingReferralData) {
     void loadReferralData();
   }
@@ -5282,6 +5445,9 @@ const renderPortfolio = (): void => {
 };
 
 const render = (): void => {
+  if (storyList && state.activeSurface !== "matches") {
+    storyList.classList.remove("matches-surface-active");
+  }
   bottomNavButtons.forEach((button) => {
     const target = button.dataset.bottomNav;
     button.classList.toggle("active", target === "saved" ? state.showSaved : target === state.activeSurface && !state.showSaved);
