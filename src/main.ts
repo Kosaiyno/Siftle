@@ -4842,7 +4842,7 @@ const renderMatches = (): void => {
       </header>
 
       <!-- Clickable Date Navigation Pills (7 Days) -->
-      <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 20px; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
+      <div class="matches-date-pills-scroll">
         ${datePills.map((dp) => {
           const isActive = state.activeMatchDate === dp.dateStr;
           return `
