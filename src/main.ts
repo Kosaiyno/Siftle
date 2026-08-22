@@ -2510,7 +2510,7 @@ const loadPortfolioPositions = async (options: { force?: boolean } = {}): Promis
     state.loadingPortfolioPositions = false;
     state.hasLoadedPortfolioPositions = true;
     void reportLeaderboardEntry(true).catch(err => console.error("Failed to report leaderboard entry:", err));
-    if (state.activeSurface === "portfolio" || state.activeSurface === "leaderboard" || state.activeSurface === "markets") render();
+    if (state.activeSurface === "portfolio" || state.activeSurface === "leaderboard" || state.activeSurface === "markets" || state.activeSurface === "matches") render();
   }
 };
 
