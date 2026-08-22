@@ -3653,7 +3653,7 @@ const renderMarketCard = (market: MarketPreview, index: number = 0): string => {
         <div style="font-family: 'Space Grotesk', sans-serif; font-size: 1.05rem; color: #f8fafc; font-weight: 700; margin-bottom: 14px; text-align: center;">
           ${escapeHtml(market.question)}
         </div>
-        <div class="sporty-odds-row" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+        <div class="sporty-odds-row" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
           ${options.map((opt) => {
             const pools = (state.marketSnapshots[market.id]?.optionPools) || (market as any).initialOptionPools || {};
             const total = Object.values(pools).reduce((a: number, b: any) => a + (Number(b) || 0), 0);
@@ -3684,7 +3684,7 @@ const renderMarketCard = (market: MarketPreview, index: number = 0): string => {
       <div class="sporty-compact-teams" style="font-size: 1rem; font-weight: 700; color: #f8fafc; margin: 8px 0;">
         ${escapeHtml(compactHome)} <span style="color: #94a3b8; font-weight: 500; font-size: 0.88rem;">vs</span> ${escapeHtml(compactAway)}
       </div>
-      <div class="sporty-odds-row" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px;">
+      <div class="sporty-odds-row" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px;">
         ${options.map((opt) => {
           const pools = (state.marketSnapshots[market.id]?.optionPools) || (market as any).initialOptionPools || {};
           const total = Object.values(pools).reduce((a: number, b: any) => a + (Number(b) || 0), 0);
@@ -4086,12 +4086,12 @@ const renderMarkets = (): void => {
   ];
 
   storyList.innerHTML = `
-    <section class="markets-surface-redesign" style="padding: 12px 10px 110px 10px; width: 100%; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif; color: #ffffff;">
+    <section class="markets-surface-redesign" style="padding: 12px 6px 110px 6px; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif; color: #ffffff;">
       
       <!-- Top Title Header -->
       <header style="margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center;">
         <h1 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: #ffffff; letter-spacing: -0.02em;">Markets</h1>
-        <a href="${ARC_TESTNET_FAUCET}" target="_blank" rel="noreferrer" style="background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); font-size: 0.8rem; font-weight: 800; padding: 6px 14px; border-radius: 999px; text-decoration: none;">Get testnet USDC</a>
+        <a href="${ARC_TESTNET_FAUCET}" target="_blank" rel="noreferrer" style="background: rgba(234, 179, 8, 0.15); color: #38bdf8; border: 1px solid rgba(234, 179, 8, 0.3); font-size: 0.8rem; font-weight: 800; padding: 6px 14px; border-radius: 999px; text-decoration: none;">Get testnet USDC</a>
       </header>
 
       <!-- Popular Featured Card (Matching Reference UI 1) -->
@@ -4124,20 +4124,20 @@ const renderMarkets = (): void => {
         </div>
 
         <!-- 3 Cents Odds Trading Boxes (Matching Reference Image) -->
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
           <button type="button" class="sporty-odds-btn" data-market-id="${featuredMarket.id}" data-market-option-id="home" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
             <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8;">${escapeHtml((featuredMarket as any).homeTeam || "Home")}</span>
-            <span style="font-size: 1.05rem; font-weight: 900; color: #facc15;">11.5¢</span>
+            <span style="font-size: 1.05rem; font-weight: 900; color: #38bdf8;">11.5¢</span>
           </button>
 
           <button type="button" class="sporty-odds-btn" data-market-id="${featuredMarket.id}" data-market-option-id="draw" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
             <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8;">Draw</span>
-            <span style="font-size: 1.05rem; font-weight: 900; color: #facc15;">20.5¢</span>
+            <span style="font-size: 1.05rem; font-weight: 900; color: #38bdf8;">20.5¢</span>
           </button>
 
           <button type="button" class="sporty-odds-btn" data-market-id="${featuredMarket.id}" data-market-option-id="away" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
             <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8;">${escapeHtml((featuredMarket as any).awayTeam || "Away")}</span>
-            <span style="font-size: 1.05rem; font-weight: 900; color: #facc15;">68.5¢</span>
+            <span style="font-size: 1.05rem; font-weight: 900; color: #38bdf8;">68.5¢</span>
           </button>
         </div>
 
@@ -4216,20 +4216,20 @@ const renderMarkets = (): void => {
               </div>
 
               <!-- 3 Outcome Cents Odds Trading Boxes -->
-              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+              <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
                 <button type="button" class="sporty-odds-btn" data-market-id="${m.id}" data-market-option-id="home" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
                   <span style="font-size: 0.78rem; font-weight: 700; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml(homeTeam)}</span>
-                  <span style="font-size: 1rem; font-weight: 900; color: #facc15;">${isLive ? '99.3¢' : '45.0¢'}</span>
+                  <span style="font-size: 1rem; font-weight: 900; color: #38bdf8;">${isLive ? '99.3¢' : '45.0¢'}</span>
                 </button>
 
                 <button type="button" class="sporty-odds-btn" data-market-id="${m.id}" data-market-option-id="draw" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
                   <span style="font-size: 0.78rem; font-weight: 700; color: #94a3b8;">Draw</span>
-                  <span style="font-size: 1rem; font-weight: 900; color: #facc15;">${isLive ? '0.6¢' : '25.0¢'}</span>
+                  <span style="font-size: 1rem; font-weight: 900; color: #38bdf8;">${isLive ? '0.6¢' : '25.0¢'}</span>
                 </button>
 
                 <button type="button" class="sporty-odds-btn" data-market-id="${m.id}" data-market-option-id="away" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
                   <span style="font-size: 0.78rem; font-weight: 700; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml(awayTeam)}</span>
-                  <span style="font-size: 1rem; font-weight: 900; color: #facc15;">${isLive ? '0.3¢' : '30.0¢'}</span>
+                  <span style="font-size: 1rem; font-weight: 900; color: #38bdf8;">${isLive ? '0.3¢' : '30.0¢'}</span>
                 </button>
               </div>
 

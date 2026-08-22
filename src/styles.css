@@ -12461,3 +12461,17 @@ body.matches-mode .story-list,
 .matches-date-pills-scroll::-webkit-scrollbar {
   display: none !important;
 }
+
+/* Contained bounds & Blue Odds Styling for Markets View */
+.markets-surface-redesign {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+}
+
+.markets-surface-redesign .sporty-odds-btn {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
