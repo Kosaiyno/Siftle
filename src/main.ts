@@ -5509,6 +5509,8 @@ document.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
   const matchesNavTarget = target.closest<HTMLElement>("[data-bottom-nav='matches'], [data-surface='matches']");
   if (matchesNavTarget) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
     state.feedScrollY = window.scrollY;
     state.activeSurface = "matches";
     state.selectedMarketId = null;
