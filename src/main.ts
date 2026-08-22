@@ -5588,6 +5588,9 @@ bottomNavButtons.forEach((button) => {
     if (target === "markets") {
       state.activeSurface = "markets";
       window.history.pushState({}, "", "#markets");
+    } else if (target === "matches") {
+      state.activeSurface = "matches";
+      window.history.pushState({}, "", "#matches");
     } else if (target === "portfolio") {
       state.activeSurface = "portfolio";
       window.history.pushState({}, "", "#portfolio");
