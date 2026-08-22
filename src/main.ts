@@ -5135,6 +5135,18 @@ const openMatchDetailModal = async (matchId: string) => {
 
 let currentEspnMatchSummary: any = null;
 
+
+(window as any).openSiftleMatchPage = (matchId: string) => {
+  console.log("openSiftleMatchPage called for matchId:", matchId);
+  state.selectedMatchId = String(matchId);
+  state.matchDetailTab = "overview";
+  if (state.activeSurface === "matches") {
+    void renderMatchDetailPage(String(matchId));
+  } else {
+    render();
+  }
+};
+
 const renderMatchDetailPage = async (matchId: string) => {
   if (!storyList || !storyDetail) return;
   briefHero?.toggleAttribute("hidden", true);
@@ -5189,7 +5201,7 @@ const renderMatchDetailPage = async (matchId: string) => {
           <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; text-align: center;">
             <img src="${match.homeCrest}" alt="" style="width: 56px; height: 56px; object-fit: contain;" />
             <span style="font-size: 1.05rem; font-weight: 800; color: #ffffff;">${escapeHtml(match.homeTeam)}</span>
-            <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">0.48 xG</span>
+            
           </div>
 
           <!-- Score & Live Status -->
@@ -5206,7 +5218,7 @@ const renderMatchDetailPage = async (matchId: string) => {
           <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; text-align: center;">
             <img src="${match.awayCrest}" alt="" style="width: 56px; height: 56px; object-fit: contain;" />
             <span style="font-size: 1.05rem; font-weight: 800; color: #ffffff;">${escapeHtml(match.awayTeam)}</span>
-            <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">0.31 xG</span>
+            
           </div>
         </div>
 
@@ -5328,12 +5340,7 @@ const renderMatchDetailPage = async (matchId: string) => {
           </div>
         </div>
 
-        <!-- Expected Goals (xG) -->
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-top: 1px solid rgba(255,255,255,0.06);">
-          <span style="font-size: 0.95rem; font-weight: 800; color: #34d399; background: rgba(52, 211, 153, 0.18); padding: 4px 14px; border-radius: 999px;">0.48</span>
-          <span style="font-size: 0.9rem; font-weight: 700; color: #94a3b8;">Expected goals (xG)</span>
-          <span style="font-size: 0.95rem; font-weight: 800; color: #ffffff;">0.31</span>
-        </div>
+        
 
         <!-- Shots on Target -->
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-top: 1px solid rgba(255,255,255,0.06);">
@@ -6282,6 +6289,15 @@ walletButton?.addEventListener("click", () => {
 
 document.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
+  const matchRow = target.closest<HTMLElement>("[data-match-id]");
+  if (matchRow) {
+    const matchId = matchRow.getAttribute("data-match-id");
+    if (matchId) {
+      (window as any).openSiftleMatchPage(matchId);
+    }
+    return;
+  }
+
   const datePillBtn = target.closest<HTMLElement>("[data-match-date]");
   if (datePillBtn) {
     const targetDate = datePillBtn.getAttribute("data-match-date");
@@ -6982,8 +6998,3 @@ document.addEventListener("click", (event) => {
 }, true);
 
 
-(window as any).openSiftleMatchPage = (matchId: string) => {
-  state.selectedMatchId = matchId;
-  state.matchDetailTab = "overview";
-  render();
-};
