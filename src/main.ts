@@ -170,7 +170,7 @@ function trackEvent(event: string, storyUrl?: string, headline?: string) {
 }
 
 const state: {
-  activeSurface: "feed" | "markets" | "portfolio" | "leaderboard" | "matches";
+  activeSurface: "feed" | "markets" | "portfolio" | "leaderboard";
   liveMatches: any[];
   loadingLiveMatches: boolean;
   activeMatchLeague: string;
@@ -449,8 +449,7 @@ const briefHero = document.querySelector<HTMLElement>(".brief-hero");
 const archiveControls = document.querySelector<HTMLElement>("#archiveControls");
 const topMarketsButton = document.querySelector<HTMLButtonElement>("[data-surface='markets']");
 const topNewsButton = document.querySelector<HTMLButtonElement>("[data-surface='feed']");
-const topPortfolioButton = document.querySelector<HTMLButtonElement>("[data-surface='portfolio']");
-const topMatchesButton = document.querySelector<HTMLButtonElement>("[data-surface='matches']");
+const topPortfolioButton = document.querySelector<HTMLButtonElement>("[data-surface='portfolio']");
 const walletButton = document.querySelector<HTMLButtonElement>("#walletButton");
 const themeToggleButton = document.querySelector<HTMLButtonElement>("[data-theme-toggle]");
 const guideToggleButton = document.getElementById("guideToggleButton") as HTMLButtonElement | null;
@@ -2417,67 +2416,6 @@ const loadMarketSnapshot = async (market: MarketPreview): Promise<void> => {
   }
 };
 
-
-const loadLiveMatches = async (): Promise<void> => {
-  if (state.loadingLiveMatches) return;
-  state.loadingLiveMatches = true;
-  try {
-    const endpoints = [
-      "https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard",
-      "https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard",
-      "https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions/scoreboard",
-      "https://site.api.espn.com/apis/site/v2/sports/soccer/esp.1/scoreboard",
-      "https://site.api.espn.com/apis/site/v2/sports/soccer/ita.1/scoreboard",
-      "https://site.api.espn.com/apis/site/v2/sports/soccer/ger.1/scoreboard"
-    ];
-
-    const responses = await Promise.allSettled(
-      endpoints.map((url) => fetch(url).then((r) => r.json()))
-    );
-
-    const matchMap = new Map<string, any>();
-
-    responses.forEach((res) => {
-      if (res.status === "fulfilled" && res.value && Array.isArray(res.value.events)) {
-        const leagueName = res.value.leagues?.[0]?.name || "Soccer";
-        res.value.events.forEach((e: any) => {
-          if (!e || !e.id || matchMap.has(e.id)) return;
-          const comp = e.competitions?.[0];
-          const home = comp?.competitors?.find((c: any) => c.homeAway === "home");
-          const away = comp?.competitors?.find((c: any) => c.homeAway === "away");
-          if (!home || !away) return;
-
-          const stateType = e.status?.type?.state; // 'in' | 'pre' | 'post'
-          const detail = e.status?.type?.detail || e.status?.type?.shortDetail || "Scheduled";
-          
-          matchMap.set(e.id, {
-            id: e.id,
-            name: e.name,
-            league: leagueName,
-            statusState: stateType,
-            statusDetail: detail,
-            isLive: stateType === "in",
-            isPost: stateType === "post",
-            homeTeam: home.team?.displayName || home.team?.name || "Home",
-            awayTeam: away.team?.displayName || away.team?.name || "Away",
-            homeCrest: home.team?.logo || "https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png",
-            awayCrest: away.team?.logo || "https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png",
-            homeScore: home.score ?? null,
-            awayScore: away.score ?? null,
-            venue: comp?.venue?.fullName || "Stadium",
-            date: e.date
-          });
-        });
-      }
-    });
-
-    state.liveMatches = Array.from(matchMap.values());
-  } catch (err) {
-    console.error("Failed to fetch ESPN live matches API:", err);
-  } finally {
-    state.loadingLiveMatches = false;
-  }
-};
 
 const loadPortfolioPositions = async (options: { force?: boolean } = {}): Promise<void> => {
   if (!state.walletAddress) return;
@@ -4728,134 +4666,6 @@ const renderReferralPanel = (walletConnected: boolean): string => {
   `;
 };
 
-
-const renderMatches = (): void => {
-  if (!storyList || !storyDetail) return;
-  briefHero?.toggleAttribute("hidden", true);
-  archiveControls?.toggleAttribute("hidden", true);
-  categoryTabs?.toggleAttribute("hidden", true);
-  topMarketsButton?.classList.remove("active");
-  topNewsButton?.classList.remove("active");
-  topPortfolioButton?.classList.remove("active");
-  document.body.classList.remove("detail-mode");
-  storyDetail.hidden = true;
-  storyList.hidden = false;
-  storyList.classList.add("markets-list");
-
-  if (state.liveMatches.length === 0 && !state.loadingLiveMatches) {
-    void loadLiveMatches().then(() => {
-      if (state.activeSurface === "matches") renderMatches();
-    });
-  }
-
-  const matches = state.liveMatches;
-  const loading = state.loadingLiveMatches && matches.length === 0;
-
-  const leagues = ["All", ...Array.from(new Set(matches.map((m: any) => m.league as string))).slice(0, 5)];
-  const filteredMatches = state.activeMatchLeague === "All"
-    ? matches
-    : matches.filter((m: any) => m.league === state.activeMatchLeague);
-
-  const liveCount = matches.filter((m: any) => m.isLive).length;
-
-  storyList.innerHTML = `
-    <section class="matches-surface" style="padding-top: 18px; box-sizing: border-box; width: 100%;">
-      <header class="matches-header" style="margin-bottom: 18px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 10px;">
-          <div>
-            <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 1.8rem; font-weight: 800; color: var(--market-text-main);">Live Scores & Fixtures</h1>
-            <p style="margin: 6px 0 0; color: var(--market-text-muted); font-size: 0.9rem; font-weight: 500;">
-              Real-time scores powered by live sports API • ${matches.length} total matches loaded
-            </p>
-          </div>
-          <button type="button" id="refreshLiveScoresBtn" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 8px 16px; border-radius: 12px; font-size: 0.82rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-            🔄 Refresh Live API
-          </button>
-        </div>
-      </header>
-
-      ${leagues.length > 1 ? `
-        <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 16px;">
-          ${leagues.map((lg) => {
-            const active = state.activeMatchLeague === lg;
-            return `
-              <button type="button" class="match-league-filter-btn" data-match-league="${escapeHtml(lg)}" style="background: ${active ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : 'rgba(255, 255, 255, 0.05)'}; color: ${active ? '#ffffff' : '#94a3b8'}; border: 1px solid ${active ? '#3b82f6' : 'rgba(255, 255, 255, 0.08)'}; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap;">
-                ${escapeHtml(lg)}
-              </button>
-            `;
-          }).join("")}
-        </div>
-      ` : ""}
-
-      ${loading ? `
-        <div style="display: flex; flex-direction: column; gap: 14px;">
-          ${Array.from({ length: 3 }).map(() => `
-            <div class="skeleton" style="height: 120px; border-radius: 16px; width: 100%;"></div>
-          `).join("")}
-        </div>
-      ` : filteredMatches.length === 0 ? `
-        <div style="text-align: center; padding: 48px 0; color: #94a3b8; font-family: 'Space Grotesk', sans-serif;">
-          No active matches found for ${escapeHtml(state.activeMatchLeague)}.
-        </div>
-      ` : `
-        <div class="matches-grid" style="display: flex; flex-direction: column; gap: 14px;">
-          ${filteredMatches.map((m: any) => {
-            const isLive = m.isLive;
-            const isPost = m.isPost;
-            const badgeBg = isLive
-              ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);'
-              : isPost
-              ? 'background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2);'
-              : 'background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);';
-
-            return `
-              <article class="live-match-card" style="background: linear-gradient(145deg, #182238 0%, #0f172a 100%); border: 1px solid ${isLive ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255, 255, 255, 0.08)'}; border-radius: 16px; padding: 18px; box-shadow: 0 10px 28px -8px rgba(0, 0, 0, 0.4); width: 100%; box-sizing: border-box;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 8px;">
-                  <span style="font-size: 0.8rem; font-weight: 700; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.04em;">${escapeHtml(m.league)}</span>
-                  <span style="font-size: 0.78rem; font-weight: 800; padding: 3px 10px; border-radius: 12px; ${badgeBg}">
-                    ${isLive ? `🟢 ${escapeHtml(m.statusDetail)}` : escapeHtml(m.statusDetail)}
-                  </span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0;">
-                  <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
-                    <img src="${m.homeCrest}" alt="" style="width: 42px; height: 42px; max-width: 42px; max-height: 42px; object-fit: contain; flex-shrink: 0;" />
-                    <span style="font-size: 1rem; font-weight: 700; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(m.homeTeam)}</span>
-                  </div>
-
-                  <div style="display: flex; flex-direction: column; align-items: center; padding: 0 14px; flex-shrink: 0;">
-                    ${(isLive || isPost) ? `
-                      <div style="font-family: 'Space Grotesk', sans-serif; font-size: 1.6rem; font-weight: 900; color: ${isLive ? '#34d399' : '#f8fafc'}; letter-spacing: 2px;">
-                        ${m.homeScore ?? 0} - ${m.awayScore ?? 0}
-                      </div>
-                      <span style="font-size: 0.7rem; color: ${isLive ? '#ef4444' : '#94a3b8'}; font-weight: 800; text-transform: uppercase; margin-top: 2px;">
-                        ${isLive ? 'LIVE' : 'FINAL'}
-                      </span>
-                    ` : `
-                      <div style="font-family: 'Space Grotesk', sans-serif; font-size: 1rem; font-weight: 800; color: #94a3b8; background: rgba(255,255,255,0.06); padding: 4px 10px; border-radius: 8px;">
-                        VS
-                      </div>
-                    `}
-                  </div>
-
-                  <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex: 1; min-width: 0; text-align: right;">
-                    <span style="font-size: 1rem; font-weight: 700; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(m.awayTeam)}</span>
-                    <img src="${m.awayCrest}" alt="" style="width: 42px; height: 42px; max-width: 42px; max-height: 42px; object-fit: contain; flex-shrink: 0;" />
-                  </div>
-                </div>
-
-                <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #94a3b8;">
-                  <span>📍 ${escapeHtml(m.venue)}</span>
-                  <span>📅 ${new Date(m.date).toLocaleDateString()}</span>
-                </div>
-              </article>
-            `;
-          }).join("")}
-        </div>
-      `}
-    </section>
-  `;
-};
 
 const renderPortfolio = (): void => {
   if (!storyList || !storyDetail) return;
