@@ -5472,18 +5472,6 @@ topNewsButton?.addEventListener("click", () => {
   ensureFeedLoaded(state.activeCategory);
 });
 
-topMatchesButton?.addEventListener("click", () => {
-  state.feedScrollY = window.scrollY;
-  state.activeSurface = "matches";
-  state.selectedMarketId = null;
-  state.selectedStoryId = null;
-  state.selectedThreadUrl = null;
-  state.showSaved = false;
-  window.history.pushState({}, "", "#matches");
-  resetFeedScroll();
-  render();
-});
-
 topPortfolioButton?.addEventListener("click", () => {
   state.feedScrollY = window.scrollY;
   state.activeSurface = "portfolio";
