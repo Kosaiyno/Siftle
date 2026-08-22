@@ -1466,14 +1466,6 @@ function syncStoryFromHash(): void {
     render();
     return;
   }
-  if (window.location.hash === "#matches") {
-    state.activeSurface = "matches";
-    state.selectedMarketId = null;
-    state.selectedStoryId = null;
-    state.selectedThreadUrl = null;
-    render();
-    return;
-  }
   if (window.location.hash === "#portfolio") {
     state.activeSurface = "portfolio";
     state.selectedMarketId = null;
@@ -3917,7 +3909,6 @@ const renderMarkets = (): void => {
   topMarketsButton?.classList.add("active");
   topNewsButton?.classList.remove("active");
   topPortfolioButton?.classList.remove("active");
-  topMatchesButton?.classList.remove("active");
 
   if (state.selectedMarketId) {
     const market = marketPreviews.find((item) => item.id === state.selectedMarketId);
@@ -5282,18 +5273,6 @@ topNewsButton?.addEventListener("click", () => {
   ensureFeedLoaded(state.activeCategory);
 });
 
-topMatchesButton?.addEventListener("click", () => {
-  state.feedScrollY = window.scrollY;
-  state.activeSurface = "matches";
-  state.selectedMarketId = null;
-  state.selectedStoryId = null;
-  state.selectedThreadUrl = null;
-  state.showSaved = false;
-  window.history.pushState({}, "", "#matches");
-  resetFeedScroll();
-  render();
-});
-
 topPortfolioButton?.addEventListener("click", () => {
   state.feedScrollY = window.scrollY;
   state.activeSurface = "portfolio";
@@ -5317,21 +5296,6 @@ walletButton?.addEventListener("click", () => {
 
 document.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
-  const matchesNavTarget = target.closest<HTMLElement>("[data-bottom-nav='matches'], [data-surface='matches']");
-  if (matchesNavTarget) {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    state.feedScrollY = window.scrollY;
-    state.activeSurface = "matches";
-    state.selectedMarketId = null;
-    state.selectedStoryId = null;
-    state.selectedThreadUrl = null;
-    state.showSaved = false;
-    window.history.pushState({}, "", "#matches");
-    resetFeedScroll();
-    render();
-    return;
-  }
   const copyBtn = target.closest(".copy-address-btn");
   if (copyBtn) {
     const address = copyBtn.getAttribute("data-address");
@@ -5400,9 +5364,6 @@ bottomNavButtons.forEach((button) => {
     if (target === "markets") {
       state.activeSurface = "markets";
       window.history.pushState({}, "", "#markets");
-    } else if (target === "matches") {
-      state.activeSurface = "matches";
-      window.history.pushState({}, "", "#matches");
     } else if (target === "portfolio") {
       state.activeSurface = "portfolio";
       window.history.pushState({}, "", "#portfolio");
