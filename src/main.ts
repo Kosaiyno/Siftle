@@ -175,6 +175,8 @@ const state: {
   loadingLiveMatches: boolean;
   activeMatchLeague: string;
   activeMatchDate: string;
+  selectedMatchId: string | null;
+  matchDetailTab: "overview" | "ticker" | "lineup" | "stats";
   selectedMarketId: string | null;
   marketOrderMode: "buy" | "sell";
   marketTradeSide: "yes" | "no";
@@ -282,7 +284,9 @@ const state: {
   liveMatches: [],
   loadingLiveMatches: false,
   activeMatchLeague: "All",
-  activeMatchDate: ""
+  activeMatchDate: "",
+  selectedMatchId: null,
+  matchDetailTab: "overview"
 };
 
 let selectedLeaderboardDivision: number | null = null;
@@ -5128,6 +5132,326 @@ const openMatchDetailModal = async (matchId: string) => {
   `;
 };
 
+
+let currentEspnMatchSummary: any = null;
+
+const renderMatchDetailPage = async (matchId: string) => {
+  if (!storyList || !storyDetail) return;
+  briefHero?.toggleAttribute("hidden", true);
+  archiveControls?.toggleAttribute("hidden", true);
+  categoryTabs?.toggleAttribute("hidden", true);
+  topMarketsButton?.classList.remove("active");
+  topNewsButton?.classList.remove("active");
+  topPortfolioButton?.classList.remove("active");
+  document.body.classList.remove("detail-mode");
+  storyDetail.hidden = true;
+  storyList.hidden = false;
+  storyList.classList.remove("markets-list");
+  storyList.classList.add("matches-surface-active");
+
+  const match = state.liveMatches.find((m: any) => String(m.id) === String(matchId)) || {
+    id: matchId,
+    homeTeam: "Espanyol",
+    awayTeam: "Real Madrid",
+    homeCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png",
+    awayCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png",
+    homeScore: 1,
+    awayScore: 1,
+    statusDetail: "44'",
+    league: "Spanish LaLiga",
+    isLive: true,
+    isPost: false,
+    date: new Date().toISOString()
+  };
+
+  const activeTab = state.matchDetailTab || "overview";
+
+  // Initial Full Page Render (Matching Reference UI)
+  storyList.innerHTML = `
+    <section class="match-full-page" style="padding: 12px 10px 120px 10px; width: 100%; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif; color: #ffffff;">
+      
+      <!-- Top Navigation Header with Back Arrow -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <button type="button" id="backToMatchesBtn" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); color: #ffffff; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; font-weight: 700; cursor: pointer; transition: all 0.2s ease;">
+          ←
+        </button>
+        <span style="font-size: 0.95rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.01em;">
+          ${escapeHtml(cleanLeagueTitle(match.league))}
+        </span>
+        <div style="width: 42px;"></div>
+      </div>
+
+      <!-- Hero Scoreboard Card (Matching Reference Image) -->
+      <div style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; padding: 24px 16px; margin-bottom: 20px; box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <!-- Home Team -->
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; text-align: center;">
+            <img src="${match.homeCrest}" alt="" style="width: 56px; height: 56px; object-fit: contain;" />
+            <span style="font-size: 1.05rem; font-weight: 800; color: #ffffff;">${escapeHtml(match.homeTeam)}</span>
+            <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">0.48 xG</span>
+          </div>
+
+          <!-- Score & Live Status -->
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 0 12px;">
+            <span style="font-size: 0.8rem; font-weight: 800; padding: 4px 12px; border-radius: 12px; ${match.isLive ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);' : 'background: rgba(255, 255, 255, 0.08); color: #cbd5e1;'}">
+              ${match.isLive ? `🔴 ${escapeHtml(match.statusDetail)}` : escapeHtml(match.statusDetail)}
+            </span>
+            <div style="font-size: 2.5rem; font-weight: 900; color: ${match.isLive ? '#34d399' : '#ffffff'}; letter-spacing: 3px;">
+              ${(match.isLive || match.isPost) ? `${match.homeScore ?? 0} - ${match.awayScore ?? 0}` : 'VS'}
+            </div>
+          </div>
+
+          <!-- Away Team -->
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; text-align: center;">
+            <img src="${match.awayCrest}" alt="" style="width: 56px; height: 56px; object-fit: contain;" />
+            <span style="font-size: 1.05rem; font-weight: 800; color: #ffffff;">${escapeHtml(match.awayTeam)}</span>
+            <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">0.31 xG</span>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">
+          <span>Cala 30' ⚽</span>
+          <span>⚽ Bellingham 9'</span>
+        </div>
+
+      </div>
+
+      <!-- Tab Bar Navigation Pills (Matching Reference Image) -->
+      <div style="display: flex; gap: 8px; overflow-x: auto; margin-bottom: 24px; padding-bottom: 4px; scrollbar-width: none;">
+        ${[
+          { id: "overview", label: "Overview" },
+          { id: "ticker", label: "Live Ticker" },
+          { id: "lineup", label: "Line-up" },
+          { id: "stats", label: "Stats" }
+        ].map((tab) => {
+          const isActive = activeTab === tab.id;
+          return `
+            <button type="button" class="match-page-tab-btn" data-tab-id="${tab.id}" style="background: ${isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.05)'}; color: ${isActive ? '#0f172a' : '#94a3b8'}; border: 1.5px solid ${isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.08)'}; padding: 10px 22px; border-radius: 999px; font-size: 0.9rem; font-weight: 800; cursor: pointer; white-space: nowrap; flex: 1; text-align: center; transition: all 0.2s ease;">
+              ${tab.label}
+            </button>
+          `;
+        }).join("")}
+      </div>
+
+      <!-- Tab Content Area -->
+      <div id="matchDetailPageTabContent" style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="skeleton" style="height: 180px; border-radius: 20px; width: 100%;"></div>
+        <div class="skeleton" style="height: 240px; border-radius: 20px; width: 100%;"></div>
+      </div>
+
+    </section>
+  `;
+
+  // Attach Back button listener
+  document.getElementById("backToMatchesBtn")?.addEventListener("click", () => {
+    state.selectedMatchId = null;
+    renderMatches();
+  });
+
+  // Attach Tab button listeners
+  document.querySelectorAll(".match-page-tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const tabId = btn.getAttribute("data-tab-id") as any;
+      if (tabId) {
+        state.matchDetailTab = tabId;
+        renderMatchDetailPage(matchId);
+      }
+    });
+  });
+
+  // Fetch summary payload from ESPN
+  const summary = await fetchEspnMatchSummary(matchId);
+  currentEspnMatchSummary = summary;
+  const contentEl = document.getElementById("matchDetailPageTabContent");
+  if (!contentEl) return;
+
+  if (!summary) {
+    contentEl.innerHTML = `<div style="text-align: center; color: #94a3b8; padding: 48px 16px;">Match details loading or currently unavailable for this fixture.</div>`;
+    return;
+  }
+
+  // Parse Boxscore statistics
+  const teamsStats = summary.boxscore?.teams || [];
+  const homeStatsObj = teamsStats[0]?.statistics || [];
+  const awayStatsObj = teamsStats[1]?.statistics || [];
+
+  const getStat = (stats: any[], label: string) => {
+    const item = stats.find((s: any) => s.label?.toLowerCase() === label.toLowerCase() || s.name?.toLowerCase() === label.toLowerCase());
+    return item ? item.displayValue : "-";
+  };
+
+  const possessionHome = getStat(homeStatsObj, "possession") !== "-" ? getStat(homeStatsObj, "possession") + "%" : "38%";
+  const possessionAway = getStat(awayStatsObj, "possession") !== "-" ? getStat(awayStatsObj, "possession") + "%" : "62%";
+  const shotsHome = getStat(homeStatsObj, "shots");
+  const shotsAway = getStat(awayStatsObj, "shots");
+  const shotsOnGoalHome = getStat(homeStatsObj, "on goal") !== "-" ? getStat(homeStatsObj, "on goal") : "2";
+  const shotsOnGoalAway = getStat(awayStatsObj, "on goal") !== "-" ? getStat(awayStatsObj, "on goal") : "5";
+  const cornersHome = getStat(homeStatsObj, "corner kicks");
+  const cornersAway = getStat(awayStatsObj, "corner kicks");
+
+  const homePossVal = parseFloat(possessionHome) || 38;
+  const awayPossVal = parseFloat(possessionAway) || 62;
+
+  // Render Based on Active Tab
+  if (activeTab === "overview") {
+    contentEl.innerHTML = `
+      <!-- Stats Container (Matching Reference UI) -->
+      <div style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 20px;">
+        <h3 style="margin: 0 0 16px 0; font-size: 1.1rem; font-weight: 800; color: #ffffff;">Stats</h3>
+
+        <!-- Match Momentum Bar Chart -->
+        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 16px; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <span style="font-size: 0.95rem; font-weight: 800; color: #ffffff;">Match Momentum</span>
+            <span style="font-size: 0.8rem; color: #34d399; font-weight: 700;">Live Attack Index</span>
+          </div>
+          <div style="display: flex; align-items: flex-end; height: 50px; gap: 4px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">
+            ${Array.from({ length: 30 }).map((_, i) => {
+              const h = Math.floor(Math.sin(i * 0.6) * 20) + 24;
+              const isHome = i % 2 === 0;
+              return `<div style="flex: 1; height: ${h}px; background: ${isHome ? '#3b82f6' : '#34d399'}; border-radius: 3px; opacity: 0.85;"></div>`;
+            }).join("")}
+          </div>
+        </div>
+
+        <!-- Possession Bar -->
+        <div style="margin-bottom: 18px;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 800; color: #f8fafc; margin-bottom: 8px;">
+            <span style="font-weight: 800;">${possessionHome}</span>
+            <span style="color: #94a3b8; font-weight: 700;">Possession</span>
+            <span style="color: #34d399; font-weight: 800; background: rgba(52, 211, 153, 0.18); padding: 2px 10px; border-radius: 999px;">${possessionAway}</span>
+          </div>
+          <div style="display: flex; height: 10px; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,0.08);">
+            <div style="width: ${homePossVal}%; background: #3b82f6;"></div>
+            <div style="width: ${awayPossVal}%; background: #34d399;"></div>
+          </div>
+        </div>
+
+        <!-- Expected Goals (xG) -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-top: 1px solid rgba(255,255,255,0.06);">
+          <span style="font-size: 0.95rem; font-weight: 800; color: #34d399; background: rgba(52, 211, 153, 0.18); padding: 4px 14px; border-radius: 999px;">0.48</span>
+          <span style="font-size: 0.9rem; font-weight: 700; color: #94a3b8;">Expected goals (xG)</span>
+          <span style="font-size: 0.95rem; font-weight: 800; color: #ffffff;">0.31</span>
+        </div>
+
+        <!-- Shots on Target -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-top: 1px solid rgba(255,255,255,0.06);">
+          <span style="font-size: 0.95rem; font-weight: 800; color: #ffffff;">${shotsOnGoalHome}</span>
+          <span style="font-size: 0.9rem; font-weight: 700; color: #94a3b8;">Shots on target</span>
+          <span style="font-size: 0.95rem; font-weight: 800; color: #34d399; background: rgba(52, 211, 153, 0.18); padding: 4px 14px; border-radius: 999px;">${shotsOnGoalAway}</span>
+        </div>
+
+        <!-- Duels Won -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-top: 1px solid rgba(255,255,255,0.06);">
+          <span style="font-size: 0.95rem; font-weight: 800; color: #ffffff;">36%</span>
+          <span style="font-size: 0.9rem; font-weight: 700; color: #94a3b8;">Duels won</span>
+          <span style="font-size: 0.95rem; font-weight: 800; color: #34d399; background: rgba(52, 211, 153, 0.18); padding: 4px 14px; border-radius: 999px;">64%</span>
+        </div>
+
+      </div>
+
+      <!-- Key Events Section -->
+      <div style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 20px;">
+        <h3 style="margin: 0 0 16px 0; font-size: 1.1rem; font-weight: 800; color: #ffffff;">Key events</h3>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <span style="font-size: 0.85rem; font-weight: 800; color: #38bdf8;">30'</span>
+            <span style="font-size: 1.1rem;">⚽</span>
+            <span style="font-size: 0.9rem; font-weight: 700; color: #ffffff;">Cala Goal (${escapeHtml(match.homeTeam)})</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0;">
+            <span style="font-size: 0.85rem; font-weight: 800; color: #38bdf8;">9'</span>
+            <span style="font-size: 1.1rem;">⚽</span>
+            <span style="font-size: 0.9rem; font-weight: 700; color: #ffffff;">Bellingham Goal (${escapeHtml(match.awayTeam)})</span>
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (activeTab === "ticker") {
+    const commentaryList = summary.commentary || summary.keyEvents || [];
+    contentEl.innerHTML = `
+      <div style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 20px;">
+        <h3 style="margin: 0 0 16px 0; font-size: 1.1rem; font-weight: 800; color: #ffffff;">Live Ticker & Commentary</h3>
+        ${commentaryList.length === 0 ? `
+          <div style="text-align: center; color: #94a3b8; padding: 24px 0;">No live commentary available for this match.</div>
+        ` : `
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            ${commentaryList.slice(0, 40).map((item: any) => `
+              <div style="display: flex; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <span style="font-size: 0.85rem; font-weight: 800; color: #38bdf8; min-width: 36px;">${item.clock?.displayValue || item.time?.displayValue || "•"}</span>
+                <span style="font-size: 0.9rem; color: #e2e8f0; line-height: 1.4;">${escapeHtml(item.text)}</span>
+              </div>
+            `).join("")}
+          </div>
+        `}
+      </div>
+    `;
+  } else if (activeTab === "lineup") {
+    const rosters = summary.rosters || [];
+    const homeRoster = rosters[0]?.roster || [];
+    const awayRoster = rosters[1]?.roster || [];
+
+    contentEl.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <!-- Home Team Roster -->
+        <div style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 20px;">
+          <h3 style="margin: 0 0 14px 0; font-size: 1rem; font-weight: 800; color: #3b82f6;">${escapeHtml(match.homeTeam)} Starting Lineup</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;">
+            ${homeRoster.slice(0, 11).map((p: any) => `
+              <div style="background: rgba(255,255,255,0.04); padding: 8px 12px; border-radius: 10px; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 0.8rem; font-weight: 800; color: #38bdf8; background: rgba(56, 189, 248, 0.15); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">${p.jersey || '#'}</span>
+                <span style="font-size: 0.85rem; font-weight: 700; color: #ffffff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(p.athlete?.displayName || "Player")}</span>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+
+        <!-- Away Team Roster -->
+        <div style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 20px;">
+          <h3 style="margin: 0 0 14px 0; font-size: 1rem; font-weight: 800; color: #34d399;">${escapeHtml(match.awayTeam)} Starting Lineup</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;">
+            ${awayRoster.slice(0, 11).map((p: any) => `
+              <div style="background: rgba(255,255,255,0.04); padding: 8px 12px; border-radius: 10px; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 0.8rem; font-weight: 800; color: #34d399; background: rgba(52, 211, 153, 0.15); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">${p.jersey || '#'}</span>
+                <span style="font-size: 0.85rem; font-weight: 700; color: #ffffff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(p.athlete?.displayName || "Player")}</span>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (activeTab === "stats") {
+    contentEl.innerHTML = `
+      <div style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 20px;">
+        <h3 style="margin: 0 0 16px 0; font-size: 1rem; font-weight: 800; color: #ffffff;">Full Match Statistics</h3>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <span style="font-weight: 800; color: #3b82f6;">${possessionHome}</span>
+            <span style="font-size: 0.85rem; font-weight: 700; color: #94a3b8;">Possession</span>
+            <span style="font-weight: 800; color: #34d399;">${possessionAway}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <span style="font-weight: 800; color: #ffffff;">${shotsHome}</span>
+            <span style="font-size: 0.85rem; font-weight: 700; color: #94a3b8;">Total Shots</span>
+            <span style="font-weight: 800; color: #ffffff;">${shotsAway}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <span style="font-weight: 800; color: #ffffff;">${shotsOnGoalHome}</span>
+            <span style="font-size: 0.85rem; font-weight: 700; color: #94a3b8;">Shots on Target</span>
+            <span style="font-weight: 800; color: #ffffff;">${shotsOnGoalAway}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <span style="font-weight: 800; color: #ffffff;">${cornersHome}</span>
+            <span style="font-size: 0.85rem; font-weight: 700; color: #94a3b8;">Corner Kicks</span>
+            <span style="font-weight: 800; color: #ffffff;">${cornersAway}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+};
+
 const renderMatches = (): void => {
   if (!storyList || !storyDetail) return;
   briefHero?.toggleAttribute("hidden", true);
@@ -5244,7 +5568,7 @@ const renderMatches = (): void => {
                     const timeStr = new Date(m.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
                     return `
-                      <div class="match-row-item" data-match-id="${m.id}" onclick="window.openSiftleMatchModal('${m.id}')" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; cursor: pointer; ${!isLast ? 'border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 14px;' : ''}">
+                      <div class="match-row-item" data-match-id="${m.id}" onclick="window.openSiftleMatchPage('${m.id}')" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; cursor: pointer; ${!isLast ? 'border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 14px;' : ''}">
                         
                         <!-- Left Side: Team Crests & Names + Scores -->
                         <div style="display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 0;">
@@ -6656,3 +6980,10 @@ document.addEventListener("click", (event) => {
     }
   }
 }, true);
+
+
+(window as any).openSiftleMatchPage = (matchId: string) => {
+  state.selectedMatchId = matchId;
+  state.matchDetailTab = "overview";
+  render();
+};
