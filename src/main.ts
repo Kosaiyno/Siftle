@@ -5365,7 +5365,7 @@ const renderMatchDetailPage = async (matchId: string) => {
       </div>
     `;
   } else if (activeTab === "ticker") {
-    const commentaryList = summary.commentary || summary.keyEvents || [];
+    const commentaryList = (summary.commentary || summary.keyEvents || []).slice().reverse();
     contentEl.innerHTML = `
       <div style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 20px;">
         <h3 style="margin: 0 0 16px 0; font-size: 1.1rem; font-weight: 800; color: #ffffff;">Live Ticker & Commentary</h3>
