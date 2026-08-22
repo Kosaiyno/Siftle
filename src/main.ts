@@ -4016,7 +4016,7 @@ const renderMarketDetail = (market: MarketPreview): void => {
 };
 
 const renderMarkets = (): void => {
-  document.body.classList.remove("matches-mode");
+  
   if (!storyList || !storyDetail) return;
   briefHero?.toggleAttribute("hidden", true);
   archiveControls?.toggleAttribute("hidden", true);
@@ -4089,7 +4089,7 @@ const renderMarkets = (): void => {
 };
 
 const renderLeaderboard = (): void => {
-  document.body.classList.remove("matches-mode");
+  
   if (!storyList || !storyDetail) return;
   briefHero?.toggleAttribute("hidden", true);
   archiveControls?.toggleAttribute("hidden", true);
@@ -4776,7 +4776,7 @@ const renderReferralPanel = (walletConnected: boolean): string => {
 
 
 const renderMatches = (): void => {
-  document.body.classList.add("matches-mode");
+  
   if (!storyList || !storyDetail) return;
   briefHero?.toggleAttribute("hidden", true);
   archiveControls?.toggleAttribute("hidden", true);
@@ -4961,7 +4961,7 @@ const renderMatches = (): void => {
 };
 
 const renderPortfolio = (): void => {
-  document.body.classList.remove("matches-mode");
+  
   if (!storyList || !storyDetail) return;
   briefHero?.toggleAttribute("hidden", true);
   archiveControls?.toggleAttribute("hidden", true);
@@ -5115,7 +5115,7 @@ const render = (): void => {
     return;
   }
 
-  document.body.classList.remove("matches-mode"); showFeedSurface();
+   showFeedSurface();
   renderCategories();
   renderStories();
   renderDetail();
