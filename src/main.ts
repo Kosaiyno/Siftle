@@ -4664,52 +4664,155 @@ const renderMatches = (): void => {
   storyList.hidden = false;
   storyList.classList.add("markets-list");
 
+  const liveMatches = [
+    {
+      id: "wc-arsenal-coventry-marquee",
+      league: "Premier League",
+      status: "LIVE",
+      timeLabel: "78' H2",
+      isLive: true,
+      homeTeam: "Arsenal",
+      awayTeam: "Coventry City",
+      homeCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/359.png",
+      awayCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/379.png",
+      homeScore: 2,
+      awayScore: 0,
+      venue: "Emirates Stadium",
+      events: ["⚽ Saka 28'", "⚽ Martinelli 61'"],
+      hasMarket: true
+    },
+    {
+      id: "wc-dinamo-nizhny-1x2",
+      league: "Russia MFL",
+      status: "LIVE",
+      timeLabel: "42' H1",
+      isLive: true,
+      homeTeam: "Dinamo Moscow",
+      awayTeam: "FK Nizhny Novgorod",
+      homeCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/228.png",
+      awayCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/228.png",
+      homeScore: 1,
+      awayScore: 1,
+      venue: "VTB Arena",
+      events: ["⚽ Tyukavin 19'", "⚽ Boselli 34'"],
+      hasMarket: true
+    },
+    {
+      id: "wc-chertanova-spartak-1x2",
+      league: "Russia MFL",
+      status: "LIVE",
+      timeLabel: "15' H1",
+      isLive: true,
+      homeTeam: "Chertanova Moscow",
+      awayTeam: "FK Spartak Moscow",
+      homeCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/228.png",
+      awayCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/228.png",
+      homeScore: 0,
+      awayScore: 0,
+      venue: "Arena Chertanova",
+      events: [],
+      hasMarket: true
+    },
+    {
+      id: "match-chelsea-city",
+      league: "Premier League",
+      status: "UPCOMING",
+      timeLabel: "Today 20:00",
+      isLive: false,
+      homeTeam: "Chelsea",
+      awayTeam: "Manchester City",
+      homeCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/363.png",
+      awayCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/382.png",
+      homeScore: null,
+      awayScore: null,
+      venue: "Stamford Bridge",
+      events: [],
+      hasMarket: false
+    },
+    {
+      id: "match-real-barca",
+      league: "La Liga",
+      status: "UPCOMING",
+      timeLabel: "Tomorrow 21:00",
+      isLive: false,
+      homeTeam: "Real Madrid",
+      awayTeam: "FC Barcelona",
+      homeCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/86.png",
+      awayCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/83.png",
+      homeScore: null,
+      awayScore: null,
+      venue: "Santiago Bernabéu",
+      events: [],
+      hasMarket: false
+    }
+  ];
+
   storyList.innerHTML = `
-    <section class="portfolio-surface" style="margin-top: 16px;">
-      <div class="chelsea-hub-header">
-        <h1 class="chelsea-hub-title" style="font-family: Outfit, sans-serif; font-size: 1.8rem; font-weight: 800; margin: 0 0 4px 0;">Match Fixtures & Live Scores</h1>
-        <p class="chelsea-hub-subtitle" style="color: #8F9BB3; font-size: 0.88rem; margin: 0 0 16px 0;">Real-time match schedules, live scores, and team match-ups across top leagues.</p>
-      </div>
-
-      <div class="fixtures-ticker-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-bottom: 24px;">
-        <div class="fixture-pill-card" style="padding: 16px; border-radius: 16px; background: #121724; border: 1px solid rgba(255,255,255,0.08);">
-          <div style="font-size: 0.72rem; font-weight: 800; color: #0052FF; text-transform: uppercase; margin-bottom: 8px;">PREMIER LEAGUE • LIVE</div>
-          <div class="fixture-teams-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <strong style="font-size: 1rem; color: #fff;">Chelsea</strong>
-            <span style="font-size: 1.1rem; font-weight: 800; color: #34D399; background: rgba(52,211,153,0.1); padding: 2px 10px; border-radius: 8px;">2 - 1</span>
-            <strong style="font-size: 1rem; color: #fff;">Arsenal</strong>
+    <section class="matches-surface" style="padding-top: 18px; box-sizing: border-box; width: 100%;">
+      <header class="matches-header" style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 1.8rem; font-weight: 800; color: var(--market-text-main);">Live Scores & Fixtures</h1>
+            <p style="margin: 6px 0 0; color: var(--market-text-muted); font-size: 0.92rem; font-weight: 500;">Real-time match updates, live scores, and prediction markets.</p>
           </div>
-          <div style="font-size: 0.76rem; color: #8F9BB3; display: flex; justify-content: space-between;">
-            <span>74' Minutes</span>
-            <span>Stamford Bridge</span>
-          </div>
+          <span style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; display: flex; align-items: center; gap: 6px;">
+            <span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block; animation: pulse 1.5s infinite;"></span>
+            3 MATCHES LIVE
+          </span>
         </div>
+      </header>
 
-        <div class="fixture-pill-card" style="padding: 16px; border-radius: 16px; background: #121724; border: 1px solid rgba(255,255,255,0.08);">
-          <div style="font-size: 0.72rem; font-weight: 800; color: #8F9BB3; text-transform: uppercase; margin-bottom: 8px;">CHAMPIONS LEAGUE • TONIGHT</div>
-          <div class="fixture-teams-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <strong style="font-size: 1rem; color: #fff;">Real Madrid</strong>
-            <span style="font-size: 0.82rem; font-weight: 800; color: #8F9BB3; background: rgba(255,255,255,0.06); padding: 4px 8px; border-radius: 6px;">VS</span>
-            <strong style="font-size: 1rem; color: #fff;">Bayern Munich</strong>
-          </div>
-          <div style="font-size: 0.76rem; color: #60A5FA; display: flex; justify-content: space-between;">
-            <span>20:00 Kickoff</span>
-            <span>Santiago Bernabéu</span>
-          </div>
-        </div>
+      <div class="matches-grid" style="display: flex; flex-direction: column; gap: 16px;">
+        ${liveMatches.map((m) => `
+          <article class="live-match-card" style="background: linear-gradient(145deg, #182238 0%, #0f172a 100%); border: 1px solid ${m.isLive ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255, 255, 255, 0.08)'}; border-radius: 18px; padding: 20px; box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.4); width: 100%; box-sizing: border-box;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 10px;">
+              <span style="font-size: 0.8rem; font-weight: 700; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.04em;">${escapeHtml(m.league)}</span>
+              <span style="font-size: 0.78rem; font-weight: 800; padding: 3px 10px; border-radius: 12px; ${m.isLive ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);' : 'background: rgba(148, 163, 184, 0.15); color: #94a3b8;'}">
+                ${m.isLive ? `🟢 ${escapeHtml(m.timeLabel)}` : escapeHtml(m.timeLabel)}
+              </span>
+            </div>
 
-        <div class="fixture-pill-card" style="padding: 16px; border-radius: 16px; background: #121724; border: 1px solid rgba(255,255,255,0.08);">
-          <div style="font-size: 0.72rem; font-weight: 800; color: #8F9BB3; text-transform: uppercase; margin-bottom: 8px;">LA LIGA • UPCOMING</div>
-          <div class="fixture-teams-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <strong style="font-size: 1rem; color: #fff;">Barcelona</strong>
-            <span style="font-size: 0.82rem; font-weight: 800; color: #8F9BB3; background: rgba(255,255,255,0.06); padding: 4px 8px; border-radius: 6px;">VS</span>
-            <strong style="font-size: 1rem; color: #fff;">Atletico Madrid</strong>
-          </div>
-          <div style="font-size: 0.76rem; color: #60A5FA; display: flex; justify-content: space-between;">
-            <span>Tomorrow • 18:30</span>
-            <span>Camp Nou</span>
-          </div>
-        </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0;">
+              <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                <img src="${m.homeCrest}" alt="" style="width: 44px; height: 44px; max-width: 44px; max-height: 44px; object-fit: contain; flex-shrink: 0;" />
+                <span style="font-size: 1.05rem; font-weight: 700; color: #f8fafc;">${escapeHtml(m.homeTeam)}</span>
+              </div>
+
+              <div style="display: flex; flex-direction: column; align-items: center; padding: 0 16px; flex-shrink: 0;">
+                ${m.isLive ? `
+                  <div style="font-family: 'Space Grotesk', sans-serif; font-size: 1.75rem; font-weight: 900; color: #34d399; letter-spacing: 2px;">
+                    ${m.homeScore} - ${m.awayScore}
+                  </div>
+                  <span style="font-size: 0.72rem; color: #ef4444; font-weight: 800; text-transform: uppercase; margin-top: 2px;">IN PLAY</span>
+                ` : `
+                  <div style="font-family: 'Space Grotesk', sans-serif; font-size: 1.1rem; font-weight: 800; color: #94a3b8; background: rgba(255,255,255,0.06); padding: 4px 12px; border-radius: 8px;">
+                    VS
+                  </div>
+                  <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600; margin-top: 4px;">${escapeHtml(m.venue)}</span>
+                `}
+              </div>
+
+              <div style="display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex: 1; text-align: right;">
+                <span style="font-size: 1.05rem; font-weight: 700; color: #f8fafc;">${escapeHtml(m.awayTeam)}</span>
+                <img src="${m.awayCrest}" alt="" style="width: 44px; height: 44px; max-width: 44px; max-height: 44px; object-fit: contain; flex-shrink: 0;" />
+              </div>
+            </div>
+
+            ${m.events.length > 0 ? `
+              <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed rgba(255, 255, 255, 0.08); font-size: 0.78rem; color: #cbd5e1; display: flex; gap: 12px; flex-wrap: wrap;">
+                ${m.events.map(e => `<span style="background: rgba(16, 185, 129, 0.1); color: #34d399; padding: 2px 8px; border-radius: 6px; font-weight: 600;">${escapeHtml(e)}</span>`).join("")}
+              </div>
+            ` : ""}
+
+            ${m.hasMarket ? `
+              <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+                <button type="button" class="sporty-odds-btn" data-market-id="${m.id}" data-market-option-id="1" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: transform 0.2s;">
+                  ⚡ Trade 1X2 Market
+                </button>
+              </div>
+            ` : ""}
+          </article>
+        `).join("")}
       </div>
     </section>
   `;
