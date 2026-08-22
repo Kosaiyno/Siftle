@@ -450,6 +450,7 @@ const archiveControls = document.querySelector<HTMLElement>("#archiveControls");
 const topMarketsButton = document.querySelector<HTMLButtonElement>("[data-surface='markets']");
 const topNewsButton = document.querySelector<HTMLButtonElement>("[data-surface='feed']");
 const topPortfolioButton = document.querySelector<HTMLButtonElement>("[data-surface='portfolio']");
+const topMatchesButton = document.querySelector<HTMLButtonElement>("[data-surface='matches']");
 const walletButton = document.querySelector<HTMLButtonElement>("#walletButton");
 const themeToggleButton = document.querySelector<HTMLButtonElement>("[data-theme-toggle]");
 const guideToggleButton = document.getElementById("guideToggleButton") as HTMLButtonElement | null;
@@ -1463,6 +1464,14 @@ function syncStoryFromHash(): void {
     state.selectedStoryId = null;
     state.selectedThreadUrl = null;
     state.activeThread = null;
+    render();
+    return;
+  }
+  if (window.location.hash === "#matches") {
+    state.activeSurface = "matches";
+    state.selectedMarketId = null;
+    state.selectedStoryId = null;
+    state.selectedThreadUrl = null;
     render();
     return;
   }
@@ -3970,6 +3979,7 @@ const renderMarkets = (): void => {
   topMarketsButton?.classList.add("active");
   topNewsButton?.classList.remove("active");
   topPortfolioButton?.classList.remove("active");
+  topMatchesButton?.classList.add("active");
 
   if (state.selectedMarketId) {
     const market = marketPreviews.find((item) => item.id === state.selectedMarketId);
@@ -4855,6 +4865,7 @@ const renderPortfolio = (): void => {
   topMarketsButton?.classList.remove("active");
   topNewsButton?.classList.remove("active");
   topPortfolioButton?.classList.add("active");
+  topMatchesButton?.classList.remove("active");
   document.body.classList.remove("detail-mode");
   storyDetail.hidden = true;
   storyList.hidden = false;
@@ -5460,6 +5471,18 @@ topNewsButton?.addEventListener("click", () => {
   render();
   ensureArchiveIndexLoaded();
   ensureFeedLoaded(state.activeCategory);
+});
+
+topMatchesButton?.addEventListener("click", () => {
+  state.feedScrollY = window.scrollY;
+  state.activeSurface = "matches";
+  state.selectedMarketId = null;
+  state.selectedStoryId = null;
+  state.selectedThreadUrl = null;
+  state.showSaved = false;
+  window.history.pushState({}, "", "#matches");
+  resetFeedScroll();
+  render();
 });
 
 topPortfolioButton?.addEventListener("click", () => {
