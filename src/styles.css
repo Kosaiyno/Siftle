@@ -12264,3 +12264,43 @@ body.matches-mode .story-list,
   width: 100% !important;
   box-sizing: border-box !important;
 }
+
+/* Dark skeleton shimmer & precise container bounds for Matches surface */
+.matches-surface .skeleton,
+body.matches-mode .skeleton {
+  display: block !important;
+  border-radius: 16px !important;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.1) 45%, rgba(255, 255, 255, 0.04) 90%) !important;
+  background-size: 200% 100% !important;
+  animation: skeleton-shimmer 1.35s ease-in-out infinite !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
+body.matches-mode .app-shell,
+body.matches-mode .brief-board,
+body.matches-mode .story-list,
+.story-list.matches-surface-active {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.matches-surface {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 16px 12px 110px 12px !important;
+  box-sizing: border-box !important;
+  background-color: #030712 !important;
+}
+
+.thick-league-card {
+  background: var(--paper, #12131a) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
