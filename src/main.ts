@@ -4790,7 +4790,7 @@ const renderMatches = (): void => {
 
             return `
               <!-- Thick Grouped League Container Card -->
-              <div class="thick-league-card" style="background: #181d28; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; padding: 18px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4); width: 100%; box-sizing: border-box;">
+              <div class="thick-league-card" style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; padding: 18px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4); width: 100%; box-sizing: border-box;">
                 
                 <!-- League Card Header -->
                 <div style="display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 14px;">

@@ -12239,3 +12239,28 @@ body.matches-mode .brief-board {
   width: 100% !important;
   box-sizing: border-box !important;
 }
+
+/* Matches card color matching News Card (#12131a) & full width */
+body.matches-mode .app-shell,
+body.matches-mode .brief-board,
+body.matches-mode .story-list,
+.story-list.matches-surface-active {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.story-list.matches-surface-active {
+  padding: 0 12px 100px 12px !important;
+}
+
+.thick-league-card {
+  background: var(--paper, #12131a) !important; /* Exact News Card Color */
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.4) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
