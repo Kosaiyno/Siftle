@@ -450,7 +450,6 @@ const archiveControls = document.querySelector<HTMLElement>("#archiveControls");
 const topMarketsButton = document.querySelector<HTMLButtonElement>("[data-surface='markets']");
 const topNewsButton = document.querySelector<HTMLButtonElement>("[data-surface='feed']");
 const topPortfolioButton = document.querySelector<HTMLButtonElement>("[data-surface='portfolio']");
-const topMatchesButton = document.querySelector<HTMLButtonElement>("[data-surface='matches']");
 const walletButton = document.querySelector<HTMLButtonElement>("#walletButton");
 const themeToggleButton = document.querySelector<HTMLButtonElement>("[data-theme-toggle]");
 const guideToggleButton = document.getElementById("guideToggleButton") as HTMLButtonElement | null;
