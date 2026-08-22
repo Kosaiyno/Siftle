@@ -3978,7 +3978,6 @@ const renderMarkets = (): void => {
   topMarketsButton?.classList.add("active");
   topNewsButton?.classList.remove("active");
   topPortfolioButton?.classList.remove("active");
-  topMatchesButton?.classList.add("active");
 
   if (state.selectedMarketId) {
     const market = marketPreviews.find((item) => item.id === state.selectedMarketId);
@@ -4864,7 +4863,6 @@ const renderPortfolio = (): void => {
   topMarketsButton?.classList.remove("active");
   topNewsButton?.classList.remove("active");
   topPortfolioButton?.classList.add("active");
-  topMatchesButton?.classList.remove("active");
   document.body.classList.remove("detail-mode");
   storyDetail.hidden = true;
   storyList.hidden = false;
