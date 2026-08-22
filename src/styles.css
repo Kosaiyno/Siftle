@@ -12206,3 +12206,36 @@ html.dark .sporty-odds-btn span {
   box-shadow: 0 10px 30px rgba(2, 6, 23, 0.7) !important;
   width: 100% !important;
 }
+
+/* Absolute Edge-to-Edge Full Width Overrides for Matches */
+body.matches-mode .app-shell,
+body.matches-mode .brief-board,
+body.matches-mode .story-list,
+.story-list.matches-surface-active {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+body.matches-mode .brief-board {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+}
+
+.matches-surface {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  background-color: #030712 !important;
+}
+
+.thick-league-card {
+  background: #0b1329 !important; /* Deep Bluish Black */
+  border: 1px solid rgba(59, 130, 246, 0.2) !important;
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.7) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
