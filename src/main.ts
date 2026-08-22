@@ -3987,7 +3987,7 @@ const renderMarkets = (): void => {
   storyDetail.hidden = true;
   storyDetail.classList.remove("fullscreen");
   storyList.hidden = false;
-  storyList.classList.add("markets-list");
+  storyList.classList.remove("markets-list"); storyList.classList.add("matches-surface-active");
 
   if (state.loadingMarkets && marketPreviews.length === 0) {
     storyList.innerHTML = `
@@ -4798,7 +4798,7 @@ const renderMatches = (): void => {
                     <h2 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.01em;">
                       ${escapeHtml(leagueName)}
                     </h2>
-                    <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">Matchday Details</span>
+                    
                   </div>
                 </div>
 

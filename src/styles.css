@@ -12182,3 +12182,27 @@ html.dark .sporty-odds-btn span {
   letter-spacing: -0.02em !important;
   line-height: 1 !important;
 }
+
+/* Matches 100% edge-to-edge stretch & bluish black theme */
+.story-list.matches-surface-active,
+#storyList.matches-surface-active {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.matches-surface {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  background-color: #030712 !important;
+}
+
+.thick-league-card {
+  background: #0b1329 !important; /* Bluish Black */
+  border: 1px solid rgba(59, 130, 246, 0.2) !important;
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.7) !important;
+  width: 100% !important;
+}
