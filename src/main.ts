@@ -281,7 +281,8 @@ const state: {
   portfolioFilter: "open",
   liveMatches: [],
   loadingLiveMatches: false,
-  activeMatchLeague: "All"
+  activeMatchLeague: "All",
+  activeMatchDate: ""
 };
 
 let selectedLeaderboardDivision: number | null = null;
@@ -4854,7 +4855,7 @@ const renderMatches = (): void => {
         </div>
       ` : matches.length === 0 ? `
         <div style="text-align: center; padding: 48px 16px; color: #94a3b8; font-size: 0.95rem; font-weight: 500;">
-          No live matches available for this date. Select another date above!
+          No matches available for this date. Select another date above!
         </div>
       ` : `
         <div class="league-groups-container" style="display: flex; flex-direction: column; gap: 20px; width: 100%;">
