@@ -170,7 +170,10 @@ function trackEvent(event: string, storyUrl?: string, headline?: string) {
 }
 
 const state: {
-  activeSurface: "feed" | "markets" | "portfolio" | "leaderboard";
+  activeSurface: "feed" | "markets" | "portfolio" | "leaderboard" | "matches";
+  liveMatches: any[];
+  loadingLiveMatches: boolean;
+  activeMatchLeague: string;
   selectedMarketId: string | null;
   marketOrderMode: "buy" | "sell";
   marketTradeSide: "yes" | "no";
@@ -4735,12 +4738,12 @@ const renderMatches = (): void => {
   const matches = state.liveMatches;
   const loading = state.loadingLiveMatches && matches.length === 0;
 
-  const leagues = ["All", ...Array.from(new Set(matches.map((m) => m.league))).slice(0, 5)];
+  const leagues = ["All", ...Array.from(new Set(matches.map((m: any) => m.league as string))).slice(0, 5)];
   const filteredMatches = state.activeMatchLeague === "All"
     ? matches
-    : matches.filter((m) => m.league === state.activeMatchLeague);
+    : matches.filter((m: any) => m.league === state.activeMatchLeague);
 
-  const liveCount = matches.filter((m) => m.isLive).length;
+  const liveCount = matches.filter((m: any) => m.isLive).length;
 
   storyList.innerHTML = `
     <section class="matches-surface" style="padding-top: 18px; box-sizing: border-box; width: 100%;">
@@ -4783,7 +4786,7 @@ const renderMatches = (): void => {
         </div>
       ` : `
         <div class="matches-grid" style="display: flex; flex-direction: column; gap: 14px;">
-          ${filteredMatches.map((m) => {
+          ${filteredMatches.map((m: any) => {
             const isLive = m.isLive;
             const isPost = m.isPost;
             const badgeBg = isLive
