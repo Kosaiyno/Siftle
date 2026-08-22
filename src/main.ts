@@ -175,6 +175,7 @@ const state: {
   loadingLiveMatches: boolean;
   activeMatchLeague: string;
   activeMatchDate: string;
+  activeMarketLeagueFilter: string;
   selectedMatchId: string | null;
   matchDetailTab: "overview" | "ticker" | "lineup" | "stats";
   selectedMarketId: string | null;
@@ -285,6 +286,7 @@ const state: {
   loadingLiveMatches: false,
   activeMatchLeague: "All",
   activeMatchDate: "",
+  activeMarketLeagueFilter: "All",
   selectedMatchId: null,
   matchDetailTab: "overview"
 };
@@ -4020,7 +4022,6 @@ const renderMarketDetail = (market: MarketPreview): void => {
 };
 
 const renderMarkets = (): void => {
-  
   if (!storyList || !storyDetail) return;
   briefHero?.toggleAttribute("hidden", true);
   archiveControls?.toggleAttribute("hidden", true);
@@ -4046,51 +4047,213 @@ const renderMarkets = (): void => {
   storyDetail.hidden = true;
   storyDetail.classList.remove("fullscreen");
   storyList.hidden = false;
-  storyList.classList.remove("markets-list"); storyList.classList.add("matches-surface-active");
+  storyList.classList.remove("matches-surface-active");
 
-  if (state.loadingMarkets && marketPreviews.length === 0) {
-    storyList.innerHTML = `
-      <header class="markets-header" style="box-sizing: border-box; width: 100%; display: block; padding-top: 18px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 12px; flex-wrap: wrap;">
-          <h1 style="margin: 0;">Markets</h1>
-          <a class="arc-faucet-button" href="${ARC_TESTNET_FAUCET}" target="_blank" rel="noreferrer" style="flex-shrink: 0;">Get testnet USDC</a>
-        </div>
-        <p style="margin: 10px 0 0; color: #647089; font-size: 0.95rem; font-weight: 600; line-height: 1.4; width: 100%;">
-          Trade daily prediction markets on Arc L1. Pari-Mutuel pools split 100% of losing bets to winners with zero house margin.
-        </p>
-      </header>
-      <div class="markets-container" style="padding-top: 16px;">
-        <section class="markets-grid" aria-label="Loading prediction markets">
-          ${Array.from({ length: 2 }).map(() => `
-            <article class="market-card skeleton-market-card">
-              <div class="skeleton skeleton-line sm"></div>
-              <div class="skeleton skeleton-line xl" style="height: 22px;"></div>
-              <div class="skeleton skeleton-line md"></div>
-            </article>
-          `).join("")}
-        </section>
-      </div>
-    `;
-    return;
-  }
+  const activeLeague = state.activeMarketLeagueFilter || "All";
+
+  // Filter markets by active league
+  const filteredMarkets = marketPreviews.filter((m: any) => {
+    if (activeLeague === "All") return true;
+    const lg = (m.league || "").toLowerCase();
+    const act = activeLeague.toLowerCase();
+    if (act.includes("epl") || act.includes("premier")) return lg.includes("premier") || lg.includes("epl");
+    if (act.includes("la liga") || act.includes("laliga")) return lg.includes("laliga") || lg.includes("la liga");
+    if (act.includes("champions")) return lg.includes("champions");
+    if (act.includes("serie a")) return lg.includes("serie a");
+    if (act.includes("bundesliga")) return lg.includes("bundesliga");
+    if (act.includes("saudi")) return lg.includes("saudi");
+    return true;
+  });
+
+  const featuredMarket = marketPreviews[0] || {
+    id: "m-espanyol-real-madrid",
+    question: "Espanyol vs Real Madrid Match Result",
+    homeTeam: "Espanyol",
+    awayTeam: "Real Madrid",
+    homeCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/379.png",
+    awayCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/86.png",
+    league: "Spanish LaLiga"
+  };
+
+  const leaguesList = [
+    { id: "All", label: "All", icon: "🌐" },
+    { id: "EPL", label: "EPL", icon: "🦁" },
+    { id: "La Liga", label: "La Liga", icon: "⚡" },
+    { id: "Champions", label: "Champions", icon: "⭐" },
+    { id: "Serie A", label: "Serie A", icon: "🇮🇹" },
+    { id: "Bundesliga", label: "Bundesliga", icon: "🏆" },
+    { id: "Saudi Pro", label: "Saudi Pro", icon: "🇸🇦" }
+  ];
 
   storyList.innerHTML = `
-    <header class="markets-header" style="box-sizing: border-box; width: 100%; display: block; padding-top: 18px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 12px; flex-wrap: wrap;">
-        <h1 style="margin: 0;">Markets</h1>
-        <a class="arc-faucet-button" href="${ARC_TESTNET_FAUCET}" target="_blank" rel="noreferrer" style="flex-shrink: 0;">Get testnet USDC</a>
+    <section class="markets-surface-redesign" style="padding: 12px 10px 110px 10px; width: 100%; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif; color: #ffffff;">
+      
+      <!-- Top Title Header -->
+      <header style="margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center;">
+        <h1 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: #ffffff; letter-spacing: -0.02em;">Markets</h1>
+        <a href="${ARC_TESTNET_FAUCET}" target="_blank" rel="noreferrer" style="background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); font-size: 0.8rem; font-weight: 800; padding: 6px 14px; border-radius: 999px; text-decoration: none;">Get testnet USDC</a>
+      </header>
+
+      <!-- Popular Featured Card (Matching Reference UI 1) -->
+      <div style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 18px; margin-bottom: 22px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.1rem;">🔥</span>
+            <h2 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #ffffff;">Popular</h2>
+          </div>
+          <span style="font-size: 0.78rem; font-weight: 700; color: #94a3b8; background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+            In 1h : 29m 🔥🔥 ⚡
+          </span>
+        </div>
+
+        <!-- Featured Teams Row (Stacked) -->
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <img src="${(featuredMarket as any).homeCrest || 'https://a.espncdn.com/i/teamlogos/soccer/500/379.png'}" alt="" style="width: 28px; height: 28px; object-fit: contain;" />
+            <span style="font-size: 1rem; font-weight: 800; color: #ffffff;">${escapeHtml((featuredMarket as any).homeTeam || "Espanyol")}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <img src="${(featuredMarket as any).awayCrest || 'https://a.espncdn.com/i/teamlogos/soccer/500/86.png'}" alt="" style="width: 28px; height: 28px; object-fit: contain;" />
+            <span style="font-size: 1rem; font-weight: 800; color: #ffffff;">${escapeHtml((featuredMarket as any).awayTeam || "Real Madrid")}</span>
+          </div>
+        </div>
+
+        <div style="text-align: center; font-size: 0.8rem; color: #94a3b8; font-weight: 700; margin-bottom: 10px; letter-spacing: 0.05em; text-transform: uppercase;">
+          Moneyline
+        </div>
+
+        <!-- 3 Cents Odds Trading Boxes (Matching Reference Image) -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+          <button type="button" class="sporty-odds-btn" data-market-id="${featuredMarket.id}" data-market-option-id="home" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8;">${escapeHtml((featuredMarket as any).homeTeam || "Home")}</span>
+            <span style="font-size: 1.05rem; font-weight: 900; color: #facc15;">11.5¢</span>
+          </button>
+
+          <button type="button" class="sporty-odds-btn" data-market-id="${featuredMarket.id}" data-market-option-id="draw" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8;">Draw</span>
+            <span style="font-size: 1.05rem; font-weight: 900; color: #facc15;">20.5¢</span>
+          </button>
+
+          <button type="button" class="sporty-odds-btn" data-market-id="${featuredMarket.id}" data-market-option-id="away" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8;">${escapeHtml((featuredMarket as any).awayTeam || "Away")}</span>
+            <span style="font-size: 1.05rem; font-weight: 900; color: #facc15;">68.5¢</span>
+          </button>
+        </div>
+
       </div>
-      <p style="margin: 10px 0 0; color: #647089; font-size: 0.95rem; font-weight: 600; line-height: 1.4; width: 100%;">
-        Trade daily prediction markets on Arc L1. Pari-Mutuel pools split 100% of losing bets to winners with zero house margin.
-      </p>
-    </header>
-    <div class="markets-container" style="padding-top: 16px;">
-      <section class="markets-grid" aria-label="Active prediction markets" style="display: flex; flex-direction: column; gap: 16px;">
-        ${marketPreviews.map((m, idx) => renderMarketCard(m, idx)).join("")}
-      </section>
-    </div>
+
+      <!-- Games vs Outrights Toggle (Matching Reference UI) -->
+      <div style="background: rgba(255, 255, 255, 0.04); border-radius: 999px; padding: 4px; display: flex; gap: 4px; margin-bottom: 20px;">
+        <button type="button" style="flex: 1; background: rgba(255,255,255,0.12); color: #ffffff; border: none; padding: 10px 0; border-radius: 999px; font-size: 0.9rem; font-weight: 800; cursor: pointer; text-align: center;">
+          Games
+        </button>
+        <button type="button" style="flex: 1; background: transparent; color: #94a3b8; border: none; padding: 10px 0; border-radius: 999px; font-size: 0.9rem; font-weight: 700; cursor: pointer; text-align: center;">
+          Outrights
+        </button>
+      </div>
+
+      <!-- Horizontal League Selection Icon Nav Bar (Matching Reference UI) -->
+      <div style="display: flex; gap: 14px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 20px; scrollbar-width: none;">
+        ${leaguesList.map((lg) => {
+          const isActive = activeLeague === lg.id;
+          return `
+            <button type="button" class="market-league-selector-btn" data-league-id="${lg.id}" style="background: transparent; border: none; color: ${isActive ? '#ffffff' : '#94a3b8'}; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; flex-shrink: 0; padding-bottom: 6px; border-bottom: 2px solid ${isActive ? '#ffffff' : 'transparent'}; font-family: inherit; transition: all 0.2s ease;">
+              <span style="font-size: 1.4rem;">${lg.icon}</span>
+              <span style="font-size: 0.8rem; font-weight: 800; white-space: nowrap;">${lg.label}</span>
+            </button>
+          `;
+        }).join("")}
+      </div>
+
+      <!-- Active Filtered Markets List -->
+      <div style="display: flex; flex-direction: column; gap: 18px;">
+        
+        <!-- League Section Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.2rem;">${leaguesList.find(l => l.id === activeLeague)?.icon || '🏆'}</span>
+            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #ffffff;">${activeLeague}</h3>
+          </div>
+          <span style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; font-size: 0.8rem; font-weight: 700; padding: 6px 12px; border-radius: 10px; cursor: pointer;">
+            Moneyline ∨
+          </span>
+        </div>
+
+        <!-- Market Cards -->
+        ${filteredMarkets.map((m: any, idx: number) => {
+          const homeTeam = m.homeTeam || "Brentford";
+          const awayTeam = m.awayTeam || "Spurs";
+          const homeCrest = m.homeCrest || "https://a.espncdn.com/i/teamlogos/soccer/500/337.png";
+          const awayCrest = m.awayCrest || "https://a.espncdn.com/i/teamlogos/soccer/500/367.png";
+          const isLive = idx === 0;
+
+          return `
+            <div class="thick-league-card" data-market-id="${m.id}" style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 18px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);">
+              
+              <!-- Card Header Status -->
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <span style="font-size: 0.78rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; ${isLive ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);' : 'background: rgba(255, 255, 255, 0.06); color: #94a3b8;'}">
+                  ${isLive ? 'LIVE ⚡' : 'Tomorrow • Sun Aug 23 02:00 PM'}
+                </span>
+                <span style="font-size: 0.8rem; color: #64748b; font-weight: 700;">+17</span>
+              </div>
+
+              <!-- Stacked Teams -->
+              <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <img src="${homeCrest}" alt="" style="width: 26px; height: 26px; object-fit: contain;" />
+                  <span style="font-size: 0.95rem; font-weight: 800; color: #ffffff;">${escapeHtml(homeTeam)}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <img src="${awayCrest}" alt="" style="width: 26px; height: 26px; object-fit: contain;" />
+                  <span style="font-size: 0.95rem; font-weight: 800; color: #ffffff;">${escapeHtml(awayTeam)}</span>
+                </div>
+              </div>
+
+              <div style="text-align: center; font-size: 0.78rem; color: #94a3b8; font-weight: 700; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em;">
+                Moneyline
+              </div>
+
+              <!-- 3 Outcome Cents Odds Trading Boxes -->
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                <button type="button" class="sporty-odds-btn" data-market-id="${m.id}" data-market-option-id="home" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
+                  <span style="font-size: 0.78rem; font-weight: 700; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml(homeTeam)}</span>
+                  <span style="font-size: 1rem; font-weight: 900; color: #facc15;">${isLive ? '99.3¢' : '45.0¢'}</span>
+                </button>
+
+                <button type="button" class="sporty-odds-btn" data-market-id="${m.id}" data-market-option-id="draw" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
+                  <span style="font-size: 0.78rem; font-weight: 700; color: #94a3b8;">Draw</span>
+                  <span style="font-size: 1rem; font-weight: 900; color: #facc15;">${isLive ? '0.6¢' : '25.0¢'}</span>
+                </button>
+
+                <button type="button" class="sporty-odds-btn" data-market-id="${m.id}" data-market-option-id="away" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
+                  <span style="font-size: 0.78rem; font-weight: 700; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml(awayTeam)}</span>
+                  <span style="font-size: 1rem; font-weight: 900; color: #facc15;">${isLive ? '0.3¢' : '30.0¢'}</span>
+                </button>
+              </div>
+
+            </div>
+          `;
+        }).join("")}
+
+      </div>
+
+    </section>
   `;
+
+  // Attach League Selector Nav click listeners
+  document.querySelectorAll(".market-league-selector-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const lgId = btn.getAttribute("data-league-id");
+      if (lgId) {
+        state.activeMarketLeagueFilter = lgId;
+        renderMarkets();
+      }
+    });
+  });
 };
+
 
 const renderLeaderboard = (): void => {
   
