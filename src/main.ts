@@ -4980,6 +4980,10 @@ const render = (): void => {
     renderMarkets();
     return;
   }
+  if (state.activeSurface === "matches") {
+    renderMatches();
+    return;
+  }
   if (state.activeSurface === "portfolio") {
     renderPortfolio();
     return;
