@@ -5506,6 +5506,7 @@ walletButton?.addEventListener("click", () => {
 });
 
 document.addEventListener("click", (event) => {
+  const target = event.target as HTMLElement;
   const matchesNavTarget = target.closest<HTMLElement>("[data-bottom-nav='matches'], [data-surface='matches']");
   if (matchesNavTarget) {
     state.feedScrollY = window.scrollY;
@@ -5519,8 +5520,6 @@ document.addEventListener("click", (event) => {
     render();
     return;
   }
-
-  const target = event.target as HTMLElement;
   const copyBtn = target.closest(".copy-address-btn");
   if (copyBtn) {
     const address = copyBtn.getAttribute("data-address");
