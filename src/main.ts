@@ -4790,6 +4790,7 @@ const fetchEspnMatchSummary = async (eventId: string): Promise<any> => {
 let activeMatchModalId: string | null = null;
 
 const openMatchDetailModal = async (matchId: string) => {
+  console.log("Opening match detail modal for id:", matchId);
   const match = state.liveMatches.find((m: any) => String(m.id) === String(matchId));
   if (!match) return;
 
@@ -4798,7 +4799,7 @@ const openMatchDetailModal = async (matchId: string) => {
   if (!modalOverlay) {
     modalOverlay = document.createElement("div");
     modalOverlay.id = "matchDetailModalOverlay";
-    modalOverlay.style.cssText = "position: fixed; inset: 0; z-index: 1000; background: rgba(3, 7, 18, 0.85); backdrop-filter: blur(12px); display: flex; justify-content: center; align-items: flex-end; padding: 0;";
+    modalOverlay.style.cssText = "position: fixed; inset: 0; z-index: 999999; background: rgba(3, 7, 18, 0.85); backdrop-filter: blur(12px); display: flex; justify-content: center; align-items: flex-end; padding: 0;";
     document.body.appendChild(modalOverlay);
   }
 
@@ -4965,7 +4966,6 @@ const openMatchDetailModal = async (matchId: string) => {
 };
 
 const renderMatches = (): void => {
-  
   if (!storyList || !storyDetail) return;
   briefHero?.toggleAttribute("hidden", true);
   archiveControls?.toggleAttribute("hidden", true);
@@ -5007,7 +5007,7 @@ const renderMatches = (): void => {
     groupedByLeague.get(lg)!.push(m);
   });
 
-  // Generate 7 Dynamic Date Pills: Yesterday (-1), Today (0), Tomorrow (+1), + 4 upcoming days
+  // Generate 7 Dynamic Date Pills
   const datePills: { label: string; dateStr: string }[] = [];
   for (let i = -1; i <= 5; i++) {
     const d = new Date(todayDate);
@@ -5030,7 +5030,7 @@ const renderMatches = (): void => {
         <h1 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: #ffffff; letter-spacing: -0.02em;">Matches</h1>
       </header>
 
-      <!-- Clickable Date Navigation Pills (7 Days) -->
+      <!-- Dynamic 7-Day Date Navigation Pills -->
       <div class="matches-date-pills-scroll">
         ${datePills.map((dp) => {
           const isActive = state.activeMatchDate === dp.dateStr;
@@ -5057,10 +5057,10 @@ const renderMatches = (): void => {
             const officialLeagueLogo = leagueMatches[0]?.leagueLogo || "";
 
             return `
-              <!-- Separate Card per League -->
+              <!-- Thick Card per League (News Card Background #12131a) -->
               <div class="thick-league-card" style="background: var(--paper, #12131a); border: 1px solid ${isLiveGroup ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255, 255, 255, 0.08)'}; border-radius: 18px; padding: 18px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4); width: 100%; box-sizing: border-box;">
                 
-                <!-- Official League Card Header -->
+                <!-- Authentic League Card Header -->
                 <div style="display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 14px;">
                   <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255, 255, 255, 0.06); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                     ${officialLeagueLogo ? `<img src="${officialLeagueLogo}" alt="" style="width: 22px; height: 22px; object-fit: contain;" />` : '🏆'}
@@ -5072,7 +5072,7 @@ const renderMatches = (): void => {
                   </div>
                 </div>
 
-                <!-- Matches List Inside Card -->
+                <!-- Matches List Inside Card (Original Clean Layout Restored) -->
                 <div style="display: flex; flex-direction: column; gap: 16px;">
                   ${leagueMatches.map((m: any, idx: number) => {
                     const isLive = m.isLive;
@@ -5081,7 +5081,7 @@ const renderMatches = (): void => {
                     const timeStr = new Date(m.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
                     return `
-                      <div class="match-row-item" data-match-id="${m.id}" style="cursor: pointer;" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; ${!isLast ? 'border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 14px;' : ''}">
+                      <div class="match-row-item" data-match-id="${m.id}" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; cursor: pointer; ${!isLast ? 'border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 14px;' : ''}">
                         
                         <!-- Left Side: Team Crests & Names + Scores -->
                         <div style="display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 0;">
