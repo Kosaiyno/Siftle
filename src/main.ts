@@ -3491,72 +3491,87 @@ const renderDetail = (): void => {
   `;
 };
 
-const renderMarketCard = (market: MarketPreview): string => {
-  const snapshot = state.marketSnapshots[market.id];
-  const marketAddress = getMarketAddress(market);
+const renderMarketCard = (market: MarketPreview, index: number = 0): string => {
   const optionMarket = isOptionMarket(market);
-  const optionCount = getMarketOptions(market).length;
-  const totalMoney = snapshot?.volumeUsdc ?? (Number((market as MarketPreview & { volumeUsdc?: number }).volumeUsdc) || 0);
+  const options = getMarketOptions(market);
+  const isFeatured = Boolean((market as any).isFeatured || index === 0);
 
-  const yesPrice = snapshot?.yesPriceCents;
-  const displayProbability = yesPrice ?? market.probability;
-  const probabilityLabel = optionMarket ? `${optionCount}` : `${displayProbability}%`;
-  const shareLabel =
-    yesPrice === undefined ? (marketAddress ? "Loading Arc pools" : "Arc setup required") : `Yes ${yesPrice}¢ · No ${100 - yesPrice}¢`;
-  const displayShareLabel = yesPrice === undefined
-    ? `Yes ${market.probability}c - No ${100 - market.probability}c`
-    : shareLabel;
-  const view = getMarketView(market);
-  const lockLabel = market.timeframe === "Daily" ? getDailyTradeLockLabel(market, snapshot) : market.closes;
+  const homeCrest = (market as any).homeCrest || "https://a.espncdn.com/i/teamlogos/soccer/500/359.png";
+  const awayCrest = (market as any).awayCrest || "https://a.espncdn.com/i/teamlogos/soccer/500/379.png";
+  const homeTeam = (market as any).homeTeam || "Arsenal";
+  const awayTeam = (market as any).awayTeam || "Coventry City";
+  const leagueInfo = (market as any).league || "Premier League — Today 20:00";
+
+  if (isFeatured) {
+    return `
+      <article class="sporty-marquee-card" data-market-id="${market.id}">
+        <div class="sporty-marquee-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <span class="sporty-hot-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; font-size: 0.72rem; font-weight: 800; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(239, 68, 68, 0.3);">🔥 HOT · BEST ODDS</span>
+          <span style="font-size: 0.82rem; color: #94a3b8; font-weight: 600;">${escapeHtml(leagueInfo)}</span>
+        </div>
+        <div class="sporty-teams-row" style="display: flex; justify-content: space-between; align-items: center; margin: 14px 0 18px;">
+          <div class="sporty-team" style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1;">
+            <img src="${homeCrest}" alt="" class="sporty-team-crest" style="width: 48px; height: 48px; max-width: 48px; max-height: 48px; object-fit: contain;" />
+            <span class="sporty-team-name" style="font-size: 0.95rem; font-weight: 700; color: #f8fafc; text-align: center;">${escapeHtml(homeTeam)}</span>
+          </div>
+          <div class="sporty-match-center" style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            <span class="sporty-match-time" style="font-size: 0.8rem; color: #94a3b8; font-weight: 600;">20:00 | Today</span>
+            <span class="sporty-market-type" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border-radius: 6px; padding: 2px 8px; font-size: 0.72rem; font-weight: 700;">1X2</span>
+          </div>
+          <div class="sporty-team" style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1;">
+            <img src="${awayCrest}" alt="" class="sporty-team-crest" style="width: 48px; height: 48px; max-width: 48px; max-height: 48px; object-fit: contain;" />
+            <span class="sporty-team-name" style="font-size: 0.95rem; font-weight: 700; color: #f8fafc; text-align: center;">${escapeHtml(awayTeam)}</span>
+          </div>
+        </div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 1.05rem; color: #f8fafc; font-weight: 700; margin-bottom: 14px; text-align: center;">
+          ${escapeHtml(market.question)}
+        </div>
+        <div class="sporty-odds-row" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+          ${options.map((opt) => {
+            const pools = (state.marketSnapshots[market.id]?.optionPools) || (market as any).initialOptionPools || {};
+            const total = Object.values(pools).reduce((a: number, b: any) => a + (Number(b) || 0), 0);
+            const optPool = Number(pools[opt.id]) || 0;
+            const oddsVal = (total > 0 && optPool > 0) ? (total / optPool) : options.length;
+            return `
+              <button type="button" class="sporty-odds-btn" data-market-id="${market.id}" data-market-option-id="${escapeHtml(opt.id)}" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;">
+                <span style="font-size: 0.82rem; font-weight: 600; color: #f1f5f9;">${escapeHtml(opt.label)}</span>
+                <strong style="font-size: 0.95rem; font-weight: 800; color: #10b981; margin-top: 2px;">${oddsVal.toFixed(2)}x</strong>
+              </button>
+            `;
+          }).join("")}
+        </div>
+      </article>
+    `;
+  }
+
+  // Clean compact 1X2 card for subsequent matches
+  const compactHome = (market as any).homeTeam || "Dinamo Moscow";
+  const compactAway = (market as any).awayTeam || "FK Nizhny Novgorod";
 
   return `
-    <button class="market-card" type="button" data-market-id="${market.id}">
-      <div class="market-card-topline">
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <span class="category-chip ${market.category}">${displayCategory(market.category)}</span>
-          <span class="timeframe-chip ${market.timeframe}">${market.timeframe === "Sagas" ? "Sagas" : market.timeframe}</span>
-          ${market.points ? `<span class="points-chip">+${market.points} pts</span>` : ""}
-        </div>
-        <span class="market-card-updates">${view.evidence.length} updates</span>
+    <article class="sporty-compact-card" data-market-id="${market.id}" style="background: linear-gradient(145deg, #151d30 0%, #0e1626 100%); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 16px; margin-bottom: 14px;">
+      <div class="sporty-compact-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-size: 0.8rem; color: #10b981; font-weight: 700;">${escapeHtml(leagueInfo)}</span>
+        <span style="font-size: 0.78rem; color: #94a3b8; font-weight: 600;">1X2 Match Result</span>
       </div>
-      <div class="market-card-body" style="display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; width: 100%; text-align: left; margin: 4px 0;">
-        <div class="market-card-text" style="flex: 1; min-width: 0;">
-          <h2>${market.question}</h2>
-        </div>
-        ${view.imageUrl ? `
-        <div class="market-card-image-frame" style="width: 72px; height: 72px; min-width: 72px; border-radius: 12px; overflow: hidden; border: 1px solid var(--market-border); flex-shrink: 0;">
-          <img src="${view.imageUrl}" alt="" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover;" />
-        </div>
-        ` : ""}
+      <div class="sporty-compact-teams" style="font-size: 1rem; font-weight: 700; color: #f8fafc; margin: 8px 0;">
+        ${escapeHtml(compactHome)} <span style="color: #94a3b8; font-weight: 500; font-size: 0.88rem;">vs</span> ${escapeHtml(compactAway)}
       </div>
-      <div class="market-probability-row">
-        <strong>${probabilityLabel}</strong>
-        <span>${optionMarket ? "possible outcomes" : marketAddress ? "market probability" : "pending deployment"}</span>
-        <span class="market-share-prices">${optionMarket ? "Pick exactly one" : "Choose a side"}</span>
+      <div class="sporty-odds-row" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px;">
+        ${options.map((opt) => {
+          const pools = (state.marketSnapshots[market.id]?.optionPools) || (market as any).initialOptionPools || {};
+          const total = Object.values(pools).reduce((a: number, b: any) => a + (Number(b) || 0), 0);
+          const optPool = Number(pools[opt.id]) || 0;
+          const oddsVal = (total > 0 && optPool > 0) ? (total / optPool) : options.length;
+          return `
+            <button type="button" class="sporty-odds-btn" data-market-id="${market.id}" data-market-option-id="${escapeHtml(opt.id)}" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;">
+              <span style="font-size: 0.82rem; font-weight: 600; color: #f1f5f9;">${escapeHtml(opt.label)}</span>
+              <strong style="font-size: 0.95rem; font-weight: 800; color: #10b981; margin-top: 2px;">${oddsVal.toFixed(2)}x</strong>
+            </button>
+          `;
+        }).join("")}
       </div>
-      <div class="market-meter" aria-hidden="true"><span style="width: ${optionMarket ? 100 : displayProbability}%"></span></div>
-      <div class="market-volume">
-        <span>Market activity</span>
-        <strong>Hidden</strong>
-      </div>
-      ${view.evidence && view.evidence.length > 0 ? `
-      <div class="market-card-news" style="margin: 12px 0 8px; width: 100%; border-top: 1px dashed var(--market-border); padding-top: 10px; box-sizing: border-box;">
-        <span style="font-size: 0.72rem; font-weight: 700; color: var(--market-text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px; text-align: left;">Related News</span>
-        <div style="display: flex; flex-direction: column; gap: 6px;">
-          ${view.evidence.slice(0, 2).map((item) => `
-            <div style="display: flex; align-items: flex-start; gap: 6px; font-size: 0.76rem; text-align: left; line-height: 1.35; padding: 4px 0;">
-              <span style="background: rgba(59, 130, 246, 0.08); color: var(--market-accent); border: 1px solid rgba(59, 130, 246, 0.15); border-radius: 4px; padding: 1px 4px; font-size: 0.62rem; font-weight: 700; text-transform: uppercase; flex-shrink: 0; line-height: 1;">${escapeHtml(item.source)}</span>
-              <span style="color: var(--market-text-main); font-weight: 500;">${escapeHtml(item.headline)}</span>
-            </div>
-          `).join("")}
-        </div>
-      </div>
-      ` : ""}
-      <div class="market-card-footer">
-        <span>${view.evidence.length} related news</span>
-        <span>${market.timeframe === "Daily" ? `Locks ${lockLabel}` : `Closes ${lockLabel}`}</span>
-      </div>
-    </button>
+    </article>
   `;
 };
 
@@ -3834,13 +3849,16 @@ const renderMarketDetail = (market: MarketPreview): void => {
             <label for="marketAmountInput">Trade Amount <span style="color: var(--market-text-muted); font-size: 0.72rem; text-transform: none; letter-spacing: 0;">${amountHint}</span></label>
             <div class="market-amount-input-row">
               <span>$</span>
-              <input id="marketAmountInput" type="number" min="${amountBounds.min.toFixed(2)}" max="${Math.max(amountBounds.min, amountBounds.max).toFixed(2)}" step="0.01" inputmode="decimal" value="${amount}" data-market-amount ${marketResolved || marketTradeLocked || state.marketOrderMode === "buy" ? "disabled" : ""} style="${state.marketOrderMode === "buy" ? "opacity: 0.7; cursor: not-allowed;" : ""}" />
+              <input id="marketAmountInput" type="number" min="${amountBounds.min.toFixed(2)}" max="${Math.max(amountBounds.min, amountBounds.max).toFixed(2)}" step="0.01" inputmode="decimal" value="${amount}" data-market-amount ${marketResolved || marketTradeLocked ? "disabled" : ""} style="${state.marketOrderMode === "buy" ? "opacity: 0.7; cursor: not-allowed;" : ""}" />
               <span>USDC</span>
             </div>
           </div>
 
           <div class="market-inline-payout">
-            <span>Market amounts are hidden while this market is open.</span>
+            <div class="sporty-slip-summary" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(5, 150, 105, 0.22) 100%); border: 1.5px solid rgba(16, 185, 129, 0.5); border-radius: 14px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; box-shadow: 0 4px 20px rgba(16, 185, 129, 0.12);">
+              <span style="color: #f8fafc; font-size: 1.05rem; font-weight: 700;">Estimated Payout:</span>
+              <strong style="color: #34d399; font-family: 'Space Grotesk', sans-serif; font-size: 1.6rem; font-weight: 900;">${((amount || 1) * (optionMarket ? (Number((snapshot?.optionPools || {})[selectedOption?.id || "1"]) > 0 ? (Object.values(snapshot?.optionPools || {}).reduce((a: number, b: any) => a + (Number(b) || 0), 0) / Number((snapshot?.optionPools || {})[selectedOption?.id || "1"])) : optionList.length) : 2.0)).toFixed(2)} USDC</strong>
+            </div>
           </div>
 
           <div class="drawer-action-container">
@@ -3884,11 +3902,6 @@ const renderMarkets = (): void => {
   topMarketsButton?.classList.add("active");
   topNewsButton?.classList.remove("active");
   topPortfolioButton?.classList.remove("active");
-  window.setTimeout(() => {
-    if (state.activeSurface === "markets") {
-      marketPreviews.forEach((market) => void loadMarketEvidence(market));
-    }
-  }, 750);
 
   if (state.selectedMarketId) {
     const market = marketPreviews.find((item) => item.id === state.selectedMarketId);
@@ -3896,7 +3909,6 @@ const renderMarkets = (): void => {
       renderMarketDetail(market);
       return;
     }
-    // If hash points to a removed market, reset to list view.
     state.selectedMarketId = null;
     if (window.location.hash.startsWith("#market-")) {
       window.history.replaceState({}, "", "#markets");
@@ -3910,27 +3922,6 @@ const renderMarkets = (): void => {
   storyList.hidden = false;
   storyList.classList.add("markets-list");
 
-  const visibleMarkets = marketPreviews;
-
-  const timeframes: ("All" | "Daily" | "Weekly" | "Sagas")[] = ["All", "Daily", "Weekly", "Sagas"];
-  const timeframeTabsHtml = `
-    <nav class="market-timeframe-tabs" aria-label="Timeframe navigation">
-      ${timeframes.map((tf) => {
-        const isActive = state.activeMarketTimeframe === tf;
-        const count = tf === "All" 
-          ? visibleMarkets.length 
-          : visibleMarkets.filter(m => m.timeframe === tf).length;
-        const label = tf === "Sagas" ? "Sagas" : tf;
-        return `
-          <button class="timeframe-tab-btn ${isActive ? 'active' : ''}" type="button" data-timeframe="${tf}">
-            <span>${label}</span>
-            <span class="timeframe-tab-count">${count}</span>
-          </button>
-        `;
-      }).join("")}
-    </nav>
-  `;
-
   if (state.loadingMarkets && marketPreviews.length === 0) {
     storyList.innerHTML = `
       <header class="markets-header" style="box-sizing: border-box; width: 100%; display: block; padding-top: 18px;">
@@ -3939,71 +3930,22 @@ const renderMarkets = (): void => {
           <a class="arc-faucet-button" href="${ARC_TESTNET_FAUCET}" target="_blank" rel="noreferrer" style="flex-shrink: 0;">Get testnet USDC</a>
         </div>
         <p style="margin: 10px 0 0; color: #647089; font-size: 0.95rem; font-weight: 600; line-height: 1.4; width: 100%;">
-          Trade daily prediction markets. Winning shares split the final pool, and Daily winners earn leaderboard points.
+          Trade daily prediction markets on Arc L1. Pari-Mutuel pools split 100% of losing bets to winners with zero house margin.
         </p>
       </header>
-      ${timeframeTabsHtml}
-      <div class="markets-container">
+      <div class="markets-container" style="padding-top: 16px;">
         <section class="markets-grid" aria-label="Loading prediction markets">
-          ${Array.from({ length: 3 }).map(() => `
+          ${Array.from({ length: 2 }).map(() => `
             <article class="market-card skeleton-market-card">
               <div class="skeleton skeleton-line sm"></div>
               <div class="skeleton skeleton-line xl" style="height: 22px;"></div>
-              <div class="skeleton skeleton-line lg"></div>
               <div class="skeleton skeleton-line md"></div>
-              <div class="skeleton skeleton-line xl" style="height: 8px; margin-top: 18px;"></div>
             </article>
           `).join("")}
         </section>
       </div>
     `;
     return;
-  }
-
-  let marketsGridHtml = "";
-  
-  const renderTimeframeSection = (title: string, subtitle: string, markets: MarketPreview[]) => {
-    if (markets.length === 0) return "";
-    return `
-      <div class="market-timeframe-section">
-        <div class="timeframe-section-header">
-          <div class="timeframe-section-header-left">
-            <h2>${title}</h2>
-            <span class="timeframe-section-subtitle">${subtitle}</span>
-          </div>
-          <span class="timeframe-section-count-badge">${markets.length} ${markets.length === 1 ? 'market' : 'markets'}</span>
-        </div>
-        <section class="markets-grid" aria-label="${title} prediction markets">
-          ${markets.map(renderMarketCard).join("")}
-        </section>
-      </div>
-    `;
-  };
-
-  if (state.activeMarketTimeframe === "All") {
-    const dailyMarkets = visibleMarkets.filter(m => m.timeframe === "Daily");
-    const weeklyMarkets = visibleMarkets.filter(m => m.timeframe === "Weekly");
-    const sagasMarkets = visibleMarkets.filter(m => m.timeframe === "Sagas");
-    
-    marketsGridHtml = `
-      ${renderTimeframeSection("Daily", "Ends in a day or two", dailyMarkets)}
-      ${renderTimeframeSection("Weekly", "Ends in a week", weeklyMarkets)}
-      ${renderTimeframeSection("Sagas (Long-term)", "Narratives & futures", sagasMarkets)}
-    `;
-  } else {
-    const filteredMarkets = visibleMarkets.filter(m => m.timeframe === state.activeMarketTimeframe);
-    let title = state.activeMarketTimeframe as string;
-    let subtitle = "";
-    if (state.activeMarketTimeframe === "Daily") subtitle = "Ends in a day or two";
-    else if (state.activeMarketTimeframe === "Weekly") subtitle = "Ends in a week";
-    else if (state.activeMarketTimeframe === "Sagas") {
-      title = "Sagas (Long-term)";
-      subtitle = "Narratives & futures";
-    }
-    
-    marketsGridHtml = `
-      ${renderTimeframeSection(title, subtitle, filteredMarkets)}
-    `;
   }
 
   storyList.innerHTML = `
@@ -4013,12 +3955,13 @@ const renderMarkets = (): void => {
         <a class="arc-faucet-button" href="${ARC_TESTNET_FAUCET}" target="_blank" rel="noreferrer" style="flex-shrink: 0;">Get testnet USDC</a>
       </div>
       <p style="margin: 10px 0 0; color: #647089; font-size: 0.95rem; font-weight: 600; line-height: 1.4; width: 100%;">
-        Trade daily prediction markets. Winning shares split the final pool, and Daily winners earn leaderboard points.
+        Trade daily prediction markets on Arc L1. Pari-Mutuel pools split 100% of losing bets to winners with zero house margin.
       </p>
     </header>
-    ${timeframeTabsHtml}
-    <div class="markets-container">
-      ${marketsGridHtml || `<p class="no-markets-message" style="color: var(--market-text-muted); text-align: center; padding: 48px 0; font-family: 'Space Grotesk', sans-serif;">No active markets available in this timeframe.</p>`}
+    <div class="markets-container" style="padding-top: 16px;">
+      <section class="markets-grid" aria-label="Active prediction markets" style="display: flex; flex-direction: column; gap: 16px;">
+        ${marketPreviews.map((m, idx) => renderMarketCard(m, idx)).join("")}
+      </section>
     </div>
   `;
 };

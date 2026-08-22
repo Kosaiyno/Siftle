@@ -11871,3 +11871,314 @@ html[data-theme="dark"] .provenance-action-link.ai-action-link:hover {
 
 
 
+
+
+/* ==========================================
+   SportyBet / Bet9ja Nigerian Sportsbook UI
+   ========================================== */
+
+.sporty-odds-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-left: 6px;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+}
+
+.quick-stake-presets {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.quick-stake-preset-btn {
+  flex: 1;
+  background: var(--market-card-bg, #1e293b);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 8px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quick-stake-preset-btn:hover,
+.quick-stake-preset-btn.active {
+  background: #3b82f6;
+  border-color: #60a5fa;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.sporty-slip-summary {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sporty-slip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.88rem;
+}
+
+.sporty-slip-row span {
+  color: #94a3b8;
+}
+
+.sporty-slip-row strong {
+  color: #10b981;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.05rem;
+}
+
+.refund-guarantee-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  padding: 6px 10px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+
+
+
+
+
+/* ==========================================
+   Un-cramped Siftle Brand Market Card Layouts
+   ========================================== */
+
+
+/* Premium Sleek Aesthetic Market Cards */
+.sporty-marquee-card {
+  background: var(--market-card-bg, #ffffff);
+  border: 1px solid var(--market-border, #e2e8f0);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+  width: 100%;
+}
+[data-theme="dark"] .sporty-marquee-card,
+body.dark-theme .sporty-marquee-card,
+html.dark .sporty-marquee-card {
+  background: linear-gradient(145deg, #182238 0%, #0f172a 100%);
+  border: 1px solid rgba(59, 130, 246, 0.22);
+  box-shadow: 0 14px 35px -8px rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+}
+.sporty-marquee-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px -6px rgba(0, 0, 0, 0.08);
+}
+[data-theme="dark"] .sporty-marquee-card:hover,
+body.dark-theme .sporty-marquee-card:hover,
+html.dark .sporty-marquee-card:hover {
+  border-color: rgba(59, 130, 246, 0.45);
+  box-shadow: 0 18px 40px -8px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+}
+
+.sporty-compact-card {
+  background: var(--market-card-bg, #ffffff);
+  border: 1px solid var(--market-border, #e2e8f0);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 6px 18px -4px rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  margin-bottom: 14px;
+  box-sizing: border-box;
+  width: 100%;
+}
+[data-theme="dark"] .sporty-compact-card,
+body.dark-theme .sporty-compact-card,
+html.dark .sporty-compact-card {
+  background: linear-gradient(145deg, #151d30 0%, #0e1626 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 28px -6px rgba(0, 0, 0, 0.4);
+}
+.sporty-compact-card:hover {
+  transform: translateY(-2px);
+}
+[data-theme="dark"] .sporty-compact-card:hover,
+body.dark-theme .sporty-compact-card:hover,
+html.dark .sporty-compact-card:hover {
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+/* Sleek Odds Buttons */
+.sporty-odds-btn {
+  background: var(--market-input-bg, #f8fafc);
+  border: 1px solid var(--market-border, #cbd5e1);
+  border-radius: 12px;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+[data-theme="dark"] .sporty-odds-btn,
+body.dark-theme .sporty-odds-btn,
+html.dark .sporty-odds-btn {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+.sporty-odds-btn:hover {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: #3b82f6;
+  transform: scale(1.02);
+}
+[data-theme="dark"] .sporty-odds-btn:hover,
+body.dark-theme .sporty-odds-btn:hover,
+html.dark .sporty-odds-btn:hover {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: #60a5fa;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.25);
+}
+.sporty-odds-btn span {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--market-text-main, #0f172a);
+}
+[data-theme="dark"] .sporty-odds-btn span,
+body.dark-theme .sporty-odds-btn span,
+html.dark .sporty-odds-btn span {
+  color: #f1f5f9;
+}
+.sporty-odds-btn strong {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #10b981;
+  font-family: 'Space Grotesk', sans-serif;
+  margin-top: 2px;
+}
+
+}
+
+
+/* Center option button text vertically and horizontally */
+.market-action-grid .market-side.option {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  min-height: 54px !important;
+  padding: 10px !important;
+}
+
+.market-action-grid .market-side.option span {
+  display: block;
+  text-align: center;
+  width: 100%;
+}
+
+
+/* Team Crest Image Constraints */
+.sporty-team-crest {
+  width: 48px !important;
+  height: 48px !important;
+  max-width: 48px !important;
+  max-height: 48px !important;
+  object-fit: contain !important;
+  flex-shrink: 0 !important;
+  margin: 0 auto 6px !important;
+  display: block !important;
+}
+
+/* Vertical and Horizontal Option Text Centering in Trade Slip Drawer */
+.market-action-grid .market-side,
+.market-side.option,
+.market-action-grid button {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  min-height: 54px !important;
+  padding: 10px 12px !important;
+  box-sizing: border-box !important;
+}
+
+.market-side.option span,
+.market-action-grid button span {
+  display: block !important;
+  text-align: center !important;
+  margin: 0 auto !important;
+  line-height: 1.3 !important;
+  width: 100% !important;
+}
+
+.market-side.option small {
+  display: block !important;
+  text-align: center !important;
+  margin: 2px auto 0 !important;
+}
+
+
+/* Prominent High-Contrast Estimated Payout Upgrade */
+.market-inline-payout {
+  margin: 16px 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.market-inline-payout .sporty-slip-summary {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(5, 150, 105, 0.22) 100%) !important;
+  border: 1.5px solid rgba(16, 185, 129, 0.5) !important;
+  border-radius: 14px !important;
+  padding: 16px 20px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.12) !important;
+}
+
+.market-inline-payout .sporty-slip-summary span,
+.market-inline-payout span {
+  color: #f8fafc !important;
+  font-size: 1.05rem !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0.01em !important;
+}
+
+.market-inline-payout .sporty-slip-summary strong,
+.market-inline-payout strong {
+  color: #34d399 !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-size: 1.6rem !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1 !important;
+}

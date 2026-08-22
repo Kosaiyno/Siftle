@@ -1,152 +1,122 @@
 [
   {
-    "id": "transfer-yan-diomande-real-madrid",
+    "id": "wc-arsenal-coventry-marquee",
     "category": "Sports",
-    "timeframe": "Sagas",
+    "timeframe": "Daily",
     "optionMarket": true,
-    "question": "Will Yan Diomande transfer to Real Madrid this summer?",
+    "isFeatured": true,
+    "question": "Arsenal vs Coventry City",
+    "homeTeam": "Arsenal",
+    "awayTeam": "Coventry City",
+    "homeCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/359.png",
+    "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/379.png",
+    "league": "Premier League — Aug 28, 20:00",
     "options": [
       {
-        "id": "yes",
-        "label": "Yes"
+        "id": "1",
+        "label": "1 (Arsenal)"
       },
       {
-        "id": "no",
-        "label": "No"
+        "id": "X",
+        "label": "X (Draw)"
+      },
+      {
+        "id": "2",
+        "label": "2 (Coventry)"
       }
     ],
-    "probability": 0,
-    "kickoffAt": "2026-09-01T23:00:00Z",
-    "expectedEndAt": "2026-09-01T23:00:00Z",
-    "resolveAfter": "2026-09-02T12:00:00Z",
-    "closes": "Sep 1, 11:00 PM GMT+1",
-    "resolution": "Resolves to 'Yes' if Real Madrid officially announces the signing of Yan Diomande on a permanent contract or loan deal during the Summer 2026 transfer window. Otherwise, resolves to 'No'.",
-    "threadTopic": "Yan Diomande to Real Madrid Saga",
+    "initialOptionPools": {
+      "1": 0,
+      "2": 0,
+      "X": 0
+    },
+    "kickoffAt": "2026-08-28T20:00:00Z",
+    "closes": "Aug 28, 8:00 PM",
+    "resolution": "Resolves to 1 if Arsenal wins, X if Draw, 2 if Coventry City wins.",
     "volume": "$0",
     "traders": "0",
     "liquidity": "$0",
-    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "points": 0,
-    "marketAddress": "0x51F11DDeAd515151515151515151515151515101"
+    "imageUrl": "",
+    "marketAddress": "0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E"
   },
   {
-    "id": "transfer-bruno-guimaraes-arsenal",
+    "id": "wc-dinamo-nizhny-1x2",
     "category": "Sports",
-    "timeframe": "Sagas",
+    "timeframe": "Daily",
     "optionMarket": true,
-    "question": "Will Bruno Guimarães transfer to Arsenal this summer?",
+    "isFeatured": false,
+    "question": "Dinamo Moscow vs FK Nizhny Novgorod",
+    "homeTeam": "Dinamo Moscow",
+    "awayTeam": "FK Nizhny Novgorod",
+    "homeCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/228.png",
+    "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/228.png",
+    "league": "Russia MFL — Live 1X2 Match",
     "options": [
       {
-        "id": "yes",
-        "label": "Yes"
+        "id": "1",
+        "label": "1 (Dinamo)"
       },
       {
-        "id": "no",
-        "label": "No"
+        "id": "X",
+        "label": "X (Draw)"
+      },
+      {
+        "id": "2",
+        "label": "2 (Nizhny)"
       }
     ],
-    "probability": 0,
-    "kickoffAt": "2026-09-01T23:00:00Z",
-    "expectedEndAt": "2026-09-01T23:00:00Z",
-    "resolveAfter": "2026-09-02T12:00:00Z",
-    "closes": "Sep 1, 11:00 PM GMT+1",
-    "resolution": "Resolves to 'Yes' if Arsenal officially announces the signing of Bruno Guimarães on a permanent contract or loan deal during the Summer 2026 transfer window. Otherwise, resolves to 'No'.",
-    "threadTopic": "Bruno Guimaraes to Arsenal",
+    "initialOptionPools": {
+      "1": 0,
+      "2": 0,
+      "X": 0
+    },
+    "kickoffAt": "2026-08-28T20:00:00Z",
+    "closes": "Aug 28, 8:00 PM",
+    "resolution": "Resolves to match outcome.",
     "volume": "$0",
     "traders": "0",
     "liquidity": "$0",
-    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "points": 0,
+    "imageUrl": "",
     "marketAddress": "0x51F11DDeAd515151515151515151515151515102"
   },
   {
-    "id": "transfer-bradley-barcola-premier-league",
+    "id": "wc-chertanova-spartak-1x2",
     "category": "Sports",
-    "timeframe": "Sagas",
+    "timeframe": "Daily",
     "optionMarket": true,
-    "question": "Will Bradley Barcola transfer to a Premier League club this summer?",
+    "isFeatured": false,
+    "question": "Chertanova Moscow vs FK Spartak Moscow",
+    "homeTeam": "Chertanova Moscow",
+    "awayTeam": "FK Spartak Moscow",
+    "homeCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/228.png",
+    "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/228.png",
+    "league": "Russia MFL — Live 1X2 Match",
     "options": [
       {
-        "id": "yes",
-        "label": "Yes"
+        "id": "1",
+        "label": "1 (Chertanova)"
       },
       {
-        "id": "no",
-        "label": "No"
+        "id": "X",
+        "label": "X (Draw)"
+      },
+      {
+        "id": "2",
+        "label": "2 (Spartak)"
       }
     ],
-    "probability": 0,
-    "kickoffAt": "2026-09-01T23:00:00Z",
-    "expectedEndAt": "2026-09-01T23:00:00Z",
-    "resolveAfter": "2026-09-02T12:00:00Z",
-    "closes": "Sep 1, 11:00 PM GMT+1",
-    "resolution": "Resolves to 'Yes' if Bradley Barcola signs for any Premier League club (permanent or loan) during the Summer 2026 transfer window. Otherwise, resolves to 'No'.",
-    "threadTopic": "Bradley Barcola to Premier League",
+    "initialOptionPools": {
+      "1": 0,
+      "2": 0,
+      "X": 0
+    },
+    "kickoffAt": "2026-08-28T20:00:00Z",
+    "closes": "Aug 28, 8:00 PM",
+    "resolution": "Resolves to match outcome.",
     "volume": "$0",
     "traders": "0",
     "liquidity": "$0",
-    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "points": 0,
+    "imageUrl": "",
     "marketAddress": "0x51F11DDeAd515151515151515151515151515103"
-  },
-  {
-    "id": "transfer-orlando-gill-manchester-united",
-    "category": "Sports",
-    "timeframe": "Sagas",
-    "optionMarket": true,
-    "question": "Will goalkeeper Orlando Gill sign for Manchester United this summer?",
-    "options": [
-      {
-        "id": "yes",
-        "label": "Yes"
-      },
-      {
-        "id": "no",
-        "label": "No"
-      }
-    ],
-    "probability": 0,
-    "kickoffAt": "2026-09-01T23:00:00Z",
-    "expectedEndAt": "2026-09-01T23:00:00Z",
-    "resolveAfter": "2026-09-02T12:00:00Z",
-    "closes": "Sep 1, 11:00 PM GMT+1",
-    "resolution": "Resolves to 'Yes' if Manchester United officially announces the signing of goalkeeper Orlando Gill during the Summer 2026 transfer window. Otherwise, resolves to 'No'.",
-    "threadTopic": "Orlando Gill to Man United",
-    "volume": "$0",
-    "traders": "0",
-    "liquidity": "$0",
-    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "points": 0,
-    "marketAddress": "0x51F11DDeAd515151515151515151515151515104"
-  },
-  {
-    "id": "transfer-vanja-milinkovic-savic-tottenham",
-    "category": "Sports",
-    "timeframe": "Sagas",
-    "optionMarket": true,
-    "question": "Will goalkeeper Vanja Milinković-Savić sign for Tottenham Hotspur this summer?",
-    "options": [
-      {
-        "id": "yes",
-        "label": "Yes"
-      },
-      {
-        "id": "no",
-        "label": "No"
-      }
-    ],
-    "probability": 0,
-    "kickoffAt": "2026-09-01T23:00:00Z",
-    "expectedEndAt": "2026-09-01T23:00:00Z",
-    "resolveAfter": "2026-09-02T12:00:00Z",
-    "closes": "Sep 1, 11:00 PM GMT+1",
-    "resolution": "Resolves to 'Yes' if Tottenham Hotspur officially announces the signing of goalkeeper Vanja Milinković-Savić during the Summer 2026 transfer window. Otherwise, resolves to 'No'.",
-    "threadTopic": "Vanja Milinkovic-Savic to Spurs",
-    "volume": "$0",
-    "traders": "0",
-    "liquidity": "$0",
-    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "points": 0,
-    "marketAddress": "0x51F11DDeAd515151515151515151515151515105"
   }
 ]
