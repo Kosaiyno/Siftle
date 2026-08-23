@@ -3634,23 +3634,23 @@ const renderMarketCard = (market: MarketPreview, index: number = 0): string => {
       <article class="sporty-marquee-card" data-market-id="${market.id}">
         <div class="sporty-marquee-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
           <span class="sporty-hot-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; font-size: 0.72rem; font-weight: 800; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(239, 68, 68, 0.3);">🔥 HOT · BEST ODDS</span>
-          <span style="font-size: 0.82rem; color: #94a3b8; font-weight: 600;">${escapeHtml(leagueInfo)}</span>
+          <span style="font-size: 0.82rem; color: var(--muted); font-weight: 600;">${escapeHtml(leagueInfo)}</span>
         </div>
         <div class="sporty-teams-row" style="display: flex; justify-content: space-between; align-items: center; margin: 14px 0 18px;">
           <div class="sporty-team" style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1;">
             <img src="${homeCrest}" alt="" class="sporty-team-crest" style="width: 48px; height: 48px; max-width: 48px; max-height: 48px; object-fit: contain;" />
-            <span class="sporty-team-name" style="font-size: 0.95rem; font-weight: 700; color: #f8fafc; text-align: center;">${escapeHtml(homeTeam)}</span>
+            <span class="sporty-team-name" style="font-size: 0.95rem; font-weight: 700; color: var(--ink); text-align: center;">${escapeHtml(homeTeam)}</span>
           </div>
           <div class="sporty-match-center" style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-            <span class="sporty-match-time" style="font-size: 0.8rem; color: #94a3b8; font-weight: 600;">20:00 | Today</span>
+            <span class="sporty-match-time" style="font-size: 0.8rem; color: var(--muted); font-weight: 600;">20:00 | Today</span>
             <span class="sporty-market-type" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border-radius: 6px; padding: 2px 8px; font-size: 0.72rem; font-weight: 700;">1X2</span>
           </div>
           <div class="sporty-team" style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1;">
             <img src="${awayCrest}" alt="" class="sporty-team-crest" style="width: 48px; height: 48px; max-width: 48px; max-height: 48px; object-fit: contain;" />
-            <span class="sporty-team-name" style="font-size: 0.95rem; font-weight: 700; color: #f8fafc; text-align: center;">${escapeHtml(awayTeam)}</span>
+            <span class="sporty-team-name" style="font-size: 0.95rem; font-weight: 700; color: var(--ink); text-align: center;">${escapeHtml(awayTeam)}</span>
           </div>
         </div>
-        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 1.05rem; color: #f8fafc; font-weight: 700; margin-bottom: 14px; text-align: center;">
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 1.05rem; color: var(--ink); font-weight: 700; margin-bottom: 14px; text-align: center;">
           ${escapeHtml(market.question)}
         </div>
         <div class="sporty-odds-row" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
@@ -3676,13 +3676,13 @@ const renderMarketCard = (market: MarketPreview, index: number = 0): string => {
   const compactAway = (market as any).awayTeam || "FK Nizhny Novgorod";
 
   return `
-    <article class="sporty-compact-card" data-market-id="${market.id}" style="background: linear-gradient(145deg, #151d30 0%, #0e1626 100%); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 16px; margin-bottom: 14px;">
+    <article class="sporty-compact-card" data-market-id="${market.id}" style="background: linear-gradient(145deg, #151d30 0%, #0e1626 100%); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 14px;">
       <div class="sporty-compact-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
         <span style="font-size: 0.8rem; color: #10b981; font-weight: 700;">${escapeHtml(leagueInfo)}</span>
-        <span style="font-size: 0.78rem; color: #94a3b8; font-weight: 600;">1X2 Match Result</span>
+        <span style="font-size: 0.78rem; color: var(--muted); font-weight: 600;">1X2 Match Result</span>
       </div>
-      <div class="sporty-compact-teams" style="font-size: 1rem; font-weight: 700; color: #f8fafc; margin: 8px 0;">
-        ${escapeHtml(compactHome)} <span style="color: #94a3b8; font-weight: 500; font-size: 0.88rem;">vs</span> ${escapeHtml(compactAway)}
+      <div class="sporty-compact-teams" style="font-size: 1rem; font-weight: 700; color: var(--ink); margin: 8px 0;">
+        ${escapeHtml(compactHome)} <span style="color: var(--muted); font-weight: 500; font-size: 0.88rem;">vs</span> ${escapeHtml(compactAway)}
       </div>
       <div class="sporty-odds-row" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px;">
         ${options.map((opt) => {
@@ -3983,7 +3983,7 @@ const renderMarketDetail = (market: MarketPreview): void => {
 
           <div class="market-inline-payout">
             <div class="sporty-slip-summary" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(5, 150, 105, 0.22) 100%); border: 1.5px solid rgba(16, 185, 129, 0.5); border-radius: 14px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; box-shadow: 0 4px 20px rgba(16, 185, 129, 0.12);">
-              <span style="color: #f8fafc; font-size: 1.05rem; font-weight: 700;">Estimated Payout:</span>
+              <span style="color: var(--ink); font-size: 1.05rem; font-weight: 700;">Estimated Payout:</span>
               <strong style="color: #34d399; font-family: 'Space Grotesk', sans-serif; font-size: 1.6rem; font-weight: 900;">${((amount || 1) * (optionMarket ? (Number((snapshot?.optionPools || {})[selectedOption?.id || "1"]) > 0 ? (Object.values(snapshot?.optionPools || {}).reduce((a: number, b: any) => a + (Number(b) || 0), 0) / Number((snapshot?.optionPools || {})[selectedOption?.id || "1"])) : optionList.length) : 2.0)).toFixed(2)} USDC</strong>
             </div>
           </div>
@@ -4073,20 +4073,20 @@ const renderMarkets = (): void => {
   ];
 
   storyList.innerHTML = `
-    <section class="markets-surface-redesign" style="padding: 12px 6px 110px 6px; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif; color: #ffffff;">
+    <section class="markets-surface-redesign" style="padding: 12px 6px 110px 6px; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif; color: var(--ink);">
       
       <!-- Top Title Header -->
       <header style="margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; box-sizing: border-box;">
-        <h1 style="margin: 0; font-size: 1.5rem; font-weight: 800; color: #ffffff; letter-spacing: -0.02em;">Markets</h1>
+        <h1 style="margin: 0; font-size: 1.5rem; font-weight: 800; color: var(--ink); letter-spacing: -0.02em;">Markets</h1>
         <a href="${ARC_TESTNET_FAUCET}" target="_blank" rel="noreferrer" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); font-size: 0.78rem; font-weight: 800; padding: 6px 12px; border-radius: 999px; text-decoration: none; white-space: nowrap; flex-shrink: 0;">Get testnet USDC</a>
       </header>
 
       <!-- Popular Featured Card -->
-      <div style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 18px; margin-bottom: 22px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
+      <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 18px; margin-bottom: 22px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
         
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-          <h2 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #ffffff;">Popular</h2>
-          <span style="font-size: 0.78rem; font-weight: 700; color: #94a3b8; background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+          <h2 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--ink);">Popular</h2>
+          <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted); background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
             In 1h : 29m ⚡
           </span>
         </div>
@@ -4095,28 +4095,28 @@ const renderMarkets = (): void => {
         <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
           <div style="display: flex; align-items: center; gap: 10px;">
             <img src="${(featuredMarket as any).homeCrest || 'https://a.espncdn.com/i/teamlogos/soccer/500/379.png'}" alt="" style="width: 28px; height: 28px; object-fit: contain;" />
-            <span style="font-size: 1rem; font-weight: 800; color: #ffffff;">${escapeHtml((featuredMarket as any).homeTeam || "Espanyol")}</span>
+            <span style="font-size: 1rem; font-weight: 800; color: var(--ink);">${escapeHtml((featuredMarket as any).homeTeam || "Espanyol")}</span>
           </div>
           <div style="display: flex; align-items: center; gap: 10px;">
             <img src="${(featuredMarket as any).awayCrest || 'https://a.espncdn.com/i/teamlogos/soccer/500/86.png'}" alt="" style="width: 28px; height: 28px; object-fit: contain;" />
-            <span style="font-size: 1rem; font-weight: 800; color: #ffffff;">${escapeHtml((featuredMarket as any).awayTeam || "Real Madrid")}</span>
+            <span style="font-size: 1rem; font-weight: 800; color: var(--ink);">${escapeHtml((featuredMarket as any).awayTeam || "Real Madrid")}</span>
           </div>
         </div>
 
         <!-- 3 Cents Odds Trading Boxes (Clicking opens Bottom Sheet Betting Modal) -->
         <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
-          <button type="button" class="siftle-bet-option-btn" data-market-id="${featuredMarket.id}" data-option-id="home" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
-            <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml((featuredMarket as any).homeTeam || "Home")}</span>
+          <button type="button" class="siftle-bet-option-btn" data-market-id="${featuredMarket.id}" data-option-id="home" style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml((featuredMarket as any).homeTeam || "Home")}</span>
             <span style="font-size: 1.05rem; font-weight: 900; color: #38bdf8;">11.5¢</span>
           </button>
 
-          <button type="button" class="siftle-bet-option-btn" data-market-id="${featuredMarket.id}" data-option-id="draw" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
-            <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8;">Draw</span>
+          <button type="button" class="siftle-bet-option-btn" data-market-id="${featuredMarket.id}" data-option-id="draw" style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted);">Draw</span>
             <span style="font-size: 1.05rem; font-weight: 900; color: #38bdf8;">20.5¢</span>
           </button>
 
-          <button type="button" class="siftle-bet-option-btn" data-market-id="${featuredMarket.id}" data-option-id="away" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
-            <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml((featuredMarket as any).awayTeam || "Away")}</span>
+          <button type="button" class="siftle-bet-option-btn" data-market-id="${featuredMarket.id}" data-option-id="away" style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml((featuredMarket as any).awayTeam || "Away")}</span>
             <span style="font-size: 1.05rem; font-weight: 900; color: #38bdf8;">68.5¢</span>
           </button>
         </div>
@@ -4140,7 +4140,7 @@ const renderMarkets = (): void => {
         
         <!-- League Section Header (No Moneyline text) -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-          <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #ffffff;">${activeLeague}</h3>
+          <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--ink);">${activeLeague}</h3>
         </div>
 
         <!-- Market Cards -->
@@ -4152,11 +4152,11 @@ const renderMarkets = (): void => {
           const isLive = idx === 0;
 
           return `
-            <div class="thick-league-card" data-market-id="${m.id}" style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 18px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);">
+            <div class="thick-league-card" data-market-id="${m.id}" style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 18px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);">
               
               <!-- Card Header Status -->
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-                <span style="font-size: 0.78rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; ${isLive ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);' : 'background: rgba(255, 255, 255, 0.06); color: #94a3b8;'}">
+                <span style="font-size: 0.78rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; ${isLive ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);' : 'background: rgba(255, 255, 255, 0.06); color: var(--muted);'}">
                   ${isLive ? 'LIVE ⚡' : 'Tomorrow • Sun Aug 23 02:00 PM'}
                 </span>
                 <span style="font-size: 0.8rem; color: #64748b; font-weight: 700;">+17</span>
@@ -4166,28 +4166,28 @@ const renderMarkets = (): void => {
               <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                   <img src="${homeCrest}" alt="" style="width: 26px; height: 26px; object-fit: contain;" />
-                  <span style="font-size: 0.95rem; font-weight: 800; color: #ffffff;">${escapeHtml(homeTeam)}</span>
+                  <span style="font-size: 0.95rem; font-weight: 800; color: var(--ink);">${escapeHtml(homeTeam)}</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 10px;">
                   <img src="${awayCrest}" alt="" style="width: 26px; height: 26px; object-fit: contain;" />
-                  <span style="font-size: 0.95rem; font-weight: 800; color: #ffffff;">${escapeHtml(awayTeam)}</span>
+                  <span style="font-size: 0.95rem; font-weight: 800; color: var(--ink);">${escapeHtml(awayTeam)}</span>
                 </div>
               </div>
 
               <!-- 3 Outcome Cents Odds Trading Boxes (Clicking opens Bottom Sheet Betting Modal) -->
               <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
-                <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="home" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
-                  <span style="font-size: 0.78rem; font-weight: 700; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml(homeTeam)}</span>
+                <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="home" style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
+                  <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml(homeTeam)}</span>
                   <span style="font-size: 1rem; font-weight: 900; color: #38bdf8;">${isLive ? '99.3¢' : '45.0¢'}</span>
                 </button>
 
-                <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="draw" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
-                  <span style="font-size: 0.78rem; font-weight: 700; color: #94a3b8;">Draw</span>
+                <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="draw" style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
+                  <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted);">Draw</span>
                   <span style="font-size: 1rem; font-weight: 900; color: #38bdf8;">${isLive ? '0.6¢' : '25.0¢'}</span>
                 </button>
 
-                <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="away" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
-                  <span style="font-size: 0.78rem; font-weight: 700; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml(awayTeam)}</span>
+                <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="away" style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
+                  <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml(awayTeam)}</span>
                   <span style="font-size: 1rem; font-weight: 900; color: #38bdf8;">${isLive ? '0.3¢' : '30.0¢'}</span>
                 </button>
               </div>
@@ -4482,10 +4482,10 @@ const renderLeaderboard = (): void => {
         <div style="flex: 1.5; display: flex; align-items: center; gap: 8px; min-width: 0;">
           ${arrowHtml}
           <span class="leaderboard-rank rank-${rank}" style="flex-shrink: 0; margin-right: 4px;">${rank}</span>
-          <span class="leaderboard-username" style="font-weight: 600; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${safeDisplayName}</span>
+          <span class="leaderboard-username" style="font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${safeDisplayName}</span>
         </div>
         <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
-          <span style="color: #ffffff; font-weight: 750; font-size: 0.95rem; white-space: nowrap;">${Number(player.points) || 0} pts</span>
+          <span style="color: var(--ink); font-weight: 750; font-size: 0.95rem; white-space: nowrap;">${Number(player.points) || 0} pts</span>
         </div>
         <div style="flex: 1.5; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; text-align: right; min-width: 0;">
           <span style="font-size: 0.78rem; color: #8e8e93; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${playerStatus}</span>
@@ -4945,19 +4945,19 @@ const openMatchDetailModal = async (matchId: string) => {
   const badgeBg = isLive
     ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);'
     : isPost
-    ? 'background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2);'
+    ? 'background: rgba(148, 163, 184, 0.15); color: var(--muted); border: 1px solid rgba(148, 163, 184, 0.2);'
     : 'background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);';
 
   // Render modal shell with loading skeleton first
   modalOverlay.innerHTML = `
-    <div class="match-detail-card" style="background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.1); border-top-left-radius: 24px; border-top-right-radius: 24px; width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto; padding: 20px; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; box-shadow: 0 -10px 40px rgba(0,0,0,0.8); animation: slideUp 0.25s ease-out;">
+    <div class="match-detail-card" style="background: #0f172a; border: 1px solid var(--border); border-top-left-radius: 24px; border-top-right-radius: 24px; width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto; padding: 20px; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; box-shadow: 0 -10px 40px rgba(0,0,0,0.8); animation: slideUp 0.25s ease-out;">
       
       <!-- Top Close Bar -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <span style="font-size: 0.8rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em;">
           ${escapeHtml(match.league)}
         </span>
-        <button type="button" id="closeMatchModalBtn" style="background: rgba(255, 255, 255, 0.08); border: none; color: #94a3b8; width: 32px; height: 32px; border-radius: 50%; font-size: 1.1rem; font-weight: 700; cursor: pointer;">✕</button>
+        <button type="button" id="closeMatchModalBtn" style="background: var(--subtle-bg); border: none; color: var(--muted); width: 32px; height: 32px; border-radius: 50%; font-size: 1.1rem; font-weight: 700; cursor: pointer;">✕</button>
       </div>
 
       <!-- Match Score Board Header -->
@@ -4966,7 +4966,7 @@ const openMatchDetailModal = async (matchId: string) => {
         <!-- Home Team -->
         <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; text-align: center;">
           <img src="${match.homeCrest}" alt="" style="width: 48px; height: 48px; object-fit: contain;" />
-          <span style="font-size: 0.95rem; font-weight: 800; color: #f8fafc;">${escapeHtml(match.homeTeam)}</span>
+          <span style="font-size: 0.95rem; font-weight: 800; color: var(--ink);">${escapeHtml(match.homeTeam)}</span>
         </div>
 
         <!-- Center Score -->
@@ -4982,7 +4982,7 @@ const openMatchDetailModal = async (matchId: string) => {
         <!-- Away Team -->
         <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; text-align: center;">
           <img src="${match.awayCrest}" alt="" style="width: 48px; height: 48px; object-fit: contain;" />
-          <span style="font-size: 0.95rem; font-weight: 800; color: #f8fafc;">${escapeHtml(match.awayTeam)}</span>
+          <span style="font-size: 0.95rem; font-weight: 800; color: var(--ink);">${escapeHtml(match.awayTeam)}</span>
         </div>
 
       </div>
@@ -5010,7 +5010,7 @@ const openMatchDetailModal = async (matchId: string) => {
   if (!modalContentEl) return;
 
   if (!summary) {
-    modalContentEl.innerHTML = `<div style="text-align: center; color: #94a3b8; padding: 32px 0;">Match statistics and commentary currently unavailable for this fixture.</div>`;
+    modalContentEl.innerHTML = `<div style="text-align: center; color: var(--muted); padding: 32px 0;">Match statistics and commentary currently unavailable for this fixture.</div>`;
     return;
   }
 
@@ -5043,9 +5043,9 @@ const openMatchDetailModal = async (matchId: string) => {
     <section class="modal-stats-section" style="display: flex; flex-direction: column; gap: 16px;">
       
       <!-- Match Momentum Visualizer Bar -->
-      <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 16px;">
+      <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 16px; padding: 16px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <span style="font-size: 0.85rem; font-weight: 800; color: #f8fafc;">Match Momentum</span>
+          <span style="font-size: 0.85rem; font-weight: 800; color: var(--ink);">Match Momentum</span>
           <span style="font-size: 0.75rem; color: #34d399; font-weight: 700;">Live Timeline</span>
         </div>
         <div style="display: flex; items-center; height: 36px; gap: 3px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
@@ -5059,12 +5059,12 @@ const openMatchDetailModal = async (matchId: string) => {
       </div>
 
       <!-- Stats Comparison Table -->
-      <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 16px;">
-        <h3 style="margin: 0 0 14px 0; font-size: 0.9rem; font-weight: 800; color: #f8fafc;">Team Statistics</h3>
+      <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 16px; padding: 16px;">
+        <h3 style="margin: 0 0 14px 0; font-size: 0.9rem; font-weight: 800; color: var(--ink);">Team Statistics</h3>
 
         <!-- Possession Bar -->
         <div style="margin-bottom: 14px;">
-          <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #cbd5e1; margin-bottom: 6px;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: var(--muted); margin-bottom: 6px;">
             <span style="color: #3b82f6; font-weight: 800;">${possessionHome}</span>
             <span>Possession</span>
             <span style="color: #34d399; font-weight: 800;">${possessionAway}</span>
@@ -5078,22 +5078,22 @@ const openMatchDetailModal = async (matchId: string) => {
         <!-- Shots on Target -->
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.05);">
           <span style="font-size: 0.9rem; font-weight: 800; color: #3b82f6; background: rgba(59, 130, 246, 0.15); padding: 2px 8px; border-radius: 6px;">${shotsHome !== "-" ? shotsHome : 0} (${shotsOnGoalHome !== "-" ? shotsOnGoalHome : 0})</span>
-          <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8;">Shots (On Target)</span>
+          <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted);">Shots (On Target)</span>
           <span style="font-size: 0.9rem; font-weight: 800; color: #34d399; background: rgba(52, 211, 153, 0.15); padding: 2px 8px; border-radius: 6px;">${shotsAway !== "-" ? shotsAway : 0} (${shotsOnGoalAway !== "-" ? shotsOnGoalAway : 0})</span>
         </div>
 
         <!-- Corner Kicks -->
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.05);">
-          <span style="font-size: 0.9rem; font-weight: 800; color: #f8fafc;">${cornersHome !== "-" ? cornersHome : 0}</span>
-          <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8;">Corner Kicks</span>
-          <span style="font-size: 0.9rem; font-weight: 800; color: #f8fafc;">${cornersAway !== "-" ? cornersAway : 0}</span>
+          <span style="font-size: 0.9rem; font-weight: 800; color: var(--ink);">${cornersHome !== "-" ? cornersHome : 0}</span>
+          <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted);">Corner Kicks</span>
+          <span style="font-size: 0.9rem; font-weight: 800; color: var(--ink);">${cornersAway !== "-" ? cornersAway : 0}</span>
         </div>
 
         <!-- Fouls -->
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.05);">
-          <span style="font-size: 0.9rem; font-weight: 800; color: #f8fafc;">${foulsHome !== "-" ? foulsHome : 0}</span>
-          <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8;">Fouls</span>
-          <span style="font-size: 0.9rem; font-weight: 800; color: #f8fafc;">${foulsAway !== "-" ? foulsAway : 0}</span>
+          <span style="font-size: 0.9rem; font-weight: 800; color: var(--ink);">${foulsHome !== "-" ? foulsHome : 0}</span>
+          <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted);">Fouls</span>
+          <span style="font-size: 0.9rem; font-weight: 800; color: var(--ink);">${foulsAway !== "-" ? foulsAway : 0}</span>
         </div>
 
       </div>
@@ -5130,7 +5130,7 @@ const openMatchDetailModal = async (matchId: string) => {
   const badgeBg = isLive
     ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);'
     : isPost
-    ? 'background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2);'
+    ? 'background: rgba(148, 163, 184, 0.15); color: var(--muted); border: 1px solid rgba(148, 163, 184, 0.2);'
     : 'background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);';
 
   modalOverlay.innerHTML = `
@@ -5141,16 +5141,16 @@ const openMatchDetailModal = async (matchId: string) => {
         <span style="font-size: 0.85rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em;">
           ${escapeHtml(match.league || "Soccer Match")}
         </span>
-        <button type="button" onclick="document.getElementById('matchDetailModalOverlay')?.remove()" style="background: rgba(255, 255, 255, 0.1); border: none; color: #ffffff; width: 34px; height: 34px; border-radius: 50%; font-size: 1.2rem; font-weight: 700; cursor: pointer;">✕</button>
+        <button type="button" onclick="document.getElementById('matchDetailModalOverlay')?.remove()" style="background: rgba(255, 255, 255, 0.1); border: none; color: var(--ink); width: 34px; height: 34px; border-radius: 50%; font-size: 1.2rem; font-weight: 700; cursor: pointer;">✕</button>
       </div>
 
       <!-- Match Header -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: rgba(255, 255, 255, 0.04); padding: 18px 14px; border-radius: 18px; border: 1px solid rgba(255, 255, 255, 0.08);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--subtle-bg); padding: 18px 14px; border-radius: 18px; border: 1px solid var(--border);">
         
         <!-- Home Team -->
         <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; text-align: center;">
           <img src="${match.homeCrest}" alt="" style="width: 44px; height: 44px; object-fit: contain;" />
-          <span style="font-size: 0.9rem; font-weight: 800; color: #f8fafc;">${escapeHtml(match.homeTeam)}</span>
+          <span style="font-size: 0.9rem; font-weight: 800; color: var(--ink);">${escapeHtml(match.homeTeam)}</span>
         </div>
 
         <!-- Score Center -->
@@ -5166,7 +5166,7 @@ const openMatchDetailModal = async (matchId: string) => {
         <!-- Away Team -->
         <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; text-align: center;">
           <img src="${match.awayCrest}" alt="" style="width: 44px; height: 44px; object-fit: contain;" />
-          <span style="font-size: 0.9rem; font-weight: 800; color: #f8fafc;">${escapeHtml(match.awayTeam)}</span>
+          <span style="font-size: 0.9rem; font-weight: 800; color: var(--ink);">${escapeHtml(match.awayTeam)}</span>
         </div>
 
       </div>
@@ -5192,7 +5192,7 @@ const openMatchDetailModal = async (matchId: string) => {
   if (!modalContentEl) return;
 
   if (!summary) {
-    modalContentEl.innerHTML = `<div style="text-align: center; color: #94a3b8; padding: 32px 0;">Match statistics and commentary currently loading or unavailable for this fixture.</div>`;
+    modalContentEl.innerHTML = `<div style="text-align: center; color: var(--muted); padding: 32px 0;">Match statistics and commentary currently loading or unavailable for this fixture.</div>`;
     return;
   }
 
@@ -5220,9 +5220,9 @@ const openMatchDetailModal = async (matchId: string) => {
 
   modalContentEl.innerHTML = `
     <!-- Match Momentum Visualizer Bar -->
-    <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 16px;">
+    <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 16px; padding: 16px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <span style="font-size: 0.85rem; font-weight: 800; color: #f8fafc;">Match Momentum</span>
+        <span style="font-size: 0.85rem; font-weight: 800; color: var(--ink);">Match Momentum</span>
         <span style="font-size: 0.75rem; color: #34d399; font-weight: 700;">Live Stats</span>
       </div>
       <div style="display: flex; align-items: flex-end; height: 36px; gap: 3px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px;">
@@ -5235,11 +5235,11 @@ const openMatchDetailModal = async (matchId: string) => {
     </div>
 
     <!-- Team Statistics -->
-    <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 16px;">
-      <h3 style="margin: 0 0 14px 0; font-size: 0.9rem; font-weight: 800; color: #f8fafc;">Team Statistics</h3>
+    <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 16px; padding: 16px;">
+      <h3 style="margin: 0 0 14px 0; font-size: 0.9rem; font-weight: 800; color: var(--ink);">Team Statistics</h3>
 
       <div style="margin-bottom: 14px;">
-        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #cbd5e1; margin-bottom: 6px;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: var(--muted); margin-bottom: 6px;">
           <span style="color: #3b82f6; font-weight: 800;">${possessionHome}</span>
           <span>Possession</span>
           <span style="color: #34d399; font-weight: 800;">${possessionAway}</span>
@@ -5252,14 +5252,14 @@ const openMatchDetailModal = async (matchId: string) => {
 
       <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.05);">
         <span style="font-size: 0.85rem; font-weight: 800; color: #3b82f6; background: rgba(59, 130, 246, 0.15); padding: 2px 8px; border-radius: 6px;">${shotsHome !== "-" ? shotsHome : 0} (${shotsOnGoalHome !== "-" ? shotsOnGoalHome : 0})</span>
-        <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8;">Shots (On Target)</span>
+        <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted);">Shots (On Target)</span>
         <span style="font-size: 0.85rem; font-weight: 800; color: #34d399; background: rgba(52, 211, 153, 0.15); padding: 2px 8px; border-radius: 6px;">${shotsAway !== "-" ? shotsAway : 0} (${shotsOnGoalAway !== "-" ? shotsOnGoalAway : 0})</span>
       </div>
 
       <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.05);">
-        <span style="font-size: 0.85rem; font-weight: 800; color: #f8fafc;">${cornersHome !== "-" ? cornersHome : 0}</span>
-        <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8;">Corner Kicks</span>
-        <span style="font-size: 0.85rem; font-weight: 800; color: #f8fafc;">${cornersAway !== "-" ? cornersAway : 0}</span>
+        <span style="font-size: 0.85rem; font-weight: 800; color: var(--ink);">${cornersHome !== "-" ? cornersHome : 0}</span>
+        <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted);">Corner Kicks</span>
+        <span style="font-size: 0.85rem; font-weight: 800; color: var(--ink);">${cornersAway !== "-" ? cornersAway : 0}</span>
       </div>
     </div>
   `;
@@ -5313,7 +5313,7 @@ let currentEspnMatchSummary: any = null;
     const potentialWin = tradeAmount > 0 ? ((tradeAmount / (avgPrice / 100))).toFixed(2) : "0.00";
 
     modalOverlay!.innerHTML = `
-      <div id="bettingModalSheet" style="background: #12131a; border: 1px solid rgba(255, 255, 255, 0.12); border-top-left-radius: 28px; border-top-right-radius: 28px; width: 100%; max-width: 600px; padding: 24px 20px 36px 20px; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; box-shadow: 0 -16px 48px rgba(0,0,0,0.95); animation: slideUp 0.25s ease-out; color: #ffffff; pointer-events: auto;">
+      <div id="bettingModalSheet" style="background: var(--paper); border: 1px solid rgba(255, 255, 255, 0.12); border-top-left-radius: 28px; border-top-right-radius: 28px; width: 100%; max-width: 600px; padding: 24px 20px 36px 20px; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; box-shadow: 0 -16px 48px rgba(0,0,0,0.95); animation: slideUp 0.25s ease-out; color: var(--ink); pointer-events: auto;">
         
         <!-- Modal Top Navigation Header -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -5322,7 +5322,7 @@ let currentEspnMatchSummary: any = null;
             ${tradeMode} ⬍
           </button>
           
-          <button type="button" id="closeBettingModalBtn" style="background: rgba(255, 255, 255, 0.08); border: none; color: #94a3b8; width: 34px; height: 34px; border-radius: 50%; font-size: 1.1rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
+          <button type="button" id="closeBettingModalBtn" style="background: var(--subtle-bg); border: none; color: var(--muted); width: 34px; height: 34px; border-radius: 50%; font-size: 1.1rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
         </div>
 
         <!-- Outcome Selection Details -->
@@ -5330,29 +5330,29 @@ let currentEspnMatchSummary: any = null;
           <div style="display: flex; align-items: center; gap: 12px;">
             <img src="${optionId === 'home' ? (market as any).homeCrest : optionId === 'away' ? (market as any).awayCrest : 'https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png'}" alt="" style="width: 38px; height: 38px; object-fit: contain;" />
             <div>
-              <div style="font-size: 1.1rem; font-weight: 800; color: #ffffff;">${escapeHtml(optionName)}</div>
-              <div style="font-size: 0.82rem; color: #94a3b8; font-weight: 600;">${escapeHtml((market as any).homeTeam || "Home")} vs ${escapeHtml((market as any).awayTeam || "Away")}</div>
+              <div style="font-size: 1.1rem; font-weight: 800; color: var(--ink);">${escapeHtml(optionName)}</div>
+              <div style="font-size: 0.82rem; color: var(--muted); font-weight: 600;">${escapeHtml((market as any).homeTeam || "Home")} vs ${escapeHtml((market as any).awayTeam || "Away")}</div>
             </div>
           </div>
           <div style="text-align: right;">
-            <div style="font-size: 0.78rem; color: #94a3b8; font-weight: 600;">Balance</div>
+            <div style="font-size: 0.78rem; color: var(--muted); font-weight: 600;">Balance</div>
             <div style="font-size: 0.9rem; font-weight: 800; color: #38bdf8;">${realBalanceStr}</div>
           </div>
         </div>
 
         <!-- Editable Amount Input Box -->
-        <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
-          <button type="button" id="decBetBtn" style="background: rgba(255,255,255,0.08); border: none; color: #ffffff; width: 40px; height: 40px; border-radius: 10px; font-size: 1.3rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center;">-</button>
+        <div style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+          <button type="button" id="decBetBtn" style="background: rgba(255,255,255,0.08); border: none; color: var(--ink); width: 40px; height: 40px; border-radius: 10px; font-size: 1.3rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center;">-</button>
           
           <div style="text-align: center; display: flex; flex-direction: column; align-items: center;">
-            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Amount</div>
+            <div style="font-size: 0.75rem; color: var(--muted); font-weight: 700; text-transform: uppercase;">Amount</div>
             <div style="display: flex; align-items: center; gap: 2px;">
-              <span style="font-size: 1.6rem; font-weight: 900; color: #ffffff;">$</span>
-              <input type="number" id="tradeAmountInput" value="${tradeAmount}" min="1" max="10000" style="background: transparent; border: none; font-size: 1.6rem; font-weight: 900; color: #ffffff; width: 90px; text-align: center; font-family: inherit; outline: none;" />
+              <span style="font-size: 1.6rem; font-weight: 900; color: var(--ink);">$</span>
+              <input type="number" id="tradeAmountInput" value="${tradeAmount}" min="1" max="10000" style="background: transparent; border: none; font-size: 1.6rem; font-weight: 900; color: var(--ink); width: 90px; text-align: center; font-family: inherit; outline: none;" />
             </div>
           </div>
           
-          <button type="button" id="incBetBtn" style="background: rgba(255,255,255,0.08); border: none; color: #ffffff; width: 40px; height: 40px; border-radius: 10px; font-size: 1.3rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button>
+          <button type="button" id="incBetBtn" style="background: rgba(255,255,255,0.08); border: none; color: var(--ink); width: 40px; height: 40px; border-radius: 10px; font-size: 1.3rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button>
         </div>
 
         <!-- Clickable Quick Amount Pills ($10, $20, $50) -->
@@ -5366,12 +5366,12 @@ let currentEspnMatchSummary: any = null;
 
         <!-- Payout Calculation Summary -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 0.95rem; font-weight: 800;">
-          <span style="color: #94a3b8;">To Win: <strong style="color: #34d399;">${potentialWin}</strong></span>
-          <span style="color: #94a3b8;">Avg Price: <strong style="color: #38bdf8;">${priceCents}¢</strong></span>
+          <span style="color: var(--muted);">To Win: <strong style="color: #34d399;">${potentialWin}</strong></span>
+          <span style="color: var(--muted);">Avg Price: <strong style="color: #38bdf8;">${priceCents}¢</strong></span>
         </div>
 
         <!-- Action Button -->
-        <button type="button" id="confirmTradeBtn" style="width: 100%; background: ${tradeMode === 'LONG' ? '#38bdf8' : '#ef4444'}; color: #ffffff; border: none; padding: 16px; border-radius: 16px; font-size: 1.1rem; font-weight: 900; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 20px ${tradeMode === 'LONG' ? 'rgba(56, 189, 248, 0.4)' : 'rgba(239, 68, 68, 0.4)'};">
+        <button type="button" id="confirmTradeBtn" style="width: 100%; background: ${tradeMode === 'LONG' ? '#38bdf8' : '#ef4444'}; color: var(--ink); border: none; padding: 16px; border-radius: 16px; font-size: 1.1rem; font-weight: 900; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 20px ${tradeMode === 'LONG' ? 'rgba(56, 189, 248, 0.4)' : 'rgba(239, 68, 68, 0.4)'};">
           Place ${tradeMode} Trade (${tradeAmount} USDC)
         </button>
 
@@ -5476,33 +5476,33 @@ const renderMatchDetailPage = async (matchId: string) => {
 
   // Initial Full Page Render (Matching Reference UI)
   storyList.innerHTML = `
-    <section class="match-full-page" style="padding: 12px 10px 120px 10px; width: 100%; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif; color: #ffffff;">
+    <section class="match-full-page" style="padding: 12px 10px 120px 10px; width: 100%; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif; color: var(--ink);">
       
       <!-- Top Navigation Header with Back Arrow -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <button type="button" id="backToMatchesBtn" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); color: #ffffff; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; font-weight: 700; cursor: pointer; transition: all 0.2s ease;">
+        <button type="button" id="backToMatchesBtn" style="background: var(--subtle-bg); border: 1px solid rgba(255, 255, 255, 0.12); color: var(--ink); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; font-weight: 700; cursor: pointer; transition: all 0.2s ease;">
           ←
         </button>
-        <span style="font-size: 0.95rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.01em;">
+        <span style="font-size: 0.95rem; font-weight: 800; color: var(--ink); letter-spacing: -0.01em;">
           ${escapeHtml(cleanLeagueTitle(match.league))}
         </span>
         <div style="width: 42px;"></div>
       </div>
 
       <!-- Hero Scoreboard Card (Matching Reference Image) -->
-      <div style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; padding: 24px 16px; margin-bottom: 20px; box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);">
+      <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 24px; padding: 24px 16px; margin-bottom: 20px; box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);">
         
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <!-- Home Team -->
           <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; text-align: center;">
             <img src="${match.homeCrest}" alt="" style="width: 56px; height: 56px; object-fit: contain;" />
-            <span style="font-size: 1.05rem; font-weight: 800; color: #ffffff;">${escapeHtml(match.homeTeam)}</span>
+            <span style="font-size: 1.05rem; font-weight: 800; color: var(--ink);">${escapeHtml(match.homeTeam)}</span>
             
           </div>
 
           <!-- Score & Live Status -->
           <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 0 12px;">
-            <span style="font-size: 0.8rem; font-weight: 800; padding: 4px 12px; border-radius: 12px; ${match.isLive ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);' : 'background: rgba(255, 255, 255, 0.08); color: #cbd5e1;'}">
+            <span style="font-size: 0.8rem; font-weight: 800; padding: 4px 12px; border-radius: 12px; ${match.isLive ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);' : 'background: var(--subtle-bg); color: var(--muted);'}">
               ${match.isLive ? `🔴 ${escapeHtml(match.statusDetail)}` : escapeHtml(match.statusDetail)}
             </span>
             <div style="font-size: 2.5rem; font-weight: 900; color: ${match.isLive ? '#34d399' : '#ffffff'}; letter-spacing: 3px;">
@@ -5513,12 +5513,12 @@ const renderMatchDetailPage = async (matchId: string) => {
           <!-- Away Team -->
           <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; text-align: center;">
             <img src="${match.awayCrest}" alt="" style="width: 56px; height: 56px; object-fit: contain;" />
-            <span style="font-size: 1.05rem; font-weight: 800; color: #ffffff;">${escapeHtml(match.awayTeam)}</span>
+            <span style="font-size: 1.05rem; font-weight: 800; color: var(--ink);">${escapeHtml(match.awayTeam)}</span>
             
           </div>
         </div>
 
-        <div id="heroGoalScorersList" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: #cbd5e1; font-weight: 600; text-align: center;"></div>
+        <div id="heroGoalScorersList" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--muted); font-weight: 600; text-align: center;"></div>
 
       </div>
 
@@ -5572,7 +5572,7 @@ const renderMatchDetailPage = async (matchId: string) => {
   if (!contentEl) return;
 
   if (!summary) {
-    contentEl.innerHTML = `<div style="text-align: center; color: #94a3b8; padding: 48px 16px;">Match details loading or currently unavailable for this fixture.</div>`;
+    contentEl.innerHTML = `<div style="text-align: center; color: var(--muted); padding: 48px 16px;">Match details loading or currently unavailable for this fixture.</div>`;
     return;
   }
 
@@ -5602,16 +5602,16 @@ const renderMatchDetailPage = async (matchId: string) => {
   if (activeTab === "overview") {
     contentEl.innerHTML = `
       <!-- Stats Container (Matching Reference UI) -->
-      <div style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 20px;">
-        <h3 style="margin: 0 0 16px 0; font-size: 1.1rem; font-weight: 800; color: #ffffff;">Stats</h3>
+      <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 20px;">
+        <h3 style="margin: 0 0 16px 0; font-size: 1.1rem; font-weight: 800; color: var(--ink);">Stats</h3>
 
         
 
         <!-- Possession Bar -->
         <div style="margin-bottom: 18px;">
-          <div style="display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 800; color: #f8fafc; margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 800; color: var(--ink); margin-bottom: 8px;">
             <span style="font-weight: 800;">${possessionHome}</span>
-            <span style="color: #94a3b8; font-weight: 700;">Possession</span>
+            <span style="color: var(--muted); font-weight: 700;">Possession</span>
             <span style="color: #34d399; font-weight: 800; background: rgba(52, 211, 153, 0.18); padding: 2px 10px; border-radius: 999px;">${possessionAway}</span>
           </div>
           <div style="display: flex; height: 10px; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,0.08);">
@@ -5624,15 +5624,15 @@ const renderMatchDetailPage = async (matchId: string) => {
 
         <!-- Shots on Target -->
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-top: 1px solid rgba(255,255,255,0.06);">
-          <span style="font-size: 0.95rem; font-weight: 800; color: #ffffff;">${shotsOnGoalHome}</span>
-          <span style="font-size: 0.9rem; font-weight: 700; color: #94a3b8;">Shots on target</span>
+          <span style="font-size: 0.95rem; font-weight: 800; color: var(--ink);">${shotsOnGoalHome}</span>
+          <span style="font-size: 0.9rem; font-weight: 700; color: var(--muted);">Shots on target</span>
           <span style="font-size: 0.95rem; font-weight: 800; color: #34d399; background: rgba(52, 211, 153, 0.18); padding: 4px 14px; border-radius: 999px;">${shotsOnGoalAway}</span>
         </div>
 
         <!-- Duels Won -->
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-top: 1px solid rgba(255,255,255,0.06);">
-          <span style="font-size: 0.95rem; font-weight: 800; color: #ffffff;">36%</span>
-          <span style="font-size: 0.9rem; font-weight: 700; color: #94a3b8;">Duels won</span>
+          <span style="font-size: 0.95rem; font-weight: 800; color: var(--ink);">36%</span>
+          <span style="font-size: 0.9rem; font-weight: 700; color: var(--muted);">Duels won</span>
           <span style="font-size: 0.95rem; font-weight: 800; color: #34d399; background: rgba(52, 211, 153, 0.18); padding: 4px 14px; border-radius: 999px;">64%</span>
         </div>
 
@@ -5640,20 +5640,20 @@ const renderMatchDetailPage = async (matchId: string) => {
 
       <!-- Key Events Section -->
       <!-- Dynamic Real Key Events Section -->
-      <div style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 20px;">
-        <h3 style="margin: 0 0 16px 0; font-size: 1.1rem; font-weight: 800; color: #ffffff;">Key events</h3>
+      <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 20px;">
+        <h3 style="margin: 0 0 16px 0; font-size: 1.1rem; font-weight: 800; color: var(--ink);">Key events</h3>
         <div style="display: flex; flex-direction: column; gap: 12px;">
           ${(() => {
             const rawEvents = summary.keyEvents || summary.commentary || [];
             const goals = rawEvents.filter((k: any) => k.type?.text?.toLowerCase().includes("goal") || k.scoringPlay || k.text?.toLowerCase().includes("goal"));
             if (goals.length === 0) {
-              return `<div style="color: #94a3b8; font-size: 0.9rem;">No goals recorded for this match yet.</div>`;
+              return `<div style="color: var(--muted); font-size: 0.9rem;">No goals recorded for this match yet.</div>`;
             }
             return goals.map((g: any) => `
               <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
                 <span style="font-size: 0.85rem; font-weight: 800; color: #38bdf8; min-width: 30px;">${g.clock?.displayValue || g.time?.displayValue || "•"}</span>
                 <span style="font-size: 1.1rem;">⚽</span>
-                <span style="font-size: 0.9rem; font-weight: 700; color: #ffffff;">${escapeHtml(g.text)}</span>
+                <span style="font-size: 0.9rem; font-weight: 700; color: var(--ink);">${escapeHtml(g.text)}</span>
               </div>
             `).join("");
           })()}
@@ -5663,10 +5663,10 @@ const renderMatchDetailPage = async (matchId: string) => {
   } else if (activeTab === "ticker") {
     const commentaryList = (summary.commentary || summary.keyEvents || []).slice().reverse();
     contentEl.innerHTML = `
-      <div style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 20px;">
-        <h3 style="margin: 0 0 16px 0; font-size: 1.1rem; font-weight: 800; color: #ffffff;">Live Ticker & Commentary</h3>
+      <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 20px;">
+        <h3 style="margin: 0 0 16px 0; font-size: 1.1rem; font-weight: 800; color: var(--ink);">Live Ticker & Commentary</h3>
         ${commentaryList.length === 0 ? `
-          <div style="text-align: center; color: #94a3b8; padding: 24px 0;">No live commentary available for this match.</div>
+          <div style="text-align: center; color: var(--muted); padding: 24px 0;">No live commentary available for this match.</div>
         ` : `
           <div style="display: flex; flex-direction: column; gap: 14px;">
             ${commentaryList.map((item: any) => `
@@ -5687,26 +5687,26 @@ const renderMatchDetailPage = async (matchId: string) => {
     contentEl.innerHTML = `
       <div style="display: flex; flex-direction: column; gap: 20px;">
         <!-- Home Team Roster -->
-        <div style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 20px;">
+        <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 20px;">
           <h3 style="margin: 0 0 14px 0; font-size: 1rem; font-weight: 800; color: #3b82f6;">${escapeHtml(match.homeTeam)} Starting Lineup</h3>
           <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;">
             ${homeRoster.slice(0, 11).map((p: any) => `
               <div style="background: rgba(255,255,255,0.04); padding: 8px 12px; border-radius: 10px; display: flex; align-items: center; gap: 8px;">
                 <span style="font-size: 0.8rem; font-weight: 800; color: #38bdf8; background: rgba(56, 189, 248, 0.15); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">${p.jersey || '#'}</span>
-                <span style="font-size: 0.85rem; font-weight: 700; color: #ffffff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(p.athlete?.displayName || "Player")}</span>
+                <span style="font-size: 0.85rem; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(p.athlete?.displayName || "Player")}</span>
               </div>
             `).join("")}
           </div>
         </div>
 
         <!-- Away Team Roster -->
-        <div style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 20px;">
+        <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 20px;">
           <h3 style="margin: 0 0 14px 0; font-size: 1rem; font-weight: 800; color: #34d399;">${escapeHtml(match.awayTeam)} Starting Lineup</h3>
           <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;">
             ${awayRoster.slice(0, 11).map((p: any) => `
               <div style="background: rgba(255,255,255,0.04); padding: 8px 12px; border-radius: 10px; display: flex; align-items: center; gap: 8px;">
                 <span style="font-size: 0.8rem; font-weight: 800; color: #34d399; background: rgba(52, 211, 153, 0.15); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">${p.jersey || '#'}</span>
-                <span style="font-size: 0.85rem; font-weight: 700; color: #ffffff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(p.athlete?.displayName || "Player")}</span>
+                <span style="font-size: 0.85rem; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(p.athlete?.displayName || "Player")}</span>
               </div>
             `).join("")}
           </div>
@@ -5715,28 +5715,28 @@ const renderMatchDetailPage = async (matchId: string) => {
     `;
   } else if (activeTab === "stats") {
     contentEl.innerHTML = `
-      <div style="background: var(--paper, #12131a); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 20px;">
-        <h3 style="margin: 0 0 16px 0; font-size: 1rem; font-weight: 800; color: #ffffff;">Full Match Statistics</h3>
+      <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 20px;">
+        <h3 style="margin: 0 0 16px 0; font-size: 1rem; font-weight: 800; color: var(--ink);">Full Match Statistics</h3>
         <div style="display: flex; flex-direction: column; gap: 12px;">
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
             <span style="font-weight: 800; color: #3b82f6;">${possessionHome}</span>
-            <span style="font-size: 0.85rem; font-weight: 700; color: #94a3b8;">Possession</span>
+            <span style="font-size: 0.85rem; font-weight: 700; color: var(--muted);">Possession</span>
             <span style="font-weight: 800; color: #34d399;">${possessionAway}</span>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
-            <span style="font-weight: 800; color: #ffffff;">${shotsHome}</span>
-            <span style="font-size: 0.85rem; font-weight: 700; color: #94a3b8;">Total Shots</span>
-            <span style="font-weight: 800; color: #ffffff;">${shotsAway}</span>
+            <span style="font-weight: 800; color: var(--ink);">${shotsHome}</span>
+            <span style="font-size: 0.85rem; font-weight: 700; color: var(--muted);">Total Shots</span>
+            <span style="font-weight: 800; color: var(--ink);">${shotsAway}</span>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
-            <span style="font-weight: 800; color: #ffffff;">${shotsOnGoalHome}</span>
-            <span style="font-size: 0.85rem; font-weight: 700; color: #94a3b8;">Shots on Target</span>
-            <span style="font-weight: 800; color: #ffffff;">${shotsOnGoalAway}</span>
+            <span style="font-weight: 800; color: var(--ink);">${shotsOnGoalHome}</span>
+            <span style="font-size: 0.85rem; font-weight: 700; color: var(--muted);">Shots on Target</span>
+            <span style="font-weight: 800; color: var(--ink);">${shotsOnGoalAway}</span>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
-            <span style="font-weight: 800; color: #ffffff;">${cornersHome}</span>
-            <span style="font-size: 0.85rem; font-weight: 700; color: #94a3b8;">Corner Kicks</span>
-            <span style="font-weight: 800; color: #ffffff;">${cornersAway}</span>
+            <span style="font-weight: 800; color: var(--ink);">${cornersHome}</span>
+            <span style="font-size: 0.85rem; font-weight: 700; color: var(--muted);">Corner Kicks</span>
+            <span style="font-weight: 800; color: var(--ink);">${cornersAway}</span>
           </div>
         </div>
       </div>
@@ -5806,7 +5806,7 @@ const renderMatches = (): void => {
       
       <!-- Top Title Header -->
       <header class="matches-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
-        <h1 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: #ffffff; letter-spacing: -0.02em;">Matches</h1>
+        <h1 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: var(--ink); letter-spacing: -0.02em;">Matches</h1>
       </header>
 
       <!-- Dynamic 7-Day Date Navigation Pills -->
@@ -5826,7 +5826,7 @@ const renderMatches = (): void => {
           ${Array.from({ length: 3 }).map(() => `<div class="skeleton" style="height: 180px; border-radius: 16px; width: 100%;"></div>`).join("")}
         </div>
       ` : matches.length === 0 ? `
-        <div style="text-align: center; padding: 48px 16px; color: #94a3b8; font-size: 0.95rem; font-weight: 500;">
+        <div style="text-align: center; padding: 48px 16px; color: var(--muted); font-size: 0.95rem; font-weight: 500;">
           No matches available for this date. Select another date above!
         </div>
       ` : `
@@ -5837,7 +5837,7 @@ const renderMatches = (): void => {
 
             return `
               <!-- Thick Card per League (News Card Background #12131a) -->
-              <div class="thick-league-card" style="background: var(--paper, #12131a); border: 1px solid ${isLiveGroup ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255, 255, 255, 0.08)'}; border-radius: 18px; padding: 18px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4); width: 100%; box-sizing: border-box;">
+              <div class="thick-league-card" style="background: var(--paper); border: 1px solid ${isLiveGroup ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255, 255, 255, 0.08)'}; border-radius: 18px; padding: 18px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4); width: 100%; box-sizing: border-box;">
                 
                 <!-- Authentic League Card Header -->
                 <div style="display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 14px;">
@@ -5869,7 +5869,7 @@ const renderMatches = (): void => {
                           <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
                             <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
                               <img src="${m.homeCrest}" alt="" style="width: 26px; height: 26px; object-fit: contain; flex-shrink: 0;" />
-                              <span style="font-size: 0.95rem; font-weight: 700; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                              <span style="font-size: 0.95rem; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                 ${escapeHtml(m.homeTeam)}
                               </span>
                             </div>
@@ -5882,7 +5882,7 @@ const renderMatches = (): void => {
                           <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
                             <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
                               <img src="${m.awayCrest}" alt="" style="width: 26px; height: 26px; object-fit: contain; flex-shrink: 0;" />
-                              <span style="font-size: 0.95rem; font-weight: 700; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                              <span style="font-size: 0.95rem; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                 ${escapeHtml(m.awayTeam)}
                               </span>
                             </div>
@@ -5894,7 +5894,7 @@ const renderMatches = (): void => {
                         </div>
 
                         <!-- Vertical Divider Line -->
-                        <div style="width: 1px; height: 42px; background: rgba(255, 255, 255, 0.08); flex-shrink: 0;"></div>
+                        <div style="width: 1px; height: 42px; background: var(--subtle-bg); flex-shrink: 0;"></div>
 
                         <!-- Right Side: Status Badge / Match Time -->
                         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 75px; flex-shrink: 0; text-align: center;">
@@ -5903,11 +5903,11 @@ const renderMatches = (): void => {
                               🔴 ${escapeHtml(m.statusDetail)}
                             </span>
                           ` : isPost ? `
-                            <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8;">
+                            <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted);">
                               Full-Time
                             </span>
                           ` : `
-                            <span style="font-size: 0.85rem; font-weight: 700; color: #cbd5e1;">
+                            <span style="font-size: 0.85rem; font-weight: 700; color: var(--muted);">
                               ${timeStr}
                             </span>
                           `}
@@ -5974,7 +5974,7 @@ const renderPortfolio = (): void => {
       <div class="profile-card" style="background: var(--market-card-bg) !important; border: 1px solid var(--market-border) !important; border-radius: 12px !important; padding: 14px !important; margin-bottom: 12px !important; box-sizing: border-box !important;">
         <div class="profile-avatar-container" style="display: flex !important; align-items: center !important; gap: 16px !important;">
           <div class="profile-avatar-gradient" style="width: 44px !important; height: 44px !important; border-radius: 50% !important; background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important; display: flex !important; align-items: center !important; justify-content: center !important; flex-shrink: 0 !important; border: 1px solid rgba(255, 255, 255, 0.1) !important;">
-            <span class="avatar-letter" style="color: #ffffff !important; font-family: 'Space Grotesk', sans-serif !important; font-size: 1.2rem !important; font-weight: 750 !important;">${avatarLetter}</span>
+            <span class="avatar-letter" style="color: var(--ink) !important; font-family: 'Space Grotesk', sans-serif !important; font-size: 1.2rem !important; font-weight: 750 !important;">${avatarLetter}</span>
           </div>
           <div class="profile-details" style="display: flex !important; flex-direction: column !important; min-width: 0 !important;">
             <div class="username-display-row" style="display: flex !important; align-items: center !important; gap: 8px !important;">

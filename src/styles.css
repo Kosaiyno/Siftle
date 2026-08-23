@@ -12475,3 +12475,45 @@ body.matches-mode .story-list,
   box-sizing: border-box !important;
   overflow: hidden !important;
 }
+
+
+/* Light/Dark Mode Full System Theme Variable Tokens */
+:root {
+  --bg: #090a0f;
+  --paper: #12131a;
+  --ink: #f8fafc;
+  --muted: #94a3b8;
+  --border: rgba(255, 255, 255, 0.08);
+  --subtle-bg: rgba(255, 255, 255, 0.05);
+  --modal-backdrop: rgba(0, 0, 0, 0.75);
+  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="light"] {
+  --bg: #f1f5f9;
+  --paper: #ffffff;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --border: rgba(15, 23, 42, 0.12);
+  --subtle-bg: rgba(15, 23, 42, 0.04);
+  --modal-backdrop: rgba(15, 23, 42, 0.5);
+  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+/* Ensure body, surfaces, cards, and modals use theme variables */
+body {
+  background: var(--bg) !important;
+  color: var(--ink) !important;
+}
+
+.matches-surface, .markets-surface-redesign, .match-full-page {
+  background: var(--bg) !important;
+  color: var(--ink) !important;
+}
+
+.thick-league-card, .market-card, .brief-board, .match-full-page section, #bettingModalSheet {
+  background: var(--paper) !important;
+  color: var(--ink) !important;
+  border-color: var(--border) !important;
+  box-shadow: var(--card-shadow) !important;
+}
