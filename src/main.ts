@@ -4212,7 +4212,7 @@ const renderMarkets = (): void => {
 
   // Attach League Selector Nav click listeners
   document.querySelectorAll(".market-league-selector-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation();
       const lgId = btn.getAttribute("data-league-id");
       if (lgId) {
         state.activeMarketLeagueFilter = lgId;
@@ -4223,7 +4223,7 @@ const renderMarkets = (): void => {
 
   // Attach Option Click listener to open Bottom Sheet Betting Modal
   document.querySelectorAll(".siftle-bet-option-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation();
       const mId = btn.getAttribute("data-market-id");
       const optId = btn.getAttribute("data-option-id");
       if (mId && optId) {
@@ -5006,7 +5006,7 @@ const openMatchDetailModal = async (matchId: string) => {
   `;
 
   document.getElementById("closeMatchModalBtn")?.addEventListener("click", () => {
-    modalOverlay?.remove();
+    modalOverlay?.remove(); window.scrollTo({ top: currentScrollY, behavior: "instant" });
   });
 
   modalOverlay.addEventListener("click", (e) => {
@@ -5279,7 +5279,12 @@ let currentEspnMatchSummary: any = null;
 
 
 
-(window as any).openSiftleBettingModal = (marketId: string, optionId: string) => {
+(window as any).openSiftleBettingModal = (marketId: string, optionId: string, event?: Event) => {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const currentScrollY = window.scrollY;
   const market = marketPreviews.find(m => m.id === marketId) || marketPreviews[0] || {
     id: marketId,
     question: "Espanyol vs Real Madrid",
@@ -5416,7 +5421,7 @@ let currentEspnMatchSummary: any = null;
     });
 
     modalOverlay!.querySelectorAll(".quick-amt-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation();
         tradeAmount = Number(btn.getAttribute("data-amt")) || 20;
         renderModalInner();
       });
@@ -5428,7 +5433,7 @@ let currentEspnMatchSummary: any = null;
         return;
       }
       alert(`Successfully placed ${tradeMode} trade of ${tradeAmount} USDC on ${optionName}!`);
-      modalOverlay?.remove();
+      modalOverlay?.remove(); window.scrollTo({ top: currentScrollY, behavior: "instant" });
     });
   };
 
@@ -5565,7 +5570,7 @@ const renderMatchDetailPage = async (matchId: string) => {
 
   // Attach Tab button listeners
   document.querySelectorAll(".match-page-tab-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation();
       const tabId = btn.getAttribute("data-tab-id") as any;
       if (tabId) {
         state.matchDetailTab = tabId;
@@ -5877,7 +5882,7 @@ const renderMatches = (): void => {
                     ${officialLeagueLogo ? `<img src="${officialLeagueLogo}" alt="" style="width: 22px; height: 22px; object-fit: contain;" />` : '🏆'}
                   </div>
                   <div>
-                    <h2 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: ${isLiveGroup ? '#ef4444' : '#f8fafc'}; letter-spacing: -0.01em;">
+                    <h2 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: ${isLiveGroup ? '#ef4444' : 'var(--ink)'}; letter-spacing: -0.01em;">
                       ${escapeHtml(cleanLeagueTitle(leagueName))}
                     </h2>
                   </div>
