@@ -5298,23 +5298,31 @@ let currentEspnMatchSummary: any = null;
 
   modalOverlay = document.createElement("div");
   modalOverlay.id = "siftleBettingModalOverlay";
-  modalOverlay.style.cssText = "position: fixed; inset: 0; z-index: 999999; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: flex-end;";
+  modalOverlay.style.cssText = "position: fixed; inset: 0; z-index: 9999999; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(10px); display: flex; justify-content: center; align-items: flex-end; padding: 0; box-sizing: border-box;";
 
   let tradeAmount = 20;
+  let tradeMode: "LONG" | "SHORT" = "LONG";
 
-  const updateModalContent = () => {
+  // Real Wallet Balance from state
+  const realBalanceStr = state.walletAddress 
+    ? (state.walletBalance ? `${parseFloat(state.walletBalance).toFixed(2)} USDC` : "0.00 USDC") 
+    : "$0.00 USDC";
+
+  const renderModalInner = () => {
     const avgPrice = priceCents;
-    const potentialWin = ((tradeAmount / (avgPrice / 100))).toFixed(2);
+    const potentialWin = tradeAmount > 0 ? ((tradeAmount / (avgPrice / 100))).toFixed(2) : "0.00";
 
     modalOverlay!.innerHTML = `
-      <div style="background: #12131a; border: 1px solid rgba(255, 255, 255, 0.1); border-top-left-radius: 28px; border-top-right-radius: 28px; width: 100%; max-width: 600px; padding: 24px 20px 32px 20px; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; box-shadow: 0 -12px 48px rgba(0,0,0,0.9); animation: slideUp 0.25s ease-out; color: #ffffff;">
+      <div id="bettingModalSheet" style="background: #12131a; border: 1px solid rgba(255, 255, 255, 0.12); border-top-left-radius: 28px; border-top-right-radius: 28px; width: 100%; max-width: 600px; padding: 24px 20px 36px 20px; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; box-shadow: 0 -16px 48px rgba(0,0,0,0.95); animation: slideUp 0.25s ease-out; color: #ffffff; pointer-events: auto;">
         
-        <!-- Modal Top Sub-Header (Matching Reference UI 2) -->
+        <!-- Modal Top Navigation Header -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-          <span style="font-size: 0.85rem; font-weight: 800; color: #34d399; background: rgba(52, 211, 153, 0.15); padding: 4px 12px; border-radius: 8px; border: 1px solid rgba(52, 211, 153, 0.3);">
-            LONG ⬍
-          </span>
-          <button type="button" id="closeBettingModalBtn" style="background: rgba(255, 255, 255, 0.08); border: none; color: #94a3b8; width: 34px; height: 34px; border-radius: 50%; font-size: 1.1rem; font-weight: 700; cursor: pointer;">✕</button>
+          <!-- Long/Short Interactive Toggle Pill -->
+          <button type="button" id="tradeModeToggleBtn" style="font-size: 0.85rem; font-weight: 800; color: ${tradeMode === 'LONG' ? '#34d399' : '#ef4444'}; background: ${tradeMode === 'LONG' ? 'rgba(52, 211, 153, 0.15)' : 'rgba(239, 68, 68, 0.15)'}; padding: 6px 14px; border-radius: 10px; border: 1.5px solid ${tradeMode === 'LONG' ? 'rgba(52, 211, 153, 0.4)' : 'rgba(239, 68, 68, 0.4)'}; cursor: pointer; transition: all 0.2s ease;">
+            ${tradeMode} ⬍
+          </button>
+          
+          <button type="button" id="closeBettingModalBtn" style="background: rgba(255, 255, 255, 0.08); border: none; color: #94a3b8; width: 34px; height: 34px; border-radius: 50%; font-size: 1.1rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
         </div>
 
         <!-- Outcome Selection Details -->
@@ -5328,64 +5336,100 @@ let currentEspnMatchSummary: any = null;
           </div>
           <div style="text-align: right;">
             <div style="font-size: 0.78rem; color: #94a3b8; font-weight: 600;">Balance</div>
-            <div style="font-size: 0.9rem; font-weight: 800; color: #38bdf8;">$100.00 USDC</div>
+            <div style="font-size: 0.9rem; font-weight: 800; color: #38bdf8;">${realBalanceStr}</div>
           </div>
         </div>
 
-        <!-- Amount Input Box -->
+        <!-- Editable Amount Input Box -->
         <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
-          <button type="button" id="decBetBtn" style="background: rgba(255,255,255,0.08); border: none; color: #ffffff; width: 36px; height: 36px; border-radius: 10px; font-size: 1.2rem; font-weight: 800; cursor: pointer;">-</button>
-          <div style="text-align: center;">
+          <button type="button" id="decBetBtn" style="background: rgba(255,255,255,0.08); border: none; color: #ffffff; width: 40px; height: 40px; border-radius: 10px; font-size: 1.3rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center;">-</button>
+          
+          <div style="text-align: center; display: flex; flex-direction: column; align-items: center;">
             <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Amount</div>
-            <div style="font-size: 1.6rem; font-weight: 900; color: #ffffff;">$${tradeAmount}</div>
+            <div style="display: flex; align-items: center; gap: 2px;">
+              <span style="font-size: 1.6rem; font-weight: 900; color: #ffffff;">$</span>
+              <input type="number" id="tradeAmountInput" value="${tradeAmount}" min="1" max="10000" style="background: transparent; border: none; font-size: 1.6rem; font-weight: 900; color: #ffffff; width: 90px; text-align: center; font-family: inherit; outline: none;" />
+            </div>
           </div>
-          <button type="button" id="incBetBtn" style="background: rgba(255,255,255,0.08); border: none; color: #ffffff; width: 36px; height: 36px; border-radius: 10px; font-size: 1.2rem; font-weight: 800; cursor: pointer;">+</button>
+          
+          <button type="button" id="incBetBtn" style="background: rgba(255,255,255,0.08); border: none; color: #ffffff; width: 40px; height: 40px; border-radius: 10px; font-size: 1.3rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button>
         </div>
 
-        <!-- Quick Amount Pills -->
+        <!-- Clickable Quick Amount Pills ($10, $20, $50) -->
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;">
           ${[10, 20, 50].map((amt) => `
-            <button type="button" class="quick-amt-btn" data-amt="${amt}" style="background: ${tradeAmount === amt ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.04)'}; border: 1.5px solid ${tradeAmount === amt ? '#38bdf8' : 'rgba(255, 255, 255, 0.08)'}; color: ${tradeAmount === amt ? '#38bdf8' : '#ffffff'}; padding: 12px 0; border-radius: 14px; font-weight: 800; cursor: pointer; text-align: center;">
-              $${amt}
+            <button type="button" class="quick-amt-btn" data-amt="${amt}" style="background: ${tradeAmount === amt ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.04)'}; border: 1.5px solid ${tradeAmount === amt ? '#38bdf8' : 'rgba(255, 255, 255, 0.08)'}; color: ${tradeAmount === amt ? '#38bdf8' : '#ffffff'}; padding: 12px 0; border-radius: 14px; font-weight: 800; cursor: pointer; text-align: center; font-size: 1rem; transition: all 0.2s ease;">
+              ${amt}
             </button>
           `).join("")}
         </div>
 
         <!-- Payout Calculation Summary -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 0.95rem; font-weight: 800;">
-          <span style="color: #94a3b8;">To Win: <strong style="color: #34d399;">$${potentialWin}</strong></span>
+          <span style="color: #94a3b8;">To Win: <strong style="color: #34d399;">${potentialWin}</strong></span>
           <span style="color: #94a3b8;">Avg Price: <strong style="color: #38bdf8;">${priceCents}¢</strong></span>
         </div>
 
         <!-- Action Button -->
-        <button type="button" id="confirmTradeBtn" style="width: 100%; background: #38bdf8; color: #0f172a; border: none; padding: 16px; border-radius: 16px; font-size: 1.1rem; font-weight: 900; cursor: pointer; transition: all 0.2s ease;">
-          Place Trade ($${tradeAmount} USDC)
+        <button type="button" id="confirmTradeBtn" style="width: 100%; background: ${tradeMode === 'LONG' ? '#38bdf8' : '#ef4444'}; color: #ffffff; border: none; padding: 16px; border-radius: 16px; font-size: 1.1rem; font-weight: 900; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 20px ${tradeMode === 'LONG' ? 'rgba(56, 189, 248, 0.4)' : 'rgba(239, 68, 68, 0.4)'};">
+          Place ${tradeMode} Trade (${tradeAmount} USDC)
         </button>
 
       </div>
     `;
 
-    document.getElementById("closeBettingModalBtn")?.addEventListener("click", () => modalOverlay?.remove());
-    document.getElementById("decBetBtn")?.addEventListener("click", () => {
-      if (tradeAmount > 5) { tradeAmount -= 5; updateModalContent(); }
+    // Attach Event Delegation Listeners directly
+    modalOverlay!.querySelector("#closeBettingModalBtn")?.addEventListener("click", () => modalOverlay?.remove());
+
+    modalOverlay!.querySelector("#tradeModeToggleBtn")?.addEventListener("click", () => {
+      tradeMode = tradeMode === "LONG" ? "SHORT" : "LONG";
+      renderModalInner();
     });
-    document.getElementById("incBetBtn")?.addEventListener("click", () => {
-      tradeAmount += 10; updateModalContent();
+
+    const amountInput = modalOverlay!.querySelector("#tradeAmountInput") as HTMLInputElement;
+    if (amountInput) {
+      amountInput.addEventListener("input", (e) => {
+        const val = parseInt((e.target as HTMLInputElement).value, 10);
+        tradeAmount = isNaN(val) ? 0 : val;
+        renderModalInner();
+        // Keep focus on input
+        const newInp = modalOverlay!.querySelector("#tradeAmountInput") as HTMLInputElement;
+        if (newInp) { newInp.focus(); newInp.setSelectionRange(newInp.value.length, newInp.value.length); }
+      });
+    }
+
+    modalOverlay!.querySelector("#decBetBtn")?.addEventListener("click", () => {
+      if (tradeAmount > 5) { tradeAmount -= 5; renderModalInner(); }
     });
-    document.querySelectorAll(".quick-amt-btn").forEach(btn => {
+
+    modalOverlay!.querySelector("#incBetBtn")?.addEventListener("click", () => {
+      tradeAmount += 10; renderModalInner();
+    });
+
+    modalOverlay!.querySelectorAll(".quick-amt-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         tradeAmount = Number(btn.getAttribute("data-amt")) || 20;
-        updateModalContent();
+        renderModalInner();
       });
     });
-    document.getElementById("confirmTradeBtn")?.addEventListener("click", () => {
-      alert("Trade of $" + tradeAmount + " USDC on " + optionName + " placed successfully!");
+
+    modalOverlay!.querySelector("#confirmTradeBtn")?.addEventListener("click", () => {
+      if (!state.walletAddress) {
+        alert("Please connect your wallet first to place USDC trades!");
+        return;
+      }
+      alert(`Successfully placed ${tradeMode} trade of ${tradeAmount} USDC on ${optionName}!`);
       modalOverlay?.remove();
     });
   };
 
-  updateModalContent();
+  renderModalInner();
   document.body.appendChild(modalOverlay);
+
+  // Close on backdrop click
+  modalOverlay.addEventListener("click", (e) => {
+    if (e.target === modalOverlay) modalOverlay.remove();
+  });
 };
 
 (window as any).openSiftleMatchPage = (matchId: string) => {
