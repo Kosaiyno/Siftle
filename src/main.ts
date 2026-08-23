@@ -4098,7 +4098,7 @@ const renderMarkets = (): void => {
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
           <h2 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--ink);">Popular</h2>
           <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted); background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
-            In 1h : 29m ⚡
+            Today ⚡
           </span>
         </div>
 
@@ -4168,7 +4168,7 @@ const renderMarkets = (): void => {
               <!-- Card Header Status -->
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
                 <span style="font-size: 0.78rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; ${isLive ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);' : 'background: rgba(255, 255, 255, 0.06); color: var(--muted);'}">
-                  ${isLive ? 'LIVE ⚡' : 'Tomorrow • Sun Aug 23 02:00 PM'}
+                  ${isLive ? '🔴 LIVE ⚡' : `Today • ${escapeHtml(m.statusDetail || 'Scheduled')}`}
                 </span>
                 <span style="font-size: 0.8rem; color: #64748b; font-weight: 700;">+17</span>
               </div>
