@@ -1,7 +1,7 @@
 export const fallbackMarketPreviews: any[] = [
   {
     "id": "m-newcastle-liverpool",
-    "question": "Newcastle United vs Liverpool - Premier League Match Winner",
+    "question": "Newcastle United vs Liverpool",
     "category": "Football",
     "timeframe": "Daily",
     "homeTeam": "Newcastle United",
@@ -10,6 +10,8 @@ export const fallbackMarketPreviews: any[] = [
     "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/364.png",
     "league": "English Premier League",
     "factoryAddress": "0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E",
+    "isOptionMarket": true,
+    "marketType": "option",
     "statusDetail": "04:30 PM",
     "isLive": false,
     "options": [
@@ -34,7 +36,7 @@ export const fallbackMarketPreviews: any[] = [
   },
   {
     "id": "m-mancity-bournemouth",
-    "question": "Manchester City vs AFC Bournemouth - Premier League Match Winner",
+    "question": "Manchester City vs AFC Bournemouth",
     "category": "Football",
     "timeframe": "Daily",
     "homeTeam": "Manchester City",
@@ -43,6 +45,8 @@ export const fallbackMarketPreviews: any[] = [
     "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/349.png",
     "league": "English Premier League",
     "factoryAddress": "0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E",
+    "isOptionMarket": true,
+    "marketType": "option",
     "statusDetail": "02:00 PM",
     "isLive": false,
     "options": [
@@ -66,8 +70,43 @@ export const fallbackMarketPreviews: any[] = [
     }
   },
   {
+    "id": "m-brighton-astonvilla",
+    "question": "Brighton & Hove Albion vs Aston Villa",
+    "category": "Football",
+    "timeframe": "Daily",
+    "homeTeam": "Brighton & Hove Albion",
+    "awayTeam": "Aston Villa",
+    "homeCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/331.png",
+    "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/362.png",
+    "league": "English Premier League",
+    "factoryAddress": "0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E",
+    "isOptionMarket": true,
+    "marketType": "option",
+    "statusDetail": "02:00 PM",
+    "isLive": false,
+    "options": [
+      {
+        "id": "home",
+        "label": "Brighton & Hove Albion"
+      },
+      {
+        "id": "draw",
+        "label": "Draw"
+      },
+      {
+        "id": "away",
+        "label": "Aston Villa"
+      }
+    ],
+    "initialOptionPools": {
+      "home": 350,
+      "draw": 300,
+      "away": 350
+    }
+  },
+  {
     "id": "m-elche-barcelona",
-    "question": "Elche vs Barcelona - LaLiga Match Winner",
+    "question": "Elche vs Barcelona",
     "category": "Football",
     "timeframe": "Daily",
     "homeTeam": "Elche",
@@ -76,6 +115,8 @@ export const fallbackMarketPreviews: any[] = [
     "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/83.png",
     "league": "Spanish LaLiga",
     "factoryAddress": "0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E",
+    "isOptionMarket": true,
+    "marketType": "option",
     "statusDetail": "08:30 PM",
     "isLive": false,
     "options": [
@@ -100,7 +141,7 @@ export const fallbackMarketPreviews: any[] = [
   },
   {
     "id": "m-atletico-villarreal",
-    "question": "Atlético Madrid vs Villarreal - LaLiga Match Winner",
+    "question": "Atlético Madrid vs Villarreal",
     "category": "Football",
     "timeframe": "Daily",
     "homeTeam": "Atlético Madrid",
@@ -109,6 +150,8 @@ export const fallbackMarketPreviews: any[] = [
     "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/102.png",
     "league": "Spanish LaLiga",
     "factoryAddress": "0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E",
+    "isOptionMarket": true,
+    "marketType": "option",
     "statusDetail": "04:00 PM",
     "isLive": false,
     "options": [
@@ -132,8 +175,43 @@ export const fallbackMarketPreviews: any[] = [
     }
   },
   {
+    "id": "m-getafe-santander",
+    "question": "Getafe vs Racing Santander",
+    "category": "Football",
+    "timeframe": "Daily",
+    "homeTeam": "Getafe",
+    "awayTeam": "Racing Santander",
+    "homeCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/2922.png",
+    "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/94.png",
+    "league": "Spanish LaLiga",
+    "factoryAddress": "0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E",
+    "isOptionMarket": true,
+    "marketType": "option",
+    "statusDetail": "06:30 PM",
+    "isLive": false,
+    "options": [
+      {
+        "id": "home",
+        "label": "Getafe"
+      },
+      {
+        "id": "draw",
+        "label": "Draw"
+      },
+      {
+        "id": "away",
+        "label": "Racing Santander"
+      }
+    ],
+    "initialOptionPools": {
+      "home": 400,
+      "draw": 350,
+      "away": 250
+    }
+  },
+  {
     "id": "m-torino-acmilan",
-    "question": "Torino vs AC Milan - Serie A Match Winner",
+    "question": "Torino vs AC Milan",
     "category": "Football",
     "timeframe": "Daily",
     "homeTeam": "Torino",
@@ -142,6 +220,8 @@ export const fallbackMarketPreviews: any[] = [
     "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/103.png",
     "league": "Italian Serie A",
     "factoryAddress": "0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E",
+    "isOptionMarket": true,
+    "marketType": "option",
     "statusDetail": "07:45 PM",
     "isLive": false,
     "options": [
@@ -165,8 +245,43 @@ export const fallbackMarketPreviews: any[] = [
     }
   },
   {
+    "id": "m-atalanta-sassuolo",
+    "question": "Atalanta vs Sassuolo",
+    "category": "Football",
+    "timeframe": "Daily",
+    "homeTeam": "Atalanta",
+    "awayTeam": "Sassuolo",
+    "homeCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/105.png",
+    "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/3534.png",
+    "league": "Italian Serie A",
+    "factoryAddress": "0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E",
+    "isOptionMarket": true,
+    "marketType": "option",
+    "statusDetail": "07:45 PM",
+    "isLive": false,
+    "options": [
+      {
+        "id": "home",
+        "label": "Atalanta"
+      },
+      {
+        "id": "draw",
+        "label": "Draw"
+      },
+      {
+        "id": "away",
+        "label": "Sassuolo"
+      }
+    ],
+    "initialOptionPools": {
+      "home": 550,
+      "draw": 250,
+      "away": 200
+    }
+  },
+  {
     "id": "m-frosinone-juventus",
-    "question": "Frosinone vs Juventus - Serie A Match Winner",
+    "question": "Frosinone vs Juventus",
     "category": "Football",
     "timeframe": "Daily",
     "homeTeam": "Frosinone",
@@ -175,6 +290,8 @@ export const fallbackMarketPreviews: any[] = [
     "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/111.png",
     "league": "Italian Serie A",
     "factoryAddress": "0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E",
+    "isOptionMarket": true,
+    "marketType": "option",
     "statusDetail": "05:30 PM",
     "isLive": false,
     "options": [
@@ -199,7 +316,7 @@ export const fallbackMarketPreviews: any[] = [
   },
   {
     "id": "m-rennais-psg",
-    "question": "Stade Rennais vs Paris Saint-Germain - Ligue 1 Match Winner",
+    "question": "Stade Rennais vs Paris Saint-Germain",
     "category": "Football",
     "timeframe": "Daily",
     "homeTeam": "Stade Rennais",
@@ -208,6 +325,8 @@ export const fallbackMarketPreviews: any[] = [
     "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/160.png",
     "league": "French Ligue 1",
     "factoryAddress": "0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E",
+    "isOptionMarket": true,
+    "marketType": "option",
     "statusDetail": "07:45 PM",
     "isLive": false,
     "options": [
@@ -231,8 +350,78 @@ export const fallbackMarketPreviews: any[] = [
     }
   },
   {
+    "id": "m-lehavre-monaco",
+    "question": "Le Havre AC vs AS Monaco",
+    "category": "Football",
+    "timeframe": "Daily",
+    "homeTeam": "Le Havre AC",
+    "awayTeam": "AS Monaco",
+    "homeCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/167.png",
+    "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/174.png",
+    "league": "French Ligue 1",
+    "factoryAddress": "0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E",
+    "isOptionMarket": true,
+    "marketType": "option",
+    "statusDetail": "04:15 PM",
+    "isLive": false,
+    "options": [
+      {
+        "id": "home",
+        "label": "Le Havre AC"
+      },
+      {
+        "id": "draw",
+        "label": "Draw"
+      },
+      {
+        "id": "away",
+        "label": "AS Monaco"
+      }
+    ],
+    "initialOptionPools": {
+      "home": 200,
+      "draw": 300,
+      "away": 500
+    }
+  },
+  {
+    "id": "m-angers-lille",
+    "question": "Angers vs Lille",
+    "category": "Football",
+    "timeframe": "Daily",
+    "homeTeam": "Angers",
+    "awayTeam": "Lille",
+    "homeCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/338.png",
+    "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/166.png",
+    "league": "French Ligue 1",
+    "factoryAddress": "0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E",
+    "isOptionMarket": true,
+    "marketType": "option",
+    "statusDetail": "02:00 PM",
+    "isLive": false,
+    "options": [
+      {
+        "id": "home",
+        "label": "Angers"
+      },
+      {
+        "id": "draw",
+        "label": "Draw"
+      },
+      {
+        "id": "away",
+        "label": "Lille"
+      }
+    ],
+    "initialOptionPools": {
+      "home": 250,
+      "draw": 300,
+      "away": 450
+    }
+  },
+  {
     "id": "m-porto-arouca",
-    "question": "FC Porto vs Arouca - Primeira Liga Match Winner",
+    "question": "FC Porto vs Arouca",
     "category": "Football",
     "timeframe": "Daily",
     "homeTeam": "FC Porto",
@@ -241,6 +430,8 @@ export const fallbackMarketPreviews: any[] = [
     "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/1437.png",
     "league": "Portuguese Primeira Liga",
     "factoryAddress": "0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E",
+    "isOptionMarket": true,
+    "marketType": "option",
     "statusDetail": "08:30 PM",
     "isLive": false,
     "options": [
@@ -261,6 +452,146 @@ export const fallbackMarketPreviews: any[] = [
       "home": 750,
       "draw": 150,
       "away": 100
+    }
+  },
+  {
+    "id": "m-cambuur-feyenoord",
+    "question": "SC Cambuur vs Feyenoord",
+    "category": "Football",
+    "timeframe": "Daily",
+    "homeTeam": "SC Cambuur",
+    "awayTeam": "Feyenoord",
+    "homeCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/2926.png",
+    "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/138.png",
+    "league": "Dutch Eredivisie",
+    "factoryAddress": "0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E",
+    "isOptionMarket": true,
+    "marketType": "option",
+    "statusDetail": "03:45 PM",
+    "isLive": false,
+    "options": [
+      {
+        "id": "home",
+        "label": "SC Cambuur"
+      },
+      {
+        "id": "draw",
+        "label": "Draw"
+      },
+      {
+        "id": "away",
+        "label": "Feyenoord"
+      }
+    ],
+    "initialOptionPools": {
+      "home": 150,
+      "draw": 250,
+      "away": 600
+    }
+  },
+  {
+    "id": "m-psv-groningen",
+    "question": "PSV Eindhoven vs FC Groningen",
+    "category": "Football",
+    "timeframe": "Daily",
+    "homeTeam": "PSV Eindhoven",
+    "awayTeam": "FC Groningen",
+    "homeCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/148.png",
+    "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/140.png",
+    "league": "Dutch Eredivisie",
+    "factoryAddress": "0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E",
+    "isOptionMarket": true,
+    "marketType": "option",
+    "statusDetail": "01:30 PM",
+    "isLive": false,
+    "options": [
+      {
+        "id": "home",
+        "label": "PSV Eindhoven"
+      },
+      {
+        "id": "draw",
+        "label": "Draw"
+      },
+      {
+        "id": "away",
+        "label": "FC Groningen"
+      }
+    ],
+    "initialOptionPools": {
+      "home": 700,
+      "draw": 200,
+      "away": 100
+    }
+  },
+  {
+    "id": "m-racing-bocajuniors",
+    "question": "Racing Club vs Boca Juniors",
+    "category": "Football",
+    "timeframe": "Daily",
+    "homeTeam": "Racing Club",
+    "awayTeam": "Boca Juniors",
+    "homeCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/15.png",
+    "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/5.png",
+    "league": "Argentine Primera División",
+    "factoryAddress": "0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E",
+    "isOptionMarket": true,
+    "marketType": "option",
+    "statusDetail": "01:30 AM",
+    "isLive": false,
+    "options": [
+      {
+        "id": "home",
+        "label": "Racing Club"
+      },
+      {
+        "id": "draw",
+        "label": "Draw"
+      },
+      {
+        "id": "away",
+        "label": "Boca Juniors"
+      }
+    ],
+    "initialOptionPools": {
+      "home": 400,
+      "draw": 300,
+      "away": 300
+    }
+  },
+  {
+    "id": "m-riverplate-velez",
+    "question": "River Plate vs Vélez Sarsfield",
+    "category": "Football",
+    "timeframe": "Daily",
+    "homeTeam": "River Plate",
+    "awayTeam": "Vélez Sarsfield",
+    "homeCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/16.png",
+    "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/21.png",
+    "league": "Argentine Primera División",
+    "factoryAddress": "0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E",
+    "isOptionMarket": true,
+    "marketType": "option",
+    "statusDetail": "11:15 PM",
+    "isLive": false,
+    "options": [
+      {
+        "id": "home",
+        "label": "River Plate"
+      },
+      {
+        "id": "draw",
+        "label": "Draw"
+      },
+      {
+        "id": "away",
+        "label": "Vélez Sarsfield"
+      }
+    ],
+    "initialOptionPools": {
+      "home": 550,
+      "draw": 250,
+      "away": 200
     }
   }
 ];
