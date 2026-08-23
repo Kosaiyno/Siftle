@@ -4023,6 +4023,7 @@ const renderMarketDetail = (market: MarketPreview): void => {
 
 
 const getMarketOddsCents = (market: any) => {
+  if (market && market.customOdds) return { home: String(market.customOdds.home), draw: String(market.customOdds.draw), away: String(market.customOdds.away) };
   const isLive = Boolean(market.isLive);
   if (isLive) {
     return { home: "68.5", draw: "20.5", away: "11.5" };
@@ -5287,6 +5288,91 @@ let currentEspnMatchSummary: any = null;
 
 
 
+
+const showTradeSuccessModal = (info: {
+  optionName: string;
+  matchTitle: string;
+  tradeMode: "LONG" | "SHORT";
+  tradeAmount: number;
+  oldPrice: number;
+  newPrice: number;
+  potentialWin: string;
+}) => {
+  const existing = document.getElementById("siftleSuccessModalOverlay");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "siftleSuccessModalOverlay";
+  modal.style.cssText = "position: fixed; inset: 0; z-index: 99999999; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;";
+
+  modal.innerHTML = `
+    <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 28px; width: 100%; max-width: 420px; padding: 32px 24px; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; box-shadow: 0 24px 64px rgba(0,0,0,0.8); text-align: center; color: var(--ink); animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+      
+      <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(52, 211, 153, 0.15); border: 2px solid rgba(52, 211, 153, 0.4); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 2rem;">
+        🎉
+      </div>
+
+      <h2 style="margin: 0 0 6px 0; font-size: 1.4rem; font-weight: 900; color: var(--ink);">Trade Executed!</h2>
+      <div style="font-size: 0.85rem; color: var(--muted); font-weight: 600; margin-bottom: 24px;">Your order has been filled on Arc testnet</div>
+
+      <div style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 18px; padding: 18px; margin-bottom: 24px; display: flex; flex-direction: column; gap: 12px; text-align: left;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Outcome</span>
+          <span style="font-size: 0.95rem; font-weight: 800; color: var(--ink);">${escapeHtml(info.optionName)}</span>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Match</span>
+          <span style="font-size: 0.85rem; font-weight: 700; color: var(--muted);">${escapeHtml(info.matchTitle)}</span>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Type</span>
+          <span style="font-size: 0.85rem; font-weight: 800; color: ${info.tradeMode === 'LONG' ? '#34d399' : '#ef4444'}; background: ${info.tradeMode === 'LONG' ? 'rgba(52, 211, 153, 0.15)' : 'rgba(239, 68, 68, 0.15)'}; padding: 2px 8px; border-radius: 6px;">${info.tradeMode}</span>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Amount Placed</span>
+          <span style="font-size: 1.1rem; font-weight: 900; color: #38bdf8;">$${info.tradeAmount}.00 USDC</span>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Share Price Impact</span>
+          <span style="font-size: 0.9rem; font-weight: 800; color: #34d399;">${info.oldPrice}¢ → ${info.newPrice}¢</span>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 10px; margin-top: 2px;">
+          <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Est. Payout</span>
+          <span style="font-size: 1.05rem; font-weight: 900; color: #34d399;">$${info.potentialWin} USDC</span>
+        </div>
+
+      </div>
+
+      <button type="button" id="closeSuccessModalBtn" style="width: 100%; background: #38bdf8; color: #000000; border: none; padding: 14px; border-radius: 14px; font-size: 1rem; font-weight: 900; cursor: pointer; box-shadow: 0 4px 20px rgba(56, 189, 248, 0.4); transition: all 0.2s ease;">
+        Done
+      </button>
+
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.querySelector("#closeSuccessModalBtn")?.addEventListener("click", () => {
+    modal.remove();
+    renderMarkets();
+    window.scrollTo({ top: lastUserScrollPos, behavior: "instant" });
+  });
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) {
+      modal.remove();
+      renderMarkets();
+      window.scrollTo({ top: lastUserScrollPos, behavior: "instant" });
+    }
+  });
+};
+
 (window as any).openSiftleBettingModal = (marketId: string, optionId: string, event?: Event) => {
   if (event) {
     event.preventDefault();
@@ -5435,13 +5521,43 @@ let currentEspnMatchSummary: any = null;
       });
     });
 
-    modalOverlay!.querySelector("#confirmTradeBtn")?.addEventListener("click", () => {
-      if (!state.walletAddress) {
-        alert("Please connect your wallet first to place USDC trades!");
-        return;
+    modalOverlay!.querySelector("#confirmTradeBtn")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const oldPrice = priceCents;
+      // Calculate dynamic price impact based on trade amount
+      const priceImpact = Math.min(15.0, (tradeAmount / 20) * 2.5);
+      const newPrice = Number((tradeMode === 'LONG' ? oldPrice + priceImpact : Math.max(1, oldPrice - priceImpact)).toFixed(1));
+
+      // Deduct from wallet balance if present or simulate demo balance
+      if (state.walletAddress && state.walletBalance) {
+        const cur = parseFloat(state.walletBalance) || 0;
+        state.walletBalance = Math.max(0, cur - tradeAmount).toFixed(2);
       }
-      alert(`Successfully placed ${tradeMode} trade of ${tradeAmount} USDC on ${optionName}!`);
-      modalOverlay?.remove(); window.scrollTo({ top: lastUserScrollPos, behavior: "instant" });
+
+      // Update market preview odds in state
+      const targetMarket = marketPreviews.find(m => m.id === market.id);
+      if (targetMarket) {
+        if (!targetMarket.customOdds) targetMarket.customOdds = { home: 45.0, draw: 25.0, away: 30.0 };
+        if (optionId === "home") targetMarket.customOdds.home = newPrice;
+        else if (optionId === "away") targetMarket.customOdds.away = newPrice;
+        else if (optionId === "draw") targetMarket.customOdds.draw = newPrice;
+      }
+
+      // Remove bottom sheet
+      modalOverlay?.remove();
+
+      // Show Center Success Modal
+      showTradeSuccessModal({
+        optionName,
+        matchTitle: `${(market as any).homeTeam || "Home"} vs ${(market as any).awayTeam || "Away"}`,
+        tradeMode,
+        tradeAmount,
+        oldPrice,
+        newPrice,
+        potentialWin: (tradeAmount / (oldPrice / 100)).toFixed(2)
+      });
     });
   };
 
