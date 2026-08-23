@@ -302,6 +302,7 @@ const pendingReferralCode = new URLSearchParams(window.location.search).get("ref
 if (pendingReferralCode) localStorage.setItem("siftle_pending_referral_code", pendingReferralCode.trim().toUpperCase());
 
 interface MarketPreview {
+  customOdds?: { home: number; draw: number; away: number };
   id: string;
   category: Exclude<Category, "All">;
   timeframe: "Daily" | "Weekly" | "Sagas";
