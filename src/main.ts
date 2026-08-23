@@ -364,7 +364,7 @@ let marketPreviews: MarketPreview[] = fallbackMarketPreviews;
 const mergeMarketsById = (...groups: MarketPreview[][]): MarketPreview[] => {
   const merged = new Map<string, MarketPreview>();
   groups.flat().forEach((market) => {
-    if (market?.id) merged.set(market.id, { ...(merged.get(market.id) || {}), ...market });
+    if (market?.id) { const prev = merged.get(market.id) || {}; merged.set(market.id, { ...prev, ...market, customOdds: market.customOdds || (prev as any).customOdds }); }
   });
   return Array.from(merged.values());
 };
@@ -4023,14 +4023,28 @@ const renderMarketDetail = (market: MarketPreview): void => {
 };
 
 
+
+export const globalOddsStore: Record<string, { home: number; draw: number; away: number }> = {};
+
 const getMarketOddsCents = (market: any) => {
-  if (market && market.customOdds) return { home: String(market.customOdds.home), draw: String(market.customOdds.draw), away: String(market.customOdds.away) };
-  const isLive = Boolean(market.isLive);
-  if (isLive) {
-    return { home: "68.5", draw: "20.5", away: "11.5" };
+  const mId = String(market?.id || "");
+  if (globalOddsStore[mId]) {
+    return {
+      home: String(globalOddsStore[mId].home.toFixed(1)),
+      draw: String(globalOddsStore[mId].draw.toFixed(1)),
+      away: String(globalOddsStore[mId].away.toFixed(1))
+    };
+  }
+  if (market && market.customOdds) {
+    return {
+      home: String(Number(market.customOdds.home).toFixed(1)),
+      draw: String(Number(market.customOdds.draw).toFixed(1)),
+      away: String(Number(market.customOdds.away).toFixed(1))
+    };
   }
   return { home: "45.0", draw: "25.0", away: "30.0" };
 };
+
 
 const renderMarkets = (): void => {
   if (!marketPreviews || marketPreviews.length === 0) { marketPreviews = fallbackMarketPreviews; }
@@ -4177,7 +4191,7 @@ const renderMarkets = (): void => {
                 <span style="font-size: 0.78rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; ${isLive ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);' : 'background: rgba(255, 255, 255, 0.06); color: var(--muted);'}">
                   ${isLive ? '🔴 LIVE ⚡' : `Today • ${escapeHtml(m.statusDetail || 'Scheduled')}`}
                 </span>
-                <span style="font-size: 0.8rem; color: #64748b; font-weight: 700;">+17</span>
+                <span style="font-size: 0.78rem; color: #38bdf8; font-weight: 800; background: rgba(56, 189, 248, 0.12); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.25);">${m.volume || "$18.4k"} Vol</span>
               </div>
 
               <!-- Stacked Teams -->
@@ -5601,6 +5615,8 @@ const showTradeSuccessModal = (info: {
       }
 
       targetMarket.customOdds = { home: newHome, draw: newDraw, away: newAway };
+      globalOddsStore[String(targetMarket.id)] = { home: newHome, draw: newDraw, away: newAway };
+      globalOddsStore[String(market.id)] = { home: newHome, draw: newDraw, away: newAway };
 
       // Record trade position into state.marketPositions so it displays in Portfolio tab
       const existingPos = state.marketPositions[targetMarket.id] || {
