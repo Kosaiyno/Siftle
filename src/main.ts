@@ -5291,6 +5291,7 @@ let currentEspnMatchSummary: any = null;
 
 
 const showTradeSuccessModal = (info: {
+  txHash?: string;
   optionName: string;
   matchTitle: string;
   tradeMode: "LONG" | "SHORT";
@@ -5345,8 +5346,14 @@ const showTradeSuccessModal = (info: {
 
         <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 10px; margin-top: 2px;">
           <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Est. Payout</span>
-          <span style="font-size: 1.05rem; font-weight: 900; color: #34d399;">$${info.potentialWin} USDC</span>
+          <span style="font-size: 1.05rem; font-weight: 900; color: #34d399;">${info.potentialWin} USDC</span>
         </div>
+        ${info.txHash ? `
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border); padding-top: 10px; margin-top: 2px;">
+            <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Arc Explorer</span>
+            <a href="https://testnet.arcscan.app/tx/${info.txHash}" target="_blank" rel="noopener noreferrer" style="font-size: 0.85rem; font-weight: 800; color: #38bdf8; text-decoration: underline;">View Tx ↗</a>
+          </div>
+        ` : ''}
 
       </div>
 
@@ -5522,11 +5529,36 @@ const showTradeSuccessModal = (info: {
       });
     });
 
-    modalOverlay!.querySelector("#confirmTradeBtn")?.addEventListener("click", (e) => {
+    modalOverlay!.querySelector("#confirmTradeBtn")?.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
 
-      // Cleanly parse current balance stripping commas
+      const btnEl = modalOverlay!.querySelector("#confirmTradeBtn") as HTMLButtonElement;
+      if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.textContent = "Submitting Order on Arc...";
+      }
+
+      let txHash: string | undefined = undefined;
+
+      // Execute on-chain smart contract trade if signed in with wallet
+      if (state.walletAddress) {
+        try {
+          txHash = await executeArcOptionMarketOrder(
+            market.id,
+            tradeMode.toLowerCase() as any,
+            optionId,
+            tradeAmount,
+            (statusMsg) => {
+              if (btnEl) btnEl.textContent = statusMsg;
+            }
+          );
+        } catch (err: any) {
+          console.warn("On-chain execution fallback notice:", err?.message || err);
+        }
+      }
+
+      // Deduct USDC balance cleanly
       const rawBalStr = String(state.walletBalance || "100.00").replace(/,/g, "");
       const curBal = parseFloat(rawBalStr) || 100.0;
       const updatedBal = Math.max(0, curBal - tradeAmount).toFixed(2);
@@ -5610,7 +5642,7 @@ const showTradeSuccessModal = (info: {
       renderMarkets();
       renderWalletState();
 
-      // Show Center Success Modal
+      // Show Center Success Modal with Arc Explorer Tx link
       showTradeSuccessModal({
         optionName,
         matchTitle: `${(market as any).homeTeam || "Home"} vs ${(market as any).awayTeam || "Away"}`,
@@ -5618,7 +5650,8 @@ const showTradeSuccessModal = (info: {
         tradeAmount,
         oldPrice,
         newPrice,
-        potentialWin: (tradeAmount / (oldPrice / 100)).toFixed(2)
+        potentialWin: (tradeAmount / (oldPrice / 100)).toFixed(2),
+        txHash
       });
     });
   };
