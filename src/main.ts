@@ -4021,6 +4021,15 @@ const renderMarketDetail = (market: MarketPreview): void => {
   `;
 };
 
+
+const getMarketOddsCents = (market: any) => {
+  const isLive = Boolean(market.isLive);
+  if (isLive) {
+    return { home: "68.5", draw: "20.5", away: "11.5" };
+  }
+  return { home: "45.0", draw: "25.0", away: "30.0" };
+};
+
 const renderMarkets = (): void => {
   if (!storyList || !storyDetail) return;
   briefHero?.toggleAttribute("hidden", true);
@@ -4107,17 +4116,17 @@ const renderMarkets = (): void => {
         <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
           <button type="button" class="siftle-bet-option-btn" data-market-id="${featuredMarket.id}" data-option-id="home" style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
             <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml((featuredMarket as any).homeTeam || "Home")}</span>
-            <span style="font-size: 1.05rem; font-weight: 900; color: #38bdf8;">11.5¢</span>
+            <span style="font-size: 1.05rem; font-weight: 900; color: #38bdf8;">${getMarketOddsCents(featuredMarket).home}¢</span>
           </button>
 
           <button type="button" class="siftle-bet-option-btn" data-market-id="${featuredMarket.id}" data-option-id="draw" style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
             <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted);">Draw</span>
-            <span style="font-size: 1.05rem; font-weight: 900; color: #38bdf8;">20.5¢</span>
+            <span style="font-size: 1.05rem; font-weight: 900; color: #38bdf8;">${getMarketOddsCents(featuredMarket).draw}¢</span>
           </button>
 
           <button type="button" class="siftle-bet-option-btn" data-market-id="${featuredMarket.id}" data-option-id="away" style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
             <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml((featuredMarket as any).awayTeam || "Away")}</span>
-            <span style="font-size: 1.05rem; font-weight: 900; color: #38bdf8;">68.5¢</span>
+            <span style="font-size: 1.05rem; font-weight: 900; color: #38bdf8;">${getMarketOddsCents(featuredMarket).away}¢</span>
           </button>
         </div>
 
@@ -4178,17 +4187,17 @@ const renderMarkets = (): void => {
               <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
                 <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="home" style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
                   <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml(homeTeam)}</span>
-                  <span style="font-size: 1rem; font-weight: 900; color: #38bdf8;">${isLive ? '99.3¢' : '45.0¢'}</span>
+                  <span style="font-size: 1rem; font-weight: 900; color: #38bdf8;">${getMarketOddsCents(m).home}¢</span>
                 </button>
 
                 <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="draw" style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
                   <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted);">Draw</span>
-                  <span style="font-size: 1rem; font-weight: 900; color: #38bdf8;">${isLive ? '0.6¢' : '25.0¢'}</span>
+                  <span style="font-size: 1rem; font-weight: 900; color: #38bdf8;">${getMarketOddsCents(m).draw}¢</span>
                 </button>
 
                 <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="away" style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
                   <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml(awayTeam)}</span>
-                  <span style="font-size: 1rem; font-weight: 900; color: #38bdf8;">${isLive ? '0.3¢' : '30.0¢'}</span>
+                  <span style="font-size: 1rem; font-weight: 900; color: #38bdf8;">${getMarketOddsCents(m).away}¢</span>
                 </button>
               </div>
 
@@ -4974,7 +4983,7 @@ const openMatchDetailModal = async (matchId: string) => {
           <span style="font-size: 0.75rem; font-weight: 800; padding: 3px 10px; border-radius: 10px; ${badgeBg}">
             ${isLive ? `🔴 ${escapeHtml(match.statusDetail)}` : escapeHtml(match.statusDetail)}
           </span>
-          <div style="font-size: 2rem; font-weight: 900; color: ${isLive ? '#34d399' : '#ffffff'}; letter-spacing: 2px;">
+          <div style="font-size: 2rem; font-weight: 900; color: ${isLive ? '#34d399' : 'var(--ink)'}; letter-spacing: 2px;">
             ${(isLive || isPost) ? `${match.homeScore ?? 0} - ${match.awayScore ?? 0}` : 'VS'}
           </div>
         </div>
@@ -5158,7 +5167,7 @@ const openMatchDetailModal = async (matchId: string) => {
           <span style="font-size: 0.75rem; font-weight: 800; padding: 3px 10px; border-radius: 10px; ${badgeBg}">
             ${isLive ? `🔴 ${escapeHtml(match.statusDetail || "LIVE")}` : escapeHtml(match.statusDetail || "Scheduled")}
           </span>
-          <div style="font-size: 1.8rem; font-weight: 900; color: ${isLive ? '#34d399' : '#ffffff'}; letter-spacing: 2px;">
+          <div style="font-size: 1.8rem; font-weight: 900; color: ${isLive ? '#34d399' : 'var(--ink)'}; letter-spacing: 2px;">
             ${(isLive || isPost) ? `${match.homeScore ?? 0} - ${match.awayScore ?? 0}` : 'VS'}
           </div>
         </div>
@@ -5505,7 +5514,7 @@ const renderMatchDetailPage = async (matchId: string) => {
             <span style="font-size: 0.8rem; font-weight: 800; padding: 4px 12px; border-radius: 12px; ${match.isLive ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);' : 'background: var(--subtle-bg); color: var(--muted);'}">
               ${match.isLive ? `🔴 ${escapeHtml(match.statusDetail)}` : escapeHtml(match.statusDetail)}
             </span>
-            <div style="font-size: 2.5rem; font-weight: 900; color: ${match.isLive ? '#34d399' : '#ffffff'}; letter-spacing: 3px;">
+            <div style="font-size: 2.5rem; font-weight: 900; color: ${match.isLive ? '#34d399' : 'var(--ink)'}; letter-spacing: 3px;">
               ${(match.isLive || match.isPost) ? `${match.homeScore ?? 0} - ${match.awayScore ?? 0}` : 'VS'}
             </div>
           </div>
@@ -5570,6 +5579,18 @@ const renderMatchDetailPage = async (matchId: string) => {
   currentEspnMatchSummary = summary;
   const contentEl = document.getElementById("matchDetailPageTabContent");
   if (!contentEl) return;
+
+  // If match has not started yet, show clean upcoming notice across ALL tabs
+  if (!match.isLive && !match.isPost) {
+    contentEl.innerHTML = `
+      <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 36px 20px; text-align: center; color: var(--muted);">
+        <div style="font-size: 2.2rem; margin-bottom: 10px;">⏱️</div>
+        <div style="font-size: 1.15rem; font-weight: 800; color: var(--ink); margin-bottom: 6px;">Match Has Not Started Yet</div>
+        <div style="font-size: 0.9rem; color: var(--muted);">Scheduled Kickoff: ${escapeHtml(match.statusDetail || "Upcoming")}. Statistics, live commentary, and rosters will display here once the match begins.</div>
+      </div>
+    `;
+    return;
+  }
 
   if (!summary) {
     contentEl.innerHTML = `<div style="text-align: center; color: var(--muted); padding: 48px 16px;">Match details loading or currently unavailable for this fixture.</div>`;
