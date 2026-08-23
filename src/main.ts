@@ -250,7 +250,7 @@ const state: {
   hasLoadedPortfolioPositions: false,
   walletConnecting: false,
   walletAddress: null,
-  walletBalance: null,
+  walletBalance: "100.00",
   activeCategory: "Sports",
   stories: [],
   isLoading: false,
@@ -5526,28 +5526,54 @@ const showTradeSuccessModal = (info: {
       e.preventDefault();
       e.stopPropagation();
 
-      const oldPrice = priceCents;
-      // Calculate dynamic price impact based on trade amount
-      const priceImpact = Math.min(15.0, (tradeAmount / 20) * 2.5);
+      // Always deduct USDC balance
+      const curBal = parseFloat(state.walletBalance || "100.00") || 100.0;
+      const updatedBal = Math.max(0, curBal - tradeAmount).toFixed(2);
+      state.walletBalance = updatedBal;
+
+      const targetMarket = marketPreviews.find(m => String(m.id) === String(market.id)) || market;
+      const currentOdds = getMarketOddsCents(targetMarket);
+      const curHome = parseFloat(currentOdds.home) || 45.0;
+      const curDraw = parseFloat(currentOdds.draw) || 25.0;
+      const curAway = parseFloat(currentOdds.away) || 30.0;
+
+      let oldPrice = 50.0;
+      if (optionId === "home") oldPrice = curHome;
+      else if (optionId === "away") oldPrice = curAway;
+      else if (optionId === "draw") oldPrice = curDraw;
+
+      const priceImpact = Math.min(12.0, (tradeAmount / 20) * 3.5);
       const newPrice = Number((tradeMode === 'LONG' ? oldPrice + priceImpact : Math.max(1, oldPrice - priceImpact)).toFixed(1));
 
-      // Deduct from wallet balance if present or simulate demo balance
-      if (state.walletAddress && state.walletBalance) {
-        const cur = parseFloat(state.walletBalance) || 0;
-        state.walletBalance = Math.max(0, cur - tradeAmount).toFixed(2);
+      // Calculate shift and rebalance
+      let newHome = curHome;
+      let newDraw = curDraw;
+      let newAway = curAway;
+
+      if (optionId === "home") {
+        newHome = newPrice;
+        const diff = newPrice - curHome;
+        newDraw = Number(Math.max(1, curDraw - diff / 2).toFixed(1));
+        newAway = Number(Math.max(1, curAway - diff / 2).toFixed(1));
+      } else if (optionId === "away") {
+        newAway = newPrice;
+        const diff = newPrice - curAway;
+        newHome = Number(Math.max(1, curHome - diff / 2).toFixed(1));
+        newDraw = Number(Math.max(1, curDraw - diff / 2).toFixed(1));
+      } else if (optionId === "draw") {
+        newDraw = newPrice;
+        const diff = newPrice - curDraw;
+        newHome = Number(Math.max(1, curHome - diff / 2).toFixed(1));
+        newAway = Number(Math.max(1, curAway - diff / 2).toFixed(1));
       }
 
-      // Update market preview odds in state
-      const targetMarket = marketPreviews.find(m => m.id === market.id);
-      if (targetMarket) {
-        if (!targetMarket.customOdds) targetMarket.customOdds = { home: 45.0, draw: 25.0, away: 30.0 };
-        if (optionId === "home") targetMarket.customOdds.home = newPrice;
-        else if (optionId === "away") targetMarket.customOdds.away = newPrice;
-        else if (optionId === "draw") targetMarket.customOdds.draw = newPrice;
-      }
+      targetMarket.customOdds = { home: newHome, draw: newDraw, away: newAway };
 
       // Remove bottom sheet
       modalOverlay?.remove();
+
+      // Immediately re-render markets underneath to reflect price movement & balance deduction
+      renderMarkets();
 
       // Show Center Success Modal
       showTradeSuccessModal({
