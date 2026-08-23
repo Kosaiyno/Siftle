@@ -4031,6 +4031,8 @@ const getMarketOddsCents = (market: any) => {
 };
 
 const renderMarkets = (): void => {
+  if (!marketPreviews || marketPreviews.length === 0) { marketPreviews = fallbackMarketPreviews; }
+  else { marketPreviews = mergeMarketsById(fallbackMarketPreviews, marketPreviews); }
   if (!storyList || !storyDetail) return;
   briefHero?.toggleAttribute("hidden", true);
   archiveControls?.toggleAttribute("hidden", true);
