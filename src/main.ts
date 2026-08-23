@@ -4128,7 +4128,7 @@ const renderMarkets = (): void => {
         ${leaguesList.map((lg) => {
           const isActive = activeLeague === lg.id;
           return `
-            <button type="button" class="market-league-selector-btn" data-league-id="${lg.id}" style="background: transparent; border: none; color: ${isActive ? '#ffffff' : '#94a3b8'}; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; flex-shrink: 0; padding-bottom: 6px; border-bottom: 2px solid ${isActive ? '#ffffff' : 'transparent'}; font-family: inherit; transition: all 0.2s ease;">
+            <button type="button" class="market-league-selector-btn" data-league-id="${lg.id}" style="background: transparent; border: none; color: ${isActive ? 'var(--ink)' : 'var(--muted)'}; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; flex-shrink: 0; padding-bottom: 6px; border-bottom: 2px solid ${isActive ? '#ffffff' : 'transparent'}; font-family: inherit; transition: all 0.2s ease;">
               <span style="font-size: 0.9rem; font-weight: 800; white-space: nowrap;">${lg.label}</span>
             </button>
           `;
@@ -5358,7 +5358,7 @@ let currentEspnMatchSummary: any = null;
         <!-- Clickable Quick Amount Pills ($10, $20, $50) -->
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;">
           ${[10, 20, 50].map((amt) => `
-            <button type="button" class="quick-amt-btn" data-amt="${amt}" style="background: ${tradeAmount === amt ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.04)'}; border: 1.5px solid ${tradeAmount === amt ? '#38bdf8' : 'rgba(255, 255, 255, 0.08)'}; color: ${tradeAmount === amt ? '#38bdf8' : '#ffffff'}; padding: 12px 0; border-radius: 14px; font-weight: 800; cursor: pointer; text-align: center; font-size: 1rem; transition: all 0.2s ease;">
+            <button type="button" class="quick-amt-btn" data-amt="${amt}" style="background: ${tradeAmount === amt ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.04)'}; border: 1.5px solid ${tradeAmount === amt ? '#38bdf8' : 'rgba(255, 255, 255, 0.08)'}; color: ${tradeAmount === amt ? '#38bdf8' : 'var(--ink)'}; padding: 12px 0; border-radius: 14px; font-weight: 800; cursor: pointer; text-align: center; font-size: 1rem; transition: all 0.2s ease;">
               ${amt}
             </button>
           `).join("")}
@@ -5600,6 +5600,17 @@ const renderMatchDetailPage = async (matchId: string) => {
 
   // Render Based on Active Tab
   if (activeTab === "overview") {
+    if (!match.isLive && !match.isPost) {
+      contentEl.innerHTML = `
+        <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 36px 20px; text-align: center; color: var(--muted);">
+          <div style="font-size: 2rem; margin-bottom: 10px;">⏱️</div>
+          <div style="font-size: 1.1rem; font-weight: 800; color: var(--ink); margin-bottom: 6px;">Match Has Not Started</div>
+          <div style="font-size: 0.88rem; color: var(--muted);">Scheduled Kickoff: ${escapeHtml(match.statusDetail || "Upcoming")}. Live statistics and key events will display here once the match begins.</div>
+        </div>
+      `;
+      return;
+    }
+
     contentEl.innerHTML = `
       <!-- Stats Container (Matching Reference UI) -->
       <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 20px;">
@@ -5672,7 +5683,7 @@ const renderMatchDetailPage = async (matchId: string) => {
             ${commentaryList.map((item: any) => `
               <div style="display: flex; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05);">
                 <span style="font-size: 0.85rem; font-weight: 800; color: #38bdf8; min-width: 36px;">${item.clock?.displayValue || item.time?.displayValue || "•"}</span>
-                <span style="font-size: 0.9rem; color: #e2e8f0; line-height: 1.4;">${escapeHtml(item.text)}</span>
+                <span style="font-size: 0.9rem; color: var(--ink); line-height: 1.4;">${escapeHtml(item.text)}</span>
               </div>
             `).join("")}
           </div>
