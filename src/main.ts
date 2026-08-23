@@ -4934,6 +4934,7 @@ const fetchEspnMatchSummary = async (eventId: string): Promise<any> => {
 };
 
 let activeMatchModalId: string | null = null;
+let lastUserScrollPos = 0;
 
 const openMatchDetailModal = async (matchId: string) => {
   console.log("Opening match detail modal for id:", matchId);
@@ -5006,7 +5007,7 @@ const openMatchDetailModal = async (matchId: string) => {
   `;
 
   document.getElementById("closeMatchModalBtn")?.addEventListener("click", () => {
-    modalOverlay?.remove(); window.scrollTo({ top: currentScrollY, behavior: "instant" });
+    modalOverlay?.remove(); window.scrollTo({ top: lastUserScrollPos, behavior: "instant" });
   });
 
   modalOverlay.addEventListener("click", (e) => {
@@ -5284,7 +5285,7 @@ let currentEspnMatchSummary: any = null;
     event.preventDefault();
     event.stopPropagation();
   }
-  const currentScrollY = window.scrollY;
+  lastUserScrollPos = window.scrollY;
   const market = marketPreviews.find(m => m.id === marketId) || marketPreviews[0] || {
     id: marketId,
     question: "Espanyol vs Real Madrid",
@@ -5433,7 +5434,7 @@ let currentEspnMatchSummary: any = null;
         return;
       }
       alert(`Successfully placed ${tradeMode} trade of ${tradeAmount} USDC on ${optionName}!`);
-      modalOverlay?.remove(); window.scrollTo({ top: currentScrollY, behavior: "instant" });
+      modalOverlay?.remove(); window.scrollTo({ top: lastUserScrollPos, behavior: "instant" });
     });
   };
 
