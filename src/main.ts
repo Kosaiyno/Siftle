@@ -5526,8 +5526,9 @@ const showTradeSuccessModal = (info: {
       e.preventDefault();
       e.stopPropagation();
 
-      // Always deduct USDC balance
-      const curBal = parseFloat(state.walletBalance || "100.00") || 100.0;
+      // Cleanly parse current balance stripping commas
+      const rawBalStr = String(state.walletBalance || "100.00").replace(/,/g, "");
+      const curBal = parseFloat(rawBalStr) || 100.0;
       const updatedBal = Math.max(0, curBal - tradeAmount).toFixed(2);
       state.walletBalance = updatedBal;
 
@@ -5569,11 +5570,45 @@ const showTradeSuccessModal = (info: {
 
       targetMarket.customOdds = { home: newHome, draw: newDraw, away: newAway };
 
+      // Record trade position into state.marketPositions so it displays in Portfolio tab
+      const existingPos = state.marketPositions[targetMarket.id] || {
+        yesSharesUsdc: 0,
+        noSharesUsdc: 0,
+        optionSharesUsdc: 0
+      };
+
+      const newPosition = {
+        ...existingPos,
+        optionId: optionId,
+        optionLabel: optionName,
+        optionSharesUsdc: (existingPos.optionSharesUsdc || 0) + tradeAmount,
+        projectedPayout: parseFloat((((existingPos.optionSharesUsdc || 0) + tradeAmount) / (oldPrice / 100)).toFixed(2)),
+        yesSharesUsdc: optionId === 'home' ? (existingPos.yesSharesUsdc || 0) + tradeAmount : (existingPos.yesSharesUsdc || 0),
+        noSharesUsdc: optionId === 'away' ? (existingPos.noSharesUsdc || 0) + tradeAmount : (existingPos.noSharesUsdc || 0)
+      };
+
+      state.marketPositions[targetMarket.id] = newPosition as any;
+
+      // Save position to localStorage for persistence
+      try {
+        const walletKey = state.walletAddress ? state.walletAddress.toLowerCase() : "guest";
+        const savedKey = `siftle_positions_${walletKey}`;
+        const currentSaved = JSON.parse(localStorage.getItem(savedKey) || "{}");
+        currentSaved[targetMarket.id] = newPosition;
+        localStorage.setItem(savedKey, JSON.stringify(currentSaved));
+      } catch (err) {}
+
+      // Ensure market is in portfolioMarketPreviews
+      if (!state.portfolioMarketPreviews.some(m => String(m.id) === String(targetMarket.id))) {
+        state.portfolioMarketPreviews.push(targetMarket);
+      }
+
       // Remove bottom sheet
       modalOverlay?.remove();
 
-      // Immediately re-render markets underneath to reflect price movement & balance deduction
+      // Immediately re-render markets and wallet state
       renderMarkets();
+      renderWalletState();
 
       // Show Center Success Modal
       showTradeSuccessModal({
@@ -6116,7 +6151,21 @@ const renderMatches = (): void => {
   `;
 };
 
+
+const loadSavedMarketPositions = () => {
+  try {
+    const walletKey = state.walletAddress ? state.walletAddress.toLowerCase() : "guest";
+    const savedKey = `siftle_positions_${walletKey}`;
+    const stored = localStorage.getItem(savedKey);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      Object.assign(state.marketPositions, parsed);
+    }
+  } catch(e) {}
+};
+
 const renderPortfolio = (): void => {
+  loadSavedMarketPositions();
   
   if (!storyList || !storyDetail) return;
   briefHero?.toggleAttribute("hidden", true);
