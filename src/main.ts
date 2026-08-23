@@ -4049,6 +4049,11 @@ const renderMarkets = (): void => {
 
   const activeLeague = state.activeMarketLeagueFilter || "All";
 
+  marketPreviews = marketPreviews.filter((m: any) => {
+    const text = (m.id + " " + m.question + " " + (m.homeTeam || "") + " " + (m.awayTeam || "")).toLowerCase();
+    return !["coventry", "nizhny", "chertanova", "dinamo moscow", "spartak moscow"].some(kw => text.includes(kw));
+  });
+
   const filteredMarkets = marketPreviews.filter((m: any) => {
     if (activeLeague === "All") return true;
     const lg = (m.league || "").toLowerCase();
@@ -4160,7 +4165,7 @@ const renderMarkets = (): void => {
           const awayTeam = m.awayTeam || "Spurs";
           const homeCrest = m.homeCrest || "https://a.espncdn.com/i/teamlogos/soccer/500/337.png";
           const awayCrest = m.awayCrest || "https://a.espncdn.com/i/teamlogos/soccer/500/367.png";
-          const isLive = idx === 0;
+          const isLive = Boolean(m.isLive);
 
           return `
             <div class="thick-league-card" data-market-id="${m.id}" style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 18px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);">
