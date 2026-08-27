@@ -4128,7 +4128,7 @@ const renderMarkets = (): void => {
   });
 
 
-  const featuredMarket = marketPreviews[0] || {
+  const featuredMarket = marketPreviews.find(m => m.id === "m-barcelona-athleticclub") || marketPreviews[0] || {
     id: "m-espanyol-real-madrid",
     question: "Espanyol vs Real Madrid Match Result",
     homeTeam: "Espanyol",
@@ -5241,19 +5241,31 @@ const showTradeSuccessModal = (info: {
       </div>
     `;
 
-    // Dynamic Live Recalculation on typing
-    const updateDynamicValues = (newVal: number) => {
-      tradeAmount = Math.max(1, newVal);
+    // Dynamic Live Recalculation on typing (allows full backspace deletion)
+    const updateDynamicValues = (rawInputVal: string, syncInputField = false) => {
+      const parsed = parseInt(rawInputVal, 10);
+      const isCleanEmpty = rawInputVal.trim() === "" || isNaN(parsed);
+      tradeAmount = isCleanEmpty ? 0 : Math.max(0, parsed);
+
       const inputEl = modalOverlay!.querySelector("#tradeAmountInput") as HTMLInputElement;
-      if (inputEl && parseInt(inputEl.value) !== tradeAmount) inputEl.value = String(tradeAmount);
+      if (inputEl && syncInputField) {
+        inputEl.value = tradeAmount > 0 ? String(tradeAmount) : "";
+      }
       
       const pWinEl = modalOverlay!.querySelector("#toWinAmountLabel");
-      const estPayoutVal = calcPariMutuelPayout(tradeAmount);
-      const mult = (estPayoutVal / tradeAmount).toFixed(2);
-      if (pWinEl) pWinEl.textContent = `$${estPayoutVal.toFixed(2)} USDC (${mult}x)`;
+      if (tradeAmount > 0) {
+        const estPayoutVal = calcPariMutuelPayout(tradeAmount);
+        const mult = (estPayoutVal / tradeAmount).toFixed(2);
+        if (pWinEl) pWinEl.textContent = `${estPayoutVal.toFixed(2)} USDC (${mult}x)`;
+      } else {
+        if (pWinEl) pWinEl.textContent = "$0.00 USDC (1.00x)";
+      }
 
-      const buyBtnEl = modalOverlay!.querySelector("#confirmTradeBtn");
-      if (buyBtnEl) buyBtnEl.textContent = `Buy Shares (${tradeAmount} USDC)`;
+      const buyBtnEl = modalOverlay!.querySelector("#confirmTradeBtn") as HTMLButtonElement;
+      if (buyBtnEl) {
+        buyBtnEl.textContent = tradeAmount > 0 ? `Buy Shares (${tradeAmount} USDC)` : "Enter Amount";
+        buyBtnEl.disabled = tradeAmount <= 0;
+      }
 
       modalOverlay!.querySelectorAll(".quick-amt-btn").forEach((qb: any) => {
         const amt = Number(qb.getAttribute("data-amt"));
@@ -5285,34 +5297,37 @@ const showTradeSuccessModal = (info: {
     });
 
     modalOverlay!.querySelector("#decBetBtn")?.addEventListener("click", () => {
-      updateDynamicValues(tradeAmount > 5 ? tradeAmount - 5 : Math.max(1, tradeAmount - 1));
+      const cur = tradeAmount || 0;
+      const next = cur > 5 ? cur - 5 : Math.max(1, cur - 1);
+      updateDynamicValues(String(next), true);
     });
 
     modalOverlay!.querySelector("#incBetBtn")?.addEventListener("click", () => {
-      updateDynamicValues(tradeAmount + 5);
+      const cur = tradeAmount || 0;
+      updateDynamicValues(String(cur + 5), true);
     });
 
     const inputEl = modalOverlay!.querySelector("#tradeAmountInput") as HTMLInputElement;
     if (inputEl) {
       inputEl.addEventListener("input", (e) => {
-        const val = parseInt((e.target as HTMLInputElement).value) || 1;
-        updateDynamicValues(val);
+        updateDynamicValues((e.target as HTMLInputElement).value, false);
       });
       inputEl.addEventListener("keyup", (e) => {
-        const val = parseInt((e.target as HTMLInputElement).value) || 1;
-        updateDynamicValues(val);
+        updateDynamicValues((e.target as HTMLInputElement).value, false);
       });
-      inputEl.addEventListener("change", (e) => {
-        const val = parseInt((e.target as HTMLInputElement).value) || 1;
-        updateDynamicValues(val);
+      inputEl.addEventListener("blur", (e) => {
+        const v = (e.target as HTMLInputElement).value.trim();
+        if (v === "" || parseInt(v, 10) < 1) {
+          updateDynamicValues("1", true);
+        }
       });
     }
 
     modalOverlay!.querySelectorAll(".quick-amt-btn").forEach(btn => {
       btn.addEventListener("click", (e) => {
         e.preventDefault(); e.stopPropagation();
-        const amt = Number(btn.getAttribute("data-amt")) || 20;
-        updateDynamicValues(amt);
+        const amt = btn.getAttribute("data-amt") || "20";
+        updateDynamicValues(amt, true);
       });
     });
 
