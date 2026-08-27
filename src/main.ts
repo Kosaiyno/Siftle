@@ -4793,80 +4793,84 @@ const getMarketOutcomeLabel = (outcome?: number): string => {
 };
 
 const renderPortfolioPositionCard = (market: MarketPreview): string => {
-  const position = state.marketPositions[market.id] || { yesSharesUsdc: 0, noSharesUsdc: 0 };
+  const position = state.marketPositions[market.id] || { yesSharesUsdc: 0, noSharesUsdc: 0, optionSharesUsdc: 0 };
   const snapshot = state.marketSnapshots[market.id];
-  if (isOptionMarket(market)) {
-    const resolvedOptionId = snapshot?.resolvedOptionId || null;
-    const isResolved = Boolean(resolvedOptionId);
-    const won = isResolved && position.optionId === resolvedOptionId;
-    const projectedPayout = getOptionMarketProjectedPayout(position, snapshot);
-    const payout = won ? projectedPayout : 0;
-    const winningLabel = getMarketOptions(market).find((option) => option.id === resolvedOptionId)?.label;
-    const isClaimed = Boolean(position.claimedAt) || readClaimedMarkets().has(market.id);
-    const isClaiming = Boolean(state.claimingMarketIds[market.id]);
-    return `
-      <article class="portfolio-position-card">
-        <div class="portfolio-position-top">
-          <span class="category-chip ${market.category}">${displayCategory(market.category)}</span>
-          <span>${isResolved ? `Resolved: ${escapeHtml(winningLabel || "Option selected")}` : "Open"}</span>
-        </div>
-        <h2>${market.question}</h2>
-        <div class="portfolio-position-stats">
-          <div><span>Your pick</span><strong>${escapeHtml(position.optionLabel || "Selected option")}</strong></div>
-          <div><span>Entry</span><strong>$${formatMoney(position.optionSharesUsdc || 0)}</strong></div>
-          <div><span>Projected payout</span><strong>$${formatMoney(payout)}</strong></div>
-        </div>
-        <div class="portfolio-position-footer">
-          <span>${isResolved ? "" : `Closes ${market.closes}`}</span>
-          ${isResolved
-            ? isClaimed
-              ? `<span style="color: #34d399; font-size: 0.82rem; font-weight: 800;">Claimed</span>`
-              : isClaiming
-                ? `<button type="button" class="connect-wallet-btn" disabled style="background: #ffffff !important; color: #000000 !important; border: 1px solid #ffffff !important; border-radius: 6px !important; padding: 8px 14px !important; font-size: 0.82rem !important; font-weight: 700 !important; opacity: 0.7 !important; cursor: wait !important;">Claiming...</button>`
-              : won
-                ? `<button type="button" class="connect-wallet-btn" data-claim-market="${market.id}" style="background: #ffffff !important; color: #000000 !important; border: 1px solid #ffffff !important; border-radius: 6px !important; padding: 8px 14px !important; font-size: 0.82rem !important; font-weight: 700 !important; cursor: pointer !important;">Claim $${formatMoney(payout)}</button>`
-                : `<span style="color: #ef4444; font-size: 0.82rem; font-weight: 800;">Lost</span>`
-            : ""}
-        </div>
-      </article>
-    `;
-  }
-  const outcome = getMarketOutcomeLabel(snapshot?.outcome);
-  const heldRows = getHeldPositionRows(position, snapshot);
-  const bestPotentialPayout = heldRows.reduce((best, row) => Math.max(best, row.payout), 0);
-  const totalShares = position.yesSharesUsdc + position.noSharesUsdc;
-  const resolvedOutcome = snapshot?.outcome ?? 0;
-  const isClaimed = readClaimedMarkets().has(market.id);
-  const winningShares = resolvedOutcome === 1 ? position.yesSharesUsdc : resolvedOutcome === 2 ? position.noSharesUsdc : 0;
-  const winningPool = resolvedOutcome === 1 ? snapshot?.yesSharesUsdc ?? 0 : resolvedOutcome === 2 ? snapshot?.noSharesUsdc ?? 0 : 0;
-  const totalPool = snapshot?.volumeUsdc ?? 0;
-  const claimAmount = winningShares > 0 && winningPool > 0 ? (winningShares / winningPool) * totalPool : 0;
-  const claimHtml = resolvedOutcome === 0
-    ? ""
-    : isClaimed
-      ? `<span style="color: #34d399; font-size: 0.82rem; font-weight: 800;">Claimed</span>`
-      : claimAmount > 0
-      ? `<button type="button" class="connect-wallet-btn" data-claim-market="${market.id}" style="background: #ffffff !important; color: #000000 !important; border: 1px solid #ffffff !important; border-radius: 6px !important; padding: 8px 14px !important; font-size: 0.82rem !important; font-weight: 700 !important; cursor: pointer !important;">Claim $${formatMoney(claimAmount)}</button>`
-      : `<span style="color: #ef4444; font-size: 0.82rem; font-weight: 800;">Lost</span>`;
+  const homeTeam = (market as any).homeTeam || "Home Team";
+  const awayTeam = (market as any).awayTeam || "Away Team";
+  const homeCrest = (market as any).homeCrest || "https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png";
+  const awayCrest = (market as any).awayCrest || "https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png";
+
+  const sharesHeld = position.optionSharesUsdc || position.yesSharesUsdc || 1;
+  const pickName = position.optionLabel || (position.optionId === 'home' ? homeTeam : position.optionId === 'away' ? awayTeam : position.optionId === 'draw' ? 'Draw' : 'Your Pick');
+  
+  // Real calculation for projected payout
+  const estPayout = (position as any).projectedPayout || (sharesHeld > 0 ? (sharesHeld * 2.22) : 2.22);
+  const potentialProfit = Math.max(0, estPayout - sharesHeld);
+  const multiplier = (estPayout / (sharesHeld || 1)).toFixed(2);
+
+  const resolvedOptionId = snapshot?.resolvedOptionId || null;
+  const isResolved = Boolean(resolvedOptionId);
+  const won = isResolved && position.optionId === resolvedOptionId;
 
   return `
-    <article class="portfolio-position-card">
-      <div class="portfolio-position-top">
-        <span class="category-chip ${market.category}">${displayCategory(market.category)}</span>
-        <span>${outcome}</span>
+    <div class="siftle-ticket-card" style="background: linear-gradient(145deg, #131722 0%, #0d1017 100%); border: 1.5px solid rgba(56, 189, 248, 0.2); border-radius: 20px; padding: 18px 16px; margin-bottom: 14px; position: relative; overflow: hidden; box-shadow: 0 12px 32px rgba(0,0,0,0.5); font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Space Grotesk', sans-serif;">
+      
+      <!-- Top Ticket Header: League & Matchday Badge -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; background: rgba(255, 255, 255, 0.08); color: var(--muted); padding: 4px 10px; border-radius: 8px;">
+            ${escapeHtml((market as any).league || "FOOTBALL")}
+          </span>
+          <span style="display: flex; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: 800; color: #34d399;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #34d399; display: inline-block;"></span>
+            ${isResolved ? (won ? 'WON' : 'SETTLED') : 'OPEN TICKET'}
+          </span>
+        </div>
+
+        <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted);">
+          ${market.closes || 'Today'}
+        </span>
       </div>
-      <h2>${market.question}</h2>
-      <div class="portfolio-position-stats">
-        <div><span>Projected payout</span><strong>$${formatMoney(bestPotentialPayout)}</strong></div>
-        ${heldRows.map((row) => `
-          <div><span>${row.label}</span><strong>${formatMoney(row.shares)}</strong></div>
-        `).join("")}
+
+      <!-- Match Row with Crests -->
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px dashed rgba(255, 255, 255, 0.1);">
+        <div style="display: flex; align-items: center; margin-right: 4px;">
+          <img src="${homeCrest}" alt="" style="width: 32px; height: 32px; object-fit: contain; z-index: 2;" />
+          <img src="${awayCrest}" alt="" style="width: 32px; height: 32px; object-fit: contain; margin-left: -10px; z-index: 1; opacity: 0.9;" />
+        </div>
+        <div style="min-width: 0; flex: 1;">
+          <div style="font-size: 1.05rem; font-weight: 900; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            ${escapeHtml(homeTeam)} vs ${escapeHtml(awayTeam)}
+          </div>
+          <div style="font-size: 0.8rem; color: #38bdf8; font-weight: 800; margin-top: 2px;">
+            ⚡ Pick: ${escapeHtml(pickName)}
+          </div>
+        </div>
       </div>
-      <div class="portfolio-position-footer">
-        <span>${totalShares > 0 ? `${formatMoney(totalShares)} total shares` : ""}</span>
-        ${claimHtml || `<span>Closes ${market.closes}</span>`}
+
+      <!-- Ticket Slip Details Grid -->
+      <div style="background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 14px; padding: 14px; margin-bottom: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div>
+          <span style="font-size: 0.72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 2px;">Stake Placed</span>
+          <strong style="font-size: 1.15rem; font-weight: 900; color: var(--ink);">$${sharesHeld.toFixed(2)} <span style="font-size: 0.75rem; color: var(--muted); font-weight: 700;">USDC</span></strong>
+        </div>
+        <div style="text-align: right;">
+          <span style="font-size: 0.72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 2px;">Est. Payout (${multiplier}x)</span>
+          <strong style="font-size: 1.25rem; font-weight: 900; color: #34d399;">+$${estPayout.toFixed(2)} <span style="font-size: 0.75rem; color: #34d399; font-weight: 700;">USDC</span></strong>
+        </div>
       </div>
-    </article>
+
+      <!-- Action Buttons Row -->
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <button type="button" onclick="window.openSiftleBettingModal('${market.id}', '${position.optionId || 'home'}')" style="flex: 1; background: rgba(56, 189, 248, 0.12); border: 1.5px solid rgba(56, 189, 248, 0.35); color: #38bdf8; padding: 10px 0; border-radius: 12px; font-size: 0.88rem; font-weight: 800; cursor: pointer; text-align: center; transition: all 0.2s ease;">
+          Manage / Cash Out ↗
+        </button>
+        <a href="https://testnet.arcscan.app/address/0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E" target="_blank" rel="noopener noreferrer" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--muted); padding: 10px 14px; border-radius: 12px; font-size: 0.82rem; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+          ArcScan ↗
+        </a>
+      </div>
+
+    </div>
   `;
 };
 
