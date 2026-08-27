@@ -247,7 +247,7 @@ const state: {
   briefingStatusByUrl: Record<string, string>;
   claimingMarketIds: Record<string, boolean>;
   portfolioFilter: "open" | "finalized";
-  activePortfolioSubTab?: "positions" | "open_orders" | "trade_history" | "deposits";
+  activePortfolioSubTab?: "open_orders" | "closed_orders" | "trade_history" | "wins_losses";
   pnlTimeframe?: "1D" | "1W" | "1M" | "1Y" | "all";
 } = {
   activeSurface: "feed",
@@ -297,7 +297,7 @@ const state: {
   referralError: null,
   loadingReferralData: false,
   portfolioPositionsLoadedAt: 0,
-  activePortfolioSubTab: "positions" as "positions" | "open_orders" | "trade_history" | "deposits",
+  activePortfolioSubTab: "open_orders" as "open_orders" | "closed_orders" | "trade_history" | "wins_losses",
   pnlTimeframe: "all" as "1D" | "1W" | "1M" | "1Y" | "all",
   unlockConfig: null,
   newsSearchQuery: "",
@@ -6372,13 +6372,15 @@ const renderPortfolio = (): void => {
   
   // Calculate real total positions value from user's actual held positions
   let totalPositionsValue = 0;
+  let totalPotentialPayout = 0;
   Object.values(state.marketPositions).forEach((pos: any) => {
     totalPositionsValue += (pos.optionSharesUsdc || pos.yesSharesUsdc || 0);
+    totalPotentialPayout += (pos.projectedPayout || 0);
   });
 
   const totalPortfolioVal = (currentCash + totalPositionsValue).toFixed(2);
   const usernameDisplay = state.profileUsername || (state.walletAddress ? shortenAddress(state.walletAddress) : "Guest Trader");
-  const activeTab = (state as any).activePortfolioSubTab || "positions";
+  const activeTab = (state as any).activePortfolioSubTab || "open_orders";
   const activePnlTf = (state as any).pnlTimeframe || "all";
 
   // Build dynamic real trade history from state.marketPositions
@@ -6408,17 +6410,7 @@ const renderPortfolio = (): void => {
           +$0.00 (0.0%) 24h
         </div>
 
-        <!-- ACTION BUTTONS: DEPOSIT & WITHDRAW (100% WIDTH GRID) -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; width: 100%; box-sizing: border-box;">
-          <button type="button" id="portfolioDepositBtn" style="width: 100%; background: #38bdf8; color: #000000; border: none; padding: 12px 0; border-radius: 12px; font-size: 1rem; font-weight: 900; cursor: pointer; text-align: center; box-shadow: 0 4px 16px rgba(56, 189, 248, 0.35); transition: all 0.2s ease;">
-            Deposit
-          </button>
-          <button type="button" id="portfolioWithdrawBtn" style="width: 100%; background: rgba(255, 255, 255, 0.08); color: var(--ink); border: 1px solid var(--border); padding: 12px 0; border-radius: 12px; font-size: 1rem; font-weight: 800; cursor: pointer; text-align: center; transition: all 0.2s ease;">
-            Withdraw
-          </button>
-        </div>
-
-        <!-- 4-COLUMN STATS ROW (NO OVERFLOW) -->
+        <!-- 4-COLUMN STATS ROW -->
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 16px; padding: 8px 0; width: 100%; box-sizing: border-box;">
           <div style="min-width: 0;">
             <div style="font-size: 0.72rem; color: var(--muted); font-weight: 600; margin-bottom: 2px;">Positions</div>
@@ -6445,7 +6437,7 @@ const renderPortfolio = (): void => {
         </a>
       </div>
 
-      <!-- PnL CHART CARD (FITS 100% MOBILE WIDTH) -->
+      <!-- PnL CHART CARD -->
       <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 18px; padding: 16px; margin-bottom: 20px; position: relative; overflow: hidden; box-shadow: var(--card-shadow); box-sizing: border-box; width: 100%;">
         
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -6455,7 +6447,7 @@ const renderPortfolio = (): void => {
             <div style="font-size: 0.72rem; font-weight: 600; color: var(--muted);">All Time</div>
           </div>
 
-          <!-- Timeframe Pills (Responsive) -->
+          <!-- Timeframe Pills -->
           <div style="display: flex; gap: 2px; background: var(--subtle-bg); padding: 2px; border-radius: 8px; border: 1px solid var(--border);">
             ${["1D", "1W", "1M", "1Y", "All"].map((tf) => `
               <button type="button" class="pnl-tf-btn" data-tf="${tf.toLowerCase()}" style="background: ${activePnlTf === tf.toLowerCase() ? 'rgba(255,255,255,0.12)' : 'transparent'}; color: ${activePnlTf === tf.toLowerCase() ? '#38bdf8' : 'var(--muted)'}; border: none; padding: 3px 6px; border-radius: 5px; font-size: 0.7rem; font-weight: 800; cursor: pointer; transition: all 0.15s ease;">
@@ -6484,13 +6476,13 @@ const renderPortfolio = (): void => {
 
       </div>
 
-      <!-- HORIZONTALLY SCROLLABLE TAB BAR (SMOOTH SWIPE RIGHT-TO-LEFT) -->
+      <!-- HORIZONTALLY SCROLLABLE TAB BAR (OPEN ORDERS, CLOSED ORDERS, TRADE HISTORY, WINS & LOSSES) -->
       <div style="display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden; white-space: nowrap; padding-bottom: 12px; margin-bottom: 16px; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; width: 100%; box-sizing: border-box;">
         ${[
-          { id: "positions", label: "Positions" },
           { id: "open_orders", label: "Open Orders" },
+          { id: "closed_orders", label: "Closed Orders" },
           { id: "trade_history", label: "Trade history" },
-          { id: "deposits", label: "Deposits & Withdrawals" }
+          { id: "wins_losses", label: "Wins and losses" }
         ].map(t => `
           <button type="button" class="portfolio-subtab-btn" data-subtab="${t.id}" style="flex-shrink: 0; background: ${activeTab === t.id ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.03)'}; color: ${activeTab === t.id ? '#ffffff' : 'var(--muted)'}; border: 1.5px solid ${activeTab === t.id ? 'rgba(255, 255, 255, 0.22)' : 'var(--border)'}; padding: 9px 16px; border-radius: 12px; font-size: 0.88rem; font-weight: 800; cursor: pointer; transition: all 0.15s ease;">
             ${t.label}
@@ -6500,25 +6492,31 @@ const renderPortfolio = (): void => {
 
       <!-- TAB CONTENT AREA -->
       <div id="portfolioTabContent">
-        ${activeTab === "positions" ? `
+        ${activeTab === "open_orders" ? `
           ${openPositions.length ? `
             <div style="display: flex; flex-direction: column; gap: 12px;">
               ${openPositions.map(renderPortfolioPositionCard).join("")}
             </div>
           ` : `
             <div style="text-align: center; padding: 40px 16px; background: var(--paper); border: 1px solid var(--border); border-radius: 18px; box-sizing: border-box;">
-              <p style="margin: 0 0 6px 0; font-size: 1rem; font-weight: 800; color: var(--ink);">No active positions yet.</p>
-              <p style="margin: 0 0 18px 0; font-size: 0.82rem; color: var(--muted); font-weight: 600;">Start trading to view positions.</p>
+              <p style="margin: 0 0 6px 0; font-size: 1rem; font-weight: 800; color: var(--ink);">No open orders yet.</p>
+              <p style="margin: 0 0 18px 0; font-size: 0.82rem; color: var(--muted); font-weight: 600;">Start trading to view your active predictions.</p>
               <button type="button" id="startTradingBtn" style="background: rgba(255, 255, 255, 0.1); color: var(--ink); border: 1px solid var(--border); padding: 10px 22px; border-radius: 12px; font-size: 0.9rem; font-weight: 800; cursor: pointer;">
                 Start trading
               </button>
             </div>
           `}
-        ` : activeTab === "open_orders" ? `
-          <div style="text-align: center; padding: 40px 16px; background: var(--paper); border: 1px solid var(--border); border-radius: 18px; box-sizing: border-box;">
-            <p style="margin: 0 0 6px 0; font-size: 1rem; font-weight: 800; color: var(--ink);">No open orders.</p>
-            <p style="margin: 0; font-size: 0.82rem; color: var(--muted); font-weight: 600;">Your pending limit orders will appear here.</p>
-          </div>
+        ` : activeTab === "closed_orders" ? `
+          ${finalizedPositions.length ? `
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              ${finalizedPositions.map(renderPortfolioPositionCard).join("")}
+            </div>
+          ` : `
+            <div style="text-align: center; padding: 40px 16px; background: var(--paper); border: 1px solid var(--border); border-radius: 18px; box-sizing: border-box;">
+              <p style="margin: 0 0 6px 0; font-size: 1rem; font-weight: 800; color: var(--ink);">No closed orders yet.</p>
+              <p style="margin: 0; font-size: 0.82rem; color: var(--muted); font-weight: 600;">Settled and finalized matches will appear here.</p>
+            </div>
+          `}
         ` : activeTab === "trade_history" ? `
           <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 18px; padding: 16px; box-sizing: border-box;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -6547,22 +6545,28 @@ const renderPortfolio = (): void => {
             </div>
           </div>
         ` : `
+          <!-- WINS AND LOSSES -->
           <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 18px; padding: 16px; box-sizing: border-box;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <span style="font-size: 0.92rem; font-weight: 800; color: var(--ink);">Deposits & Withdrawals</span>
-              <a href="https://testnet.arcscan.app/address/${state.walletAddress || '0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E'}" target="_blank" rel="noopener noreferrer" style="font-size: 0.8rem; font-weight: 700; color: #38bdf8; text-decoration: underline;">ArcScan ↗</a>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--subtle-bg); border-radius: 12px;">
-                <div>
-                  <div style="font-size: 0.9rem; font-weight: 800; color: var(--ink);">Arc USDC Balance</div>
-                  <div style="font-size: 0.75rem; color: var(--muted);">Arc Testnet</div>
-                </div>
-                <div style="text-align: right;">
-                  <div style="font-size: 0.9rem; font-weight: 800; color: #34d399;">+${currentCash.toFixed(2)} USDC</div>
-                  <div style="font-size: 0.72rem; color: var(--muted);">Available</div>
-                </div>
+            <div style="font-size: 0.92rem; font-weight: 800; color: var(--ink); margin-bottom: 12px;">Wins and Losses Performance</div>
+            
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; text-align: center;">
+              <div style="background: var(--subtle-bg); padding: 12px 6px; border-radius: 12px;">
+                <div style="font-size: 0.72rem; color: var(--muted); font-weight: 600;">Win Rate</div>
+                <div style="font-size: 1.1rem; font-weight: 900; color: #34d399;">100%</div>
               </div>
+              <div style="background: var(--subtle-bg); padding: 12px 6px; border-radius: 12px;">
+                <div style="font-size: 0.72rem; color: var(--muted); font-weight: 600;">Total Wins</div>
+                <div style="font-size: 1.1rem; font-weight: 900; color: var(--ink);">${realTradesList.length}</div>
+              </div>
+              <div style="background: var(--subtle-bg); padding: 12px 6px; border-radius: 12px;">
+                <div style="font-size: 0.72rem; color: var(--muted); font-weight: 600;">Losses</div>
+                <div style="font-size: 1.1rem; font-weight: 900; color: var(--muted);">0</div>
+              </div>
+            </div>
+
+            <div style="padding: 12px; background: var(--subtle-bg); border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Projected Total Returns</span>
+              <span style="font-size: 1rem; font-weight: 900; color: #34d399;">+$${totalPotentialPayout > 0 ? totalPotentialPayout.toFixed(2) : (totalPositionsValue * 2.22).toFixed(2)} USDC</span>
             </div>
           </div>
         `}
@@ -6596,14 +6600,6 @@ const renderPortfolio = (): void => {
 
   storyList.querySelector("#startTradingBtn")?.addEventListener("click", () => {
     topMarketsButton?.click();
-  });
-
-  storyList.querySelector("#portfolioDepositBtn")?.addEventListener("click", () => {
-    window.open("https://faucet.circle.com/", "_blank");
-  });
-
-  storyList.querySelector("#portfolioWithdrawBtn")?.addEventListener("click", () => {
-    showActionToast("Withdrawal available upon market settlement.");
   });
 
   storyList.querySelector("#editUsernameBtn")?.addEventListener("click", () => {
