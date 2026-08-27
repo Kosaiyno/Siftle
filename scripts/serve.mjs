@@ -9651,14 +9651,14 @@ const server = createServer(async (request, response) => {
         sendJson(response, 400, { error: "marketId, optionId and amount are required" });
         return;
       }
-      if (mode === "buy" && amountUsdc !== 2) {
-        sendJson(response, 400, { error: "Trade amount must be exactly $2 USDC" });
+      if (mode === "buy" && (!Number.isFinite(amountUsdc) || amountUsdc < 0.1)) {
+        sendJson(response, 400, { error: "Trade amount must be at least 0.10 USDC" });
         return;
       }
 
       let market = getActiveMarkets().find((entry) => String(entry.id || "").trim() === marketId && entry.optionMarket);
       if (!market) {
-        market = fallbackMarketPreviews.find((entry) => String(entry.id || "").trim() === marketId);
+        market = getActiveMarkets().find((entry) => String(entry.id || "").trim() === marketId);
       }
       if (!market) {
         sendJson(response, 400, { error: "This option market is not available" });
