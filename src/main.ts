@@ -3698,7 +3698,8 @@ const renderMarketCard = (market: MarketPreview, index: number = 0): string => {
             const pools = (state.marketSnapshots[market.id]?.optionPools) || (market as any).initialOptionPools || {};
             const total = Object.values(pools).reduce((a: number, b: any) => a + (Number(b) || 0), 0);
             const optPool = Number(pools[opt.id]) || 0;
-            const oddsVal = (total > 0 && optPool > 0) ? (total / optPool) : options.length;
+            const defaultOddsMap: Record<string, number> = { home: 2.25, draw: 3.20, away: 2.45 };
+            const oddsVal = (total > 0 && optPool > 0) ? (total / optPool) : (defaultOddsMap[opt.id] || 2.25);
             return `
               <button type="button" class="sporty-odds-btn" data-market-id="${market.id}" data-market-option-id="${escapeHtml(opt.id)}" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;">
                 <span style="font-size: 0.82rem; font-weight: 600; color: #f1f5f9;">${escapeHtml(opt.label)}</span>
@@ -3729,7 +3730,8 @@ const renderMarketCard = (market: MarketPreview, index: number = 0): string => {
           const pools = (state.marketSnapshots[market.id]?.optionPools) || (market as any).initialOptionPools || {};
           const total = Object.values(pools).reduce((a: number, b: any) => a + (Number(b) || 0), 0);
           const optPool = Number(pools[opt.id]) || 0;
-          const oddsVal = (total > 0 && optPool > 0) ? (total / optPool) : options.length;
+          const defaultOddsMap: Record<string, number> = { home: 2.25, draw: 3.20, away: 2.45 };
+          const oddsVal = (total > 0 && optPool > 0) ? (total / optPool) : (defaultOddsMap[opt.id] || 2.25);
           return `
             <button type="button" class="sporty-odds-btn" data-market-id="${market.id}" data-market-option-id="${escapeHtml(opt.id)}" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;">
               <span style="font-size: 0.82rem; font-weight: 600; color: #f1f5f9;">${escapeHtml(opt.label)}</span>
