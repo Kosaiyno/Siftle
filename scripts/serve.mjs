@@ -6724,7 +6724,9 @@ function saveOptionMarketPosition(data, market, walletAddress, optionId, optionL
     throw new Error("You already picked an option in this market");
   }
   if (existing && existing.optionId === optionId) {
-    throw new Error("Your pick is already locked");
+    existing.amountUsdc = (Number(existing.amountUsdc) || 0) + amountUsdc;
+    marketStore.optionPools[optionId] = (Number(marketStore.optionPools[optionId]) || 0) + amountUsdc;
+    return;
   }
 
   marketStore.positions[cleanWallet] = {
@@ -9678,7 +9680,7 @@ const server = createServer(async (request, response) => {
       }
 
       let data = await loadOptionMarketStateFromSupabase(loadAnalytics(), market);
-      const treasuryAddress = normalizeWalletAddress(aiBriefingTreasuryAddress || process.env.SIFTLE_TREASURY_ADDRESS);
+      const marketContractAddress = normalizeWalletAddress(market.marketAddress || market.contractAddress || market.factoryAddress || process.env.SIFTLE_MARKET_FACTORY_ADDRESS || "0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E");
       let txHash = `0xoptionpick${randomUUID().replace(/-/g, "").slice(0, 24)}`;
       if (mode === "buy") {
         const currentState = readOptionMarketStateFromData(data, user.address, market);
@@ -9686,17 +9688,17 @@ const server = createServer(async (request, response) => {
           sendJson(response, 400, { error: "This market is resolved and can no longer be traded" });
           return;
         }
-        if (currentState.position?.optionId) {
-          sendJson(response, 400, { error: "You already picked an option in this market" });
+        if (currentState.position?.optionId && currentState.position?.optionId !== option.id) {
+          sendJson(response, 400, { error: `You already picked ${currentState.position.optionLabel || currentState.position.optionId} in this market. Sell your position first to switch.` });
           return;
         }
         // === USDC PREDICTION MARKET START ===
         await saveOptionMarketPositionToSupabase(market, user.address, option.id, option.label, amountUsdc);
-        if (treasuryAddress) {
+        if (marketContractAddress) {
           try {
             const signer = new Wallet(user.privateKey, leaderboardProvider);
             const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
-            const tx = await usdc.transfer(treasuryAddress, parseUnits(amountUsdc.toFixed(6), 6));
+            const tx = await usdc.transfer(marketContractAddress, parseUnits(amountUsdc.toFixed(6), 6));
             const receipt = await tx.wait();
             txHash = receipt?.hash || tx.hash;
           } catch (err) {
