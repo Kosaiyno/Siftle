@@ -5484,6 +5484,17 @@ const showTradeSuccessModal = (info: {
       renderMarkets();
       renderWalletState();
       showActionToast(`Successfully placed $${tradeAmount} prediction on ${escapeHtml(optionName)}!`);
+
+      const estPayoutVal = calcPariMutuelPayout(tradeAmount);
+      showTradeSuccessModal({
+        optionName: optionName,
+        matchTitle: `${(targetMarket as any).homeTeam || "Home"} vs ${(targetMarket as any).awayTeam || "Away"}`,
+        tradeAmount: tradeAmount,
+        oldPrice: parseFloat(priceCents.toFixed(1)),
+        newPrice: parseFloat((optionId === "home" ? newHome : optionId === "away" ? newAway : newDraw).toFixed(1)),
+        potentialWin: estPayoutVal.toFixed(2),
+        txHash: txHash
+      });
     });
   };
 
