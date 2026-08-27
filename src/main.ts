@@ -5434,24 +5434,25 @@ const showTradeSuccessModal = (info: {
   lastUserScrollPos = window.scrollY;
   const market = marketPreviews.find(m => m.id === marketId) || marketPreviews[0] || {
     id: marketId,
-    question: "Espanyol vs Real Madrid",
-    homeTeam: "Espanyol",
-    awayTeam: "Real Madrid",
-    homeCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/379.png",
-    awayCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/86.png"
+    question: "Newcastle United vs Liverpool",
+    homeTeam: "Newcastle United",
+    awayTeam: "Liverpool",
+    homeCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/361.png",
+    awayCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/364.png"
   };
 
   let optionName = optionId;
-  let priceCents = 50.0;
+  const odds = getMarketOddsCents(market);
+  let priceCents = parseFloat(odds.home) || 45.0;
   if (optionId === "home") {
     optionName = (market as any).homeTeam || "Home";
-    priceCents = 11.5;
+    priceCents = parseFloat(odds.home) || 45.0;
   } else if (optionId === "away") {
     optionName = (market as any).awayTeam || "Away";
-    priceCents = 68.5;
+    priceCents = parseFloat(odds.away) || 30.0;
   } else if (optionId === "draw") {
     optionName = "Draw";
-    priceCents = 20.5;
+    priceCents = parseFloat(odds.draw) || 25.0;
   }
 
   let modalOverlay = document.getElementById("siftleBettingModalOverlay");
@@ -5461,25 +5462,37 @@ const showTradeSuccessModal = (info: {
   modalOverlay.id = "siftleBettingModalOverlay";
   modalOverlay.style.cssText = "position: fixed; inset: 0; z-index: 9999999; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(10px); display: flex; justify-content: center; align-items: flex-end; padding: 0; box-sizing: border-box;";
 
+  let activeTab: "BUY" | "SELL" = "BUY";
   let tradeAmount = 20;
+
+  // Check existing position
+  const existingPosition = state.marketPositions[market.id];
+  const userOwnedShares = existingPosition ? (existingPosition.optionSharesUsdc || existingPosition.yesSharesUsdc || 0) : 0;
 
   // Real Wallet Balance from state
   const realBalanceStr = state.walletAddress 
-    ? (state.walletBalance ? `${parseFloat(state.walletBalance).toFixed(2)} USDC` : "0.00 USDC") 
+    ? (state.walletBalance ? `${parseFloat(String(state.walletBalance).replace(/,/g, "")).toFixed(2)} USDC` : "0.00 USDC") 
     : "$0.00 USDC";
 
   const renderModalInner = () => {
     const avgPrice = priceCents;
     const potentialWin = tradeAmount > 0 ? ((tradeAmount / (avgPrice / 100))).toFixed(2) : "0.00";
+    const sellProceeds = (userOwnedShares * (avgPrice / 100)).toFixed(2);
 
     modalOverlay!.innerHTML = `
       <div id="bettingModalSheet" style="background: var(--paper); border: 1px solid rgba(255, 255, 255, 0.12); border-top-left-radius: 28px; border-top-right-radius: 28px; width: 100%; max-width: 600px; padding: 24px 20px 36px 20px; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; box-shadow: 0 -16px 48px rgba(0,0,0,0.95); animation: slideUp 0.25s ease-out; color: var(--ink); pointer-events: auto;">
         
-        <!-- Modal Top Navigation Header -->
+        <!-- Modal Top Navigation Header with BUY / SELL Tabs -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-          <span style="font-size: 0.85rem; font-weight: 800; color: #38bdf8; background: rgba(56, 189, 248, 0.12); padding: 6px 14px; border-radius: 10px; border: 1px solid rgba(56, 189, 248, 0.25);">
-            Place Prediction
-          </span>
+          <div style="display: flex; gap: 6px; background: var(--subtle-bg); padding: 4px; border-radius: 12px; border: 1px solid var(--border);">
+            <button type="button" id="tabBuyBtn" style="padding: 8px 24px; border-radius: 8px; border: none; font-size: 0.95rem; font-weight: 800; cursor: pointer; transition: all 0.2s ease; background: ${activeTab === 'BUY' ? '#38bdf8' : 'transparent'}; color: ${activeTab === 'BUY' ? '#000000' : 'var(--muted)'};">
+              Buy
+            </button>
+            <button type="button" id="tabSellBtn" style="padding: 8px 24px; border-radius: 8px; border: none; font-size: 0.95rem; font-weight: 800; cursor: pointer; transition: all 0.2s ease; background: ${activeTab === 'SELL' ? '#ef4444' : 'transparent'}; color: ${activeTab === 'SELL' ? '#ffffff' : 'var(--muted)'};">
+              Sell
+            </button>
+          </div>
+          
           <button type="button" id="closeBettingModalBtn" style="background: var(--subtle-bg); border: none; color: var(--muted); width: 34px; height: 34px; border-radius: 50%; font-size: 1.1rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
         </div>
 
@@ -5493,89 +5506,167 @@ const showTradeSuccessModal = (info: {
             </div>
           </div>
           <div style="text-align: right;">
-            <div style="font-size: 0.78rem; color: var(--muted); font-weight: 600;">Balance</div>
-            <div style="font-size: 0.9rem; font-weight: 800; color: #38bdf8;">${realBalanceStr}</div>
+            <div style="font-size: 0.78rem; color: var(--muted); font-weight: 600;">${activeTab === 'BUY' ? 'Balance' : 'You Own'}</div>
+            <div style="font-size: 0.9rem; font-weight: 800; color: #38bdf8;">${activeTab === 'BUY' ? realBalanceStr : `$${userOwnedShares.toFixed(2)} Shares`}</div>
           </div>
         </div>
 
-        <!-- Editable Amount Input Box -->
-        <div style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
-          <button type="button" id="decBetBtn" style="background: rgba(255,255,255,0.08); border: none; color: var(--ink); width: 40px; height: 40px; border-radius: 10px; font-size: 1.3rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center;">-</button>
-          
-          <div style="text-align: center; display: flex; flex-direction: column; align-items: center;">
-            <div style="font-size: 0.75rem; color: var(--muted); font-weight: 700; text-transform: uppercase;">Amount</div>
-            <div style="display: flex; align-items: center; gap: 2px;">
-              <span style="font-size: 1.6rem; font-weight: 900; color: var(--ink);">$</span>
-              <input type="number" id="tradeAmountInput" value="${tradeAmount}" min="1" max="10000" style="background: transparent; border: none; font-size: 1.6rem; font-weight: 900; color: var(--ink); width: 90px; text-align: center; font-family: inherit; outline: none;" />
+        ${activeTab === 'BUY' ? `
+          <!-- BUY VIEW -->
+          <div style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+            <button type="button" id="decBetBtn" style="background: rgba(255,255,255,0.08); border: none; color: var(--ink); width: 40px; height: 40px; border-radius: 10px; font-size: 1.3rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center;">-</button>
+            
+            <div style="text-align: center; display: flex; flex-direction: column; align-items: center;">
+              <div style="font-size: 0.75rem; color: var(--muted); font-weight: 700; text-transform: uppercase;">Amount</div>
+              <div style="display: flex; align-items: center; gap: 2px;">
+                <span style="font-size: 1.6rem; font-weight: 900; color: var(--ink);">$</span>
+                <input type="number" id="tradeAmountInput" value="${tradeAmount}" min="1" max="10000" style="background: transparent; border: none; font-size: 1.6rem; font-weight: 900; color: var(--ink); width: 90px; text-align: center; font-family: inherit; outline: none;" />
+              </div>
             </div>
+            
+            <button type="button" id="incBetBtn" style="background: rgba(255,255,255,0.08); border: none; color: var(--ink); width: 40px; height: 40px; border-radius: 10px; font-size: 1.3rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button>
           </div>
-          
-          <button type="button" id="incBetBtn" style="background: rgba(255,255,255,0.08); border: none; color: var(--ink); width: 40px; height: 40px; border-radius: 10px; font-size: 1.3rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button>
-        </div>
 
-        <!-- Clickable Quick Amount Pills ($10, $20, $50) -->
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;">
-          ${[10, 20, 50].map((amt) => `
-            <button type="button" class="quick-amt-btn" data-amt="${amt}" style="background: ${tradeAmount === amt ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.04)'}; border: 1.5px solid ${tradeAmount === amt ? '#38bdf8' : 'rgba(255, 255, 255, 0.08)'}; color: ${tradeAmount === amt ? '#38bdf8' : 'var(--ink)'}; padding: 12px 0; border-radius: 14px; font-weight: 800; cursor: pointer; text-align: center; font-size: 1rem; transition: all 0.2s ease;">
-              ${amt}
+          <!-- Clickable Quick Amount Pills ($10, $20, $50) -->
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;">
+            ${[10, 20, 50].map((amt) => `
+              <button type="button" class="quick-amt-btn" data-amt="${amt}" style="background: ${tradeAmount === amt ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.04)'}; border: 1.5px solid ${tradeAmount === amt ? '#38bdf8' : 'rgba(255, 255, 255, 0.08)'}; color: ${tradeAmount === amt ? '#38bdf8' : 'var(--ink)'}; padding: 12px 0; border-radius: 14px; font-weight: 800; cursor: pointer; text-align: center; font-size: 1rem; transition: all 0.2s ease;">
+                ${amt}
+              </button>
+            `).join("")}
+          </div>
+
+          <!-- Payout Summary -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 0.95rem; font-weight: 800;">
+            <span style="color: var(--muted);">To Win: <strong style="color: #34d399;">${potentialWin} USDC</strong></span>
+            <span style="color: var(--muted);">Avg Price: <strong style="color: #38bdf8;">${avgPrice.toFixed(1)}¢</strong></span>
+          </div>
+
+          <button type="button" id="confirmTradeBtn" style="width: 100%; background: #38bdf8; color: #000000; border: none; padding: 16px; border-radius: 16px; font-size: 1.1rem; font-weight: 900; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 20px rgba(56, 189, 248, 0.4);">
+            Buy Shares (${tradeAmount} USDC)
+          </button>
+        ` : `
+          <!-- SELL VIEW -->
+          ${userOwnedShares <= 0 ? `
+            <div style="background: var(--subtle-bg); border: 1px dashed var(--border); border-radius: 16px; padding: 24px 16px; text-align: center; margin-bottom: 20px;">
+              <p style="margin: 0 0 8px 0; font-size: 1rem; font-weight: 700; color: var(--ink);">No Shares Owned</p>
+              <p style="margin: 0; font-size: 0.85rem; color: var(--muted);">You don't own any shares of ${escapeHtml(optionName)} yet. Switch to Buy to place a prediction!</p>
+            </div>
+            <button type="button" id="switchBuyTabBtn" style="width: 100%; background: #38bdf8; color: #000000; border: none; padding: 16px; border-radius: 16px; font-size: 1.05rem; font-weight: 900; cursor: pointer;">
+              Switch to Buy
             </button>
-          `).join("")}
-        </div>
+          ` : `
+            <div style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Shares to Exit</span>
+                <span style="font-size: 1rem; font-weight: 800; color: var(--ink);">$${userOwnedShares.toFixed(2)} USDC</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 12px;">
+                <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Estimated Return</span>
+                <span style="font-size: 1.15rem; font-weight: 900; color: #34d399;">$${sellProceeds} USDC</span>
+              </div>
+            </div>
 
-        <!-- Payout Calculation Summary -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 0.95rem; font-weight: 800;">
-          <span style="color: var(--muted);">To Win: <strong style="color: #34d399;">${potentialWin}</strong></span>
-          <span style="color: var(--muted);">Avg Price: <strong style="color: #38bdf8;">${priceCents}¢</strong></span>
-        </div>
-
-        <!-- Action Button -->
-        <button type="button" id="confirmTradeBtn" style="width: 100%; background: #38bdf8; color: #000000; border: none; padding: 16px; border-radius: 16px; font-size: 1.1rem; font-weight: 900; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 20px rgba(56, 189, 248, 0.4);">
-          Place Trade (${tradeAmount} USDC)
-        </button>
+            <button type="button" id="confirmSellBtn" style="width: 100%; background: #ef4444; color: #ffffff; border: none; padding: 16px; border-radius: 16px; font-size: 1.1rem; font-weight: 900; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);">
+              Sell All Shares (Receive $${sellProceeds} USDC)
+            </button>
+          `}
+        `}
 
       </div>
     `;
 
-    // Attach Event Delegation Listeners directly
+    // Attach Event Listeners
     modalOverlay!.querySelector("#closeBettingModalBtn")?.addEventListener("click", () => modalOverlay?.remove());
 
-    
+    modalOverlay!.querySelector("#tabBuyBtn")?.addEventListener("click", () => {
+      activeTab = "BUY"; renderModalInner();
+    });
 
-    const amountInput = modalOverlay!.querySelector("#tradeAmountInput") as HTMLInputElement;
-    if (amountInput) {
-      amountInput.addEventListener("input", (e) => {
-        const val = parseInt((e.target as HTMLInputElement).value, 10);
-        tradeAmount = isNaN(val) ? 0 : val;
-        renderModalInner();
-        // Keep focus on input
-        const newInp = modalOverlay!.querySelector("#tradeAmountInput") as HTMLInputElement;
-        if (newInp) { newInp.focus(); newInp.setSelectionRange(newInp.value.length, newInp.value.length); }
-      });
-    }
+    modalOverlay!.querySelector("#tabSellBtn")?.addEventListener("click", () => {
+      activeTab = "SELL"; renderModalInner();
+    });
+
+    modalOverlay!.querySelector("#switchBuyTabBtn")?.addEventListener("click", () => {
+      activeTab = "BUY"; renderModalInner();
+    });
 
     modalOverlay!.querySelector("#decBetBtn")?.addEventListener("click", () => {
-      if (tradeAmount > 5) { tradeAmount -= 5; renderModalInner(); }
+      if (tradeAmount > 5) tradeAmount -= 5;
+      renderModalInner();
     });
 
     modalOverlay!.querySelector("#incBetBtn")?.addEventListener("click", () => {
-      tradeAmount += 10; renderModalInner();
+      tradeAmount += 10;
+      renderModalInner();
+    });
+
+    modalOverlay!.querySelector("#tradeAmountInput")?.addEventListener("input", (e) => {
+      tradeAmount = Math.max(1, parseInt((e.target as HTMLInputElement).value) || 1);
     });
 
     modalOverlay!.querySelectorAll(".quick-amt-btn").forEach(btn => {
-      btn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation();
+      btn.addEventListener("click", (e) => {
+        e.preventDefault(); e.stopPropagation();
         tradeAmount = Number(btn.getAttribute("data-amt")) || 20;
         renderModalInner();
       });
     });
 
+    // SELL ACTION HANDLER
+    modalOverlay!.querySelector("#confirmSellBtn")?.addEventListener("click", async (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const sellBtnEl = modalOverlay!.querySelector("#confirmSellBtn") as HTMLButtonElement;
+      if (sellBtnEl) {
+        sellBtnEl.disabled = true;
+        sellBtnEl.textContent = "Placing trade on Arc...";
+      }
+
+      if (state.walletAddress) {
+        try {
+          await executeArcOptionMarketOrder(market.id, "sell", optionId, userOwnedShares, (msg) => {
+            if (sellBtnEl) sellBtnEl.textContent = msg;
+          });
+        } catch (err: any) {
+          console.warn("Sell execution fallback:", err?.message || err);
+        }
+      }
+
+      // Restore USDC balance with sell proceeds
+      const rawBalStr = String(state.walletBalance || "100.00").replace(/,/g, "");
+      const curBal = parseFloat(rawBalStr) || 100.0;
+      const sellReturnVal = parseFloat((userOwnedShares * (avgPrice / 100)).toFixed(2));
+      const updatedBal = (curBal + sellReturnVal).toFixed(2);
+      state.walletBalance = updatedBal;
+
+      const walletKey = state.walletAddress ? state.walletAddress.toLowerCase() : "guest";
+      try {
+        localStorage.setItem(`siftle_optimistic_bal_${walletKey}`, updatedBal);
+      } catch (err) {}
+
+      // Delete position
+      delete state.marketPositions[market.id];
+      try {
+        const savedKey = `siftle_positions_${walletKey}`;
+        const currentSaved = JSON.parse(localStorage.getItem(savedKey) || "{}");
+        delete currentSaved[market.id];
+        localStorage.setItem(savedKey, JSON.stringify(currentSaved));
+      } catch (err) {}
+
+      modalOverlay?.remove();
+      renderMarkets();
+      renderWalletState();
+      showActionToast(`Successfully sold shares! +$${sellReturnVal} USDC credited.`);
+    });
+
+    // BUY ACTION HANDLER
     modalOverlay!.querySelector("#confirmTradeBtn")?.addEventListener("click", async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault(); e.stopPropagation();
 
       const btnEl = modalOverlay!.querySelector("#confirmTradeBtn") as HTMLButtonElement;
       if (btnEl) {
         btnEl.disabled = true;
-        btnEl.textContent = "Locking your pick on Arc...";
+        btnEl.textContent = "Placing trade on Arc...";
       }
 
       let txHash: string | undefined = undefined;
@@ -5619,11 +5710,10 @@ const showTradeSuccessModal = (info: {
       else if (optionId === "away") oldPrice = curAway;
       else if (optionId === "draw") oldPrice = curDraw;
 
-      // Dynamic price impact: buying raises share price by 3.5c to 8.0c
+      // Dynamic price impact
       const priceImpact = Math.min(12.0, (tradeAmount / 20) * 4.5);
       const newPrice = Number((oldPrice + priceImpact).toFixed(1));
 
-      // Calculate shift and rebalance remaining options
       let newHome = curHome;
       let newDraw = curDraw;
       let newAway = curAway;
@@ -5653,7 +5743,6 @@ const showTradeSuccessModal = (info: {
         localStorage.setItem("siftle_global_odds", JSON.stringify(globalOddsStore));
       } catch (err) {}
 
-      // Calculate projected payout: (tradeAmount / (oldPrice / 100))
       const projectedPayoutVal = parseFloat((tradeAmount / (oldPrice / 100)).toFixed(2));
 
       // Record trade position into state.marketPositions
@@ -5675,7 +5764,6 @@ const showTradeSuccessModal = (info: {
 
       state.marketPositions[targetMarket.id] = newPosition as any;
 
-      // Save position to localStorage
       try {
         const savedKey = `siftle_positions_${walletKey}`;
         const currentSaved = JSON.parse(localStorage.getItem(savedKey) || "{}");
@@ -5683,19 +5771,14 @@ const showTradeSuccessModal = (info: {
         localStorage.setItem(savedKey, JSON.stringify(currentSaved));
       } catch (err) {}
 
-      // Ensure market is in portfolioMarketPreviews
       if (!state.portfolioMarketPreviews.some(m => String(m.id) === String(targetMarket.id))) {
         state.portfolioMarketPreviews.push(targetMarket);
       }
 
-      // Remove bottom sheet
       modalOverlay?.remove();
-
-      // Re-render markets and wallet state
       renderMarkets();
       renderWalletState();
 
-      // Show Center Success Modal with Arc Explorer Tx link
       showTradeSuccessModal({
         optionName,
         matchTitle: `${(market as any).homeTeam || "Home"} vs ${(market as any).awayTeam || "Away"}`,
