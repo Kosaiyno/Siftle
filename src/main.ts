@@ -23,13 +23,12 @@ const getSmartWalletBalance = async (address: string): Promise<string> => {
   try {
     const optKey = `siftle_optimistic_bal_${address.toLowerCase()}`;
     const optBal = localStorage.getItem(optKey);
-    if (optBal !== null) {
+    if (optBal !== null && optBal !== undefined) {
       const rpcVal = parseFloat(String(rpcBal || "0").replace(/,/g, ""));
       const optVal = parseFloat(optBal);
-      if (optVal < rpcVal) {
+      // Keep deducted balance if optVal is lower than rpcVal
+      if (optVal < rpcVal && optVal >= 0) {
         return optVal.toFixed(2);
-      } else {
-        localStorage.removeItem(optKey);
       }
     }
   } catch(e) {}
@@ -1903,7 +1902,10 @@ const getMarketOptions = (market: MarketPreview): { id: string; label: string }[
     : [];
 
 const isOptionMarket = (market: MarketPreview): boolean =>
-  Boolean(market.optionMarket && getMarketOptions(market).length > 1);
+  Boolean(
+    (market?.optionMarket || (market as any)?.isOptionMarket || (market as any)?.marketType === "option" || (Array.isArray(market?.options) && market.options.length > 0)) &&
+    getMarketOptions(market).length > 1
+  );
 
 const getSelectedOption = (market: MarketPreview): { id: string; label: string } | null => {
   const options = getMarketOptions(market);
@@ -4051,7 +4053,14 @@ const renderMarketDetail = (market: MarketPreview): void => {
 
 
 
-export const globalOddsStore: Record<string, { home: number; draw: number; away: number }> = {};
+export const globalOddsStore: Record<string, { home: number; draw: number; away: number }> = (() => {
+  try {
+    const saved = localStorage.getItem("siftle_global_odds");
+    return saved ? JSON.parse(saved) : {};
+  } catch (e) {
+    return {};
+  }
+})();
 
 const getMarketOddsCents = (market: any) => {
   const mId = String(market?.id || "");
@@ -5577,7 +5586,7 @@ const showTradeSuccessModal = (info: {
       const btnEl = modalOverlay!.querySelector("#confirmTradeBtn") as HTMLButtonElement;
       if (btnEl) {
         btnEl.disabled = true;
-        btnEl.textContent = "Submitting Order on Arc...";
+        btnEl.textContent = "Locking your pick on Arc...";
       }
 
       let txHash: string | undefined = undefined;
@@ -5599,11 +5608,16 @@ const showTradeSuccessModal = (info: {
         }
       }
 
-      // Deduct USDC balance cleanly
+      // Deduct USDC balance cleanly and save to localStorage
       const rawBalStr = String(state.walletBalance || "100.00").replace(/,/g, "");
       const curBal = parseFloat(rawBalStr) || 100.0;
       const updatedBal = Math.max(0, curBal - tradeAmount).toFixed(2);
       state.walletBalance = updatedBal;
+
+      const walletKey = state.walletAddress ? state.walletAddress.toLowerCase() : "guest";
+      try {
+        localStorage.setItem(`siftle_optimistic_bal_${walletKey}`, updatedBal);
+      } catch (err) {}
 
       const targetMarket = marketPreviews.find(m => String(m.id) === String(market.id)) || market;
       const currentOdds = getMarketOddsCents(targetMarket);
@@ -5616,10 +5630,11 @@ const showTradeSuccessModal = (info: {
       else if (optionId === "away") oldPrice = curAway;
       else if (optionId === "draw") oldPrice = curDraw;
 
-      const priceImpact = Math.min(12.0, (tradeAmount / 20) * 3.5);
+      // Dynamic price impact: buying raises share price by 3.5c to 8.0c
+      const priceImpact = Math.min(12.0, (tradeAmount / 20) * 4.5);
       const newPrice = Number((tradeMode === 'LONG' ? oldPrice + priceImpact : Math.max(1, oldPrice - priceImpact)).toFixed(1));
 
-      // Calculate shift and rebalance
+      // Calculate shift and rebalance remaining options
       let newHome = curHome;
       let newDraw = curDraw;
       let newAway = curAway;
@@ -5645,7 +5660,14 @@ const showTradeSuccessModal = (info: {
       globalOddsStore[String(targetMarket.id)] = { home: newHome, draw: newDraw, away: newAway };
       globalOddsStore[String(market.id)] = { home: newHome, draw: newDraw, away: newAway };
 
-      // Record trade position into state.marketPositions so it displays in Portfolio tab
+      try {
+        localStorage.setItem("siftle_global_odds", JSON.stringify(globalOddsStore));
+      } catch (err) {}
+
+      // Calculate projected payout: (tradeAmount / (oldPrice / 100))
+      const projectedPayoutVal = parseFloat((tradeAmount / (oldPrice / 100)).toFixed(2));
+
+      // Record trade position into state.marketPositions
       const existingPos = state.marketPositions[targetMarket.id] || {
         yesSharesUsdc: 0,
         noSharesUsdc: 0,
@@ -5657,16 +5679,15 @@ const showTradeSuccessModal = (info: {
         optionId: optionId,
         optionLabel: optionName,
         optionSharesUsdc: (existingPos.optionSharesUsdc || 0) + tradeAmount,
-        projectedPayout: parseFloat((((existingPos.optionSharesUsdc || 0) + tradeAmount) / (oldPrice / 100)).toFixed(2)),
-        yesSharesUsdc: optionId === 'home' ? (existingPos.yesSharesUsdc || 0) + tradeAmount : (existingPos.yesSharesUsdc || 0),
-        noSharesUsdc: optionId === 'away' ? (existingPos.noSharesUsdc || 0) + tradeAmount : (existingPos.noSharesUsdc || 0)
+        projectedPayout: projectedPayoutVal,
+        yesSharesUsdc: (existingPos.yesSharesUsdc || 0) + tradeAmount,
+        noSharesUsdc: 0
       };
 
       state.marketPositions[targetMarket.id] = newPosition as any;
 
-      // Save position to localStorage for persistence
+      // Save position to localStorage
       try {
-        const walletKey = state.walletAddress ? state.walletAddress.toLowerCase() : "guest";
         const savedKey = `siftle_positions_${walletKey}`;
         const currentSaved = JSON.parse(localStorage.getItem(savedKey) || "{}");
         currentSaved[targetMarket.id] = newPosition;
@@ -5681,7 +5702,7 @@ const showTradeSuccessModal = (info: {
       // Remove bottom sheet
       modalOverlay?.remove();
 
-      // Immediately re-render markets and wallet state
+      // Re-render markets and wallet state
       renderMarkets();
       renderWalletState();
 
@@ -5693,7 +5714,7 @@ const showTradeSuccessModal = (info: {
         tradeAmount,
         oldPrice,
         newPrice,
-        potentialWin: (tradeAmount / (oldPrice / 100)).toFixed(2),
+        potentialWin: projectedPayoutVal.toFixed(2),
         txHash
       });
     });

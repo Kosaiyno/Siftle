@@ -32,7 +32,9 @@ export const fallbackMarketPreviews: any[] = [
       "home": 400,
       "draw": 250,
       "away": 350
-    }
+    },
+    "optionMarket": true,
+    "closes": "Today"
   },
   {
     "id": "m-mancity-bournemouth",
@@ -67,7 +69,9 @@ export const fallbackMarketPreviews: any[] = [
       "home": 700,
       "draw": 200,
       "away": 100
-    }
+    },
+    "optionMarket": true,
+    "closes": "Today"
   },
   {
     "id": "m-brighton-astonvilla",
@@ -102,7 +106,9 @@ export const fallbackMarketPreviews: any[] = [
       "home": 350,
       "draw": 300,
       "away": 350
-    }
+    },
+    "optionMarket": true,
+    "closes": "Today"
   },
   {
     "id": "m-elche-barcelona",
@@ -137,7 +143,9 @@ export const fallbackMarketPreviews: any[] = [
       "home": 150,
       "draw": 200,
       "away": 650
-    }
+    },
+    "optionMarket": true,
+    "closes": "Today"
   },
   {
     "id": "m-atletico-villarreal",
@@ -172,7 +180,9 @@ export const fallbackMarketPreviews: any[] = [
       "home": 500,
       "draw": 300,
       "away": 200
-    }
+    },
+    "optionMarket": true,
+    "closes": "Today"
   },
   {
     "id": "m-getafe-santander",
@@ -207,7 +217,9 @@ export const fallbackMarketPreviews: any[] = [
       "home": 400,
       "draw": 350,
       "away": 250
-    }
+    },
+    "optionMarket": true,
+    "closes": "Today"
   },
   {
     "id": "m-torino-acmilan",
@@ -242,7 +254,9 @@ export const fallbackMarketPreviews: any[] = [
       "home": 250,
       "draw": 300,
       "away": 450
-    }
+    },
+    "optionMarket": true,
+    "closes": "Today"
   },
   {
     "id": "m-atalanta-sassuolo",
@@ -277,7 +291,9 @@ export const fallbackMarketPreviews: any[] = [
       "home": 550,
       "draw": 250,
       "away": 200
-    }
+    },
+    "optionMarket": true,
+    "closes": "Today"
   },
   {
     "id": "m-frosinone-juventus",
@@ -312,7 +328,9 @@ export const fallbackMarketPreviews: any[] = [
       "home": 150,
       "draw": 250,
       "away": 600
-    }
+    },
+    "optionMarket": true,
+    "closes": "Today"
   },
   {
     "id": "m-rennais-psg",
@@ -347,7 +365,9 @@ export const fallbackMarketPreviews: any[] = [
       "home": 200,
       "draw": 250,
       "away": 550
-    }
+    },
+    "optionMarket": true,
+    "closes": "Today"
   },
   {
     "id": "m-lehavre-monaco",
@@ -382,7 +402,9 @@ export const fallbackMarketPreviews: any[] = [
       "home": 200,
       "draw": 300,
       "away": 500
-    }
+    },
+    "optionMarket": true,
+    "closes": "Today"
   },
   {
     "id": "m-angers-lille",
@@ -417,7 +439,9 @@ export const fallbackMarketPreviews: any[] = [
       "home": 250,
       "draw": 300,
       "away": 450
-    }
+    },
+    "optionMarket": true,
+    "closes": "Today"
   },
   {
     "id": "m-porto-arouca",
@@ -452,7 +476,9 @@ export const fallbackMarketPreviews: any[] = [
       "home": 750,
       "draw": 150,
       "away": 100
-    }
+    },
+    "optionMarket": true,
+    "closes": "Today"
   },
   {
     "id": "m-cambuur-feyenoord",
@@ -487,7 +513,9 @@ export const fallbackMarketPreviews: any[] = [
       "home": 150,
       "draw": 250,
       "away": 600
-    }
+    },
+    "optionMarket": true,
+    "closes": "Today"
   },
   {
     "id": "m-psv-groningen",
@@ -522,7 +550,9 @@ export const fallbackMarketPreviews: any[] = [
       "home": 700,
       "draw": 200,
       "away": 100
-    }
+    },
+    "optionMarket": true,
+    "closes": "Today"
   },
   {
     "id": "m-racing-bocajuniors",
@@ -557,7 +587,9 @@ export const fallbackMarketPreviews: any[] = [
       "home": 400,
       "draw": 300,
       "away": 300
-    }
+    },
+    "optionMarket": true,
+    "closes": "Today"
   },
   {
     "id": "m-riverplate-velez",
@@ -592,6 +624,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 550,
       "draw": 250,
       "away": 200
-    }
+    },
+    "optionMarket": true,
+    "closes": "Today"
   }
 ];
