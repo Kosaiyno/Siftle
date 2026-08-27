@@ -2471,23 +2471,29 @@ function formatYyyyMmDd(d: Date): string {
 
 function cleanLeagueTitle(name: string): string {
   if (!name) return "Soccer Matches";
-  // Remove year prefixes like 2026-27-, 2025-26-, 2026-
-  let clean = name.replace(/^\d{4}(-\d{2,4})?-/g, "");
-  // Replace hyphens with spaces
-  clean = clean.replace(/-/g, " ");
-  // Capitalize words nicely
-  clean = clean.split(" ").map(w => w ? (w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()) : "").join(" ");
-  // Standardize known names
-  if (clean.toLowerCase().includes("premier league") || clean.toLowerCase().includes("eng 1")) return "English Premier League";
-  if (clean.toLowerCase().includes("laliga") || clean.toLowerCase().includes("esp 1")) return "Spanish LaLiga";
-  if (clean.toLowerCase().includes("champions league") || clean.toLowerCase().includes("uefa champions")) return "UEFA Champions League";
-  if (clean.toLowerCase().includes("championship") || clean.toLowerCase().includes("eng 2")) return "EFL Championship";
-  if (clean.toLowerCase().includes("serie a") || clean.toLowerCase().includes("ita 1")) return "Italian Serie A";
-  if (clean.toLowerCase().includes("bundesliga") || clean.toLowerCase().includes("ger 1")) return "German Bundesliga";
-  if (clean.toLowerCase().includes("saudi") || clean.toLowerCase().includes("sau 1")) return "Saudi Pro League";
-  if (clean.toLowerCase().includes("friendly") || clean.toLowerCase().includes("friendlies")) return "Club Friendlies";
-  return clean.trim();
-}
+  let clean = name.replace(/^\d{4}(-\d{2,4})?-/g, "").replace(/-/g, " ").trim();
+  const lower = clean.toLowerCase();
+  
+  if (lower.includes("russian") || lower.includes("rus.1")) return "Russian Premier League";
+  if (lower.includes("scottish") || lower.includes("sco.1")) return "Scottish Premiership";
+  if (lower.includes("ukrainian") || lower.includes("ukr.1")) return "Ukrainian Premier League";
+  if (lower.includes("egyptian") || lower.includes("egy.1")) return "Egyptian Premier League";
+  if (lower.includes("english premier league") || lower.includes("premier league") || lower.includes("eng.1") || lower.includes("eng 1")) {
+    return "English Premier League";
+  }
+  if (lower.includes("laliga") || lower.includes("esp.1") || lower.includes("esp 1") || lower.includes("spanish")) return "Spanish LaLiga";
+  if (lower.includes("champions league") || lower.includes("uefa champions")) return "UEFA Champions League";
+  if (lower.includes("europa league") || lower.includes("uefa europa")) return "UEFA Europa League";
+  if (lower.includes("championship") || lower.includes("eng.2") || lower.includes("eng 2")) return "EFL Championship";
+  if (lower.includes("serie a") || lower.includes("ita.1") || lower.includes("ita 1") || lower.includes("italian")) return "Italian Serie A";
+  if (lower.includes("bundesliga") || lower.includes("ger.1") || lower.includes("ger 1") || lower.includes("german")) return "German Bundesliga";
+  if (lower.includes("ligue 1") || lower.includes("fra.1") || lower.includes("fra 1") || lower.includes("french")) return "French Ligue 1";
+  if (lower.includes("saudi") || lower.includes("sau.1") || lower.includes("sau 1")) return "Saudi Pro League";
+  if (lower.includes("eredivisie") || lower.includes("ned.1")) return "Dutch Eredivisie";
+  if (lower.includes("primeira liga") || lower.includes("por.1")) return "Portuguese Primeira Liga";
+  if (lower.includes("friendly") || lower.includes("friendlies")) return "Club Friendlies";
+  return clean.split(" ").map(w => w ? (w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()) : "").join(" ").trim();
+};
 
 const loadLiveMatches = async (dateParam?: string): Promise<void> => {
   const todayStr = formatYyyyMmDd(new Date());
