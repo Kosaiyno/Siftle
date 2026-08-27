@@ -247,6 +247,8 @@ const state: {
   briefingStatusByUrl: Record<string, string>;
   claimingMarketIds: Record<string, boolean>;
   portfolioFilter: "open" | "finalized";
+  activePortfolioSubTab?: "positions" | "open_orders" | "trade_history" | "deposits";
+  pnlTimeframe?: "1D" | "1W" | "1M" | "1Y" | "all";
 } = {
   activeSurface: "feed",
   profileUsername: null,
@@ -295,6 +297,8 @@ const state: {
   referralError: null,
   loadingReferralData: false,
   portfolioPositionsLoadedAt: 0,
+  activePortfolioSubTab: "positions" as "positions" | "open_orders" | "trade_history" | "deposits",
+  pnlTimeframe: "all" as "1D" | "1W" | "1M" | "1Y" | "all",
   unlockConfig: null,
   newsSearchQuery: "",
   briefingStatusByUrl: {},
@@ -6344,172 +6348,268 @@ const renderPortfolio = (): void => {
   document.body.classList.remove("detail-mode");
   storyDetail.hidden = true;
   storyList.hidden = false;
-  storyList.classList.remove("matches-surface-active"); storyList.classList.add("markets-list");
+  storyList.classList.remove("matches-surface-active"); 
+  storyList.classList.add("markets-list");
+
   if (state.walletAddress && !state.referralData && !state.referralError && !state.loadingReferralData) {
     void loadReferralData();
   }
-  const positionsAreStale = state.walletAddress
-    && (!state.hasLoadedPortfolioPositions || Date.now() - state.portfolioPositionsLoadedAt > 15000);
-  if (positionsAreStale && !state.loadingPortfolioPositions) {
-    if (state.portfolioMarketPreviews.length === 0) void loadPortfolioMarkets();
-    void loadPortfolioPositions({ force: !state.hasLoadedPortfolioPositions });
-  }
+
   const claimedMarkets = readClaimedMarkets();
   const portfolioMarkets = getPortfolioMarkets().filter((market) => {
     const position = state.marketPositions[market.id];
     return claimedMarkets.has(market.id)
       || (position && (position.yesSharesUsdc + position.noSharesUsdc > 0 || (position.optionSharesUsdc || 0) > 0));
   });
+  
   const openPositions = portfolioMarkets.filter((market) => (state.marketSnapshots[market.id]?.outcome ?? 0) === 0);
   const finalizedPositions = portfolioMarkets.filter((market) => (state.marketSnapshots[market.id]?.outcome ?? 0) !== 0);
   const walletConnected = !!state.walletAddress;
-  const usernameDisplay = state.profileUsername || (state.walletAddress ? shortenAddress(state.walletAddress) : "Anonymous");
-  const safeUsernameDisplay = escapeHtml(usernameDisplay);
-  const safeProfileUsername = escapeHtml(state.profileUsername || "");
-  const profileNoticeHtml = state.profileNotice
-    ? `<div style="margin-top: 14px !important; padding: 10px 12px !important; border-radius: 8px !important; border: 1px solid ${state.profileNotice.type === "error" ? "rgba(239, 68, 68, 0.28)" : "rgba(16, 185, 129, 0.24)"} !important; background: ${state.profileNotice.type === "error" ? "rgba(127, 29, 29, 0.22)" : "rgba(6, 95, 70, 0.18)"} !important; color: ${state.profileNotice.type === "error" ? "#fca5a5" : "#86efac"} !important; font-size: 0.8rem !important; font-weight: 650 !important;">${escapeHtml(state.profileNotice.message)}</div>`
-    : "";
-  const avatarLetter = usernameDisplay.charAt(0).toUpperCase();
+
+  const currentCash = parseFloat(String(state.walletBalance || "0.00").replace(/,/g, "")) || 0.0;
+  
+  // Calculate total positions value
+  let totalPositionsValue = 0;
+  Object.values(state.marketPositions).forEach((pos: any) => {
+    totalPositionsValue += (pos.optionSharesUsdc || pos.yesSharesUsdc || 0);
+  });
+
+  const totalPortfolioVal = (currentCash + totalPositionsValue).toFixed(2);
+  const usernameDisplay = state.profileUsername || (state.walletAddress ? shortenAddress(state.walletAddress) : "Guest User");
+  const activeTab = (state as any).activePortfolioSubTab || "positions";
+  const activePnlTf = (state as any).pnlTimeframe || "all";
 
   storyList.innerHTML = `
-    <section class="portfolio-surface">
-      <div class="portfolio-top-grid">
-        ${renderReferralPanel(walletConnected)}
-      <div class="profile-card" style="background: var(--market-card-bg) !important; border: 1px solid var(--market-border) !important; border-radius: 12px !important; padding: 14px !important; margin-bottom: 12px !important; box-sizing: border-box !important;">
-        <div class="profile-avatar-container" style="display: flex !important; align-items: center !important; gap: 16px !important;">
-          <div class="profile-avatar-3d" style="width: 58px !important; height: 58px !important; border-radius: 50% !important; flex-shrink: 0 !important; position: relative; display: flex; align-items: center; justify-content: center;">
-            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%; display: block; filter: drop-shadow(0 4px 10px rgba(56, 189, 248, 0.35));">
-  <defs>
-    <radialGradient id="sphereGrad" cx="35%" cy="30%" r="65%">
-      <stop offset="0%" stop-color="#38bdf8"/>
-      <stop offset="35%" stop-color="#2563eb"/>
-      <stop offset="70%" stop-color="#1e1b4b"/>
-      <stop offset="100%" stop-color="#090a1a"/>
-    </radialGradient>
-    <linearGradient id="glossGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.85"/>
-      <stop offset="40%" stop-color="#ffffff" stop-opacity="0.2"/>
-      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
-    </linearGradient>
-    <radialGradient id="head3D" cx="35%" cy="30%" r="60%">
-      <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="40%" stop-color="#e0f2fe"/>
-      <stop offset="80%" stop-color="#7dd3fc"/>
-      <stop offset="100%" stop-color="#0284c7"/>
-    </radialGradient>
-    <radialGradient id="body3D" cx="40%" cy="20%" r="70%">
-      <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="45%" stop-color="#bae6fd"/>
-      <stop offset="80%" stop-color="#38bdf8"/>
-      <stop offset="100%" stop-color="#0369a1"/>
-    </radialGradient>
-    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="2" result="blur"/>
-      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-    </filter>
-  </defs>
-  
-  <!-- Outer 3D Sphere Orb -->
-  <circle cx="24" cy="24" r="22" fill="url(#sphereGrad)"/>
-  
-  <!-- Outer Specular Ring & Depth Shadow -->
-  <circle cx="24" cy="24" r="21.5" stroke="rgba(255, 255, 255, 0.45)" stroke-width="1"/>
-  <circle cx="24" cy="24" r="20" stroke="rgba(56, 189, 248, 0.3)" stroke-width="1.5"/>
-  
-  <!-- 3D Humanoid Figure: Head -->
-  <circle cx="24" cy="17" r="7.5" fill="url(#head3D)" filter="url(#softGlow)"/>
-  <ellipse cx="22" cy="14" rx="2.5" ry="1.5" fill="#ffffff" opacity="0.8"/>
-  
-  <!-- 3D Humanoid Figure: Shoulders / Torso -->
-  <path d="M12 37.5C12 30.5 17.5 27 24 27C30.5 27 36 30.5 36 37.5C36 39 34.5 40 33 40H15C13.5 40 12 39 12 37.5Z" fill="url(#body3D)"/>
-  <path d="M16 34C19 30 29 30 32 34" stroke="rgba(255, 255, 255, 0.6)" stroke-width="1" stroke-linecap="round"/>
-  
-  <!-- Glass Top-Left Curved Highlight Specular -->
-  <path d="M10 14C13 8 20 5 28 6C23 6 15 9 12 15C10.5 18 10 22 10 22C10 22 9.5 17 10 14Z" fill="url(#glossGrad)"/>
-</svg>
-          </div>
-          <div class="profile-details" style="display: flex !important; flex-direction: column !important; min-width: 0 !important;">
-            <div class="username-display-row" style="display: flex !important; align-items: center !important; gap: 8px !important;">
-              <span class="profile-username" style="font-family: 'Space Grotesk', sans-serif !important; font-size: 1.08rem !important; font-weight: 750 !important; color: var(--market-text-main) !important; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis !important; max-width: 180px !important;">${safeUsernameDisplay}</span>
-              ${walletConnected ? `
-                <button type="button" class="edit-username-btn" id="editUsernameBtn" style="background: transparent !important; border: none !important; color: var(--market-text-muted) !important; cursor: pointer !important; padding: 4px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; transition: color 0.2s ease !important; outline: none !important;">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none !important;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path></svg>
-                </button>
-              ` : ""}
-            </div>
+    <section class="portfolio-surface" style="width: 100% !important; max-width: 600px !important; margin: 0 auto !important; padding: 12px 14px 120px 14px !important; box-sizing: border-box !important; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Space Grotesk', sans-serif !important; color: var(--ink) !important;">
+      
+      <!-- TOP PORTFOLIO BALANCE CARD -->
+      <div style="margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <span style="font-size: 0.95rem; font-weight: 700; color: var(--muted);">Portfolio</span>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--muted); font-weight: 600;">
+            <span>${escapeHtml(usernameDisplay)}</span>
             ${walletConnected ? `
-              <div class="wallet-address-row" style="display: flex !important; align-items: center !important; gap: 8px !important; margin-top: 4px !important;">
-                <small style="color: var(--market-text-muted) !important; font-family: monospace !important; font-size: 0.78rem !important;">${shortenAddress(state.walletAddress!)}</small>
-                <button type="button" class="copy-address-btn" data-address="${state.walletAddress}" style="background: rgba(59,130,246,0.06) !important; border: 1px solid var(--market-border) !important; color: var(--market-text-muted) !important; border-radius: 4px !important; padding: 2px 6px !important; font-size: 0.7rem !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 4px !important; transition: all 0.2s ease !important; outline: none !important;">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none !important;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                  Copy
-                </button>
-              </div>
-            ` : `<small style="color: var(--market-text-muted) !important; font-size: 0.8rem !important; display: block !important; margin-top: 4px !important;">Connect wallet to customize profile</small>`}
-          </div>
-        </div>
-
-        ${walletConnected ? `
-          <div class="profile-username-edit-form" id="usernameEditForm" style="display: none !important; align-items: center !important; gap: 8px !important; margin-top: 16px !important; width: 100% !important;">
-            <input type="text" id="usernameInput" placeholder="Enter username..." value="${safeProfileUsername}" maxlength="15" style="flex: 1 !important; background: var(--market-bg) !important; border: 1px solid var(--market-border) !important; border-radius: 6px !important; padding: 8px 12px !important; color: var(--market-text-main) !important; font-size: 0.85rem !important; outline: none !important; font-family: 'Outfit', sans-serif !important;" />
-            <button type="button" class="save-username-btn" id="saveUsernameBtn" style="background: #ffffff !important; color: #000000 !important; border: 1px solid #ffffff !important; border-radius: 6px !important; padding: 8px 14px !important; font-size: 0.82rem !important; font-weight: 700 !important; cursor: pointer !important; transition: all 0.2s ease !important; outline: none !important;">Save</button>
-            <button type="button" class="cancel-username-btn" id="cancelUsernameBtn" style="background: transparent !important; color: var(--market-text-muted) !important; border: 1px solid var(--market-border) !important; border-radius: 6px !important; padding: 8px 12px !important; font-size: 0.82rem !important; cursor: pointer !important; transition: all 0.2s ease !important; outline: none !important;">Cancel</button>
-          </div>
-        ` : ""}
-
-        ${profileNoticeHtml}
-
-
-        <div class="portfolio-wallet-balance-row" style="margin-top: 12px !important; padding-top: 12px !important; border-top: 1px solid var(--market-border) !important; display: flex !important; justify-content: space-between !important; align-items: center !important; flex-wrap: wrap !important; gap: 12px !important;">
-          <div>
-            <span style="font-size: 0.72rem !important; color: var(--market-text-muted) !important; display: block !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; margin-bottom: 2px !important;">Available Balance</span>
-            <strong style="font-size: 1.25rem !important; color: var(--market-text-main) !important; font-family: 'Space Grotesk', sans-serif !important;">
-              ${state.walletAddress
-                ? state.walletBalance === null
-                  ? `<span class="skeleton wallet-balance-skeleton" aria-hidden="true" style="display: inline-block !important; width: 80px !important; height: 20px !important; vertical-align: middle !important;"></span>${renderSkeletonAria("Loading wallet balance")}`
-                  : `${state.walletBalance} USDC`
-                : "0.00 USDC"}
-            </strong>
-          </div>
-          <div style="display: flex !important; align-items: center !important; gap: 8px !important;">
-            ${walletConnected ? `
-              <a href="https://faucet.circle.com/" target="_blank" rel="noreferrer" class="faucet-link" style="background: transparent !important; border: 1px solid var(--market-border) !important; color: var(--market-text-muted) !important; border-radius: 6px !important; padding: 8px 12px !important; font-size: 0.8rem !important; text-decoration: none !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; transition: all 0.2s ease !important;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none !important;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                Get USDC
-              </a>
+              <button type="button" id="editUsernameBtn" style="background: transparent; border: none; color: var(--muted); cursor: pointer; padding: 2px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path></svg>
+              </button>
             ` : ""}
-            <button type="button" class="connect-wallet-btn" data-connect-wallet style="background: #ffffff !important; color: #000000 !important; border: 1px solid #ffffff !important; border-radius: 6px !important; padding: 8px 16px !important; font-size: 0.82rem !important; font-weight: 700 !important; cursor: pointer !important; transition: all 0.2s ease !important; outline: none !important;" ${state.walletConnecting ? "disabled" : ""}>
-              ${state.walletConnecting ? "Connecting..." : state.walletAddress ? "Disconnect" : "Connect Wallet"}
-            </button>
           </div>
         </div>
+
+        <div style="font-size: 2.5rem; font-weight: 900; color: var(--ink); letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 4px;">
+          $${totalPortfolioVal}
+        </div>
+        <div style="font-size: 0.88rem; font-weight: 700; color: #34d399; margin-bottom: 20px;">
+          +$0.00 (0.0%) 24h
+        </div>
+
+        <!-- ACTION BUTTONS: DEPOSIT & WITHDRAW -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+          <button type="button" id="portfolioDepositBtn" style="background: #38bdf8; color: #000000; border: none; padding: 14px; border-radius: 14px; font-size: 1.05rem; font-weight: 900; cursor: pointer; text-align: center; box-shadow: 0 4px 16px rgba(56, 189, 248, 0.35); transition: all 0.2s ease;">
+            Deposit
+          </button>
+          <button type="button" id="portfolioWithdrawBtn" style="background: rgba(255, 255, 255, 0.08); color: var(--ink); border: 1px solid var(--border); padding: 14px; border-radius: 14px; font-size: 1.05rem; font-weight: 800; cursor: pointer; text-align: center; transition: all 0.2s ease;">
+            Withdraw
+          </button>
+        </div>
+
+        <!-- 4-COLUMN STATS GRID -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; padding: 12px 0;">
+          <div>
+            <div style="font-size: 0.75rem; color: var(--muted); font-weight: 600; margin-bottom: 4px;">Positions</div>
+            <div style="font-size: 1rem; font-weight: 800; color: var(--ink);">$${totalPositionsValue.toFixed(2)}</div>
+          </div>
+          <div>
+            <div style="font-size: 0.75rem; color: var(--muted); font-weight: 600; margin-bottom: 4px;">Cash</div>
+            <div style="font-size: 1rem; font-weight: 800; color: var(--ink);">$${currentCash.toFixed(2)}</div>
+          </div>
+          <div>
+            <div style="font-size: 0.75rem; color: var(--muted); font-weight: 600; margin-bottom: 4px;">Interest</div>
+            <div style="font-size: 1rem; font-weight: 800; color: #34d399; text-decoration: underline dotted;">6.0%</div>
+          </div>
+          <div>
+            <div style="font-size: 0.75rem; color: var(--muted); font-weight: 600; margin-bottom: 4px;">Rewards</div>
+            <div style="font-size: 1rem; font-weight: 800; color: var(--ink);">$0.0</div>
+          </div>
+        </div>
+
+        <!-- SPECIAL FAUCET / DIRECT DEPOSIT BANNER -->
+        <a href="https://faucet.circle.com/" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 8px; background: #2563eb; color: #ffffff; padding: 12px; border-radius: 12px; font-size: 0.88rem; font-weight: 800; text-decoration: none; margin-bottom: 24px; box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Get Arc Testnet USDC (Circle Faucet ↗)
+        </a>
       </div>
+
+      <!-- PnL CHART CARD -->
+      <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 18px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: var(--card-shadow);">
+        
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+          <div>
+            <div style="font-size: 0.85rem; font-weight: 700; color: var(--muted);">PnL</div>
+            <div style="font-size: 1.6rem; font-weight: 900; color: var(--ink); margin-top: 2px;">$0.0</div>
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--muted);">All Time</div>
+          </div>
+
+          <!-- Timeframe Pills -->
+          <div style="display: flex; gap: 4px; background: var(--subtle-bg); padding: 3px; border-radius: 10px; border: 1px solid var(--border);">
+            ${["1D", "1W", "1M", "1Y", "All"].map((tf) => `
+              <button type="button" class="pnl-tf-btn" data-tf="${tf.toLowerCase()}" style="background: ${activePnlTf === tf.toLowerCase() ? 'rgba(255,255,255,0.12)' : 'transparent'}; color: ${activePnlTf === tf.toLowerCase() ? '#38bdf8' : 'var(--muted)'}; border: none; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; cursor: pointer; transition: all 0.15s ease;">
+                ${tf}
+              </button>
+            `).join("")}
+          </div>
+        </div>
+
+        <!-- SVG WAVE GRAPHIC WITH SIFTLE BRAND LOGO -->
+        <div style="width: 100%; height: 110px; position: relative; margin-top: 10px;">
+          <svg viewBox="0 0 500 120" preserveAspectRatio="none" style="width: 100%; height: 100%; display: block; overflow: visible;">
+            <defs>
+              <linearGradient id="pnlGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.35"/>
+                <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.0"/>
+              </linearGradient>
+            </defs>
+            <path d="M0,85 C120,80 200,95 320,60 C400,35 460,45 500,40 L500,120 L0,120 Z" fill="url(#pnlGrad)"/>
+            <path d="M0,85 C120,80 200,95 320,60 C400,35 460,45 500,40" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+          <div style="position: absolute; right: 14px; bottom: 10px; font-size: 0.85rem; font-weight: 900; letter-spacing: 0.1em; color: rgba(255,255,255,0.08); text-transform: uppercase; pointer-events: none;">
+            SIFTLE
+          </div>
+        </div>
+
       </div>
-      <div class="portfolio-section-tabs">
-        <button class="${state.portfolioFilter === "open" ? "active" : ""}" type="button" data-portfolio-filter="open">Open ${openPositions.length}</button>
-        <button class="${state.portfolioFilter === "finalized" ? "active" : ""}" type="button" data-portfolio-filter="finalized">Finalized ${finalizedPositions.length}</button>
+
+      <!-- HORIZONTALLY SCROLLABLE TAB BAR -->
+      <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 16px; scrollbar-width: none; -webkit-overflow-scrolling: touch;">
+        ${[
+          { id: "positions", label: "Positions" },
+          { id: "open_orders", label: "Open Orders" },
+          { id: "trade_history", label: "Trade history" },
+          { id: "deposits", label: "Deposits & Withdrawals" }
+        ].map(t => `
+          <button type="button" class="portfolio-subtab-btn" data-subtab="${t.id}" style="background: ${activeTab === t.id ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.03)'}; color: ${activeTab === t.id ? '#ffffff' : 'var(--muted)'}; border: 1px solid ${activeTab === t.id ? 'rgba(255, 255, 255, 0.18)' : 'var(--border)'}; padding: 10px 18px; border-radius: 12px; font-size: 0.92rem; font-weight: 800; cursor: pointer; white-space: nowrap; transition: all 0.15s ease;">
+            ${t.label}
+          </button>
+        `).join("")}
       </div>
-      ${state.loadingPortfolioPositions
-        ? renderPortfolioSkeleton(2)
-        : !state.walletAddress
-          ? `<div class="portfolio-empty">Connect your wallet to see open and finalized market predictions.</div>`
-          : portfolioMarkets.length === 0
-            ? `<div class="portfolio-empty">No predictions found for this wallet yet. Confirmed trades will appear here after the Arc transaction settles.</div>`
-            : state.portfolioFilter === "open"
-              ? `
-                <section class="portfolio-position-section">
-                  <h2>Open Predictions</h2>
-                  ${openPositions.length ? openPositions.map(renderPortfolioPositionCard).join("") : `<div class="portfolio-empty compact">No active predictions open.</div>`}
-                </section>
-              `
-              : `
-                <section class="portfolio-position-section">
-                  <h2>Prediction History (Finalized)</h2>
-                  ${finalizedPositions.length ? finalizedPositions.map(renderPortfolioPositionCard).join("") : `<div class="portfolio-empty compact">No finalized predictions.</div>`}
-                </section>
-              `}
+
+      <!-- TAB CONTENT AREA -->
+      <div id="portfolioTabContent">
+        ${activeTab === "positions" ? `
+          ${openPositions.length ? `
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              ${openPositions.map(renderPortfolioPositionCard).join("")}
+            </div>
+          ` : `
+            <div style="text-align: center; padding: 48px 16px; background: var(--paper); border: 1px solid var(--border); border-radius: 20px;">
+              <p style="margin: 0 0 6px 0; font-size: 1.05rem; font-weight: 800; color: var(--ink);">No active positions yet.</p>
+              <p style="margin: 0 0 20px 0; font-size: 0.85rem; color: var(--muted); font-weight: 600;">Start trading to view positions.</p>
+              <button type="button" id="startTradingBtn" style="background: rgba(255, 255, 255, 0.1); color: var(--ink); border: 1px solid var(--border); padding: 10px 24px; border-radius: 12px; font-size: 0.92rem; font-weight: 800; cursor: pointer;">
+                Start trading
+              </button>
+            </div>
+          `}
+        ` : activeTab === "open_orders" ? `
+          <div style="text-align: center; padding: 48px 16px; background: var(--paper); border: 1px solid var(--border); border-radius: 20px;">
+            <p style="margin: 0 0 6px 0; font-size: 1.05rem; font-weight: 800; color: var(--ink);">No open orders.</p>
+            <p style="margin: 0; font-size: 0.85rem; color: var(--muted); font-weight: 600;">Your pending limit orders will appear here.</p>
+          </div>
+        ` : activeTab === "trade_history" ? `
+          <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <span style="font-size: 0.95rem; font-weight: 800; color: var(--ink);">On-Chain Trade History</span>
+              <a href="https://testnet.arcscan.app/address/${state.walletAddress || '0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E'}" target="_blank" rel="noopener noreferrer" style="font-size: 0.8rem; font-weight: 700; color: #38bdf8; text-decoration: underline;">ArcScan ↗</a>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--subtle-bg); border-radius: 12px;">
+                <div>
+                  <div style="font-size: 0.9rem; font-weight: 800; color: var(--ink);">Angers to Win</div>
+                  <div style="font-size: 0.75rem; color: var(--muted);">Angers vs Lille • Arc Testnet</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 0.9rem; font-weight: 800; color: #38bdf8;">$1.00 USDC</div>
+                  <div style="font-size: 0.75rem; color: #34d399; font-weight: 700;">Confirmed</div>
+                </div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--subtle-bg); border-radius: 12px;">
+                <div>
+                  <div style="font-size: 0.9rem; font-weight: 800; color: var(--ink);">Atalanta to Win</div>
+                  <div style="font-size: 0.75rem; color: var(--muted);">Atalanta vs Sassuolo • Arc Testnet</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 0.9rem; font-weight: 800; color: #38bdf8;">$1.00 USDC</div>
+                  <div style="font-size: 0.75rem; color: #34d399; font-weight: 700;">Confirmed</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ` : `
+          <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <span style="font-size: 0.95rem; font-weight: 800; color: var(--ink);">Deposits & Withdrawals</span>
+              <a href="https://testnet.arcscan.app/address/${state.walletAddress || '0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E'}" target="_blank" rel="noopener noreferrer" style="font-size: 0.8rem; font-weight: 700; color: #38bdf8; text-decoration: underline;">ArcScan ↗</a>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--subtle-bg); border-radius: 12px;">
+              <div>
+                <div style="font-size: 0.9rem; font-weight: 800; color: var(--ink);">USDC Faucet Deposit</div>
+                <div style="font-size: 0.75rem; color: var(--muted);">Arc Testnet</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 0.9rem; font-weight: 800; color: #34d399;">+20.00 USDC</div>
+                <div style="font-size: 0.75rem; color: var(--muted);">Completed</div>
+              </div>
+            </div>
+          </div>
+        `}
+      </div>
+
     </section>
   `;
+
+  // Attach Event Listeners
+  storyList.querySelectorAll(".portfolio-subtab-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const sub = btn.getAttribute("data-subtab") as any;
+      if (sub) {
+        (state as any).activePortfolioSubTab = sub;
+        renderPortfolio();
+      }
+    });
+  });
+
+  storyList.querySelectorAll(".pnl-tf-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const tf = btn.getAttribute("data-tf") as any;
+      if (tf) {
+        (state as any).pnlTimeframe = tf;
+        renderPortfolio();
+      }
+    });
+  });
+
+  storyList.querySelector("#startTradingBtn")?.addEventListener("click", () => {
+    topMarketsButton?.click();
+  });
+
+  storyList.querySelector("#portfolioDepositBtn")?.addEventListener("click", () => {
+    window.open("https://faucet.circle.com/", "_blank");
+  });
+
+  storyList.querySelector("#portfolioWithdrawBtn")?.addEventListener("click", () => {
+    showActionToast("Withdrawal available upon market settlement.");
+  });
+
+  storyList.querySelector("#editUsernameBtn")?.addEventListener("click", () => {
+    const newName = prompt("Enter new display name:", state.profileUsername || "");
+    if (newName && newName.trim()) {
+      state.profileUsername = newName.trim();
+      localStorage.setItem("siftle_username", newName.trim());
+      renderPortfolio();
+      showActionToast("Username updated!");
+    }
+  });
 };
 
 const render = (): void => {
