@@ -1,0 +1,236 @@
+﻿diff --git a/src/main.ts b/src/main.ts
+index 8afcaaa..d67f735 100644
+--- a/src/main.ts
++++ b/src/main.ts
+@@ -106,11 +106,61 @@ const readStoredTheme = (): AppTheme => {
+ 
+ let currentTheme: AppTheme = readStoredTheme();
+ 
++let trafficSource = "organic";
++
++function initTrafficSource() {
++  try {
++    let source = localStorage.getItem("siftle_traffic_source");
++    if (!source) {
++      const params = new URLSearchParams(window.location.search);
++      let ref = params.get("ref") || params.get("utm_source");
++      if (ref) {
++        ref = ref.trim().toLowerCase();
++        if (ref === "twitter") ref = "x";
++        if (ref === "instagram") ref = "ig";
++        if (ref === "whatsapp") ref = "wa";
++        if (ref === "discord") ref = "dc";
++        if (ref === "google_search" || ref === "google-search") ref = "google";
++        
++        if (["x", "ig", "wa", "dc", "google", "organic"].includes(ref)) {
++          source = ref;
++        } else {
++          source = ref.slice(0, 20);
++        }
++      } else {
++        const referrer = document.referrer;
++        if (referrer) {
++          if (/twitter\.com|x\.com|t\.co/i.test(referrer)) {
++            source = "x";
++          } else if (/instagram\.com/i.test(referrer)) {
++            source = "ig";
++          } else if (/whatsapp\.com|wa\.me/i.test(referrer)) {
++            source = "wa";
++          } else if (/discord\.com|discordapp\.com/i.test(referrer)) {
++            source = "dc";
++          } else if (/google\.com|google\.co/i.test(referrer)) {
++            source = "google";
++          }
++        }
++      }
++      if (!source) {
++        source = "organic";
++      }
++      localStorage.setItem("siftle_traffic_source", source);
++    }
++    trafficSource = source;
++  } catch (err) {
++    console.error("Failed to initialize traffic source:", err);
++  }
++}
++
++initTrafficSource();
++
+ function trackEvent(event: string) {
+   fetch(apiUrl("/api/analytics"), {
+     method: "POST",
+     headers: { "Content-Type": "application/json" },
+-    body: JSON.stringify({ event })
++    body: JSON.stringify({ event, source: trafficSource })
+   }).catch((err) => console.error("Failed to track event:", err));
+ }
+ 
+@@ -155,6 +205,8 @@ const state: {
+   activeMarketTimeframe: "All" | "Daily" | "Weekly" | "Sagas";
+   profileUsername: string | null;
+   profileNotice: ProfileNotice | null;
++  favoriteClub: string | null;
++  emailDigestEnabled: boolean;
+   portfolioMarketPreviews: MarketPreview[];
+   referralPanelOpen: boolean;
+   referralData: ReferralData | null;
+@@ -168,6 +220,8 @@ const state: {
+ } = {
+   activeSurface: "feed",
+   profileUsername: null,
++  favoriteClub: null,
++  emailDigestEnabled: true,
+   selectedMarketId: null,
+   marketOrderMode: "buy",
+   marketTradeSide: "yes",
+@@ -1568,14 +1622,47 @@ const profileUsernameKey = (address: string): string => `siftle_profile_username
+ 
+ const cleanProfileUsername = (value: string): string => value.trim().replace(/\s+/g, " ").slice(0, 15);
+ 
++const fetchUserProfile = async (address: string): Promise<void> => {
++  try {
++    const res = await fetch(apiUrl(`/api/profile?walletAddress=${encodeURIComponent(address)}`));
++    if (res.ok) {
++      const data = await res.json();
++      state.profileUsername = data.username || null;
++      state.favoriteClub = data.favoriteClub || null;
++      state.emailDigestEnabled = data.emailDigestEnabled !== false;
++      
++      const key = profileUsernameKey(address);
++      if (data.username) {
++        localStorage.setItem(key, data.username);
++      }
++      const addrLower = address.toLowerCase();
++      if (data.favoriteClub) {
++        localStorage.setItem(`siftle_favorite_club_${addrLower}`, data.favoriteClub);
++      } else {
++        localStorage.removeItem(`siftle_favorite_club_${addrLower}`);
++      }
++      localStorage.setItem(`siftle_email_digest_${addrLower}`, String(state.emailDigestEnabled));
++      
++      if (state.activeSurface === "portfolio") {
++        renderPortfolio();
++      }
++    }
++  } catch (err) {
++    console.error("Failed to fetch user profile:", err);
++  }
++};
++
+ const syncProfileUsernameForWallet = (): void => {
+   if (!state.walletAddress) {
+     state.profileUsername = null;
++    state.favoriteClub = null;
++    state.emailDigestEnabled = true;
+     state.profileNotice = null;
+     return;
+   }
+ 
+-  const key = profileUsernameKey(state.walletAddress);
++  const address = state.walletAddress;
++  const key = profileUsernameKey(address);
+   let username = localStorage.getItem(key);
+   const oldSharedUsername = localStorage.getItem("siftle_profile_username");
+   if (!username && oldSharedUsername) {
+@@ -1585,7 +1672,12 @@ const syncProfileUsernameForWallet = (): void => {
+   }
+ 
+   state.profileUsername = username || null;
++  const addrLower = address.toLowerCase();
++  state.favoriteClub = localStorage.getItem(`siftle_favorite_club_${addrLower}`) || null;
++  state.emailDigestEnabled = localStorage.getItem(`siftle_email_digest_${addrLower}`) !== "false";
+   state.profileNotice = null;
++
++  void fetchUserProfile(address);
+ };
+ 
+ const saveProfileUsernameForWallet = (username: string): void => {
+@@ -4414,6 +4506,36 @@ const renderPortfolio = (): void => {
+ 
+         ${profileNoticeHtml}
+ 
++        ${walletConnected ? `
++          <div class="profile-settings-section" style="margin-top: 14px !important; padding-top: 12px !important; border-top: 1px solid var(--market-border) !important;">
++            <div style="margin-bottom: 10px !important;">
++              <label for="favoriteClubSelect" style="font-size: 0.72rem !important; color: var(--market-text-muted) !important; display: block !important; margin-bottom: 6px !important; font-weight: 700 !important; text-transform: uppercase !important; letter-spacing: 0.05em !important;">Favorite Football Club</label>
++              <select id="favoriteClubSelect" style="width: 100% !important; background: var(--market-bg) !important; border: 1px solid var(--market-border) !important; border-radius: 6px !important; padding: 8px 12px !important; color: var(--market-text-main) !important; font-size: 0.85rem !important; outline: none !important; font-family: 'Outfit', sans-serif !important; cursor: pointer !important; box-sizing: border-box !important;">
++                <option value="">None (General news)</option>
++                <option value="arsenal" ${state.favoriteClub === "arsenal" ? "selected" : ""}>Γ¥ñ∩╕Å Arsenal</option>
++                <option value="chelsea" ${state.favoriteClub === "chelsea" ? "selected" : ""}>≡ƒÆÖ Chelsea</option>
++                <option value="manchester united" ${state.favoriteClub === "manchester united" ? "selected" : ""}>≡ƒÿê Manchester United</option>
++                <option value="liverpool" ${state.favoriteClub === "liverpool" ? "selected" : ""}>≡ƒö┤ Liverpool</option>
++                <option value="manchester city" ${state.favoriteClub === "manchester city" ? "selected" : ""}>≡ƒ⌐╡ Manchester City</option>
++                <option value="tottenham hotspur" ${state.favoriteClub === "tottenham hotspur" ? "selected" : ""}>ΓÜ¬ Tottenham Hotspur</option>
++                <option value="real madrid" ${state.favoriteClub === "real madrid" ? "selected" : ""}>≡ƒææ Real Madrid</option>
++                <option value="barcelona" ${state.favoriteClub === "barcelona" ? "selected" : ""}>≡ƒö╡≡ƒö┤ Barcelona</option>
++                <option value="bayern munich" ${state.favoriteClub === "bayern munich" ? "selected" : ""}>≡ƒö┤ΓÜ¬ Bayern Munich</option>
++                <option value="paris saint-germain" ${state.favoriteClub === "paris saint-germain" ? "selected" : ""}>≡ƒö╡≡ƒö┤ Paris Saint-Germain</option>
++              </select>
++            </div>
++            <div style="display: flex !important; align-items: center !important; justify-content: space-between !important; margin-top: 10px !important; gap: 12px !important;">
++              <span style="font-size: 0.82rem !important; color: var(--market-text-main) !important;">Daily Late-Day Email Digest</span>
++              <label style="position: relative; display: inline-flex; align-items: center; cursor: pointer;">
++                <input type="checkbox" id="emailDigestToggle" ${state.emailDigestEnabled ? "checked" : ""} style="position: absolute; opacity: 0; width: 0; height: 0;" />
++                <div style="width: 38px; height: 20px; background-color: ${state.emailDigestEnabled ? '#3b82f6' : 'rgba(255,255,255,0.15)'}; border-radius: 9999px; transition: background-color 0.2s ease; position: relative;">
++                  <div style="position: absolute; width: 16px; height: 16px; border-radius: 50%; background-color: #ffffff; top: 2px; left: ${state.emailDigestEnabled ? '20px' : '2px'}; transition: left 0.2s ease;"></div>
++                </div>
++              </label>
++            </div>
++          </div>
++        ` : ""}
++
+         <div class="portfolio-wallet-balance-row" style="margin-top: 12px !important; padding-top: 12px !important; border-top: 1px solid var(--market-border) !important; display: flex !important; justify-content: space-between !important; align-items: center !important; flex-wrap: wrap !important; gap: 12px !important;">
+           <div>
+             <span style="font-size: 0.72rem !important; color: var(--market-text-muted) !important; display: block !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; margin-bottom: 2px !important;">Available Balance</span>
+@@ -4669,6 +4791,51 @@ todayButton?.addEventListener("click", () => {
+   ensureFeedLoaded(state.activeCategory);
+ });
+ 
++const saveUserProfileSettings = async (favoriteClub: string | null, emailDigestEnabled: boolean) => {
++  if (!state.walletAddress) return;
++  try {
++    const res = await fetch(apiUrl("/api/profile/update"), {
++      method: "POST",
++      headers: { "Content-Type": "application/json" },
++      body: JSON.stringify({
++        walletAddress: state.walletAddress,
++        favoriteClub,
++        emailDigestEnabled
++      })
++    });
++    if (res.ok) {
++      state.favoriteClub = favoriteClub;
++      state.emailDigestEnabled = emailDigestEnabled;
++      const address = state.walletAddress.toLowerCase();
++      if (favoriteClub) {
++        localStorage.setItem(`siftle_favorite_club_${address}`, favoriteClub);
++      } else {
++        localStorage.removeItem(`siftle_favorite_club_${address}`);
++      }
++      localStorage.setItem(`siftle_email_digest_${address}`, String(emailDigestEnabled));
++      showActionToast("Preferences updated successfully");
++    } else {
++      const errData = await res.json();
++      showActionToast(errData.error || "Failed to save settings");
++    }
++  } catch (err) {
++    console.error("Failed to save user settings:", err);
++    showActionToast("Failed to save preferences. Please try again.");
++  }
++};
++
++storyList?.addEventListener("change", async (event) => {
++  const target = event.target as HTMLElement;
++  if (target.id === "favoriteClubSelect") {
++    const favoriteClub = (target as HTMLSelectElement).value || null;
++    await saveUserProfileSettings(favoriteClub, state.emailDigestEnabled);
++  } else if (target.id === "emailDigestToggle") {
++    const emailDigestEnabled = (target as HTMLInputElement).checked;
++    await saveUserProfileSettings(state.favoriteClub, emailDigestEnabled);
++    renderPortfolio();
++  }
++});
++
+ storyList?.addEventListener("click", async (event) => {
+   const target = event.target as HTMLElement;
+ 

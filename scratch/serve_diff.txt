@@ -1,0 +1,698 @@
+﻿diff --git a/scripts/serve.mjs b/scripts/serve.mjs
+index cc608ed..3e41903 100644
+--- a/scripts/serve.mjs
++++ b/scripts/serve.mjs
+@@ -6754,10 +6754,14 @@ function normalizeAnalytics(data = {}) {
+     totals[key] = hasDailyRows ? (Number(dailyTotals[key]) || 0) : (Number(storedTotals[key]) || 0);
+   });
+ 
++  const sources_daily = data.sources_daily && typeof data.sources_daily === "object" ? data.sources_daily : {};
++
+   return {
+     ...data,
+     totals,
+     daily,
++    sources_daily,
++    profiles: data.profiles && typeof data.profiles === "object" ? data.profiles : {},
+     emails: Array.isArray(data.emails) ? data.emails : []
+   };
+ }
+@@ -6924,6 +6928,26 @@ async function loadAnalyticsFromSupabase(localData = loadAnalytics()) {
+       });
+       data.daily[dateKey] = merged;
+     });
++
++    try {
++      const sourceRows = await supabaseRequest("analytics_sources_daily?select=date_key,source,app_open,sign_up,ai_unlock_success");
++      (sourceRows || []).forEach((row) => {
++        const dateKey = String(row.date_key || "").trim();
++        const source = String(row.source || "").trim();
++        if (!dateKey || !source) return;
++
++        data.sources_daily[dateKey] = data.sources_daily[dateKey] || {};
++        const existing = data.sources_daily[dateKey][source] || { app_open: 0, sign_up: 0, ai_unlock_success: 0 };
++        data.sources_daily[dateKey][source] = {
++          app_open: Math.max(Number(existing.app_open) || 0, Number(row.app_open) || 0),
++          sign_up: Math.max(Number(existing.sign_up) || 0, Number(row.sign_up) || 0),
++          ai_unlock_success: Math.max(Number(existing.ai_unlock_success) || 0, Number(row.ai_unlock_success) || 0)
++        };
++      });
++    } catch (sourceDbErr) {
++      console.warn("[SUPABASE] Source analytics read failed; using local fallback:", sourceDbErr.message);
++    }
++
+     return normalizeAnalytics(data);
+   } catch (err) {
+     console.warn("[SUPABASE] Analytics read failed; using local fallback:", err.message);
+@@ -8582,6 +8606,457 @@ function trackAnalyticsEvent(event, email = null) {
+   return incrementAnalyticsEventInSupabase(cleanEvent, email);
+ }
+ 
++export const sanitizeTrafficSource = (source) => {
++  const clean = String(source || "organic").trim().toLowerCase();
++  const allowed = ["x", "ig", "wa", "dc", "google", "organic"];
++  return allowed.includes(clean) ? clean : "organic";
++};
++
++export const clubKeywords = {
++  "arsenal": ["arsenal"],
++  "chelsea": ["chelsea"],
++  "manchester united": ["manchester united", "man united", "man utd", "mufc"],
++  "liverpool": ["liverpool"],
++  "manchester city": ["manchester city", "man city", "mcfc"],
++  "tottenham hotspur": ["tottenham", "hotspur", "spurs"],
++  "real madrid": ["real madrid", "madrid"],
++  "barcelona": ["barcelona", "barca"],
++  "bayern munich": ["bayern", "munich"],
++  "paris saint-germain": ["paris saint-germain", "psg"]
++};
++
++export function storyMatchesClub(story, club) {
++  if (!club) return false;
++  const keywords = clubKeywords[club.toLowerCase()];
++  if (!keywords) return false;
++  
++  const textToSearch = [
++    story.headline,
++    story.summary,
++    story.ai_summary,
++    story.source
++  ].filter(Boolean).join(" ").toLowerCase();
++  
++  return keywords.some(keyword => textToSearch.includes(keyword));
++}
++
++export function filterOldStories(stories, relativeTo = Date.now()) {
++  const maxAgeMs = 24 * 60 * 60 * 1000; // 24 hours
++  return stories.filter(story => {
++    if (!story.publishedAt) return true;
++    const pubDate = new Date(story.publishedAt);
++    if (isNaN(pubDate.getTime())) return true;
++    return (relativeTo - pubDate.getTime()) <= maxAgeMs;
++  });
++}
++
++export async function sendEmail({ to, subject, html, text }) {
++  let emailSent = false;
++  const resendApiKey = process.env.RESEND_API_KEY;
++
++  if (resendApiKey) {
++    try {
++      const resendFrom = process.env.RESEND_FROM || "Siftle <onboarding@resend.dev>";
++      const res = await fetch("https://api.resend.com/emails", {
++        method: "POST",
++        headers: {
++          "Content-Type": "application/json",
++          "Authorization": `Bearer ${resendApiKey.trim().replace(/^["']|["']$/g, "")}`
++        },
++        body: JSON.stringify({
++          from: resendFrom,
++          to: [to],
++          subject,
++          html
++        })
++      });
++      const resText = await res.text();
++      if (res.ok) {
++        emailSent = true;
++        console.log(`Email sent via Resend API to ${to}`);
++      } else {
++        console.warn(`Resend API send failed: ${res.status} -> ${resText}`);
++      }
++    } catch (resendErr) {
++      console.warn(`Failed to send email via Resend API: ${resendErr.message}`);
++    }
++  }
++
++  if (!emailSent) {
++    const smtpHost = process.env.SMTP_HOST;
++    const smtpUser = process.env.SMTP_USER;
++    const smtpPass = process.env.SMTP_PASS;
++    if (smtpHost && smtpUser && smtpPass) {
++      try {
++        let resolvedHost = smtpHost;
++        try {
++          const { resolve4 } = await import("node:dns/promises");
++          const addresses = await resolve4(smtpHost);
++          if (addresses && addresses.length > 0) {
++            resolvedHost = addresses[0];
++            console.log(`SMTP: Resolved ${smtpHost} -> ${resolvedHost} (IPv4)`);
++          }
++        } catch (dnsErr) {
++          console.warn(`SMTP DNS resolve4 failed for ${smtpHost}, using hostname directly: ${dnsErr.message}`);
++        }
++
++        const smtpPort = Number(process.env.SMTP_PORT || 587);
++        const transporter = nodemailer.createTransport({
++          host: resolvedHost,
++          port: smtpPort,
++          secure: smtpPort === 465,
++          auth: { user: smtpUser, pass: smtpPass },
++          family: 4,
++          tls: { servername: smtpHost },
++          connectionTimeout: 10000,
++          greetingTimeout: 10000,
++          socketTimeout: 15000
++        });
++
++        const randomId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
++        const customMessageId = `<${randomId}@gmail.com>`;
++
++        await transporter.sendMail({
++          messageId: customMessageId,
++          from: `Siftle <${smtpUser}>`,
++          to,
++          replyTo: smtpUser,
++          subject,
++          text: text || "",
++          html,
++          headers: {
++            "X-Priority": "1",
++            "X-MSMail-Priority": "High",
++            "Importance": "high",
++            "X-Mailer": "Siftle Mailer",
++            "X-Auto-Response-Suppress": "All",
++            "Feedback-ID": "siftle:system"
++          }
++        });
++        emailSent = true;
++        console.log(`Email sent via SMTP to ${to}`);
++      } catch (mailErr) {
++        console.warn(`Failed to send SMTP email: ${mailErr.message}`);
++      }
++    }
++  }
++
++  if (!emailSent) {
++    console.log(`\n==========================================\n[EMAIL NOT SENT] To: ${to}\nSubject: ${subject}\n==========================================\n`);
++  }
++
++  return emailSent;
++}
++
++export async function sendPersonalizedClubDigests() {
++  console.log("[CLUB DIGEST] Starting personalized club digest execution...");
++  
++  // 1. Get Sports Category news stories
++  let sportsFeed;
++  try {
++    sportsFeed = await getPublishedFeed("Sports");
++  } catch (feedErr) {
++    console.error("[CLUB DIGEST] Failed to fetch Sports feed:", feedErr.message);
++    return { sent: 0, skipped: 0, error: `Failed to fetch Sports feed: ${feedErr.message}` };
++  }
++  
++  const stories = sportsFeed?.top_stories || [];
++  if (stories.length === 0) {
++    console.log("[CLUB DIGEST] No stories found in Sports feed today. Skipping digests.");
++    return { sent: 0, skipped: 0, reason: "No stories found in Sports feed" };
++  }
++  
++  const freshStories = filterOldStories(stories);
++  if (freshStories.length === 0) {
++    console.log("[CLUB DIGEST] No fresh stories found in Sports feed today. Skipping digests.");
++    return { sent: 0, skipped: 0, reason: "No fresh stories found in Sports feed" };
++  }
++  
++  // 2. Fetch all profiles
++  let profiles = [];
++  if (isSupabaseConfigured) {
++    try {
++      profiles = await supabaseRequest("profiles?select=wallet_address,email,favorite_club,email_digest_enabled");
++    } catch (dbErr) {
++      console.warn("[CLUB DIGEST] Failed to fetch profiles from Supabase, using local fallback:", dbErr.message);
++    }
++  }
++  
++  const localData = loadAnalytics();
++  const localProfiles = localData.profiles || {};
++  const mergedProfilesMap = new Map();
++  
++  Object.entries(localProfiles).forEach(([address, p]) => {
++    const cleanAddress = address.toLowerCase();
++    mergedProfilesMap.set(cleanAddress, {
++      wallet_address: cleanAddress,
++      email: p.email || null,
++      favorite_club: p.favoriteClub || null,
++      email_digest_enabled: p.emailDigestEnabled !== false
++    });
++  });
++  
++  (profiles || []).forEach(p => {
++    if (p.wallet_address) {
++      const cleanAddress = p.wallet_address.toLowerCase();
++      const existing = mergedProfilesMap.get(cleanAddress) || {};
++      mergedProfilesMap.set(cleanAddress, {
++        ...existing,
++        wallet_address: cleanAddress,
++        email: p.email || existing.email,
++        favorite_club: p.favorite_club !== undefined ? p.favorite_club : existing.favorite_club,
++        email_digest_enabled: p.email_digest_enabled !== undefined ? p.email_digest_enabled : existing.email_digest_enabled
++      });
++    }
++  });
++  
++  // 3. Construct Email Map
++  const emailMap = new Map();
++  const localUsers = loadBackendWalletUsers();
++  Object.values(localUsers).forEach(u => {
++    if (u.address && u.email) {
++      emailMap.set(u.address.toLowerCase(), u.email.toLowerCase());
++    }
++  });
++  
++  if (isSupabaseConfigured) {
++    try {
++      const dbUsers = await supabaseRequest("backend_wallet_users?select=email,wallet_address");
++      (dbUsers || []).forEach(u => {
++        if (u.wallet_address && u.email) {
++          emailMap.set(u.wallet_address.toLowerCase(), u.email.toLowerCase());
++        }
++      });
++    } catch (dbUsersErr) {
++      console.warn("[CLUB DIGEST] Failed to load backend_wallet_users from Supabase:", dbUsersErr.message);
++    }
++  }
++  
++  // 4. Send emails
++  const appUrl = process.env.APP_URL || "https://siftle.xyz";
++  let sentCount = 0;
++  let skippedCount = 0;
++  
++  const clubEmojis = {
++    "arsenal": "Γ¥ñ∩╕Å",
++    "chelsea": "≡ƒÆÖ",
++    "manchester united": "≡ƒÿê",
++    "liverpool": "≡ƒö┤",
++    "manchester city": "≡ƒ⌐╡",
++    "tottenham hotspur": "ΓÜ¬",
++    "real madrid": "≡ƒææ",
++    "barcelona": "≡ƒö╡≡ƒö┤",
++    "bayern munich": "≡ƒö┤ΓÜ¬",
++    "paris saint-germain": "≡ƒö╡≡ƒö┤"
++  };
++  
++  for (const profile of mergedProfilesMap.values()) {
++    const favoriteClub = profile.favorite_club;
++    const emailDigestEnabled = profile.email_digest_enabled !== false;
++    
++    if (!favoriteClub || !emailDigestEnabled) {
++      skippedCount++;
++      continue;
++    }
++    
++    let email = profile.email;
++    if (!email && profile.wallet_address) {
++      email = emailMap.get(profile.wallet_address.toLowerCase());
++    }
++    
++    if (!email) {
++      skippedCount++;
++      continue;
++    }
++    
++    const matchingStories = freshStories.filter(story => storyMatchesClub(story, favoriteClub));
++    if (matchingStories.length === 0) {
++      skippedCount++;
++      continue;
++    }
++    
++    const clubEmoji = clubEmojis[favoriteClub.toLowerCase()] || "ΓÜ╜";
++    const clubName = favoriteClub.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
++    
++    const storiesHtml = matchingStories.map(story => `
++      <div style="margin-bottom: 24px; padding: 18px; background-color: #1e293b; border: 1px solid #334155; border-radius: 8px;">
++        <div style="font-size: 12px; color: #94a3b8; margin-bottom: 8px; font-weight: 500;">
++          ${story.source} &middot; ${story.readTime || '3 min read'}
++        </div>
++        <h3 style="margin: 0 0 10px 0; color: #ffffff; font-size: 16px; line-height: 1.4; font-weight: 700;">
++          ${story.headline}
++        </h3>
++        <p style="margin: 0 0 16px 0; color: #cbd5e1; font-size: 14px; line-height: 1.5;">
++          ${story.summary}
++        </p>
++        <a href="${appUrl}/#story-${story.id}" target="_blank" style="display: inline-block; background-color: #4f46e5; color: #ffffff; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px; text-align: center;">
++          Read AI Briefing &rarr;
++        </a>
++      </div>
++    `).join("");
++    
++    const htmlContent = `
++      <!DOCTYPE html>
++      <html>
++      <head>
++        <meta charset="utf-8">
++        <meta name="viewport" content="width=device-width, initial-scale=1.0">
++        <title>Siftle Daily Club Roundup</title>
++      </head>
++      <body style="margin: 0; padding: 0; background-color: #0b0f19; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #f1f5f9;">
++        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
++          <!-- Header -->
++          <div style="padding: 32px 24px; text-align: center; border-radius: 12px 12px 0 0; background: linear-gradient(135deg, #1e1b4b 0%, #111827 100%); border: 1px solid #1f2937; border-bottom: none;">
++            <div style="font-size: 28px; font-weight: 800; color: #ffffff; letter-spacing: 2px; margin-bottom: 4px;">SIFTLE</div>
++            <div style="font-size: 14px; color: #94a3b8; font-weight: 500;">DAILY CLUB ROUNDUP</div>
++          </div>
++          
++          <!-- Content Banner -->
++          <div style="padding: 24px; background-color: #111827; border: 1px solid #1f2937; text-align: center; border-bottom: none;">
++            <span style="font-size: 24px; margin-bottom: 8px; display: inline-block;">${clubEmoji}</span>
++            <h2 style="margin: 0 0 8px 0; color: #ffffff; font-size: 20px;">Your ${clubName} Digest</h2>
++            <p style="margin: 0; color: #94a3b8; font-size: 14px; line-height: 1.5;">Here are today's top stories matching your preferences. Tap below to read their AI briefings.</p>
++          </div>
++          
++          <!-- Stories List -->
++          <div style="padding: 24px; background-color: #111827; border: 1px solid #1f2937; border-top: none; border-bottom: none;">
++            ${storiesHtml}
++          </div>
++          
++          <!-- Footer -->
++          <div style="padding: 24px; background-color: #0d121f; border: 1px solid #1f2937; border-radius: 0 0 12px 12px; text-align: center; font-size: 11px; color: #64748b; line-height: 1.6;">
++            <p style="margin: 0 0 8px 0;">You are receiving this because you enabled late-day digests on Siftle.</p>
++            <p style="margin: 0 0 16px 0;"><a href="${appUrl}/#portfolio" style="color: #6366f1; text-decoration: none; font-weight: 600;">Manage email preferences</a></p>
++            <p style="margin: 0;">&copy; 2026 Siftle. All rights reserved.</p>
++          </div>
++        </div>
++      </body>
++      </html>
++    `;
++    
++    try {
++      const emailSent = await sendEmail({
++        to: email,
++        subject: `${clubEmoji} Siftle: Your Daily ${clubName} Roundup`,
++        html: htmlContent,
++        text: `Your Daily ${clubName} Roundup from Siftle. Head over to ${appUrl}/#portfolio to manage preferences.`
++      });
++      if (emailSent) sentCount++;
++      else skippedCount++;
++    } catch (sendErr) {
++      console.error(`[CLUB DIGEST] Failed to send email to ${email}:`, sendErr.message);
++      skippedCount++;
++    }
++  }
++  
++  return { sent: sentCount, skipped: skippedCount };
++}
++
++const digestMetadataFile = join(root, ".siftle", "digest-metadata.json");
++const readDigestMetadata = () => {
++  if (!existsSync(digestMetadataFile)) return { lastRunDate: "" };
++  try {
++    return JSON.parse(readFileSync(digestMetadataFile, "utf8"));
++  } catch {
++    return { lastRunDate: "" };
++  }
++};
++const writeDigestMetadata = (metadata) => {
++  try {
++    ensureLocalStoreDir();
++    writeFileSync(digestMetadataFile, JSON.stringify(metadata, null, 2), "utf8");
++  } catch (err) {
++    console.warn("[CLUB DIGEST] Failed to save digest metadata:", err.message);
++  }
++};
++
++export const startClubDigestScheduler = () => {
++  setInterval(async () => {
++    try {
++      const now = new Date();
++      const currentUtcDate = now.toISOString().slice(0, 10);
++      const currentUtcHour = now.getUTCHours();
++      
++      if (currentUtcHour >= 21) {
++        const metadata = readDigestMetadata();
++        if (metadata.lastRunDate !== currentUtcDate) {
++          console.log(`[CLUB DIGEST] Triggering scheduled daily digests for ${currentUtcDate} at ${now.toISOString()}`);
++          metadata.lastRunDate = currentUtcDate;
++          writeDigestMetadata(metadata);
++          
++          await sendPersonalizedClubDigests().catch((err) => {
++            console.error("[CLUB DIGEST] Scheduled send failed:", err.message);
++          });
++        }
++      }
++    } catch (err) {
++      console.error("[CLUB DIGEST] Scheduler check error:", err.message);
++    }
++  }, 10 * 60 * 1000);
++};
++
++async function trackTrafficSourceEvent(source, event) {
++  const cleanSource = sanitizeTrafficSource(source);
++  const cleanEvent = String(event || "").trim();
++  
++  const allowedEvents = ["app_open", "sign_up", "ai_unlock_success"];
++  if (!allowedEvents.includes(cleanEvent)) {
++    return { saved: false, skipped: true };
++  }
++
++  // Update local fallback
++  const data = normalizeAnalytics(loadAnalytics());
++  if (!data.sources_daily) {
++    data.sources_daily = {};
++  }
++  const dateKey = getTodayKey();
++  if (!data.sources_daily[dateKey]) {
++    data.sources_daily[dateKey] = {};
++  }
++  if (!data.sources_daily[dateKey][cleanSource]) {
++    data.sources_daily[dateKey][cleanSource] = {
++      app_open: 0,
++      sign_up: 0,
++      ai_unlock_success: 0
++    };
++  }
++  
++  data.sources_daily[dateKey][cleanSource][cleanEvent] = (data.sources_daily[dateKey][cleanSource][cleanEvent] || 0) + 1;
++  saveAnalytics(data);
++
++  if (!isSupabaseConfigured) {
++    return { saved: false, skipped: true };
++  }
++
++  try {
++    const encodedDate = encodeURIComponent(dateKey);
++    const encodedSource = encodeURIComponent(cleanSource);
++    const existingRows = await supabaseRequest(`analytics_sources_daily?date_key=eq.${encodedDate}&source=eq.${encodedSource}&select=app_open,sign_up,ai_unlock_success`);
++    const existing = existingRows?.[0] || {};
++    
++    const nextRow = {
++      date_key: dateKey,
++      source: cleanSource,
++      app_open: Number(existing.app_open) || 0,
++      sign_up: Number(existing.sign_up) || 0,
++      ai_unlock_success: Number(existing.ai_unlock_success) || 0,
++      updated_at: new Date().toISOString()
++    };
++    
++    nextRow[cleanEvent] += 1;
++    
++    await supabaseRequest("analytics_sources_daily?on_conflict=date_key,source", {
++      method: "POST",
++      prefer: "resolution=merge-duplicates,return=minimal",
++      body: [nextRow]
++    });
++    return { saved: true };
++  } catch (err) {
++    console.warn("[SUPABASE] Analytics source write failed; local JSON fallback kept:", err.message);
++    return { saved: false, error: err.message };
++  }
++}
++
+ function getAnalyticsHtml() {
+   return `<!DOCTYPE html>
+ <html lang="en">
+@@ -9695,6 +10170,33 @@ const server = createServer(async (request, response) => {
+     return;
+   }
+ 
++  if (requestUrl.pathname === "/api/admin/send-club-digests" && request.method === "POST") {
++    try {
++      const body = await readJsonBody(request);
++      const configuredToken = String(process.env.SIFTLE_ADMIN_TOKEN || "").trim();
++      const providedToken = String(body.adminToken || request.headers["x-siftle-admin-token"] || "").trim();
++      if (configuredToken && providedToken !== configuredToken) {
++        sendJson(response, 401, { error: "Unauthorized" });
++        return;
++      }
++      if (!configuredToken && !isLocalRequest(request)) {
++        sendJson(response, 401, { error: "Admin token is required" });
++        return;
++      }
++
++      const digestResult = await sendPersonalizedClubDigests();
++      sendJson(response, 200, {
++        ok: true,
++        sent: digestResult.sent,
++        skipped: digestResult.skipped,
++        error: digestResult.error
++      });
++    } catch (err) {
++      sendJson(response, 500, { error: err.message });
++    }
++    return;
++  }
++
+   if (requestUrl.pathname === "/api/backend-wallet/trade" && request.method === "POST") {
+     if (!requireBackendWalletMode(request, response)) return;
+     try {
+@@ -9933,11 +10435,20 @@ const server = createServer(async (request, response) => {
+       const body = await readJsonBody(request);
+       if (body && body.event) {
+         const supabaseResult = await trackAnalyticsEvent(body.event);
++        let sourceResult = null;
++        if (body.source || ["app_open", "sign_up", "ai_unlock_success"].includes(body.event)) {
++          try {
++            sourceResult = await trackTrafficSourceEvent(body.source, body.event);
++          } catch (sourceErr) {
++            console.warn("[ANALYTICS] Source tracking warning:", sourceErr.message);
++          }
++        }
+         sendJson(response, 200, {
+           success: true,
+           supabaseConfigured: isSupabaseConfigured,
+           supabaseSaved: Boolean(supabaseResult?.saved),
+-          supabaseError: supabaseResult?.error || ""
++          supabaseError: supabaseResult?.error || "",
++          sourceTracked: Boolean(sourceResult?.saved)
+         });
+       } else {
+         sendJson(response, 400, { error: "Event name is required" });
+@@ -10236,6 +10747,7 @@ const server = createServer(async (request, response) => {
+       const body = await readJsonBody(request);
+       const email = normalizeEmail(body.email);
+       const otp = normalizeOtpCode(body.otp);
++      const source = body.source || "organic";
+ 
+       if (!email || !otp) {
+         sendJson(response, 400, { error: "Email and OTP code are required" });
+@@ -10256,6 +10768,7 @@ const server = createServer(async (request, response) => {
+         const walletAddress = "0x12793cA4f495f5255C423128b1ED9Cd71B08023D";
+         try {
+           trackAnalyticsEvent("sign_up", cleanEmail);
++          void trackTrafficSourceEvent(source, "sign_up").catch(err => console.warn("[ANALYTICS] mock source sign_up fail:", err.message));
+         } catch (err) {
+           console.error("Failed to track mock sign_up event:", err);
+         }
+@@ -10303,6 +10816,7 @@ const server = createServer(async (request, response) => {
+         // 3. No ARC-TESTNET wallet found. Initialize user/wallet.
+         try {
+           trackAnalyticsEvent("sign_up", cleanEmail);
++          void trackTrafficSourceEvent(source, "sign_up").catch(err => console.warn("[ANALYTICS] real source sign_up fail:", err.message));
+         } catch (err) {
+           console.error("Failed to track real sign_up event:", err);
+         }
+@@ -10660,6 +11174,98 @@ const server = createServer(async (request, response) => {
+     return;
+   }
+ 
++  if (requestUrl.pathname === "/api/profile" && request.method === "GET") {
++    try {
++      const walletAddress = normalizeWalletAddress(requestUrl.searchParams.get("walletAddress") || "");
++      if (!walletAddress) {
++        sendJson(response, 400, { error: "Missing walletAddress" });
++        return;
++      }
++
++      let profileData = { favoriteClub: null, emailDigestEnabled: true, username: "" };
++
++      if (isSupabaseConfigured) {
++        try {
++          const rows = await supabaseRequest(`profiles?select=favorite_club,email_digest_enabled,username&wallet_address=eq.${encodeURIComponent(walletAddress)}`);
++          if (rows && rows.length > 0) {
++            profileData.favoriteClub = rows[0].favorite_club || null;
++            profileData.emailDigestEnabled = rows[0].email_digest_enabled !== false;
++            profileData.username = rows[0].username || "";
++          }
++        } catch (dbErr) {
++          console.warn("[API] DB query profile failed, using local fallback:", dbErr.message);
++        }
++      }
++
++      const data = loadAnalytics();
++      const localProfile = data.profiles?.[walletAddress] || {};
++      if (profileData.favoriteClub === null) {
++        profileData.favoriteClub = localProfile.favoriteClub || null;
++      }
++      if (profileData.username === "") {
++        profileData.username = localProfile.username || data.leaderboard?.traders?.[walletAddress]?.username || "";
++      }
++
++      sendJson(response, 200, profileData);
++    } catch (error) {
++      sendJson(response, 500, { error: error.message });
++    }
++    return;
++  }
++
++  if (requestUrl.pathname === "/api/profile/update" && request.method === "POST") {
++    try {
++      const body = await readJsonBody(request);
++      const walletAddress = normalizeWalletAddress(body?.walletAddress || "");
++      if (!walletAddress) {
++        sendJson(response, 400, { error: "Missing walletAddress" });
++        return;
++      }
++
++      const favoriteClub = body.favoriteClub || null;
++      const emailDigestEnabled = body.emailDigestEnabled !== false;
++      const username = body.username !== undefined ? String(body.username).trim().slice(0, 15) : undefined;
++
++      if (isSupabaseConfigured) {
++        try {
++          const updateObj = {
++            wallet_address: walletAddress,
++            favorite_club: favoriteClub,
++            email_digest_enabled: emailDigestEnabled
++          };
++          if (username !== undefined) {
++            updateObj.username = username;
++          }
++          await supabaseRequest("profiles", "POST", updateObj, {
++            "Prefer": "resolution=merge-duplicates"
++          });
++        } catch (dbErr) {
++          console.warn("[API] DB save profile failed, relying on local fallback:", dbErr.message);
++        }
++      }
++
++      const data = loadAnalytics();
++      data.profiles = data.profiles || {};
++      data.profiles[walletAddress] = {
++        ...data.profiles[walletAddress],
++        favoriteClub,
++        emailDigestEnabled
++      };
++      if (username !== undefined) {
++        data.profiles[walletAddress].username = username;
++        if (data.leaderboard?.traders?.[walletAddress]) {
++          data.leaderboard.traders[walletAddress].username = username;
++        }
++      }
++      saveAnalytics(data);
++
++      sendJson(response, 200, { success: true });
++    } catch (error) {
++      sendJson(response, 500, { error: error.message });
++    }
++    return;
++  }
++
+   if (requestUrl.pathname === "/api/market-thread" && request.method === "GET") {
+     try {
+       const marketId = requestUrl.searchParams.get("id") ?? "";
+@@ -11095,6 +11701,14 @@ if (isMain) {
+   server.listen(port, () => {
+     console.log(`Siftle frontend running at http://localhost:${port}`);
+     
++    // Start club digest scheduler
++    try {
++      // startClubDigestScheduler();
++      console.log("[CLUB DIGEST] Scheduler is disabled for now.");
++    } catch (schedErr) {
++      console.error("[CLUB DIGEST] Failed to start scheduler:", schedErr.message);
++    }
++
+     // Diagnostic Circle config check
+     const key = process.env.CIRCLE_API_KEY;
+     if (key) {

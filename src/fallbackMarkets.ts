@@ -1,5 +1,43 @@
 export const fallbackMarketPreviews: any[] = [
   {
+    "id": "m-barcelona-athleticclub",
+    "question": "Barcelona vs Athletic Club",
+    "category": "Football",
+    "timeframe": "Daily",
+    "homeTeam": "Barcelona",
+    "awayTeam": "Athletic Club",
+    "homeCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/83.png",
+    "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/93.png",
+    "league": "Spanish LaLiga",
+    "factoryAddress": "0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E",
+    "isOptionMarket": true,
+    "marketType": "option",
+    "statusDetail": "Today • 08:30 PM",
+    "isLive": false,
+    "options": [
+      {
+        "id": "home",
+        "label": "Barcelona"
+      },
+      {
+        "id": "draw",
+        "label": "Draw"
+      },
+      {
+        "id": "away",
+        "label": "Athletic Club"
+      }
+    ],
+    "initialOptionPools": {
+      "home": 0,
+      "draw": 0,
+      "away": 0
+    },
+    "volumeUsdc": 0,
+    "optionMarket": true,
+    "closes": "Today"
+  },
+  {
     "id": "m-crystalpalace-manchestercity",
     "question": "Crystal Palace vs Manchester City",
     "category": "Football",

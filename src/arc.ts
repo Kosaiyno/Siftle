@@ -103,6 +103,7 @@ export interface ArcMarketPosition {
   claimedAmountUsdc?: number;
   claimTxHash?: string | null;
   autoClaimed?: boolean;
+  [key: string]: any;
 }
 
 export interface ArcClaimResult {

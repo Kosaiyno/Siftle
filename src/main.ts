@@ -249,6 +249,8 @@ const state: {
   portfolioFilter: "open" | "finalized";
   activePortfolioSubTab?: "open_orders" | "closed_orders" | "trade_history" | "wins_losses";
   pnlTimeframe?: "1D" | "1W" | "1M" | "1Y" | "all";
+  userSeasonPoints?: number;
+  [key: string]: any;
 } = {
   activeSurface: "feed",
   profileUsername: null,
@@ -325,6 +327,8 @@ const pendingReferralCode = new URLSearchParams(window.location.search).get("ref
 if (pendingReferralCode) localStorage.setItem("siftle_pending_referral_code", pendingReferralCode.trim().toUpperCase());
 
 interface MarketPreview {
+  [key: string]: any;
+  volumeUsdc?: number;
   customOdds?: { home: number; draw: number; away: number };
   id: string;
   category: Exclude<Category, "All">;
@@ -5462,6 +5466,7 @@ const showTradeSuccessModal = (info: {
         optionLabel: optionName,
         optionSharesUsdc: totalStake,
         yesSharesUsdc: totalStake,
+        noSharesUsdc: 0,
         stakePlaced: totalStake,
         costBasisUsdc: totalStake,
         entryPriceCents: priceCents,

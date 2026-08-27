@@ -1,0 +1,142 @@
+import fs from "node:fs";
+import { join } from "node:path";
+
+const root = "C:/Users/user/Desktop/Siftle";
+const filePath = join(root, "data", "active_markets.json");
+
+const newMarkets = [
+  {
+    "id": "transfer-yan-diomande-real-madrid",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "optionMarket": true,
+    "question": "Will Yan Diomande transfer to Real Madrid this summer?",
+    "options": [
+      { "id": "yes", "label": "Yes" },
+      { "id": "no", "label": "No" }
+    ],
+    "probability": 0,
+    "kickoffAt": "2026-07-25T11:00:00Z",
+    "expectedEndAt": "2026-09-01T23:00:00Z",
+    "resolveAfter": "2026-09-02T12:00:00Z",
+    "closes": "Sep 1, 11:00 PM GMT+1",
+    "resolution": "Resolves to 'Yes' if Real Madrid officially announces the signing of Yan Diomande on a permanent contract or loan deal during the Summer 2026 transfer window. Otherwise, resolves to 'No'.",
+    "threadTopic": "Yan Diomande to Real Madrid Saga",
+    "volume": "$0",
+    "traders": "0",
+    "liquidity": "$0",
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
+    "points": 500
+  },
+  {
+    "id": "transfer-bruno-guimaraes-arsenal",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "optionMarket": true,
+    "question": "Will Bruno Guimarães transfer to Arsenal this summer?",
+    "options": [
+      { "id": "yes", "label": "Yes" },
+      { "id": "no", "label": "No" }
+    ],
+    "probability": 0,
+    "kickoffAt": "2026-07-25T11:00:00Z",
+    "expectedEndAt": "2026-09-01T23:00:00Z",
+    "resolveAfter": "2026-09-02T12:00:00Z",
+    "closes": "Sep 1, 11:00 PM GMT+1",
+    "resolution": "Resolves to 'Yes' if Arsenal officially announces the signing of Bruno Guimarães on a permanent contract or loan deal during the Summer 2026 transfer window. Otherwise, resolves to 'No'.",
+    "threadTopic": "Bruno Guimaraes to Arsenal",
+    "volume": "$0",
+    "traders": "0",
+    "liquidity": "$0",
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
+    "points": 500
+  },
+  {
+    "id": "transfer-bradley-barcola-premier-league",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "optionMarket": true,
+    "question": "Will Bradley Barcola transfer to a Premier League club this summer?",
+    "options": [
+      { "id": "yes", "label": "Yes" },
+      { "id": "no", "label": "No" }
+    ],
+    "probability": 0,
+    "kickoffAt": "2026-07-25T11:00:00Z",
+    "expectedEndAt": "2026-09-01T23:00:00Z",
+    "resolveAfter": "2026-09-02T12:00:00Z",
+    "closes": "Sep 1, 11:00 PM GMT+1",
+    "resolution": "Resolves to 'Yes' if Bradley Barcola signs for any Premier League club (permanent or loan) during the Summer 2026 transfer window. Otherwise, resolves to 'No'.",
+    "threadTopic": "Bradley Barcola to Premier League",
+    "volume": "$0",
+    "traders": "0",
+    "liquidity": "$0",
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
+    "points": 500
+  },
+  {
+    "id": "transfer-orlando-gill-manchester-united",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "optionMarket": true,
+    "question": "Will goalkeeper Orlando Gill sign for Manchester United this summer?",
+    "options": [
+      { "id": "yes", "label": "Yes" },
+      { "id": "no", "label": "No" }
+    ],
+    "probability": 0,
+    "kickoffAt": "2026-07-25T11:00:00Z",
+    "expectedEndAt": "2026-09-01T23:00:00Z",
+    "resolveAfter": "2026-09-02T12:00:00Z",
+    "closes": "Sep 1, 11:00 PM GMT+1",
+    "resolution": "Resolves to 'Yes' if Manchester United officially announces the signing of goalkeeper Orlando Gill during the Summer 2026 transfer window. Otherwise, resolves to 'No'.",
+    "threadTopic": "Orlando Gill to Man United",
+    "volume": "$0",
+    "traders": "0",
+    "liquidity": "$0",
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
+    "points": 500
+  },
+  {
+    "id": "transfer-vanja-milinkovic-savic-tottenham",
+    "category": "Sports",
+    "timeframe": "Daily",
+    "optionMarket": true,
+    "question": "Will goalkeeper Vanja Milinković-Savić sign for Tottenham Hotspur this summer?",
+    "options": [
+      { "id": "yes", "label": "Yes" },
+      { "id": "no", "label": "No" }
+    ],
+    "probability": 0,
+    "kickoffAt": "2026-07-25T11:00:00Z",
+    "expectedEndAt": "2026-09-01T23:00:00Z",
+    "resolveAfter": "2026-09-02T12:00:00Z",
+    "closes": "Sep 1, 11:00 PM GMT+1",
+    "resolution": "Resolves to 'Yes' if Tottenham Hotspur officially announces the signing of goalkeeper Vanja Milinković-Savić during the Summer 2026 transfer window. Otherwise, resolves to 'No'.",
+    "threadTopic": "Vanja Milinkovic-Savic to Spurs",
+    "volume": "$0",
+    "traders": "0",
+    "liquidity": "$0",
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
+    "points": 500
+  }
+];
+
+let existing = [];
+if (fs.existsSync(filePath)) {
+  try {
+    existing = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch (e) {
+    existing = [];
+  }
+}
+
+const merged = [...existing];
+for (const m of newMarkets) {
+  if (!merged.some(item => item.id === m.id)) {
+    merged.push(m);
+  }
+}
+
+fs.writeFileSync(filePath, JSON.stringify(merged, null, 2), "utf8");
+console.log(`Successfully deployed ${newMarkets.length} transfer markets to active_markets.json`);
