@@ -5123,7 +5123,7 @@ const showTradeSuccessModal = (info: {
   const renderModalInner = () => {
     const avgPrice = priceCents;
     const potentialWin = tradeAmount > 0 ? ((tradeAmount / (avgPrice / 100))).toFixed(2) : "0.00";
-    const sellProceeds = (userOwnedShares * (avgPrice / 100)).toFixed(2);
+    const sellProceeds = userOwnedShares.toFixed(2);
 
     modalOverlay!.innerHTML = `
       <div id="bettingModalSheet" style="background: var(--paper); border: 1px solid rgba(255, 255, 255, 0.12); border-top-left-radius: 28px; border-top-right-radius: 28px; width: 100%; max-width: 600px; padding: 24px 20px 36px 20px; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; box-shadow: 0 -16px 48px rgba(0,0,0,0.95); animation: slideUp 0.25s ease-out; color: var(--ink); pointer-events: auto;">
@@ -5184,7 +5184,7 @@ const showTradeSuccessModal = (info: {
 
           <!-- Payout Summary -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 0.95rem; font-weight: 800;">
-            <span style="color: var(--muted);">To Win: <strong style="color: #34d399;">${potentialWin} USDC</strong></span>
+            <span style="color: var(--muted);">Est. Pool Payout: <strong id="toWinAmountLabel" style="color: #34d399;">${potentialWin} USDC</strong></span>
             <span style="color: var(--muted);">Avg Price: <strong style="color: #38bdf8;">${avgPrice.toFixed(1)}¢</strong></span>
           </div>
 
@@ -5208,7 +5208,7 @@ const showTradeSuccessModal = (info: {
                 <span style="font-size: 1rem; font-weight: 800; color: var(--ink);">$${userOwnedShares.toFixed(2)} USDC</span>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 12px;">
-                <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Estimated Return</span>
+                <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Full Refund Return</span>
                 <span style="font-size: 1.15rem; font-weight: 900; color: #34d399;">$${sellProceeds} USDC</span>
               </div>
             </div>
@@ -5281,7 +5281,7 @@ const showTradeSuccessModal = (info: {
       // Restore USDC balance with sell proceeds
       const rawBalStr = String(state.walletBalance || "100.00").replace(/,/g, "");
       const curBal = parseFloat(rawBalStr) || 100.0;
-      const sellReturnVal = parseFloat((userOwnedShares * (avgPrice / 100)).toFixed(2));
+      const sellReturnVal = parseFloat(userOwnedShares.toFixed(2));
       const updatedBal = (curBal + sellReturnVal).toFixed(2);
       state.walletBalance = updatedBal;
 
@@ -6064,12 +6064,12 @@ const renderPortfolio = (): void => {
             <div style="font-size: 0.95rem; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">$${currentCash.toFixed(2)}</div>
           </div>
           <div style="min-width: 0;">
-            <div style="font-size: 0.72rem; color: var(--muted); font-weight: 600; margin-bottom: 2px;">Interest</div>
-            <div style="font-size: 0.95rem; font-weight: 800; color: #34d399; text-decoration: underline dotted;">6.0%</div>
+            <div style="font-size: 0.72rem; color: var(--muted); font-weight: 600; margin-bottom: 2px;">Open Picks</div>
+            <div style="font-size: 0.95rem; font-weight: 800; color: #38bdf8;">${openPositions.length}</div>
           </div>
           <div style="min-width: 0;">
-            <div style="font-size: 0.72rem; color: var(--muted); font-weight: 600; margin-bottom: 2px;">Rewards</div>
-            <div style="font-size: 0.95rem; font-weight: 800; color: var(--ink);">$0.0</div>
+            <div style="font-size: 0.72rem; color: var(--muted); font-weight: 600; margin-bottom: 2px;">Points</div>
+            <div style="font-size: 0.95rem; font-weight: 800; color: #fbbf24;">${(state as any).seasonPoints || 60} pts</div>
           </div>
         </div>
 
@@ -6195,15 +6195,49 @@ const renderPortfolio = (): void => {
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; text-align: center;">
               <div style="background: var(--subtle-bg); padding: 12px 6px; border-radius: 12px;">
                 <div style="font-size: 0.72rem; color: var(--muted); font-weight: 600;">Win Rate</div>
-                <div style="font-size: 1.1rem; font-weight: 900; color: #34d399;">100%</div>
+                <div style="font-size: 1.1rem; font-weight: 900; color: ${(() => {
+                  let sw = 0, sl = 0;
+                  finalizedPositions.forEach((m: any) => {
+                    const pos = state.marketPositions[m.id];
+                    if (pos && m.isResolved) {
+                      if (m.resolvedOptionId && pos.optionId === m.resolvedOptionId) sw++;
+                      else sl++;
+                    }
+                  });
+                  return (sw + sl) > 0 ? '#34d399' : 'var(--muted)';
+                })()};">${(() => {
+                  let sw = 0, sl = 0;
+                  finalizedPositions.forEach((m: any) => {
+                    const pos = state.marketPositions[m.id];
+                    if (pos && m.isResolved) {
+                      if (m.resolvedOptionId && pos.optionId === m.resolvedOptionId) sw++;
+                      else sl++;
+                    }
+                  });
+                  return (sw + sl) > 0 ? ((sw / (sw + sl)) * 100).toFixed(0) + '%' : '--';
+                })()}</div>
               </div>
               <div style="background: var(--subtle-bg); padding: 12px 6px; border-radius: 12px;">
                 <div style="font-size: 0.72rem; color: var(--muted); font-weight: 600;">Total Wins</div>
-                <div style="font-size: 1.1rem; font-weight: 900; color: var(--ink);">${realTradesList.length}</div>
+                <div style="font-size: 1.1rem; font-weight: 900; color: var(--ink);">${(() => {
+                  let sw = 0;
+                  finalizedPositions.forEach((m: any) => {
+                    const pos = state.marketPositions[m.id];
+                    if (pos && m.isResolved && m.resolvedOptionId && pos.optionId === m.resolvedOptionId) sw++;
+                  });
+                  return sw;
+                })()}</div>
               </div>
               <div style="background: var(--subtle-bg); padding: 12px 6px; border-radius: 12px;">
                 <div style="font-size: 0.72rem; color: var(--muted); font-weight: 600;">Losses</div>
-                <div style="font-size: 1.1rem; font-weight: 900; color: var(--muted);">0</div>
+                <div style="font-size: 1.1rem; font-weight: 900; color: var(--muted);">${(() => {
+                  let sl = 0;
+                  finalizedPositions.forEach((m: any) => {
+                    const pos = state.marketPositions[m.id];
+                    if (pos && m.isResolved && (!m.resolvedOptionId || pos.optionId !== m.resolvedOptionId)) sl++;
+                  });
+                  return sl;
+                })()}</div>
               </div>
             </div>
 
