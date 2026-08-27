@@ -4170,7 +4170,7 @@ const renderMarkets = (): void => {
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
           <h2 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--ink);">Popular</h2>
           <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted); background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
-            Today ⚡
+            ${escapeHtml((featuredMarket as any).statusDetail || "Upcoming")}
           </span>
         </div>
 
@@ -4240,7 +4240,7 @@ const renderMarkets = (): void => {
               <!-- Card Header Status -->
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
                 <span style="font-size: 0.78rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; ${isLive ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);' : 'background: rgba(255, 255, 255, 0.06); color: var(--muted);'}">
-                  ${isLive ? '🔴 LIVE ⚡' : `Today • ${escapeHtml(m.statusDetail || 'Scheduled')}`}
+                  ${isLive ? '🔴 LIVE IN-PLAY ⚡' : escapeHtml(m.statusDetail || 'Scheduled')}
                 </span>
                 <span style="font-size: 0.78rem; color: #38bdf8; font-weight: 800; background: rgba(56, 189, 248, 0.12); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.25);">${Number(m.volumeUsdc || 0) > 0 ? ("$" + Number(m.volumeUsdc).toFixed(2)) : "$0.00"} Vol</span>
               </div>
@@ -4391,8 +4391,13 @@ const renderLeaderboard = (): void => {
                     <strong style="font-size: 1rem; font-weight: 900; color: var(--ink);">${points} pts</strong>
                   </div>
 
-                  <div style="font-size: 0.78rem; font-weight: 700; color: var(--muted);">
-                    Season 2
+                  <div style="text-align: right;">
+                    <div style="font-size: 0.92rem; font-weight: 800; color: ${(Number(player.pnlUsdc) || 0) >= 0 ? '#34d399' : '#ef4444'};">
+                      ${(Number(player.pnlUsdc) || 0) >= 0 ? '+' : ''}${(Number(player.pnlUsdc) || 0).toFixed(2)}
+                    </div>
+                    <div style="font-size: 0.75rem; font-weight: 700; color: ${(Number(player.roiPct) || 0) >= 0 ? '#34d399' : '#ef4444'};">
+                      ${(Number(player.roiPct) || 0) >= 0 ? '+' : ''}${(Number(player.roiPct) || 0).toFixed(1)}%
+                    </div>
                   </div>
                 </div>
               `;

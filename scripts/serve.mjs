@@ -9277,8 +9277,20 @@ export function buildPreseasonLeaderboardPlayers(data, profiles, unlocks, bonusE
 
   const dailyUnlocks = new Map(); // walletAddress -> Map<dateKey, count>
   const predictionWinsMap = new Map(); // walletAddress -> count
+  const traderPnlMap = new Map(); // walletAddress -> { pnlUsdc: number, roiPct: number }
 
-  // Load prediction wins from memory/local store
+  // Load prediction wins and pnl from local store/analytics
+  if (data.leaderboard?.traders) {
+    Object.entries(data.leaderboard.traders).forEach(([addr, info]) => {
+      const clean = normalizeWalletAddress(addr);
+      if (!clean) return;
+      const pnl = Number(info.pnlUsdc) || 0;
+      const vol = Number(info.totalVolumeUsdc) || 0;
+      const roi = vol > 0 ? ((pnl / vol) * 100) : 0;
+      traderPnlMap.set(clean, { pnlUsdc: pnl, roiPct: roi });
+    });
+  }
+
   if (data.leaderboard?.predictionWins) {
     Object.entries(data.leaderboard.predictionWins).forEach(([addr, count]) => {
       const clean = normalizeWalletAddress(addr);
@@ -9286,7 +9298,6 @@ export function buildPreseasonLeaderboardPlayers(data, profiles, unlocks, bonusE
     });
   }
 
-  // Load bonus events from Supabase
   if (bonusEvents && Array.isArray(bonusEvents)) {
     bonusEvents.forEach(evt => {
       const clean = normalizeWalletAddress(evt.wallet_address);
@@ -9301,46 +9312,18 @@ export function buildPreseasonLeaderboardPlayers(data, profiles, unlocks, bonusE
     unlocks.forEach(unlock => {
       const addr = normalizeWalletAddress(unlock.wallet_address);
       if (!addr || isAdminWallet(addr)) return;
-      
       let dateKey = unlock.date_key;
-      if (!dateKey && unlock.created_at) {
-        dateKey = unlock.created_at.substring(0, 10);
-      }
+      if (!dateKey && unlock.created_at) dateKey = unlock.created_at.substring(0, 10);
       if (!dateKey) return;
-
-      if (!dailyUnlocks.has(addr)) {
-        dailyUnlocks.set(addr, new Map());
-      }
+      if (!dailyUnlocks.has(addr)) dailyUnlocks.set(addr, new Map());
       const userDays = dailyUnlocks.get(addr);
       userDays.set(dateKey, (userDays.get(dateKey) || 0) + 1);
     });
-  } else {
-    const localUnlocks = data.leaderboard?.aiBriefingUnlocks || {};
-    for (const [key, list] of Object.entries(localUnlocks)) {
-      const parts = key.split(":");
-      const addr = normalizeWalletAddress(parts[0]);
-      const dateKey = parts[1];
-      if (!addr || isAdminWallet(addr) || !dateKey || dateKey < "2026-07-20") continue;
-      
-      const validList = (Array.isArray(list) ? list : []).filter(item => {
-        const createdAt = item?.createdAt || item?.created_at || "";
-        return !createdAt || createdAt >= "2026-07-20T00:00:00Z";
-      });
-      if (validList.length > 0) {
-        if (!dailyUnlocks.has(addr)) {
-          dailyUnlocks.set(addr, new Map());
-        }
-        const userDays = dailyUnlocks.get(addr);
-        userDays.set(dateKey, (userDays.get(dateKey) || 0) + validList.length);
-      }
-    }
   }
 
   const countMap = new Map();
   const daysMap = new Map();
-  
-  // Combine all addresses from unlocks and prediction wins
-  const allAddresses = new Set([...dailyUnlocks.keys(), ...predictionWinsMap.keys()]);
+  const allAddresses = new Set([...dailyUnlocks.keys(), ...predictionWinsMap.keys(), ...traderPnlMap.keys()]);
 
   for (const addr of allAddresses) {
     let daysWithTarget = 0;
@@ -9353,25 +9336,29 @@ export function buildPreseasonLeaderboardPlayers(data, profiles, unlocks, bonusE
     const wins = predictionWinsMap.get(addr) || 0;
     const totalPoints = (daysWithTarget * 30) + (wins * 100);
 
-    if (totalPoints > 0 || wins > 0) {
+    if (totalPoints > 0 || wins > 0 || traderPnlMap.has(addr)) {
       daysMap.set(addr, daysWithTarget);
       countMap.set(addr, totalPoints);
     }
   }
 
-  return Array.from(countMap.entries()).map(([address, points]) => {
+  return Array.from(allAddresses).map((address) => {
     const username = profileMap.get(address) || "";
     const days = daysMap.get(address) || 0;
     const wins = predictionWinsMap.get(address) || 0;
+    const points = countMap.get(address) || 0;
+    const pnlInfo = traderPnlMap.get(address) || { pnlUsdc: 0, roiPct: 0 };
     return {
       username: address,
       displayName: username,
       unlocks: days * 3,
       points: points,
       wins: wins,
+      pnlUsdc: pnlInfo.pnlUsdc,
+      roiPct: pnlInfo.roiPct,
       status: wins > 0 ? `${wins} win${wins === 1 ? "" : "s"} • ${days} briefing day${days === 1 ? "" : "s"}` : `${days} day${days === 1 ? "" : "s"} completed`
     };
-  }).sort((a, b) => b.points - a.points);
+  }).filter(p => p.points > 0 || p.pnlUsdc !== 0 || p.wins > 0).sort((a, b) => b.points - a.points);
 }
 
 const server = createServer(async (request, response) => {
@@ -10974,7 +10961,15 @@ const server = createServer(async (request, response) => {
         const data = loadAnalytics();
         if (!data.leaderboard) data.leaderboard = {};
         if (!data.leaderboard.predictionWins) data.leaderboard.predictionWins = {};
+        const isLiveTrade = Boolean(body?.isLiveTrade);
+        const pts = isLiveTrade ? 50 : 100;
         data.leaderboard.predictionWins[walletAddress] = (data.leaderboard.predictionWins[walletAddress] || 0) + 1;
+        if (!data.leaderboard.traders) data.leaderboard.traders = {};
+        if (!data.leaderboard.traders[walletAddress]) data.leaderboard.traders[walletAddress] = { pnlUsdc: 0, totalVolumeUsdc: 0 };
+        const payout = Number(body?.payoutUsdc) || 0;
+        const stake = Number(body?.stakeUsdc) || 1;
+        data.leaderboard.traders[walletAddress].pnlUsdc = (data.leaderboard.traders[walletAddress].pnlUsdc || 0) + (payout - stake);
+        data.leaderboard.traders[walletAddress].totalVolumeUsdc = (data.leaderboard.traders[walletAddress].totalVolumeUsdc || 0) + stake;
         saveAnalytics(data);
 
         // Persistent save in Supabase if configured
