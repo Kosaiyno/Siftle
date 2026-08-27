@@ -5393,13 +5393,6 @@ const showTradeSuccessModal = (info: {
           <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Est. Payout</span>
           <span style="font-size: 1.05rem; font-weight: 900; color: #34d399;">${info.potentialWin} USDC</span>
         </div>
-
-        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border); padding-top: 10px; margin-top: 2px;">
-          <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">ArcScan Status</span>
-          <span style="font-size: 0.85rem; font-weight: 800; color: #34d399; display: flex; align-items: center; gap: 4px;">
-            <span style="width: 7px; height: 7px; border-radius: 50%; background: #34d399; display: inline-block;"></span>
-            Verified On-Chain
-          </span>
         </div>
 
       </div>
