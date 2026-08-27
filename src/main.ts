@@ -5467,7 +5467,6 @@ const showTradeSuccessModal = (info: {
   modalOverlay.style.cssText = "position: fixed; inset: 0; z-index: 9999999; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(10px); display: flex; justify-content: center; align-items: flex-end; padding: 0; box-sizing: border-box;";
 
   let tradeAmount = 20;
-  let tradeMode: "LONG" | "SHORT" = "LONG";
 
   // Real Wallet Balance from state
   const realBalanceStr = state.walletAddress 
@@ -5483,11 +5482,9 @@ const showTradeSuccessModal = (info: {
         
         <!-- Modal Top Navigation Header -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-          <!-- Long/Short Interactive Toggle Pill -->
-          <button type="button" id="tradeModeToggleBtn" style="font-size: 0.85rem; font-weight: 800; color: ${tradeMode === 'LONG' ? '#34d399' : '#ef4444'}; background: ${tradeMode === 'LONG' ? 'rgba(52, 211, 153, 0.15)' : 'rgba(239, 68, 68, 0.15)'}; padding: 6px 14px; border-radius: 10px; border: 1.5px solid ${tradeMode === 'LONG' ? 'rgba(52, 211, 153, 0.4)' : 'rgba(239, 68, 68, 0.4)'}; cursor: pointer; transition: all 0.2s ease;">
-            ${tradeMode} ⬍
-          </button>
-          
+          <span style="font-size: 0.85rem; font-weight: 800; color: #38bdf8; background: rgba(56, 189, 248, 0.12); padding: 6px 14px; border-radius: 10px; border: 1px solid rgba(56, 189, 248, 0.25);">
+            Place Prediction
+          </span>
           <button type="button" id="closeBettingModalBtn" style="background: var(--subtle-bg); border: none; color: var(--muted); width: 34px; height: 34px; border-radius: 50%; font-size: 1.1rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
         </div>
 
@@ -5537,8 +5534,8 @@ const showTradeSuccessModal = (info: {
         </div>
 
         <!-- Action Button -->
-        <button type="button" id="confirmTradeBtn" style="width: 100%; background: ${tradeMode === 'LONG' ? '#38bdf8' : '#ef4444'}; color: var(--ink); border: none; padding: 16px; border-radius: 16px; font-size: 1.1rem; font-weight: 900; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 20px ${tradeMode === 'LONG' ? 'rgba(56, 189, 248, 0.4)' : 'rgba(239, 68, 68, 0.4)'};">
-          Place ${tradeMode} Trade (${tradeAmount} USDC)
+        <button type="button" id="confirmTradeBtn" style="width: 100%; background: #38bdf8; color: #000000; border: none; padding: 16px; border-radius: 16px; font-size: 1.1rem; font-weight: 900; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 20px rgba(56, 189, 248, 0.4);">
+          Place Trade (${tradeAmount} USDC)
         </button>
 
       </div>
@@ -5547,10 +5544,7 @@ const showTradeSuccessModal = (info: {
     // Attach Event Delegation Listeners directly
     modalOverlay!.querySelector("#closeBettingModalBtn")?.addEventListener("click", () => modalOverlay?.remove());
 
-    modalOverlay!.querySelector("#tradeModeToggleBtn")?.addEventListener("click", () => {
-      tradeMode = tradeMode === "LONG" ? "SHORT" : "LONG";
-      renderModalInner();
-    });
+    
 
     const amountInput = modalOverlay!.querySelector("#tradeAmountInput") as HTMLInputElement;
     if (amountInput) {
@@ -5596,7 +5590,7 @@ const showTradeSuccessModal = (info: {
         try {
           txHash = await executeArcOptionMarketOrder(
             market.id,
-            tradeMode.toLowerCase() as any,
+            "buy",
             optionId,
             tradeAmount,
             (statusMsg) => {
@@ -5632,7 +5626,7 @@ const showTradeSuccessModal = (info: {
 
       // Dynamic price impact: buying raises share price by 3.5c to 8.0c
       const priceImpact = Math.min(12.0, (tradeAmount / 20) * 4.5);
-      const newPrice = Number((tradeMode === 'LONG' ? oldPrice + priceImpact : Math.max(1, oldPrice - priceImpact)).toFixed(1));
+      const newPrice = Number((oldPrice + priceImpact).toFixed(1));
 
       // Calculate shift and rebalance remaining options
       let newHome = curHome;
@@ -5710,7 +5704,6 @@ const showTradeSuccessModal = (info: {
       showTradeSuccessModal({
         optionName,
         matchTitle: `${(market as any).homeTeam || "Home"} vs ${(market as any).awayTeam || "Away"}`,
-        tradeMode,
         tradeAmount,
         oldPrice,
         newPrice,
