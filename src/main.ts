@@ -17,6 +17,25 @@ const shortenAddress = (address: string): string =>
 
 const connectArcWallet = async (): Promise<string> => (await loadArcModule()).connectArcWallet();
 const readArcUsdcBalance = async (address: string): Promise<string> => (await loadArcModule()).readArcUsdcBalance(address);
+
+const getSmartWalletBalance = async (address: string): Promise<string> => {
+  const rpcBal = await readArcUsdcBalance(address);
+  try {
+    const optKey = `siftle_optimistic_bal_${address.toLowerCase()}`;
+    const optBal = localStorage.getItem(optKey);
+    if (optBal !== null) {
+      const rpcVal = parseFloat(String(rpcBal || "0").replace(/,/g, ""));
+      const optVal = parseFloat(optBal);
+      if (optVal < rpcVal) {
+        return optVal.toFixed(2);
+      } else {
+        localStorage.removeItem(optKey);
+      }
+    }
+  } catch(e) {}
+  return rpcBal;
+};
+
 const payAiBriefingUnlock = async (
   treasuryAddress: string,
   amountUsdc: number,
@@ -646,7 +665,7 @@ const connectWallet = async (): Promise<void> => {
       state.referralError = null;
       state.referralPanelOpen = false;
       syncProfileUsernameForWallet();
-      const rpcBal = await readArcUsdcBalance(account);
+      const rpcBal = await getSmartWalletBalance(account);
       const optKey = `siftle_optimistic_bal_${account.toLowerCase()}`;
       const optBal = localStorage.getItem(optKey);
       if (optBal !== null && parseFloat(optBal) < parseFloat(rpcBal.replace(/,/g, ""))) {
@@ -2654,7 +2673,7 @@ const placeMarketOrder = async (marketId: string, side: "yes" | "no"): Promise<v
     state.hasLoadedPortfolioPositions = false;
     state.portfolioPositionsLoadedAt = 0;
     state.walletAddress = await getConnectedArcWallet();
-    if (state.walletAddress) state.walletBalance = await readArcUsdcBalance(state.walletAddress);
+    if (state.walletAddress) state.walletBalance = await getSmartWalletBalance(state.walletAddress);
     await loadPortfolioPositions({ force: true });
     void reportLeaderboardEntry(true).catch(err => console.error("Failed to report leaderboard entry:", err));
 
@@ -3450,7 +3469,7 @@ const placeOptionMarketOrder = async (marketId: string, optionId: string): Promi
     state.hasLoadedPortfolioPositions = false;
     state.portfolioPositionsLoadedAt = 0;
     state.walletAddress = await getConnectedArcWallet();
-    if (state.walletAddress) state.walletBalance = await readArcUsdcBalance(state.walletAddress);
+    if (state.walletAddress) state.walletBalance = await getSmartWalletBalance(state.walletAddress);
     await loadPortfolioPositions({ force: true });
     trackEvent(exiting ? "trade_sell_success" : "trade_buy_success");
     showActionToast(exiting ? "Pick exited" : `Pick locked: ${option.label}`);
@@ -4862,7 +4881,7 @@ const claimPortfolioMarket = async (marketId: string): Promise<void> => {
     delete state.marketPositions[market.id];
     delete state.marketSnapshots[market.id];
     state.hasLoadedPortfolioPositions = false;
-    state.walletBalance = await readArcUsdcBalance(state.walletAddress);
+    state.walletBalance = await getSmartWalletBalance(state.walletAddress);
     await loadPortfolioPositions();
     showActionToast(result.won ? `Claimed $${formatMoney(result.amountUsdc)}` : "No payout to claim");
     renderWalletState();
@@ -7340,7 +7359,7 @@ window.addEventListener("hashchange", syncStoryFromHash);
 window.addEventListener("focus", async () => {
   if (state.walletAddress) {
     const oldBalance = state.walletBalance;
-    const balance = await readArcUsdcBalance(state.walletAddress);
+    const balance = await getSmartWalletBalance(state.walletAddress);
     state.walletBalance = balance;
     renderWalletState();
     if ((!oldBalance || parseFloat(oldBalance) === 0) && parseFloat(balance) > 0) {
@@ -7494,7 +7513,7 @@ const initializeWalletSession = (): void => {
           state.walletAddress = await getConnectedArcWallet();
           if (state.walletAddress) {
             syncProfileUsernameForWallet();
-            state.walletBalance = await readArcUsdcBalance(state.walletAddress);
+            state.walletBalance = await getSmartWalletBalance(state.walletAddress);
             await loadPortfolioPositions();
           }
           renderWalletState();
@@ -7530,7 +7549,7 @@ const initializeWalletSession = (): void => {
       renderWalletState();
       if (address) {
         void loadReferralData();
-        void readArcUsdcBalance(address).then((balance) => {
+        void getSmartWalletBalance(address).then((balance) => {
           state.walletBalance = balance;
           renderWalletState();
           if (state.activeSurface === "portfolio") render();
