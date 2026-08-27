@@ -5344,7 +5344,6 @@ const showTradeSuccessModal = (info: {
   txHash?: string;
   optionName: string;
   matchTitle: string;
-  tradeMode: "LONG" | "SHORT";
   tradeAmount: number;
   oldPrice: number;
   newPrice: number;
@@ -5379,10 +5378,6 @@ const showTradeSuccessModal = (info: {
           <span style="font-size: 0.85rem; font-weight: 700; color: var(--muted);">${escapeHtml(info.matchTitle)}</span>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Type</span>
-          <span style="font-size: 0.85rem; font-weight: 800; color: ${info.tradeMode === 'LONG' ? '#34d399' : '#ef4444'}; background: ${info.tradeMode === 'LONG' ? 'rgba(52, 211, 153, 0.15)' : 'rgba(239, 68, 68, 0.15)'}; padding: 2px 8px; border-radius: 6px;">${info.tradeMode}</span>
-        </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Amount Placed</span>
