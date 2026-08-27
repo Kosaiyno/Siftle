@@ -12517,3 +12517,56 @@ body {
   border-color: var(--border) !important;
   box-shadow: var(--card-shadow) !important;
 }
+
+
+/* ==========================================================================
+   SEAMLESS FULL-BLEED DARK THEME UI FIX (ZERO GREY GAPS)
+   ========================================================================== */
+html, body, .app-shell, main, .brief-board, #storyList, .story-list, .markets-surface-redesign, .matches-surface {
+  background: var(--bg) !important;
+  background-color: var(--bg) !important;
+  color: var(--ink) !important;
+}
+
+.brief-board {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  min-height: 100vh !important;
+}
+
+.app-shell {
+  background: var(--bg) !important;
+  min-height: 100vh !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.markets-surface-redesign {
+  background: var(--bg) !important;
+  min-height: calc(100vh - 120px) !important;
+  padding: 16px 14px 110px 14px !important;
+  width: 100% !important;
+  max-width: 900px !important;
+  margin: 0 auto !important;
+}
+
+.site-header {
+  background: var(--bg) !important;
+  border-bottom: 1px solid var(--border) !important;
+  max-width: 900px !important;
+  margin: 0 auto !important;
+  padding: 16px 14px !important;
+}
+
+.mobile-bottom-nav {
+  background: rgba(9, 10, 15, 0.92) !important;
+  backdrop-filter: blur(16px) !important;
+  border-top: 1px solid var(--border) !important;
+}
+
+[data-theme="light"] .mobile-bottom-nav {
+  background: rgba(241, 245, 249, 0.92) !important;
+  border-top: 1px solid var(--border) !important;
+}
+
