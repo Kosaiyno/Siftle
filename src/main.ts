@@ -306,6 +306,7 @@ const state: {
   portfolioFilter: "open",
   liveMatches: [],
   loadingLiveMatches: false,
+  userSeasonPoints: 0,
   activeMatchLeague: "All",
   activeMatchDate: "",
   activeMarketLeagueFilter: "All",
@@ -5088,11 +5089,11 @@ const showTradeSuccessModal = (info: {
   lastUserScrollPos = window.scrollY;
   const market = marketPreviews.find(m => m.id === marketId) || marketPreviews[0] || {
     id: marketId,
-    question: "Newcastle United vs Liverpool",
-    homeTeam: "Newcastle United",
-    awayTeam: "Liverpool",
-    homeCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/361.png",
-    awayCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/364.png"
+    question: "Crystal Palace vs Manchester City",
+    homeTeam: "Crystal Palace",
+    awayTeam: "Manchester City",
+    homeCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/384.png",
+    awayCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/382.png"
   };
 
   let optionName = optionId;
@@ -5103,10 +5104,10 @@ const showTradeSuccessModal = (info: {
     priceCents = parseFloat(odds.home) || 33.3;
   } else if (optionId === "away") {
     optionName = (market as any).awayTeam || "Away";
-    priceCents = parseFloat(odds.away) || 30.0;
+    priceCents = parseFloat(odds.away) || 33.3;
   } else if (optionId === "draw") {
     optionName = "Draw";
-    priceCents = parseFloat(odds.draw) || 25.0;
+    priceCents = parseFloat(odds.draw) || 33.3;
   }
 
   let modalOverlay = document.getElementById("siftleBettingModalOverlay");
@@ -5117,7 +5118,7 @@ const showTradeSuccessModal = (info: {
   modalOverlay.style.cssText = "position: fixed; inset: 0; z-index: 9999999; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(10px); display: flex; justify-content: center; align-items: flex-end; padding: 0; box-sizing: border-box;";
 
   let activeTab: "BUY" | "SELL" = "BUY";
-  let tradeAmount = 20;
+  let tradeAmount = 2;
 
   // Check existing position
   const existingPosition = state.marketPositions[market.id];
@@ -5128,9 +5129,19 @@ const showTradeSuccessModal = (info: {
     ? (state.walletBalance ? `${parseFloat(String(state.walletBalance).replace(/,/g, "")).toFixed(2)} USDC` : "0.00 USDC") 
     : "$0.00 USDC";
 
+  // Pari-Mutuel Calculation: Share of Total Pool
+  const calcPariMutuelPayout = (amt: number) => {
+    const marketVol = Number((market as any).volumeUsdc) || 0;
+    const outcomeExistingPool = Number((market as any)[`${optionId}PoolUsdc`]) || (marketVol > 0 ? marketVol * 0.333 : 0);
+    const totalNewPool = marketVol + amt;
+    const outcomeNewPool = outcomeExistingPool + amt;
+    const payout = outcomeNewPool > 0 ? (amt / outcomeNewPool) * totalNewPool : amt;
+    return payout;
+  };
+
   const renderModalInner = () => {
-    const avgPrice = priceCents;
-    const potentialWin = tradeAmount > 0 ? ((tradeAmount / (avgPrice / 100))).toFixed(2) : "0.00";
+    const initialPayout = calcPariMutuelPayout(tradeAmount);
+    const initialMultiplier = (initialPayout / (tradeAmount || 1)).toFixed(2);
     const sellProceeds = userOwnedShares.toFixed(2);
 
     modalOverlay!.innerHTML = `
@@ -5190,10 +5201,10 @@ const showTradeSuccessModal = (info: {
             `).join("")}
           </div>
 
-          <!-- Payout Summary -->
+          <!-- Payout Summary (Pari-Mutuel Shared Pot) -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 0.95rem; font-weight: 800;">
-            <span style="color: var(--muted);">Est. Pool Payout: <strong id="toWinAmountLabel" style="color: #34d399;">${potentialWin} USDC</strong></span>
-            <span style="color: var(--muted);">Avg Price: <strong style="color: #38bdf8;">${avgPrice.toFixed(1)}¢</strong></span>
+            <span style="color: var(--muted);">Est. Pool Payout: <strong id="toWinAmountLabel" style="color: #34d399;">$${initialPayout.toFixed(2)} USDC (${initialMultiplier}x)</strong></span>
+            <span style="color: var(--muted);">Pool Odds: <strong style="color: #38bdf8;">${priceCents.toFixed(1)}¢</strong></span>
           </div>
 
           <button type="button" id="confirmTradeBtn" style="width: 100%; background: #38bdf8; color: #000000; border: none; padding: 16px; border-radius: 16px; font-size: 1.1rem; font-weight: 900; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 20px rgba(56, 189, 248, 0.4);">
@@ -5230,6 +5241,34 @@ const showTradeSuccessModal = (info: {
       </div>
     `;
 
+    // Dynamic Live Recalculation on typing
+    const updateDynamicValues = (newVal: number) => {
+      tradeAmount = Math.max(1, newVal);
+      const inputEl = modalOverlay!.querySelector("#tradeAmountInput") as HTMLInputElement;
+      if (inputEl && parseInt(inputEl.value) !== tradeAmount) inputEl.value = String(tradeAmount);
+      
+      const pWinEl = modalOverlay!.querySelector("#toWinAmountLabel");
+      const estPayoutVal = calcPariMutuelPayout(tradeAmount);
+      const mult = (estPayoutVal / tradeAmount).toFixed(2);
+      if (pWinEl) pWinEl.textContent = `$${estPayoutVal.toFixed(2)} USDC (${mult}x)`;
+
+      const buyBtnEl = modalOverlay!.querySelector("#confirmTradeBtn");
+      if (buyBtnEl) buyBtnEl.textContent = `Buy Shares (${tradeAmount} USDC)`;
+
+      modalOverlay!.querySelectorAll(".quick-amt-btn").forEach((qb: any) => {
+        const amt = Number(qb.getAttribute("data-amt"));
+        if (amt === tradeAmount) {
+          qb.style.background = 'rgba(56, 189, 248, 0.2)';
+          qb.style.borderColor = '#38bdf8';
+          qb.style.color = '#38bdf8';
+        } else {
+          qb.style.background = 'rgba(255, 255, 255, 0.04)';
+          qb.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+          qb.style.color = 'var(--ink)';
+        }
+      });
+    };
+
     // Attach Event Listeners
     modalOverlay!.querySelector("#closeBettingModalBtn")?.addEventListener("click", () => modalOverlay?.remove());
 
@@ -5246,24 +5285,34 @@ const showTradeSuccessModal = (info: {
     });
 
     modalOverlay!.querySelector("#decBetBtn")?.addEventListener("click", () => {
-      if (tradeAmount > 5) tradeAmount -= 5;
-      renderModalInner();
+      updateDynamicValues(tradeAmount > 5 ? tradeAmount - 5 : Math.max(1, tradeAmount - 1));
     });
 
     modalOverlay!.querySelector("#incBetBtn")?.addEventListener("click", () => {
-      tradeAmount += 10;
-      renderModalInner();
+      updateDynamicValues(tradeAmount + 5);
     });
 
-    modalOverlay!.querySelector("#tradeAmountInput")?.addEventListener("input", (e) => {
-      tradeAmount = Math.max(1, parseInt((e.target as HTMLInputElement).value) || 1);
-    });
+    const inputEl = modalOverlay!.querySelector("#tradeAmountInput") as HTMLInputElement;
+    if (inputEl) {
+      inputEl.addEventListener("input", (e) => {
+        const val = parseInt((e.target as HTMLInputElement).value) || 1;
+        updateDynamicValues(val);
+      });
+      inputEl.addEventListener("keyup", (e) => {
+        const val = parseInt((e.target as HTMLInputElement).value) || 1;
+        updateDynamicValues(val);
+      });
+      inputEl.addEventListener("change", (e) => {
+        const val = parseInt((e.target as HTMLInputElement).value) || 1;
+        updateDynamicValues(val);
+      });
+    }
 
     modalOverlay!.querySelectorAll(".quick-amt-btn").forEach(btn => {
       btn.addEventListener("click", (e) => {
         e.preventDefault(); e.stopPropagation();
-        tradeAmount = Number(btn.getAttribute("data-amt")) || 20;
-        renderModalInner();
+        const amt = Number(btn.getAttribute("data-amt")) || 20;
+        updateDynamicValues(amt);
       });
     });
 
@@ -5286,7 +5335,7 @@ const showTradeSuccessModal = (info: {
         }
       }
 
-      // Restore USDC balance with sell proceeds
+      // Restore USDC balance with 100% full refund
       const rawBalStr = String(state.walletBalance || "100.00").replace(/,/g, "");
       const curBal = parseFloat(rawBalStr) || 100.0;
       const sellReturnVal = parseFloat(userOwnedShares.toFixed(2));
@@ -5310,7 +5359,7 @@ const showTradeSuccessModal = (info: {
       modalOverlay?.remove();
       renderMarkets();
       renderWalletState();
-      showActionToast(`Successfully sold shares! +$${sellReturnVal} USDC credited.`);
+      showActionToast(`Successfully sold shares! +$${sellReturnVal} USDC refunded.`);
     });
 
     // BUY ACTION HANDLER
@@ -5355,103 +5404,71 @@ const showTradeSuccessModal = (info: {
 
       const targetMarket = marketPreviews.find(m => String(m.id) === String(market.id)) || market;
       const currentOdds = getMarketOddsCents(targetMarket);
-      const curHome = parseFloat(currentOdds.home) || 45.0;
-      const curDraw = parseFloat(currentOdds.draw) || 25.0;
-      const curAway = parseFloat(currentOdds.away) || 30.0;
-
-      let oldPrice = 50.0;
-      if (optionId === "home") oldPrice = curHome;
-      else if (optionId === "away") oldPrice = curAway;
-      else if (optionId === "draw") oldPrice = curDraw;
-
-      // Dynamic price impact
-      const priceImpact = Math.min(12.0, (tradeAmount / 20) * 4.5);
-      const newPrice = Number((oldPrice + priceImpact).toFixed(1));
+      const curHome = parseFloat(currentOdds.home) || 33.3;
+      const curDraw = parseFloat(currentOdds.draw) || 33.3;
+      const curAway = parseFloat(currentOdds.away) || 33.3;
 
       let newHome = curHome;
       let newDraw = curDraw;
       let newAway = curAway;
 
       if (optionId === "home") {
-        newHome = newPrice;
-        const diff = newPrice - curHome;
-        newDraw = Number(Math.max(1, curDraw - diff / 2).toFixed(1));
-        newAway = Number(Math.max(1, curAway - diff / 2).toFixed(1));
+        newHome = Math.min(85.0, curHome + 2.5);
+        newAway = Math.max(10.0, curAway - 1.5);
+        newDraw = Math.max(10.0, 100.0 - (newHome + newAway));
       } else if (optionId === "away") {
-        newAway = newPrice;
-        const diff = newPrice - curAway;
-        newHome = Number(Math.max(1, curHome - diff / 2).toFixed(1));
-        newDraw = Number(Math.max(1, curDraw - diff / 2).toFixed(1));
-      } else if (optionId === "draw") {
-        newDraw = newPrice;
-        const diff = newPrice - curDraw;
-        newHome = Number(Math.max(1, curHome - diff / 2).toFixed(1));
-        newAway = Number(Math.max(1, curAway - diff / 2).toFixed(1));
+        newAway = Math.min(85.0, curAway + 2.5);
+        newHome = Math.max(10.0, curHome - 1.5);
+        newDraw = Math.max(10.0, 100.0 - (newHome + newAway));
+      } else {
+        newDraw = Math.min(60.0, curDraw + 2.5);
+        newHome = Math.max(10.0, curHome - 1.25);
+        newAway = Math.max(10.0, curAway - 1.25);
       }
 
-      targetMarket.customOdds = { home: newHome, draw: newDraw, away: newAway };
-      globalOddsStore[String(targetMarket.id)] = { home: newHome, draw: newDraw, away: newAway };
-      globalOddsStore[String(market.id)] = { home: newHome, draw: newDraw, away: newAway };
-
-      try {
-        localStorage.setItem("siftle_global_odds", JSON.stringify(globalOddsStore));
-      } catch (err) {}
-
-      const projectedPayoutVal = parseFloat((tradeAmount / (oldPrice / 100)).toFixed(2));
-
-      // Record trade position into state.marketPositions
-      const existingPos = state.marketPositions[targetMarket.id] || {
-        yesSharesUsdc: 0,
-        noSharesUsdc: 0,
-        optionSharesUsdc: 0
+      const totalPoolVal = (Number(targetMarket.volumeUsdc) || 0) + tradeAmount;
+      (targetMarket as any).volumeUsdc = totalPoolVal;
+      (targetMarket as any)[`${optionId}PoolUsdc`] = (Number((targetMarket as any)[`${optionId}PoolUsdc`]) || 0) + tradeAmount;
+      (targetMarket as any).volume = `$${totalPoolVal.toFixed(2)}`;
+      (targetMarket as any).currentOdds = {
+        home: newHome.toFixed(1),
+        draw: newDraw.toFixed(1),
+        away: newAway.toFixed(1)
       };
 
-      const newPosition = {
-        ...existingPos,
+      // Pari-mutuel stake stored
+      const existingStake = state.marketPositions[market.id]?.optionSharesUsdc || 0;
+      const totalStake = existingStake + tradeAmount;
+
+      state.marketPositions[market.id] = {
+        marketId: market.id,
+        side: optionId,
         optionId: optionId,
         optionLabel: optionName,
-        optionSharesUsdc: (existingPos.optionSharesUsdc || 0) + tradeAmount,
-        projectedPayout: projectedPayoutVal,
-        yesSharesUsdc: (existingPos.yesSharesUsdc || 0) + tradeAmount,
-        noSharesUsdc: 0
+        optionSharesUsdc: totalStake,
+        yesSharesUsdc: totalStake,
+        stakePlaced: totalStake,
+        costBasisUsdc: totalStake,
+        entryPriceCents: priceCents,
+        isLiveTrade: Boolean((market as any).isLive)
       };
-
-      state.marketPositions[targetMarket.id] = newPosition as any;
 
       try {
         const savedKey = `siftle_positions_${walletKey}`;
         const currentSaved = JSON.parse(localStorage.getItem(savedKey) || "{}");
-        currentSaved[targetMarket.id] = newPosition;
+        currentSaved[market.id] = state.marketPositions[market.id];
         localStorage.setItem(savedKey, JSON.stringify(currentSaved));
       } catch (err) {}
-
-      if (!state.portfolioMarketPreviews.some(m => String(m.id) === String(targetMarket.id))) {
-        state.portfolioMarketPreviews.push(targetMarket);
-      }
 
       modalOverlay?.remove();
       renderMarkets();
       renderWalletState();
-
-      showTradeSuccessModal({
-        optionName,
-        matchTitle: `${(market as any).homeTeam || "Home"} vs ${(market as any).awayTeam || "Away"}`,
-        tradeAmount,
-        oldPrice,
-        newPrice,
-        potentialWin: projectedPayoutVal.toFixed(2),
-        txHash
-      });
+      showActionToast(`Successfully placed $${tradeAmount} prediction on ${escapeHtml(optionName)}!`);
     });
   };
 
   renderModalInner();
   document.body.appendChild(modalOverlay);
-
-  // Close on backdrop click
-  modalOverlay.addEventListener("click", (e) => {
-    if (e.target === modalOverlay) modalOverlay.remove();
-  });
 };
 
 (window as any).openSiftleMatchPage = (matchId: string) => {
@@ -6116,7 +6133,7 @@ const renderPortfolio = (): void => {
           </div>
           <div style="min-width: 0;">
             <div style="font-size: 0.72rem; color: var(--muted); font-weight: 600; margin-bottom: 2px;">Points</div>
-            <div style="font-size: 0.95rem; font-weight: 800; color: #fbbf24;">${(state as any).seasonPoints || 60} pts</div>
+            <div id="portfolioUserPointsStat" style="font-size: 0.95rem; font-weight: 800; color: #fbbf24;">${(state as any).userSeasonPoints ?? (state as any).seasonPoints ?? 0} pts</div>
           </div>
         </div>
 
