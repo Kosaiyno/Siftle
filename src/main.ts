@@ -6366,102 +6366,107 @@ const renderPortfolio = (): void => {
   const finalizedPositions = portfolioMarkets.filter((market) => (state.marketSnapshots[market.id]?.outcome ?? 0) !== 0);
   const walletConnected = !!state.walletAddress;
 
-  const currentCash = parseFloat(String(state.walletBalance || "0.00").replace(/,/g, "")) || 0.0;
+  // Real Dynamic Wallet Balance from state/localStorage
+  const smartBal = state.walletBalance || (state.walletAddress ? localStorage.getItem(`siftle_optimistic_bal_${state.walletAddress.toLowerCase()}`) : "0.00") || "0.00";
+  const currentCash = parseFloat(String(smartBal).replace(/,/g, "")) || 0.0;
   
-  // Calculate total positions value
+  // Calculate real total positions value from user's actual held positions
   let totalPositionsValue = 0;
   Object.values(state.marketPositions).forEach((pos: any) => {
     totalPositionsValue += (pos.optionSharesUsdc || pos.yesSharesUsdc || 0);
   });
 
   const totalPortfolioVal = (currentCash + totalPositionsValue).toFixed(2);
-  const usernameDisplay = state.profileUsername || (state.walletAddress ? shortenAddress(state.walletAddress) : "Guest User");
+  const usernameDisplay = state.profileUsername || (state.walletAddress ? shortenAddress(state.walletAddress) : "Guest Trader");
   const activeTab = (state as any).activePortfolioSubTab || "positions";
   const activePnlTf = (state as any).pnlTimeframe || "all";
 
+  // Build dynamic real trade history from state.marketPositions
+  const realTradesList = Object.entries(state.marketPositions).filter(([_, pos]: any) => (pos.optionSharesUsdc || pos.yesSharesUsdc || 0) > 0);
+
   storyList.innerHTML = `
-    <section class="portfolio-surface" style="width: 100% !important; max-width: 600px !important; margin: 0 auto !important; padding: 12px 14px 120px 14px !important; box-sizing: border-box !important; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Space Grotesk', sans-serif !important; color: var(--ink) !important;">
+    <section class="portfolio-surface" style="width: 100% !important; max-width: 100% !important; margin: 0 auto !important; padding: 12px 16px 120px 16px !important; box-sizing: border-box !important; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Space Grotesk', sans-serif !important; color: var(--ink) !important; overflow-x: hidden !important;">
       
-      <!-- TOP PORTFOLIO BALANCE CARD -->
-      <div style="margin-bottom: 24px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-          <span style="font-size: 0.95rem; font-weight: 700; color: var(--muted);">Portfolio</span>
+      <!-- TOP PORTFOLIO BALANCE -->
+      <div style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+          <span style="font-size: 0.9rem; font-weight: 700; color: var(--muted);">Portfolio</span>
           <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--muted); font-weight: 600;">
             <span>${escapeHtml(usernameDisplay)}</span>
             ${walletConnected ? `
-              <button type="button" id="editUsernameBtn" style="background: transparent; border: none; color: var(--muted); cursor: pointer; padding: 2px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path></svg>
+              <button type="button" id="editUsernameBtn" style="background: transparent; border: none; color: var(--muted); cursor: pointer; padding: 2px; display: inline-flex; align-items: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path></svg>
               </button>
             ` : ""}
           </div>
         </div>
 
-        <div style="font-size: 2.5rem; font-weight: 900; color: var(--ink); letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 4px;">
+        <div style="font-size: 2.2rem; font-weight: 900; color: var(--ink); letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 4px;">
           $${totalPortfolioVal}
         </div>
-        <div style="font-size: 0.88rem; font-weight: 700; color: #34d399; margin-bottom: 20px;">
+        <div style="font-size: 0.85rem; font-weight: 700; color: #34d399; margin-bottom: 16px;">
           +$0.00 (0.0%) 24h
         </div>
 
-        <!-- ACTION BUTTONS: DEPOSIT & WITHDRAW -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
-          <button type="button" id="portfolioDepositBtn" style="background: #38bdf8; color: #000000; border: none; padding: 14px; border-radius: 14px; font-size: 1.05rem; font-weight: 900; cursor: pointer; text-align: center; box-shadow: 0 4px 16px rgba(56, 189, 248, 0.35); transition: all 0.2s ease;">
+        <!-- ACTION BUTTONS: DEPOSIT & WITHDRAW (100% WIDTH GRID) -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; width: 100%; box-sizing: border-box;">
+          <button type="button" id="portfolioDepositBtn" style="width: 100%; background: #38bdf8; color: #000000; border: none; padding: 12px 0; border-radius: 12px; font-size: 1rem; font-weight: 900; cursor: pointer; text-align: center; box-shadow: 0 4px 16px rgba(56, 189, 248, 0.35); transition: all 0.2s ease;">
             Deposit
           </button>
-          <button type="button" id="portfolioWithdrawBtn" style="background: rgba(255, 255, 255, 0.08); color: var(--ink); border: 1px solid var(--border); padding: 14px; border-radius: 14px; font-size: 1.05rem; font-weight: 800; cursor: pointer; text-align: center; transition: all 0.2s ease;">
+          <button type="button" id="portfolioWithdrawBtn" style="width: 100%; background: rgba(255, 255, 255, 0.08); color: var(--ink); border: 1px solid var(--border); padding: 12px 0; border-radius: 12px; font-size: 1rem; font-weight: 800; cursor: pointer; text-align: center; transition: all 0.2s ease;">
             Withdraw
           </button>
         </div>
 
-        <!-- 4-COLUMN STATS GRID -->
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; padding: 12px 0;">
-          <div>
-            <div style="font-size: 0.75rem; color: var(--muted); font-weight: 600; margin-bottom: 4px;">Positions</div>
-            <div style="font-size: 1rem; font-weight: 800; color: var(--ink);">$${totalPositionsValue.toFixed(2)}</div>
+        <!-- 4-COLUMN STATS ROW (NO OVERFLOW) -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 16px; padding: 8px 0; width: 100%; box-sizing: border-box;">
+          <div style="min-width: 0;">
+            <div style="font-size: 0.72rem; color: var(--muted); font-weight: 600; margin-bottom: 2px;">Positions</div>
+            <div style="font-size: 0.95rem; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">$${totalPositionsValue.toFixed(2)}</div>
           </div>
-          <div>
-            <div style="font-size: 0.75rem; color: var(--muted); font-weight: 600; margin-bottom: 4px;">Cash</div>
-            <div style="font-size: 1rem; font-weight: 800; color: var(--ink);">$${currentCash.toFixed(2)}</div>
+          <div style="min-width: 0;">
+            <div style="font-size: 0.72rem; color: var(--muted); font-weight: 600; margin-bottom: 2px;">Cash</div>
+            <div style="font-size: 0.95rem; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">$${currentCash.toFixed(2)}</div>
           </div>
-          <div>
-            <div style="font-size: 0.75rem; color: var(--muted); font-weight: 600; margin-bottom: 4px;">Interest</div>
-            <div style="font-size: 1rem; font-weight: 800; color: #34d399; text-decoration: underline dotted;">6.0%</div>
+          <div style="min-width: 0;">
+            <div style="font-size: 0.72rem; color: var(--muted); font-weight: 600; margin-bottom: 2px;">Interest</div>
+            <div style="font-size: 0.95rem; font-weight: 800; color: #34d399; text-decoration: underline dotted;">6.0%</div>
           </div>
-          <div>
-            <div style="font-size: 0.75rem; color: var(--muted); font-weight: 600; margin-bottom: 4px;">Rewards</div>
-            <div style="font-size: 1rem; font-weight: 800; color: var(--ink);">$0.0</div>
+          <div style="min-width: 0;">
+            <div style="font-size: 0.72rem; color: var(--muted); font-weight: 600; margin-bottom: 2px;">Rewards</div>
+            <div style="font-size: 0.95rem; font-weight: 800; color: var(--ink);">$0.0</div>
           </div>
         </div>
 
-        <!-- SPECIAL FAUCET / DIRECT DEPOSIT BANNER -->
-        <a href="https://faucet.circle.com/" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 8px; background: #2563eb; color: #ffffff; padding: 12px; border-radius: 12px; font-size: 0.88rem; font-weight: 800; text-decoration: none; margin-bottom: 24px; box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <!-- SPECIAL FAUCET BANNER -->
+        <a href="https://faucet.circle.com/" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 8px; background: #2563eb; color: #ffffff; padding: 11px; border-radius: 12px; font-size: 0.85rem; font-weight: 800; text-decoration: none; margin-bottom: 20px; box-sizing: border-box; width: 100%;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
           Get Arc Testnet USDC (Circle Faucet ↗)
         </a>
       </div>
 
-      <!-- PnL CHART CARD -->
-      <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 18px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: var(--card-shadow);">
+      <!-- PnL CHART CARD (FITS 100% MOBILE WIDTH) -->
+      <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 18px; padding: 16px; margin-bottom: 20px; position: relative; overflow: hidden; box-shadow: var(--card-shadow); box-sizing: border-box; width: 100%;">
         
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <div>
-            <div style="font-size: 0.85rem; font-weight: 700; color: var(--muted);">PnL</div>
-            <div style="font-size: 1.6rem; font-weight: 900; color: var(--ink); margin-top: 2px;">$0.0</div>
-            <div style="font-size: 0.78rem; font-weight: 600; color: var(--muted);">All Time</div>
+            <div style="font-size: 0.8rem; font-weight: 700; color: var(--muted);">PnL</div>
+            <div style="font-size: 1.4rem; font-weight: 900; color: var(--ink); margin-top: 1px;">$0.0</div>
+            <div style="font-size: 0.72rem; font-weight: 600; color: var(--muted);">All Time</div>
           </div>
 
-          <!-- Timeframe Pills -->
-          <div style="display: flex; gap: 4px; background: var(--subtle-bg); padding: 3px; border-radius: 10px; border: 1px solid var(--border);">
+          <!-- Timeframe Pills (Responsive) -->
+          <div style="display: flex; gap: 2px; background: var(--subtle-bg); padding: 2px; border-radius: 8px; border: 1px solid var(--border);">
             ${["1D", "1W", "1M", "1Y", "All"].map((tf) => `
-              <button type="button" class="pnl-tf-btn" data-tf="${tf.toLowerCase()}" style="background: ${activePnlTf === tf.toLowerCase() ? 'rgba(255,255,255,0.12)' : 'transparent'}; color: ${activePnlTf === tf.toLowerCase() ? '#38bdf8' : 'var(--muted)'}; border: none; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; cursor: pointer; transition: all 0.15s ease;">
+              <button type="button" class="pnl-tf-btn" data-tf="${tf.toLowerCase()}" style="background: ${activePnlTf === tf.toLowerCase() ? 'rgba(255,255,255,0.12)' : 'transparent'}; color: ${activePnlTf === tf.toLowerCase() ? '#38bdf8' : 'var(--muted)'}; border: none; padding: 3px 6px; border-radius: 5px; font-size: 0.7rem; font-weight: 800; cursor: pointer; transition: all 0.15s ease;">
                 ${tf}
               </button>
             `).join("")}
           </div>
         </div>
 
-        <!-- SVG WAVE GRAPHIC WITH SIFTLE BRAND LOGO -->
-        <div style="width: 100%; height: 110px; position: relative; margin-top: 10px;">
+        <!-- SVG WAVE GRAPHIC -->
+        <div style="width: 100%; height: 95px; position: relative; margin-top: 6px;">
           <svg viewBox="0 0 500 120" preserveAspectRatio="none" style="width: 100%; height: 100%; display: block; overflow: visible;">
             <defs>
               <linearGradient id="pnlGrad" x1="0" y1="0" x2="0" y2="1">
@@ -6472,22 +6477,22 @@ const renderPortfolio = (): void => {
             <path d="M0,85 C120,80 200,95 320,60 C400,35 460,45 500,40 L500,120 L0,120 Z" fill="url(#pnlGrad)"/>
             <path d="M0,85 C120,80 200,95 320,60 C400,35 460,45 500,40" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round"/>
           </svg>
-          <div style="position: absolute; right: 14px; bottom: 10px; font-size: 0.85rem; font-weight: 900; letter-spacing: 0.1em; color: rgba(255,255,255,0.08); text-transform: uppercase; pointer-events: none;">
+          <div style="position: absolute; right: 10px; bottom: 8px; font-size: 0.8rem; font-weight: 900; letter-spacing: 0.1em; color: rgba(255,255,255,0.08); text-transform: uppercase; pointer-events: none;">
             SIFTLE
           </div>
         </div>
 
       </div>
 
-      <!-- HORIZONTALLY SCROLLABLE TAB BAR -->
-      <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 16px; scrollbar-width: none; -webkit-overflow-scrolling: touch;">
+      <!-- HORIZONTALLY SCROLLABLE TAB BAR (SMOOTH SWIPE RIGHT-TO-LEFT) -->
+      <div style="display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden; white-space: nowrap; padding-bottom: 12px; margin-bottom: 16px; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; width: 100%; box-sizing: border-box;">
         ${[
           { id: "positions", label: "Positions" },
           { id: "open_orders", label: "Open Orders" },
           { id: "trade_history", label: "Trade history" },
           { id: "deposits", label: "Deposits & Withdrawals" }
         ].map(t => `
-          <button type="button" class="portfolio-subtab-btn" data-subtab="${t.id}" style="background: ${activeTab === t.id ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.03)'}; color: ${activeTab === t.id ? '#ffffff' : 'var(--muted)'}; border: 1px solid ${activeTab === t.id ? 'rgba(255, 255, 255, 0.18)' : 'var(--border)'}; padding: 10px 18px; border-radius: 12px; font-size: 0.92rem; font-weight: 800; cursor: pointer; white-space: nowrap; transition: all 0.15s ease;">
+          <button type="button" class="portfolio-subtab-btn" data-subtab="${t.id}" style="flex-shrink: 0; background: ${activeTab === t.id ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.03)'}; color: ${activeTab === t.id ? '#ffffff' : 'var(--muted)'}; border: 1.5px solid ${activeTab === t.id ? 'rgba(255, 255, 255, 0.22)' : 'var(--border)'}; padding: 9px 16px; border-radius: 12px; font-size: 0.88rem; font-weight: 800; cursor: pointer; transition: all 0.15s ease;">
             ${t.label}
           </button>
         `).join("")}
@@ -6501,62 +6506,62 @@ const renderPortfolio = (): void => {
               ${openPositions.map(renderPortfolioPositionCard).join("")}
             </div>
           ` : `
-            <div style="text-align: center; padding: 48px 16px; background: var(--paper); border: 1px solid var(--border); border-radius: 20px;">
-              <p style="margin: 0 0 6px 0; font-size: 1.05rem; font-weight: 800; color: var(--ink);">No active positions yet.</p>
-              <p style="margin: 0 0 20px 0; font-size: 0.85rem; color: var(--muted); font-weight: 600;">Start trading to view positions.</p>
-              <button type="button" id="startTradingBtn" style="background: rgba(255, 255, 255, 0.1); color: var(--ink); border: 1px solid var(--border); padding: 10px 24px; border-radius: 12px; font-size: 0.92rem; font-weight: 800; cursor: pointer;">
+            <div style="text-align: center; padding: 40px 16px; background: var(--paper); border: 1px solid var(--border); border-radius: 18px; box-sizing: border-box;">
+              <p style="margin: 0 0 6px 0; font-size: 1rem; font-weight: 800; color: var(--ink);">No active positions yet.</p>
+              <p style="margin: 0 0 18px 0; font-size: 0.82rem; color: var(--muted); font-weight: 600;">Start trading to view positions.</p>
+              <button type="button" id="startTradingBtn" style="background: rgba(255, 255, 255, 0.1); color: var(--ink); border: 1px solid var(--border); padding: 10px 22px; border-radius: 12px; font-size: 0.9rem; font-weight: 800; cursor: pointer;">
                 Start trading
               </button>
             </div>
           `}
         ` : activeTab === "open_orders" ? `
-          <div style="text-align: center; padding: 48px 16px; background: var(--paper); border: 1px solid var(--border); border-radius: 20px;">
-            <p style="margin: 0 0 6px 0; font-size: 1.05rem; font-weight: 800; color: var(--ink);">No open orders.</p>
-            <p style="margin: 0; font-size: 0.85rem; color: var(--muted); font-weight: 600;">Your pending limit orders will appear here.</p>
+          <div style="text-align: center; padding: 40px 16px; background: var(--paper); border: 1px solid var(--border); border-radius: 18px; box-sizing: border-box;">
+            <p style="margin: 0 0 6px 0; font-size: 1rem; font-weight: 800; color: var(--ink);">No open orders.</p>
+            <p style="margin: 0; font-size: 0.82rem; color: var(--muted); font-weight: 600;">Your pending limit orders will appear here.</p>
           </div>
         ` : activeTab === "trade_history" ? `
-          <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 18px;">
+          <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 18px; padding: 16px; box-sizing: border-box;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <span style="font-size: 0.95rem; font-weight: 800; color: var(--ink);">On-Chain Trade History</span>
+              <span style="font-size: 0.92rem; font-weight: 800; color: var(--ink);">On-Chain Trade History</span>
+              <a href="https://testnet.arcscan.app/address/${state.walletAddress || '0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E'}" target="_blank" rel="noopener noreferrer" style="font-size: 0.8rem; font-weight: 700; color: #38bdf8; text-decoration: underline;">ArcScan ↗</a>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              ${realTradesList.length ? realTradesList.map(([mId, pos]: any) => {
+                const optLabel = pos.optionLabel || (pos.optionId === 'home' ? 'Home' : pos.optionId === 'away' ? 'Away' : 'Draw');
+                const shares = pos.optionSharesUsdc || pos.yesSharesUsdc || 1;
+                return `
+                  <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--subtle-bg); border-radius: 12px;">
+                    <div>
+                      <div style="font-size: 0.9rem; font-weight: 800; color: var(--ink);">${escapeHtml(optLabel)}</div>
+                      <div style="font-size: 0.75rem; color: var(--muted);">Arc Testnet Contract</div>
+                    </div>
+                    <div style="text-align: right;">
+                      <div style="font-size: 0.9rem; font-weight: 800; color: #38bdf8;">$${shares.toFixed(2)} USDC</div>
+                      <div style="font-size: 0.72rem; color: #34d399; font-weight: 700;">Confirmed On-Chain</div>
+                    </div>
+                  </div>
+                `;
+              }).join("") : `
+                <div style="text-align: center; padding: 20px; color: var(--muted); font-size: 0.85rem;">No trades placed yet.</div>
+              `}
+            </div>
+          </div>
+        ` : `
+          <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 18px; padding: 16px; box-sizing: border-box;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <span style="font-size: 0.92rem; font-weight: 800; color: var(--ink);">Deposits & Withdrawals</span>
               <a href="https://testnet.arcscan.app/address/${state.walletAddress || '0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E'}" target="_blank" rel="noopener noreferrer" style="font-size: 0.8rem; font-weight: 700; color: #38bdf8; text-decoration: underline;">ArcScan ↗</a>
             </div>
             <div style="display: flex; flex-direction: column; gap: 10px;">
               <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--subtle-bg); border-radius: 12px;">
                 <div>
-                  <div style="font-size: 0.9rem; font-weight: 800; color: var(--ink);">Angers to Win</div>
-                  <div style="font-size: 0.75rem; color: var(--muted);">Angers vs Lille • Arc Testnet</div>
+                  <div style="font-size: 0.9rem; font-weight: 800; color: var(--ink);">Arc USDC Balance</div>
+                  <div style="font-size: 0.75rem; color: var(--muted);">Arc Testnet</div>
                 </div>
                 <div style="text-align: right;">
-                  <div style="font-size: 0.9rem; font-weight: 800; color: #38bdf8;">$1.00 USDC</div>
-                  <div style="font-size: 0.75rem; color: #34d399; font-weight: 700;">Confirmed</div>
+                  <div style="font-size: 0.9rem; font-weight: 800; color: #34d399;">+${currentCash.toFixed(2)} USDC</div>
+                  <div style="font-size: 0.72rem; color: var(--muted);">Available</div>
                 </div>
-              </div>
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--subtle-bg); border-radius: 12px;">
-                <div>
-                  <div style="font-size: 0.9rem; font-weight: 800; color: var(--ink);">Atalanta to Win</div>
-                  <div style="font-size: 0.75rem; color: var(--muted);">Atalanta vs Sassuolo • Arc Testnet</div>
-                </div>
-                <div style="text-align: right;">
-                  <div style="font-size: 0.9rem; font-weight: 800; color: #38bdf8;">$1.00 USDC</div>
-                  <div style="font-size: 0.75rem; color: #34d399; font-weight: 700;">Confirmed</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        ` : `
-          <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 18px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <span style="font-size: 0.95rem; font-weight: 800; color: var(--ink);">Deposits & Withdrawals</span>
-              <a href="https://testnet.arcscan.app/address/${state.walletAddress || '0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E'}" target="_blank" rel="noopener noreferrer" style="font-size: 0.8rem; font-weight: 700; color: #38bdf8; text-decoration: underline;">ArcScan ↗</a>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--subtle-bg); border-radius: 12px;">
-              <div>
-                <div style="font-size: 0.9rem; font-weight: 800; color: var(--ink);">USDC Faucet Deposit</div>
-                <div style="font-size: 0.75rem; color: var(--muted);">Arc Testnet</div>
-              </div>
-              <div style="text-align: right;">
-                <div style="font-size: 0.9rem; font-weight: 800; color: #34d399;">+20.00 USDC</div>
-                <div style="font-size: 0.75rem; color: var(--muted);">Completed</div>
               </div>
             </div>
           </div>
