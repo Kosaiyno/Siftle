@@ -4118,18 +4118,6 @@ const renderMarkets = (): void => {
     return !["coventry", "nizhny", "chertanova", "dinamo moscow", "spartak moscow"].some(kw => text.includes(kw));
   });
 
-  const filteredMarkets = marketPreviews.filter((m: any) => {
-    if (activeLeague === "All") return true;
-    const lg = (m.league || "").toLowerCase();
-    const act = activeLeague.toLowerCase();
-    if (act.includes("epl") || act.includes("premier")) return lg.includes("premier") || lg.includes("epl");
-    if (act.includes("la liga") || act.includes("laliga")) return lg.includes("laliga") || lg.includes("la liga");
-    if (act.includes("champions")) return lg.includes("champions");
-    if (act.includes("serie a")) return lg.includes("serie a");
-    if (act.includes("bundesliga")) return lg.includes("bundesliga");
-    if (act.includes("saudi")) return lg.includes("saudi");
-    return true;
-  });
 
   const featuredMarket = marketPreviews[0] || {
     id: "m-espanyol-real-madrid",
@@ -4141,16 +4129,31 @@ const renderMarkets = (): void => {
     league: "Spanish LaLiga"
   };
 
-  // Clean text labels without emojis
+  // Complete list of all 7 top leagues with exact matching
   const leaguesList = [
     { id: "All", label: "All" },
-    { id: "EPL", label: "EPL" },
+    { id: "Premier League", label: "Premier League (EPL)" },
     { id: "La Liga", label: "La Liga" },
-    { id: "Champions", label: "Champions" },
     { id: "Serie A", label: "Serie A" },
     { id: "Bundesliga", label: "Bundesliga" },
-    { id: "Saudi Pro", label: "Saudi Pro" }
+    { id: "Ligue 1", label: "Ligue 1" },
+    { id: "Primeira Liga", label: "Primeira Liga" },
+    { id: "Eredivisie", label: "Eredivisie" }
   ];
+
+  const filteredMarkets = marketPreviews.filter((m: any) => {
+    if (activeLeague === "All") return true;
+    const lg = (m.league || "").toLowerCase();
+    const act = activeLeague.toLowerCase();
+    if (act.includes("premier") || act.includes("epl")) return lg.includes("premier") || lg.includes("eng");
+    if (act.includes("la liga") || act.includes("laliga")) return lg.includes("laliga") || lg.includes("la liga") || lg.includes("spanish");
+    if (act.includes("serie a")) return lg.includes("serie a") || lg.includes("italian");
+    if (act.includes("bundesliga")) return lg.includes("bundesliga") || lg.includes("german");
+    if (act.includes("ligue 1") || act.includes("ligue")) return lg.includes("ligue 1") || lg.includes("french");
+    if (act.includes("primeira") || act.includes("portuguese")) return lg.includes("primeira") || lg.includes("portuguese");
+    if (act.includes("eredivisie") || act.includes("dutch")) return lg.includes("eredivisie") || lg.includes("dutch");
+    return lg.includes(act);
+  });
 
   storyList.innerHTML = `
     <section class="markets-surface-redesign" style="padding: 12px 6px 110px 6px; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif; color: var(--ink);">
@@ -4203,13 +4206,13 @@ const renderMarkets = (): void => {
 
       </div>
 
-      <!-- Horizontal League Selection Icon Nav Bar (No Emojis) -->
-      <div style="display: flex; gap: 14px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 20px; scrollbar-width: none;">
+      <!-- Horizontal League Selection Nav Bar -->
+      <div style="display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden; padding-bottom: 10px; margin-bottom: 20px; scrollbar-width: none; -webkit-overflow-scrolling: touch; width: 100%; box-sizing: border-box;">
         ${leaguesList.map((lg) => {
           const isActive = activeLeague === lg.id;
           return `
-            <button type="button" class="market-league-selector-btn" data-league-id="${lg.id}" style="background: transparent; border: none; color: ${isActive ? 'var(--ink)' : 'var(--muted)'}; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; flex-shrink: 0; padding-bottom: 6px; border-bottom: 2px solid ${isActive ? '#ffffff' : 'transparent'}; font-family: inherit; transition: all 0.2s ease;">
-              <span style="font-size: 0.9rem; font-weight: 800; white-space: nowrap;">${lg.label}</span>
+            <button type="button" class="market-league-selector-btn" data-league-id="${lg.id}" style="background: ${isActive ? '#38bdf8' : 'rgba(255, 255, 255, 0.05)'}; color: ${isActive ? '#000000' : 'var(--muted)'}; border: 1.5px solid ${isActive ? '#38bdf8' : 'var(--border)'}; border-radius: 999px; padding: 8px 16px; font-size: 0.88rem; font-weight: ${isActive ? '900' : '700'}; cursor: pointer; flex-shrink: 0; white-space: nowrap; font-family: inherit; transition: all 0.2s ease; ${isActive ? 'box-shadow: 0 4px 12px rgba(56, 189, 248, 0.35);' : ''}">
+              ${escapeHtml(lg.label)}
             </button>
           `;
         }).join("")}
