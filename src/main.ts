@@ -5393,8 +5393,6 @@ const showTradeSuccessModal = (info: {
           <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Est. Payout</span>
           <span style="font-size: 1.05rem; font-weight: 900; color: #34d399;">${info.potentialWin} USDC</span>
         </div>
-        </div>
-
       </div>
 
       <!-- Prominent Clickable ArcScan Verification Button -->
