@@ -6377,8 +6377,56 @@ const renderPortfolio = (): void => {
         ${renderReferralPanel(walletConnected)}
       <div class="profile-card" style="background: var(--market-card-bg) !important; border: 1px solid var(--market-border) !important; border-radius: 12px !important; padding: 14px !important; margin-bottom: 12px !important; box-sizing: border-box !important;">
         <div class="profile-avatar-container" style="display: flex !important; align-items: center !important; gap: 16px !important;">
-          <div class="profile-avatar-gradient" style="width: 44px !important; height: 44px !important; border-radius: 50% !important; background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important; display: flex !important; align-items: center !important; justify-content: center !important; flex-shrink: 0 !important; border: 1px solid rgba(255, 255, 255, 0.1) !important;">
-            <span class="avatar-letter" style="color: var(--ink) !important; font-family: 'Space Grotesk', sans-serif !important; font-size: 1.2rem !important; font-weight: 750 !important;">${avatarLetter}</span>
+          <div class="profile-avatar-3d" style="width: 58px !important; height: 58px !important; border-radius: 50% !important; flex-shrink: 0 !important; position: relative; display: flex; align-items: center; justify-content: center;">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%; display: block; filter: drop-shadow(0 4px 10px rgba(56, 189, 248, 0.35));">
+  <defs>
+    <radialGradient id="sphereGrad" cx="35%" cy="30%" r="65%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="35%" stop-color="#2563eb"/>
+      <stop offset="70%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#090a1a"/>
+    </radialGradient>
+    <linearGradient id="glossGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.85"/>
+      <stop offset="40%" stop-color="#ffffff" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="head3D" cx="35%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="40%" stop-color="#e0f2fe"/>
+      <stop offset="80%" stop-color="#7dd3fc"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </radialGradient>
+    <radialGradient id="body3D" cx="40%" cy="20%" r="70%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="45%" stop-color="#bae6fd"/>
+      <stop offset="80%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </radialGradient>
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+  
+  <!-- Outer 3D Sphere Orb -->
+  <circle cx="24" cy="24" r="22" fill="url(#sphereGrad)"/>
+  
+  <!-- Outer Specular Ring & Depth Shadow -->
+  <circle cx="24" cy="24" r="21.5" stroke="rgba(255, 255, 255, 0.45)" stroke-width="1"/>
+  <circle cx="24" cy="24" r="20" stroke="rgba(56, 189, 248, 0.3)" stroke-width="1.5"/>
+  
+  <!-- 3D Humanoid Figure: Head -->
+  <circle cx="24" cy="17" r="7.5" fill="url(#head3D)" filter="url(#softGlow)"/>
+  <ellipse cx="22" cy="14" rx="2.5" ry="1.5" fill="#ffffff" opacity="0.8"/>
+  
+  <!-- 3D Humanoid Figure: Shoulders / Torso -->
+  <path d="M12 37.5C12 30.5 17.5 27 24 27C30.5 27 36 30.5 36 37.5C36 39 34.5 40 33 40H15C13.5 40 12 39 12 37.5Z" fill="url(#body3D)"/>
+  <path d="M16 34C19 30 29 30 32 34" stroke="rgba(255, 255, 255, 0.6)" stroke-width="1" stroke-linecap="round"/>
+  
+  <!-- Glass Top-Left Curved Highlight Specular -->
+  <path d="M10 14C13 8 20 5 28 6C23 6 15 9 12 15C10.5 18 10 22 10 22C10 22 9.5 17 10 14Z" fill="url(#glossGrad)"/>
+</svg>
           </div>
           <div class="profile-details" style="display: flex !important; flex-direction: column !important; min-width: 0 !important;">
             <div class="username-display-row" style="display: flex !important; align-items: center !important; gap: 8px !important;">
