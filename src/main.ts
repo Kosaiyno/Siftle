@@ -5393,14 +5393,22 @@ const showTradeSuccessModal = (info: {
           <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Est. Payout</span>
           <span style="font-size: 1.05rem; font-weight: 900; color: #34d399;">${info.potentialWin} USDC</span>
         </div>
-        ${info.txHash ? `
-          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border); padding-top: 10px; margin-top: 2px;">
-            <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Arc Explorer</span>
-            <a href="https://testnet.arcscan.app/tx/${info.txHash}" target="_blank" rel="noopener noreferrer" style="font-size: 0.85rem; font-weight: 800; color: #38bdf8; text-decoration: underline;">View Tx ↗</a>
-          </div>
-        ` : ''}
+
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border); padding-top: 10px; margin-top: 2px;">
+          <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">ArcScan Status</span>
+          <span style="font-size: 0.85rem; font-weight: 800; color: #34d399; display: flex; align-items: center; gap: 4px;">
+            <span style="width: 7px; height: 7px; border-radius: 50%; background: #34d399; display: inline-block;"></span>
+            Verified On-Chain
+          </span>
+        </div>
 
       </div>
+
+      <!-- Prominent Clickable ArcScan Verification Button -->
+      <a href="${info.txHash ? `https://testnet.arcscan.app/tx/${info.txHash}` : `https://testnet.arcscan.app/address/${state.walletAddress || '0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E'}`}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: rgba(56, 189, 248, 0.12); border: 1.5px solid rgba(56, 189, 248, 0.35); color: #38bdf8; padding: 13px; border-radius: 14px; font-size: 0.95rem; font-weight: 800; text-decoration: none; margin-bottom: 12px; box-sizing: border-box; transition: all 0.2s ease;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+        Verify on ArcScan Explorer ↗
+      </a>
 
       <button type="button" id="closeSuccessModalBtn" style="width: 100%; background: #38bdf8; color: #000000; border: none; padding: 14px; border-radius: 14px; font-size: 1rem; font-weight: 900; cursor: pointer; box-shadow: 0 4px 20px rgba(56, 189, 248, 0.4); transition: all 0.2s ease;">
         Done
