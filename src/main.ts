@@ -4090,7 +4090,7 @@ const getMarketOddsCents = (market: any) => {
       away: String(Number(market.customOdds.away).toFixed(1))
     };
   }
-  return { home: "45.0", draw: "25.0", away: "30.0" };
+  return { home: "33.3", draw: "33.3", away: "33.3" };
 };
 
 
@@ -4239,7 +4239,7 @@ const renderMarkets = (): void => {
                 <span style="font-size: 0.78rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; ${isLive ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);' : 'background: rgba(255, 255, 255, 0.06); color: var(--muted);'}">
                   ${isLive ? '🔴 LIVE ⚡' : `Today • ${escapeHtml(m.statusDetail || 'Scheduled')}`}
                 </span>
-                <span style="font-size: 0.78rem; color: #38bdf8; font-weight: 800; background: rgba(56, 189, 248, 0.12); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.25);">${m.volume || "$18.4k"} Vol</span>
+                <span style="font-size: 0.78rem; color: #38bdf8; font-weight: 800; background: rgba(56, 189, 248, 0.12); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.25);">${Number(m.volumeUsdc || 0) > 0 ? ("$" + Number(m.volumeUsdc).toFixed(2)) : "$0.00"} Vol</span>
               </div>
 
               <!-- Stacked Teams -->
@@ -5458,10 +5458,10 @@ const showTradeSuccessModal = (info: {
 
   let optionName = optionId;
   const odds = getMarketOddsCents(market);
-  let priceCents = parseFloat(odds.home) || 45.0;
+  let priceCents = parseFloat(odds.home) || 33.3;
   if (optionId === "home") {
     optionName = (market as any).homeTeam || "Home";
-    priceCents = parseFloat(odds.home) || 45.0;
+    priceCents = parseFloat(odds.home) || 33.3;
   } else if (optionId === "away") {
     optionName = (market as any).awayTeam || "Away";
     priceCents = parseFloat(odds.away) || 30.0;
