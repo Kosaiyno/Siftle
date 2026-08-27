@@ -9260,7 +9260,7 @@ function getAnalyticsHtml() {
   return readFileSync(join(dir, "analytics.html"), "utf8");
 }
 
-export function buildPreseasonLeaderboardPlayers(data, profiles, unlocks) {
+export function buildPreseasonLeaderboardPlayers(data, profiles, unlocks, bonusEvents = []) {
   const profileMap = new Map();
   if (profiles && profiles.length > 0) {
     profiles.forEach(p => {
@@ -9276,6 +9276,26 @@ export function buildPreseasonLeaderboardPlayers(data, profiles, unlocks) {
   });
 
   const dailyUnlocks = new Map(); // walletAddress -> Map<dateKey, count>
+  const predictionWinsMap = new Map(); // walletAddress -> count
+
+  // Load prediction wins from memory/local store
+  if (data.leaderboard?.predictionWins) {
+    Object.entries(data.leaderboard.predictionWins).forEach(([addr, count]) => {
+      const clean = normalizeWalletAddress(addr);
+      if (clean) predictionWinsMap.set(clean, Number(count) || 0);
+    });
+  }
+
+  // Load bonus events from Supabase
+  if (bonusEvents && Array.isArray(bonusEvents)) {
+    bonusEvents.forEach(evt => {
+      const clean = normalizeWalletAddress(evt.wallet_address);
+      if (!clean) return;
+      if (evt.bonus_type === 'prediction_win') {
+        predictionWinsMap.set(clean, (predictionWinsMap.get(clean) || 0) + 1);
+      }
+    });
+  }
 
   if (unlocks && unlocks.length > 0) {
     unlocks.forEach(unlock => {
@@ -9318,28 +9338,38 @@ export function buildPreseasonLeaderboardPlayers(data, profiles, unlocks) {
 
   const countMap = new Map();
   const daysMap = new Map();
-  for (const [addr, userDays] of dailyUnlocks.entries()) {
+  
+  // Combine all addresses from unlocks and prediction wins
+  const allAddresses = new Set([...dailyUnlocks.keys(), ...predictionWinsMap.keys()]);
+
+  for (const addr of allAddresses) {
     let daysWithTarget = 0;
-    for (const [dateKey, count] of userDays.entries()) {
-      if (count >= 3) {
-        daysWithTarget++;
+    const userDays = dailyUnlocks.get(addr);
+    if (userDays) {
+      for (const [dateKey, count] of userDays.entries()) {
+        if (count >= 3) daysWithTarget++;
       }
     }
-    if (daysWithTarget > 0) {
+    const wins = predictionWinsMap.get(addr) || 0;
+    const totalPoints = (daysWithTarget * 30) + (wins * 100);
+
+    if (totalPoints > 0 || wins > 0) {
       daysMap.set(addr, daysWithTarget);
-      countMap.set(addr, daysWithTarget * 30);
+      countMap.set(addr, totalPoints);
     }
   }
 
   return Array.from(countMap.entries()).map(([address, points]) => {
     const username = profileMap.get(address) || "";
     const days = daysMap.get(address) || 0;
+    const wins = predictionWinsMap.get(address) || 0;
     return {
       username: address,
       displayName: username,
       unlocks: days * 3,
       points: points,
-      status: `${days} day${days === 1 ? "" : "s"} completed`
+      wins: wins,
+      status: wins > 0 ? `${wins} win${wins === 1 ? "" : "s"} • ${days} briefing day${days === 1 ? "" : "s"}` : `${days} day${days === 1 ? "" : "s"} completed`
     };
   }).sort((a, b) => b.points - a.points);
 }
@@ -10932,6 +10962,43 @@ const server = createServer(async (request, response) => {
 
   if (requestUrl.pathname === "/api/0g/status" && request.method === "GET") {
     sendJson(response, 200, getZeroGStatusSnapshot());
+    return;
+  }
+
+    if (requestUrl.pathname === "/api/leaderboard/report-win" && request.method === "POST") {
+    try {
+      const body = await readJsonBody(request);
+      const walletAddress = normalizeWalletAddress(body?.walletAddress);
+      const marketId = body?.marketId || "";
+      if (walletAddress) {
+        const data = loadAnalytics();
+        if (!data.leaderboard) data.leaderboard = {};
+        if (!data.leaderboard.predictionWins) data.leaderboard.predictionWins = {};
+        data.leaderboard.predictionWins[walletAddress] = (data.leaderboard.predictionWins[walletAddress] || 0) + 1;
+        saveAnalytics(data);
+
+        // Persistent save in Supabase if configured
+        try {
+          await supabaseRequest("leaderboard_bonus_events", {
+            method: "POST",
+            body: JSON.stringify({
+              wallet_address: walletAddress,
+              season_id: "season-2",
+              bonus_type: "prediction_win",
+              bonus_key: marketId,
+              points: 100,
+              created_at: new Date().toISOString()
+            })
+          });
+        } catch (e) {}
+
+        sendJson(response, 200, { success: true, pointsAwarded: 100, totalWins: data.leaderboard.predictionWins[walletAddress] });
+        return;
+      }
+      sendJson(response, 400, { error: "Missing walletAddress" });
+    } catch (err) {
+      sendJson(response, 500, { error: err.message });
+    }
     return;
   }
 
