@@ -646,7 +646,15 @@ const connectWallet = async (): Promise<void> => {
       state.referralError = null;
       state.referralPanelOpen = false;
       syncProfileUsernameForWallet();
-      state.walletBalance = await readArcUsdcBalance(account);
+      const rpcBal = await readArcUsdcBalance(account);
+      const optKey = `siftle_optimistic_bal_${account.toLowerCase()}`;
+      const optBal = localStorage.getItem(optKey);
+      if (optBal !== null && parseFloat(optBal) < parseFloat(rpcBal.replace(/,/g, ""))) {
+        state.walletBalance = optBal;
+      } else {
+        localStorage.removeItem(optKey);
+        state.walletBalance = rpcBal;
+      }
       await bindPendingReferral(account);
       void loadReferralData();
       await loadPortfolioPositions();
