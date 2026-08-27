@@ -1652,7 +1652,7 @@ export const executeArcOptionMarketOrder = async (
     throw new Error("Option markets are available after signing in with Siftle wallet.");
   }
 
-  onStatus?.(mode === "sell" ? "Exiting your pick..." : "Locking your pick...");
+  onStatus?.(mode === "sell" ? "Exiting trade on Arc..." : "Placing trade on Arc...");
   const response = await fetch(apiUrl("/api/backend-wallet/option-trade"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
