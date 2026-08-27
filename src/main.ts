@@ -569,6 +569,14 @@ const openGuideModal = (): void => {
             <p class="guide-step-desc">Click <strong>"AI briefing"</strong> on any news card to unlock a quick AI summary of what happened, key points, and takeaways.</p>
           </div>
         </div>
+
+        <div class="guide-step-item">
+          <span class="guide-step-num">4</span>
+          <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
+            <h4 class="guide-step-title">Predict Matches & Win</h4>
+            <p class="guide-step-desc">Trade pre-match and in-play prediction markets using testnet USDC from the <strong>Circle Faucet</strong>. Earn up to 100 points per winning match to climb Season 2 rankings!</p>
+          </div>
+        </div>
       </div>
       
       <button id="guideStartBtn" class="circle-auth-btn" type="button" style="width: 100%; font-family: Outfit, sans-serif;">Get Started</button>
@@ -4331,7 +4339,7 @@ const renderLeaderboard = (): void => {
           Season 2 rankings
         </h1>
         <p style="margin: 0; font-size: 0.88rem; color: var(--muted); font-weight: 500; line-height: 1.5;">
-          Everyone ranked by Season 2 points. Earn 100 points for every correct match prediction + daily points for unlocking AI Briefings.
+          Everyone ranked by Season 2 points. Earn 100 points for pre-match predictions (50 points for in-play live predictions) + daily points for unlocking AI Briefings.
         </p>
       </header>
 
@@ -5553,10 +5561,25 @@ const renderMatchDetailPage = async (matchId: string) => {
         }).join("")}
       </div>
 
-      <!-- Tab Content Area -->
-      <div id="matchDetailPageTabContent" style="display: flex; flex-direction: column; gap: 20px;">
-        <div class="skeleton" style="height: 180px; border-radius: 20px; width: 100%;"></div>
-        <div class="skeleton" style="height: 240px; border-radius: 20px; width: 100%;"></div>
+      <!-- Tab Content Area with Rich Glowing Skeleton Loader -->
+      <div id="matchDetailPageTabContent" style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 22px 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
+          <div style="width: 120px; height: 18px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); margin-bottom: 18px; animation: pulse 1.2s infinite ease-in-out;"></div>
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            ${[1, 2, 3, 4].map(() => `
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="width: 35%; height: 12px; border-radius: 4px; background: rgba(255, 255, 255, 0.06); animation: pulse 1.2s infinite ease-in-out;"></div>
+                <div style="width: 25%; height: 14px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); animation: pulse 1.2s infinite ease-in-out;"></div>
+                <div style="width: 35%; height: 12px; border-radius: 4px; background: rgba(255, 255, 255, 0.06); animation: pulse 1.2s infinite ease-in-out;"></div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+
+        <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 22px 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
+          <div style="width: 150px; height: 18px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); margin-bottom: 18px; animation: pulse 1.2s infinite ease-in-out;"></div>
+          <div style="height: 120px; border-radius: 12px; background: rgba(255, 255, 255, 0.03); animation: pulse 1.2s infinite ease-in-out;"></div>
+        </div>
       </div>
 
     </section>
@@ -5859,8 +5882,32 @@ const renderMatches = (): void => {
       </div>
 
       ${loading ? `
-        <div style="display: flex; flex-direction: column; gap: 16px;">
-          ${Array.from({ length: 3 }).map(() => `<div class="skeleton" style="height: 180px; border-radius: 16px; width: 100%;"></div>`).join("")}
+        <!-- Rich Football Match Loading Skeletons -->
+        <div style="display: flex; flex-direction: column; gap: 16px; width: 100%;">
+          ${[1, 2, 3].map(() => `
+            <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 18px; padding: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); width: 100%; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); margin-bottom: 14px;">
+                <div style="width: 28px; height: 28px; border-radius: 8px; background: rgba(255, 255, 255, 0.08); animation: pulse 1.2s infinite ease-in-out;"></div>
+                <div style="width: 140px; height: 16px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); animation: pulse 1.2s infinite ease-in-out;"></div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(255, 255, 255, 0.08); animation: pulse 1.2s infinite ease-in-out;"></div>
+                    <div style="width: 110px; height: 14px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); animation: pulse 1.2s infinite ease-in-out;"></div>
+                  </div>
+                  <div style="width: 20px; height: 16px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); animation: pulse 1.2s infinite ease-in-out;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(255, 255, 255, 0.08); animation: pulse 1.2s infinite ease-in-out;"></div>
+                    <div style="width: 95px; height: 14px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); animation: pulse 1.2s infinite ease-in-out;"></div>
+                  </div>
+                  <div style="width: 20px; height: 16px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); animation: pulse 1.2s infinite ease-in-out;"></div>
+                </div>
+              </div>
+            </div>
+          `).join("")}
         </div>
       ` : matches.length === 0 ? `
         <div style="text-align: center; padding: 48px 16px; color: var(--muted); font-size: 0.95rem; font-weight: 500;">
