@@ -9656,7 +9656,10 @@ const server = createServer(async (request, response) => {
         return;
       }
 
-      const market = getActiveMarkets().find((entry) => String(entry.id || "").trim() === marketId && entry.optionMarket);
+      let market = getActiveMarkets().find((entry) => String(entry.id || "").trim() === marketId && entry.optionMarket);
+      if (!market) {
+        market = fallbackMarketPreviews.find((entry) => String(entry.id || "").trim() === marketId);
+      }
       if (!market) {
         sendJson(response, 400, { error: "This option market is not available" });
         return;
