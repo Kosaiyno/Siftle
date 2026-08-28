@@ -3686,7 +3686,7 @@ const renderMarketCard = (market: MarketPreview, index: number = 0): string => {
     return `
       <article class="sporty-marquee-card" data-market-id="${market.id}">
         <div class="sporty-marquee-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <span class="sporty-hot-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; font-size: 0.72rem; font-weight: 800; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(239, 68, 68, 0.3);">🔥 HOT · BEST ODDS</span>
+          <span class="sporty-hot-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; font-size: 0.72rem; font-weight: 800; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(239, 68, 68, 0.3);">HOT · BEST ODDS</span>
           <span style="font-size: 0.82rem; color: var(--muted); font-weight: 600;">${escapeHtml(leagueInfo)}</span>
         </div>
         <div class="sporty-teams-row" style="display: flex; justify-content: space-between; align-items: center; margin: 14px 0 18px;">
@@ -3767,7 +3767,7 @@ const generateWhatsAppShareText = (market: MarketPreview): string => {
   
   const currentUrl = `${window.location.origin}${window.location.pathname}#market-${market.id}`;
   
-  return `🚨 *Siftle Market Alert* 🚨\n\n*Market:* ${market.question}\n🟢 *Yes:* ${yesPrice}¢ | 🔴 *No:* ${noPrice}¢\n\n*Latest Development:* "${latestTitle}"\n\nTrade and discuss here: ${currentUrl}`;
+  return `🚨 *Siftle Market Alert* 🚨\n\n*Market:* ${market.question}\n🟢 *Yes:* ${yesPrice}¢ | LIVE • *No:* ${noPrice}¢\n\n*Latest Development:* "${latestTitle}"\n\nTrade and discuss here: ${currentUrl}`;
 };
 
 const renderMarketDetail = (market: MarketPreview): void => {
@@ -4243,7 +4243,7 @@ const renderMarkets = (): void => {
               <!-- Card Header Status -->
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
                 <span style="font-size: 0.78rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; ${isLive ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);' : 'background: rgba(255, 255, 255, 0.06); color: var(--muted);'}">
-                  ${isLive ? '🔴 LIVE IN-PLAY ⚡' : escapeHtml(m.statusDetail || 'Scheduled')}
+                  ${isLive ? 'LIVE IN-PLAY' : escapeHtml(m.statusDetail || 'Scheduled')}
                 </span>
                 <span style="font-size: 0.78rem; color: #38bdf8; font-weight: 800; background: rgba(56, 189, 248, 0.12); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.25);">${cardVol > 0 ? ("$" + cardVol.toFixed(2)) : "$0.00"} Vol</span>
               </div>
@@ -4274,7 +4274,7 @@ const renderMarkets = (): void => {
                   if (isHeld) {
                     return `
                       <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="${optId}" style="background: rgba(52, 211, 153, 0.12); border: 1.5px solid #34d399; border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; cursor: pointer; text-align: left; box-shadow: 0 0 12px rgba(52, 211, 153, 0.2);">
-                        <span style="font-size: 0.68rem; font-weight: 800; color: #34d399; text-transform: uppercase;">✓ Holding ${userPos.optionSharesUsdc}</span>
+                        <span style="font-size: 0.68rem; font-weight: 800; color: #34d399; text-transform: uppercase;">Holding ${userPos.optionSharesUsdc}</span>
                         <span style="font-size: 0.78rem; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml(label)}</span>
                         <span style="font-size: 1rem; font-weight: 900; color: #34d399;">${price}¢</span>
                       </button>
@@ -4284,7 +4284,7 @@ const renderMarkets = (): void => {
                   if (isLocked) {
                     return `
                       <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="${optId}" data-held-lock="true" style="background: rgba(255, 255, 255, 0.02); border: 1px dashed rgba(255, 255, 255, 0.12); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; cursor: not-allowed; opacity: 0.45; text-align: left;">
-                        <span style="font-size: 0.68rem; font-weight: 800; color: var(--muted);">🔒 Locked</span>
+                        <span style="font-size: 0.68rem; font-weight: 800; color: var(--muted);">Locked</span>
                         <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml(label)}</span>
                         <span style="font-size: 1rem; font-weight: 800; color: var(--muted);">${price}¢</span>
                       </button>
@@ -4306,8 +4306,8 @@ const renderMarkets = (): void => {
                     ${renderOptionBox("away", awayTeam, odds.away)}
                   </div>
                   ${hasPos ? `
-                    <div style="margin-top: 10px; font-size: 0.75rem; color: var(--muted); font-weight: 600; text-align: center; background: rgba(255, 255, 255, 0.03); border-radius: 8px; padding: 6px 10px;">
-                      💡 You hold a position in <strong style="color: #34d399;">${escapeHtml(userPos.optionLabel || heldId)}</strong>. You can buy more or sell in Portfolio. Other outcomes are locked.
+                    <div style="margin-top: 10px; font-size: 0.78rem; color: var(--muted); font-weight: 600; text-align: center; background: rgba(255, 255, 255, 0.03); border-radius: 8px; padding: 8px 12px; border: 1px solid rgba(255, 255, 255, 0.06);">
+                      You hold a position in <strong style="color: #34d399;">${escapeHtml(userPos.optionLabel || heldId)}</strong>. You can buy more or sell. Other outcomes are locked.
                     </div>
                   ` : ''}
                 `;
@@ -4520,7 +4520,7 @@ const renderPortfolioPositionCard = (market: MarketPreview): string => {
             ${escapeHtml(homeTeam)} vs ${escapeHtml(awayTeam)}
           </div>
           <div style="font-size: 0.8rem; color: #38bdf8; font-weight: 800; margin-top: 2px;">
-            ⚡ Pick: ${escapeHtml(pickName)}
+            Pick: ${escapeHtml(pickName)}
           </div>
         </div>
       </div>
@@ -4726,7 +4726,7 @@ const openMatchDetailModal = async (matchId: string) => {
         <!-- Center Score -->
         <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 12px;">
           <span style="font-size: 0.75rem; font-weight: 800; padding: 3px 10px; border-radius: 10px; ${badgeBg}">
-            ${isLive ? `🔴 ${escapeHtml(match.statusDetail)}` : escapeHtml(match.statusDetail)}
+            ${isLive ? `LIVE • ${escapeHtml(match.statusDetail)}` : escapeHtml(match.statusDetail)}
           </span>
           <div style="font-size: 2rem; font-weight: 900; color: ${isLive ? '#34d399' : 'var(--ink)'}; letter-spacing: 2px;">
             ${(isLive || isPost) ? `${match.homeScore ?? 0} - ${match.awayScore ?? 0}` : 'VS'}
@@ -4910,7 +4910,7 @@ const openMatchDetailModal = async (matchId: string) => {
         <!-- Score Center -->
         <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 10px;">
           <span style="font-size: 0.75rem; font-weight: 800; padding: 3px 10px; border-radius: 10px; ${badgeBg}">
-            ${isLive ? `🔴 ${escapeHtml(match.statusDetail || "LIVE")}` : escapeHtml(match.statusDetail || "Scheduled")}
+            ${isLive ? `LIVE • ${escapeHtml(match.statusDetail || "LIVE")}` : escapeHtml(match.statusDetail || "Scheduled")}
           </span>
           <div style="font-size: 1.8rem; font-weight: 900; color: ${isLive ? '#34d399' : 'var(--ink)'}; letter-spacing: 2px;">
             ${(isLive || isPost) ? `${match.homeScore ?? 0} - ${match.awayScore ?? 0}` : 'VS'}
@@ -5045,7 +5045,7 @@ const showTradeSuccessModal = (info: {
     <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 28px; width: 100%; max-width: 420px; padding: 32px 24px; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; box-shadow: 0 24px 64px rgba(0,0,0,0.8); text-align: center; color: var(--ink); animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
       
       <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(52, 211, 153, 0.15); border: 2px solid rgba(52, 211, 153, 0.4); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 2rem;">
-        🎉
+        
       </div>
 
       <h2 style="margin: 0 0 6px 0; font-size: 1.4rem; font-weight: 900; color: var(--ink);">Trade Executed!</h2>
@@ -5130,7 +5130,7 @@ const showTradeSuccessModal = (info: {
   const heldOptionId = currentPos?.optionId || currentPos?.side;
 
   if (hasActivePos && heldOptionId !== optionId) {
-    showActionToast(`🔒 Outcome Locked: You currently hold $${currentPos.optionSharesUsdc} in ${currentPos.optionLabel || heldOptionId}. Sell your shares in Portfolio first to switch outcomes.`);
+    showActionToast(`Outcome Locked: You currently hold ${currentPos.optionSharesUsdc} in ${currentPos.optionLabel || heldOptionId}. You can buy more or sell. Other outcomes are locked.`);
     return;
   }
 
@@ -5621,7 +5621,7 @@ const renderMatchDetailPage = async (matchId: string) => {
           <!-- Score & Live Status -->
           <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 0 12px;">
             <span style="font-size: 0.8rem; font-weight: 800; padding: 4px 12px; border-radius: 12px; ${match.isLive ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);' : 'background: var(--subtle-bg); color: var(--muted);'}">
-              ${match.isLive ? `🔴 ${escapeHtml(match.statusDetail)}` : escapeHtml(match.statusDetail)}
+              ${match.isLive ? `LIVE • ${escapeHtml(match.statusDetail)}` : escapeHtml(match.statusDetail)}
             </span>
             <div style="font-size: 2.5rem; font-weight: 900; color: ${match.isLive ? '#34d399' : 'var(--ink)'}; letter-spacing: 3px;">
               ${(match.isLive || match.isPost) ? `${match.homeScore ?? 0} - ${match.awayScore ?? 0}` : 'VS'}
@@ -5808,7 +5808,7 @@ const renderMatchDetailPage = async (matchId: string) => {
             return goals.map((g: any) => `
               <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
                 <span style="font-size: 0.85rem; font-weight: 800; color: #38bdf8; min-width: 30px;">${g.clock?.displayValue || g.time?.displayValue || "•"}</span>
-                <span style="font-size: 1.1rem;">⚽</span>
+                <span style="font-size: 1.1rem;"></span>
                 <span style="font-size: 0.9rem; font-weight: 700; color: var(--ink);">${escapeHtml(g.text)}</span>
               </div>
             `).join("");
@@ -5934,7 +5934,7 @@ const renderMatches = (): void => {
   // 2. Group non-live matches by cleaned league name
   const groupedByLeague = new Map<string, any[]>();
   if (liveMatches.length > 0) {
-    groupedByLeague.set("🔴 LIVE MATCHES NOW", liveMatches);
+    groupedByLeague.set("LIVE • LIVE MATCHES NOW", liveMatches);
   }
   nonLiveMatches.forEach((m: any) => {
     const lg = cleanLeagueTitle(m.league || "Matches");
@@ -6022,7 +6022,7 @@ const renderMatches = (): void => {
                 <!-- Authentic League Card Header -->
                 <div style="display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 14px;">
                   <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255, 255, 255, 0.06); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    ${officialLeagueLogo ? `<img src="${officialLeagueLogo}" alt="" style="width: 22px; height: 22px; object-fit: contain;" />` : '🏆'}
+                    ${officialLeagueLogo ? `<img src="${officialLeagueLogo}" alt="" style="width: 22px; height: 22px; object-fit: contain;" />` : ''}
                   </div>
                   <div>
                     <h2 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: ${isLiveGroup ? '#ef4444' : 'var(--ink)'}; letter-spacing: -0.01em;">
@@ -6080,7 +6080,7 @@ const renderMatches = (): void => {
                         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 75px; flex-shrink: 0; text-align: center;">
                           ${isLive ? `
                             <span style="font-size: 0.75rem; font-weight: 800; color: #ef4444; background: rgba(239, 68, 68, 0.18); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.3);">
-                              🔴 ${escapeHtml(m.statusDetail)}
+                              LIVE • ${escapeHtml(m.statusDetail)}
                             </span>
                           ` : isPost ? `
                             <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted);">
