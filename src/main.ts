@@ -2662,7 +2662,10 @@ const loadPortfolioPositions = async (options: { force?: boolean } = {}): Promis
         }
       })
     );
-    state.marketPositions = Object.fromEntries(entries);
+    const loadedEntries = Object.fromEntries(entries);
+    loadSavedMarketPositions();
+    state.marketPositions = { ...state.marketPositions, ...loadedEntries };
+    loadSavedMarketPositions();
     state.portfolioPositionsLoadedAt = Date.now();
   } catch (error) {
     console.warn(error);
