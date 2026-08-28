@@ -4078,6 +4078,35 @@ const renderMarketDetail = (market: MarketPreview): void => {
 
 
 
+export const isMarketLocked = (market: any): boolean => {
+  if (!market) return false;
+  if (market.isLocked === true) return true;
+  const status = String(market.statusDetail || "").toLowerCase();
+  if (
+    status.includes("ft") ||
+    status.includes("final") ||
+    status.includes("ended") ||
+    status.includes("finished") ||
+    status.includes("resolved") ||
+    status.includes("postponed") ||
+    status.includes("locked")
+  ) {
+    return true;
+  }
+  if (String(market.closes || "").toLowerCase() === "resolved") {
+    return true;
+  }
+  // Check if live match reached 75+ mins (10-15 mins before final whistle)
+  if (market.isLive) {
+    const minsMatch = status.match(/([0-9]{1,3})/);
+    if (minsMatch) {
+      const mins = parseInt(minsMatch[1], 10);
+      if (!isNaN(mins) && mins >= 75) return true;
+    }
+  }
+  return false;
+};
+
 export const globalOddsStore: Record<string, { home: number; draw: number; away: number }> = (() => {
   try {
     const saved = localStorage.getItem("siftle_global_odds");
