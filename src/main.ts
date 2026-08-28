@@ -4117,16 +4117,7 @@ export const globalOddsStore: Record<string, { home: number; draw: number; away:
 })();
 
 const getMarketOddsCents = (market: any) => {
-  const mId = String(market?.id || "");
-  if (globalOddsStore[mId]) {
-    return {
-      home: String(Number(globalOddsStore[mId].home).toFixed(1)),
-      draw: String(Number(globalOddsStore[mId].draw).toFixed(1)),
-      away: String(Number(globalOddsStore[mId].away).toFixed(1))
-    };
-  }
-  
-  // Calculate directly from option pools when volume exists
+  // Calculate directly from live option pools when volume exists
   const homePool = Number(market?.homePoolUsdc) || Number(market?.optionPools?.home) || Number(market?.initialOptionPools?.home) || 0;
   const drawPool = Number(market?.drawPoolUsdc) || Number(market?.optionPools?.draw) || Number(market?.initialOptionPools?.draw) || 0;
   const awayPool = Number(market?.awayPoolUsdc) || Number(market?.optionPools?.away) || Number(market?.initialOptionPools?.away) || 0;
@@ -4229,7 +4220,12 @@ const renderMarkets = (): void => {
         </div>
 
         <!-- Market Cards -->
-        ${filteredMarkets.map((m: any, idx: number) => {
+        ${filteredMarkets.length === 0 ? `
+          <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 48px 20px; text-align: center; color: var(--muted); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);">
+            <div style="font-size: 1.15rem; font-weight: 800; color: var(--ink); margin-bottom: 8px;">No live markets in ${escapeHtml(activeLeague)}</div>
+            <div style="font-size: 0.88rem; font-weight: 600; color: var(--muted);">Check back soon for upcoming match fixtures.</div>
+          </div>
+        ` : filteredMarkets.map((m: any, idx: number) => {
           const homeTeam = m.homeTeam || "Chelsea";
           const awayTeam = m.awayTeam || "Manchester United";
           const homeCrest = m.homeCrest || "https://a.espncdn.com/i/teamlogos/soccer/500/363.png";
