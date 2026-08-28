@@ -6513,9 +6513,15 @@ function readOptionMarketStateFromData(data, walletAddress, market) {
   Object.entries(marketStore.optionPools || {}).forEach(([optionId, amount]) => {
     if (optionPools[optionId] !== undefined) optionPools[optionId] = Math.max(0, Number(amount) || 0);
   });
+  if (Object.values(optionPools).reduce((sum, amount) => sum + (Number(amount) || 0), 0) === 0) {
+    const fallbackPools = market.optionPools || market.initialOptionPools || {};
+    Object.entries(fallbackPools).forEach(([optionId, amount]) => {
+      if (optionPools[optionId] !== undefined) optionPools[optionId] = Math.max(0, Number(amount) || 0);
+    });
+  }
   const position = cleanWallet ? marketStore.positions?.[cleanWallet] : null;
   const claimRecord = cleanWallet ? marketStore.claimed?.[cleanWallet] || null : null;
-  const volumeUsdc = Object.values(optionPools).reduce((sum, amount) => sum + (Number(amount) || 0), 0);
+  const volumeUsdc = Math.max(Number(market.volumeUsdc) || 0, Object.values(optionPools).reduce((sum, amount) => sum + (Number(amount) || 0), 0));
   return {
     position: {
       yesSharesUsdc: 0,
@@ -8727,8 +8733,12 @@ function getFastMarketsWithCachedCounts() {
   return getActiveMarkets().map((market) => {
     const marketAddress = normalizeWalletAddress(market.marketAddress) || getConfiguredMarketAddress(market.id);
     const cached = cachedById.get(market.id);
+    const poolSum = (Number(market.optionPools?.home || 0) + Number(market.optionPools?.draw || 0) + Number(market.optionPools?.away || 0)) ||
+                    (Number(market.initialOptionPools?.home || 0) + Number(market.initialOptionPools?.draw || 0) + Number(market.initialOptionPools?.away || 0)) || 0;
+    const computedVol = Number(market.volumeUsdc) || poolSum || 0;
     return {
       ...market,
+      volumeUsdc: cached?.volumeUsdc ?? computedVol,
       ...(marketAddress ? { marketAddress } : {}),
       ...(market.optionMarket && cached?.resolvedOptionId ? {
         resolvedOptionId: cached.resolvedOptionId,

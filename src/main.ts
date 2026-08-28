@@ -4164,7 +4164,7 @@ const renderMarkets = (): void => {
   if (!storyList || !storyDetail) return;
   briefHero?.toggleAttribute("hidden", true);
   archiveControls?.toggleAttribute("hidden", true);
-  categoryTabs?.toggleAttribute("hidden", true); // REMOVE FEED & PERSONALIZED BUTTONS ON MARKETS
+  categoryTabs?.toggleAttribute("hidden", true);
   topMarketsButton?.classList.add("active");
   topNewsButton?.classList.remove("active");
   topPortfolioButton?.classList.remove("active");
@@ -4182,85 +4182,31 @@ const renderMarkets = (): void => {
     return !["coventry", "nizhny", "chertanova", "dinamo moscow", "spartak moscow"].some(kw => text.includes(kw));
   });
 
-
   const featuredMarket = marketPreviews.find(m => m.id === "m-chelsea-manutd") || marketPreviews[0];
 
-  // Complete list of all 7 top leagues with exact matching
   const leaguesList = [
     { id: "All", label: "All" },
-    { id: "Premier League", label: "Premier League (EPL)" },
-    { id: "La Liga", label: "La Liga" },
-    { id: "Serie A", label: "Serie A" },
-    { id: "Bundesliga", label: "Bundesliga" },
-    { id: "Ligue 1", label: "Ligue 1" },
-    { id: "Primeira Liga", label: "Primeira Liga" },
-    { id: "Eredivisie", label: "Eredivisie" }
+    { id: "English Premier League", label: "Premier League" },
+    { id: "Spanish LaLiga", label: "La Liga" },
+    { id: "Italian Serie A", label: "Serie A" },
+    { id: "German Bundesliga", label: "Bundesliga" },
+    { id: "French Ligue 1", label: "Ligue 1" },
+    { id: "Portuguese Primeira Liga", label: "Primeira Liga" },
+    { id: "Dutch Eredivisie", label: "Eredivisie" }
   ];
 
-  const filteredMarkets = marketPreviews.filter((m: any) => {
-    if (activeLeague === "All") return true;
-    const lg = (m.league || "").toLowerCase();
-    const act = activeLeague.toLowerCase();
-    if (act.includes("premier") || act.includes("epl")) return lg.includes("premier") || lg.includes("eng");
-    if (act.includes("la liga") || act.includes("laliga")) return lg.includes("laliga") || lg.includes("la liga") || lg.includes("spanish");
-    if (act.includes("serie a")) return lg.includes("serie a") || lg.includes("italian");
-    if (act.includes("bundesliga")) return lg.includes("bundesliga") || lg.includes("german");
-    if (act.includes("ligue 1") || act.includes("ligue")) return lg.includes("ligue 1") || lg.includes("french");
-    if (act.includes("primeira") || act.includes("portuguese")) return lg.includes("primeira") || lg.includes("portuguese");
-    if (act.includes("eredivisie") || act.includes("dutch")) return lg.includes("eredivisie") || lg.includes("dutch");
-    return lg.includes(act);
-  });
+  const filteredMarkets = activeLeague === "All"
+    ? marketPreviews
+    : marketPreviews.filter((m: any) => (m.league || "").toLowerCase().trim() === activeLeague.toLowerCase().trim());
 
   storyList.innerHTML = `
-    <section class="markets-surface-redesign" style="padding: 12px 6px 110px 6px; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif; color: var(--ink);">
+    <section class="markets-surface" style="width: 100% !important; max-width: 100% !important; margin: 0 auto !important; padding: 12px 16px 120px 16px !important; box-sizing: border-box !important; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Space Grotesk', sans-serif !important; color: var(--ink) !important; overflow-x: hidden !important;">
       
       <!-- Top Title Header -->
-      <header style="margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; box-sizing: border-box;">
-        <h1 style="margin: 0; font-size: 1.5rem; font-weight: 800; color: var(--ink); letter-spacing: -0.02em;">Markets</h1>
+      <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="margin: 0; font-size: 1.8rem; font-weight: 900; color: var(--ink); letter-spacing: -0.02em;">Live Markets</h1>
         <a href="${ARC_TESTNET_FAUCET}" target="_blank" rel="noreferrer" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); font-size: 0.78rem; font-weight: 800; padding: 6px 12px; border-radius: 999px; text-decoration: none; white-space: nowrap; flex-shrink: 0;">Get testnet USDC</a>
       </header>
-
-      <!-- Popular Featured Card -->
-      <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 18px; margin-bottom: 22px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
-        
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-          <h2 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--ink);">Popular</h2>
-          <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted); background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
-            ${escapeHtml((featuredMarket as any).statusDetail || "Upcoming")}
-          </span>
-        </div>
-
-        <!-- Featured Teams Row -->
-        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <img src="${(featuredMarket as any).homeCrest || 'https://a.espncdn.com/i/teamlogos/soccer/500/379.png'}" alt="" style="width: 28px; height: 28px; object-fit: contain;" />
-            <span style="font-size: 1rem; font-weight: 800; color: var(--ink);">${escapeHtml((featuredMarket as any).homeTeam || "Espanyol")}</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <img src="${(featuredMarket as any).awayCrest || 'https://a.espncdn.com/i/teamlogos/soccer/500/86.png'}" alt="" style="width: 28px; height: 28px; object-fit: contain;" />
-            <span style="font-size: 1rem; font-weight: 800; color: var(--ink);">${escapeHtml((featuredMarket as any).awayTeam || "Real Madrid")}</span>
-          </div>
-        </div>
-
-        <!-- 3 Cents Odds Trading Boxes (Clicking opens Bottom Sheet Betting Modal) -->
-        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
-          <button type="button" class="siftle-bet-option-btn" data-market-id="${featuredMarket.id}" data-option-id="home" style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
-            <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml((featuredMarket as any).homeTeam || "Home")}</span>
-            <span style="font-size: 1.05rem; font-weight: 900; color: #38bdf8;">${getMarketOddsCents(featuredMarket).home}¢</span>
-          </button>
-
-          <button type="button" class="siftle-bet-option-btn" data-market-id="${featuredMarket.id}" data-option-id="draw" style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
-            <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted);">Draw</span>
-            <span style="font-size: 1.05rem; font-weight: 900; color: #38bdf8;">${getMarketOddsCents(featuredMarket).draw}¢</span>
-          </button>
-
-          <button type="button" class="siftle-bet-option-btn" data-market-id="${featuredMarket.id}" data-option-id="away" style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
-            <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml((featuredMarket as any).awayTeam || "Away")}</span>
-            <span style="font-size: 1.05rem; font-weight: 900; color: #38bdf8;">${getMarketOddsCents(featuredMarket).away}¢</span>
-          </button>
-        </div>
-
-      </div>
 
       <!-- Horizontal League Selection Nav Bar -->
       <div style="display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden; padding-bottom: 10px; margin-bottom: 20px; scrollbar-width: none; -webkit-overflow-scrolling: touch; width: 100%; box-sizing: border-box;">
@@ -4277,18 +4223,19 @@ const renderMarkets = (): void => {
       <!-- Active Filtered Markets List -->
       <div style="display: flex; flex-direction: column; gap: 18px;">
         
-        <!-- League Section Header (No Moneyline text) -->
+        <!-- League Section Header -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
           <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--ink);">${activeLeague}</h3>
         </div>
 
         <!-- Market Cards -->
         ${filteredMarkets.map((m: any, idx: number) => {
-          const homeTeam = m.homeTeam || "Brentford";
-          const awayTeam = m.awayTeam || "Spurs";
-          const homeCrest = m.homeCrest || "https://a.espncdn.com/i/teamlogos/soccer/500/337.png";
-          const awayCrest = m.awayCrest || "https://a.espncdn.com/i/teamlogos/soccer/500/367.png";
+          const homeTeam = m.homeTeam || "Chelsea";
+          const awayTeam = m.awayTeam || "Manchester United";
+          const homeCrest = m.homeCrest || "https://a.espncdn.com/i/teamlogos/soccer/500/363.png";
+          const awayCrest = m.awayCrest || "https://a.espncdn.com/i/teamlogos/soccer/500/360.png";
           const isLive = Boolean(m.isLive);
+          const cardVol = Number(m.volumeUsdc) || (Number(m.optionPools?.home || 0) + Number(m.optionPools?.draw || 0) + Number(m.optionPools?.away || 0)) || (Number(m.initialOptionPools?.home || 0) + Number(m.initialOptionPools?.draw || 0) + Number(m.initialOptionPools?.away || 0)) || 0;
 
           return `
             <div class="thick-league-card" data-market-id="${m.id}" style="background: var(--paper); border: 1px solid var(--border); border-radius: 20px; padding: 18px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);">
@@ -4298,7 +4245,7 @@ const renderMarkets = (): void => {
                 <span style="font-size: 0.78rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; ${isLive ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);' : 'background: rgba(255, 255, 255, 0.06); color: var(--muted);'}">
                   ${isLive ? '🔴 LIVE IN-PLAY ⚡' : escapeHtml(m.statusDetail || 'Scheduled')}
                 </span>
-                <span style="font-size: 0.78rem; color: #38bdf8; font-weight: 800; background: rgba(56, 189, 248, 0.12); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.25);">${Number(m.volumeUsdc || 0) > 0 ? ("$" + Number(m.volumeUsdc).toFixed(2)) : "$0.00"} Vol</span>
+                <span style="font-size: 0.78rem; color: #38bdf8; font-weight: 800; background: rgba(56, 189, 248, 0.12); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.25);">${cardVol > 0 ? ("$" + cardVol.toFixed(2)) : "$0.00"} Vol</span>
               </div>
 
               <!-- Stacked Teams -->
@@ -4313,7 +4260,7 @@ const renderMarkets = (): void => {
                 </div>
               </div>
 
-              <!-- 3 Outcome Cents Odds Trading Boxes (Clicking opens Bottom Sheet Betting Modal) -->
+              <!-- 3 Outcome Cents Odds Trading Boxes -->
               <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
                 <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="home" style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
                   <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml(homeTeam)}</span>
