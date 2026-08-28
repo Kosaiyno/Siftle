@@ -31,7 +31,7 @@ export const fallbackMarketPreviews: any[] = [
     "initialOptionPools": {
       "home": 3,
       "draw": 0,
-      "away": 2
+      "away": 0
     },
     "optionPools": {
       "home": 3,
