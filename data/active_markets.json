@@ -30,8 +30,8 @@
     ],
     "initialOptionPools": {
       "home": 3,
-      "draw": 1,
-      "away": 2
+      "draw": 0,
+      "away": 0
     },
     "optionPools": {
       "home": 3,
