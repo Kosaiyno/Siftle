@@ -1,3 +1,12 @@
+// Clean stale localStorage mock pools and odds
+try {
+  Object.keys(localStorage).forEach((k) => {
+    if (k.startsWith("siftle_mock_") || k.startsWith("siftle_odds_") || k.startsWith("mock_") || k.includes("pool_0x")) {
+      localStorage.removeItem(k);
+    }
+  });
+} catch (e) {}
+
 import type { ArchiveDate, Category, NewsStory, StoryThread } from "./types.js";
 import { fallbackMarketPreviews } from "./fallbackMarkets.js";
 import type { ArcMarketPosition, ArcMarketSnapshot } from "./arc.js";

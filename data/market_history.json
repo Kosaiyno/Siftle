@@ -27,7 +27,11 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
     "points": 250,
-    "resolvedWinningOptionId": "spain"
+    "resolvedWinningOptionId": "spain",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-spain-argentina-concede",
@@ -61,7 +65,11 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
     "points": 150,
-    "resolvedWinningOptionId": "neither-0-0"
+    "resolvedWinningOptionId": "neither-0-0",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-spain-argentina-yamal-assists",
@@ -99,7 +107,11 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1553778263-73a83bab9b0c?auto=format&fit=crop&w=1200&q=80",
     "points": 250,
-    "resolvedWinningOptionId": "0-assists"
+    "resolvedWinningOptionId": "0-assists",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-spain-argentina-red-card",
@@ -129,7 +141,11 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
     "points": 100,
-    "resolvedWinningOptionId": "yes"
+    "resolvedWinningOptionId": "yes",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-spain-argentina-arg-cards",
@@ -167,7 +183,11 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1553778263-73a83bab9b0c?auto=format&fit=crop&w=1200&q=80",
     "points": 300,
-    "resolvedWinningOptionId": "6-plus"
+    "resolvedWinningOptionId": "6-plus",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-spain-argentina-shots",
@@ -201,7 +221,11 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
     "points": 120,
-    "resolvedWinningOptionId": "spain"
+    "resolvedWinningOptionId": "spain",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-spain-argentina-rating-duel",
@@ -235,7 +259,11 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
     "points": 300,
-    "resolvedWinningOptionId": "yamal"
+    "resolvedWinningOptionId": "yamal",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-spain-argentina-victory-method",
@@ -273,7 +301,11 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
     "points": 350,
-    "resolvedWinningOptionId": "either-et"
+    "resolvedWinningOptionId": "either-et",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-spain-argentina-messi-goals",
@@ -311,7 +343,11 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1553778263-73a83bab9b0c?auto=format&fit=crop&w=1200&q=80",
     "points": 500,
-    "resolvedWinningOptionId": "no-goals"
+    "resolvedWinningOptionId": "no-goals",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-spain-argentina-exact-score",
@@ -357,7 +393,11 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
     "points": 800,
-    "resolvedWinningOptionId": "draw"
+    "resolvedWinningOptionId": "draw",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-france-england-corners",
@@ -387,7 +427,11 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
     "points": 100,
-    "resolvedWinningOptionId": "no"
+    "resolvedWinningOptionId": "no",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-france-england-cards",
@@ -421,7 +465,11 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
     "points": 100,
-    "resolvedWinningOptionId": "0-2"
+    "resolvedWinningOptionId": "0-2",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-france-england-halftime",
@@ -455,7 +503,11 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
     "points": 120,
-    "resolvedWinningOptionId": "england-lead"
+    "resolvedWinningOptionId": "england-lead",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-france-england-fouls",
@@ -489,7 +541,11 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
     "points": 150,
-    "resolvedWinningOptionId": "france"
+    "resolvedWinningOptionId": "france",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-france-england-bronze-winner",
@@ -519,7 +575,11 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
     "points": 250,
-    "resolvedWinningOptionId": "england"
+    "resolvedWinningOptionId": "england",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-france-england-goals",
@@ -553,7 +613,11 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
     "points": 250,
-    "resolvedWinningOptionId": "4-plus"
+    "resolvedWinningOptionId": "4-plus",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-france-england-rating-duel",
@@ -587,7 +651,11 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
     "points": 300,
-    "resolvedWinningOptionId": "mbappe"
+    "resolvedWinningOptionId": "mbappe",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-france-england-victory-method",
@@ -625,7 +693,11 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
     "points": 350,
-    "resolvedWinningOptionId": "england-regular"
+    "resolvedWinningOptionId": "england-regular",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-france-england-mbappe-goals",
@@ -659,7 +731,11 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
     "points": 500,
-    "resolvedWinningOptionId": "2-plus"
+    "resolvedWinningOptionId": "2-plus",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-france-england-exact-score",
@@ -705,7 +781,11 @@
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
     "points": 800,
-    "resolvedWinningOptionId": "other"
+    "resolvedWinningOptionId": "other",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-spain-france-qualify",
@@ -734,7 +814,11 @@
     "traders": "0",
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "resolvedWinningOptionId": "spain"
+    "resolvedWinningOptionId": "spain",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-spain-france-first-half-result",
@@ -767,7 +851,11 @@
     "traders": "0",
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "resolvedWinningOptionId": "spain-lead"
+    "resolvedWinningOptionId": "spain-lead",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-spain-france-first-goal",
@@ -800,7 +888,11 @@
     "traders": "0",
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "resolvedWinningOptionId": "spain"
+    "resolvedWinningOptionId": "spain",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-spain-france-shots-target",
@@ -837,7 +929,11 @@
     "traders": "0",
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "resolvedWinningOptionId": "0-7"
+    "resolvedWinningOptionId": "0-7",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-england-norway-qualify",
@@ -866,7 +962,11 @@
     "traders": "0",
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "resolvedWinningOptionId": "england"
+    "resolvedWinningOptionId": "england",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-haaland-kane-goals",
@@ -899,7 +999,11 @@
     "traders": "0",
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "resolvedWinningOptionId": "tie"
+    "resolvedWinningOptionId": "tie",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-england-norway-yellow-cards",
@@ -936,7 +1040,11 @@
     "traders": "0",
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "resolvedWinningOptionId": "0-2"
+    "resolvedWinningOptionId": "0-2",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-england-norway-victory-method",
@@ -973,7 +1081,11 @@
     "traders": "0",
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "resolvedWinningOptionId": "either-et"
+    "resolvedWinningOptionId": "either-et",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-spain-belgium-qualify",
@@ -1001,7 +1113,11 @@
     "volume": "$0",
     "traders": "0",
     "liquidity": "$0",
-    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-spain-concede-belgium",
@@ -1029,7 +1145,11 @@
     "volume": "$0",
     "traders": "0",
     "liquidity": "$0",
-    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-yamal-goal-assist-belgium",
@@ -1057,7 +1177,11 @@
     "volume": "$0",
     "traders": "0",
     "liquidity": "$0",
-    "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-spain-goals-belgium",
@@ -1093,7 +1217,11 @@
     "volume": "$0",
     "traders": "0",
     "liquidity": "$0",
-    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-vinicius-score-japan",
@@ -1109,7 +1237,11 @@
     "volume": "$0",
     "traders": "0",
     "liquidity": "$0",
-    "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-paraguay-score-germany",
@@ -1125,7 +1257,11 @@
     "volume": "$0",
     "traders": "0",
     "liquidity": "$0",
-    "imageUrl": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-morocco-eliminate-netherlands",
@@ -1141,7 +1277,11 @@
     "volume": "$0",
     "traders": "0",
     "liquidity": "$0",
-    "imageUrl": "https://images.unsplash.com/photo-1553778263-73a83bab9b0c?auto=format&fit=crop&w=1200&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1553778263-73a83bab9b0c?auto=format&fit=crop&w=1200&q=80",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-ivory-coast-eliminate-norway",
@@ -1158,7 +1298,11 @@
     "volume": "$0",
     "traders": "0",
     "liquidity": "$0",
-    "imageUrl": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-haaland-outscore-mbappe",
@@ -1175,7 +1319,11 @@
     "volume": "$0",
     "traders": "0",
     "liquidity": "$0",
-    "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-france-sweden-spread",
@@ -1192,7 +1340,11 @@
     "volume": "$0",
     "traders": "0",
     "liquidity": "$0",
-    "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-england-score-both-halves-drc",
@@ -1211,7 +1363,11 @@
     "volume": "$0",
     "traders": "0",
     "liquidity": "$0",
-    "imageUrl": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-de-bruyne-score-assist-senegal",
@@ -1230,7 +1386,11 @@
     "volume": "$0",
     "traders": "0",
     "liquidity": "$0",
-    "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-usa-score-before-20-bosnia",
@@ -1249,7 +1409,11 @@
     "volume": "$0",
     "traders": "0",
     "liquidity": "$0",
-    "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-vozinha-saves-argentina",
@@ -1284,7 +1448,11 @@
         "id": "six-plus",
         "label": "6+ saves"
       }
-    ]
+    ],
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-messi-impact-cape-verde",
@@ -1319,7 +1487,11 @@
         "id": "no-goal-assist",
         "label": "No goal or assist"
       }
-    ]
+    ],
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-australia-egypt-first-event",
@@ -1354,7 +1526,11 @@
         "id": "goal",
         "label": "Goal"
       }
-    ]
+    ],
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-colombia-ghana-halftime",
@@ -1389,7 +1565,11 @@
         "id": "nil-nil",
         "label": "0-0"
       }
-    ]
+    ],
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "transfer-tonali-spurs",
@@ -1397,13 +1577,17 @@
     "timeframe": "Sagas",
     "question": "Will Sandro Tonali sign with Tottenham Hotspur in the Summer Transfer Window?",
     "probability": 58,
-    "closes": "September 1, 2026",
+    "closes": "Resolved",
     "resolution": "Resolves Yes if Tottenham Hotspur officially announces the transfer/signing of Sandro Tonali by the transfer deadline.",
     "threadTopic": "Sandro Tonali Tottenham Transfer Link",
     "volume": "$182K",
     "traders": "980",
     "liquidity": "$29K",
-    "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "transfer-guimaraes-arsenal",
@@ -1411,13 +1595,17 @@
     "timeframe": "Sagas",
     "question": "Will Bruno Guimaraes officially sign with Arsenal by September 1, 2026?",
     "probability": 45,
-    "closes": "September 1, 2026",
+    "closes": "Resolved",
     "resolution": "Resolves Yes if Arsenal officially announces the transfer/signing of Bruno Guimaraes by the transfer deadline.",
     "threadTopic": "Bruno Guimaraes Arsenal Transfer Link",
     "volume": "$204K",
     "traders": "1,240",
     "liquidity": "$36K",
-    "imageUrl": "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=80",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-argentina-england-qualify",
@@ -1446,7 +1634,11 @@
     "traders": "0",
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "resolvedWinningOptionId": "argentina"
+    "resolvedWinningOptionId": "argentina",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-messi-bellingham-rating",
@@ -1479,7 +1671,11 @@
     "traders": "0",
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "resolvedWinningOptionId": "messi"
+    "resolvedWinningOptionId": "messi",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-argentina-england-shots-target",
@@ -1516,7 +1712,11 @@
     "traders": "0",
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "resolvedWinningOptionId": "7-9"
+    "resolvedWinningOptionId": "7-9",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   },
   {
     "id": "wc-argentina-england-victory-method",
@@ -1553,6 +1753,10 @@
     "traders": "0",
     "liquidity": "$0",
     "imageUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "resolvedWinningOptionId": "argentina-regular"
+    "resolvedWinningOptionId": "argentina-regular",
+    "statusDetail": "Resolved • Closed",
+    "isLive": false,
+    "isLocked": true,
+    "outcome": 1
   }
 ]
