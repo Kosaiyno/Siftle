@@ -5435,8 +5435,13 @@ const showTradeSuccessModal = (info: {
         newAway = Math.max(10.0, curAway - 1.25);
       }
 
-      const totalPoolVal = (Number(targetMarket.volumeUsdc) || 0) + tradeAmount;
+      const curVol = Number(targetMarket.volumeUsdc) || 
+        (Number(targetMarket.optionPools?.home || 0) + Number(targetMarket.optionPools?.draw || 0) + Number(targetMarket.optionPools?.away || 0)) ||
+        (Number(targetMarket.initialOptionPools?.home || 0) + Number(targetMarket.initialOptionPools?.draw || 0) + Number(targetMarket.initialOptionPools?.away || 0)) || 0;
+      const totalPoolVal = curVol + tradeAmount;
       (targetMarket as any).volumeUsdc = totalPoolVal;
+      (targetMarket as any).optionPools = (targetMarket as any).optionPools || { ...((targetMarket as any).initialOptionPools || {}) };
+      (targetMarket as any).optionPools[optionId] = (Number((targetMarket as any).optionPools[optionId]) || 0) + tradeAmount;
       (targetMarket as any)[`${optionId}PoolUsdc`] = (Number((targetMarket as any)[`${optionId}PoolUsdc`]) || 0) + tradeAmount;
       (targetMarket as any).volume = `$${totalPoolVal.toFixed(2)}`;
       (targetMarket as any).currentOdds = {

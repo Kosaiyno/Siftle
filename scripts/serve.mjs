@@ -6557,9 +6557,10 @@ async function loadOptionMarketStateFromSupabase(data, market) {
     ]);
     const store = ensureOptionMarketStore(data);
     const current = store[market.id] || {};
+    const initialPools = { ...(market.initialOptionPools || market.optionPools || {}) };
     const marketStore = {
       positions: { ...(current.positions || {}) },
-      optionPools: {},
+      optionPools: initialPools,
       traders: [],
       resolvedOptionId: resolutionRows?.[0]?.winning_option_id || current.resolvedOptionId || null,
       resolvedAt: resolutionRows?.[0]?.resolved_at || current.resolvedAt || null,
@@ -6710,10 +6711,11 @@ function saveOptionMarketPosition(data, market, walletAddress, optionId, optionL
   const cleanWallet = normalizeWalletAddress(walletAddress);
   if (!cleanWallet) throw new Error("Missing wallet");
   const store = ensureOptionMarketStore(data);
+  const initPools = { ...(market.initialOptionPools || market.optionPools || {}) };
   if (!store[market.id]) {
     store[market.id] = {
       positions: {},
-      optionPools: {},
+      optionPools: initPools,
       traders: [],
       resolvedOptionId: null,
       claimed: {}
@@ -6721,7 +6723,15 @@ function saveOptionMarketPosition(data, market, walletAddress, optionId, optionL
   }
   const marketStore = store[market.id];
   if (!marketStore.positions) marketStore.positions = {};
-  if (!marketStore.optionPools) marketStore.optionPools = {};
+  if (!marketStore.optionPools || Object.keys(marketStore.optionPools).length === 0) {
+    marketStore.optionPools = { ...initPools };
+  } else {
+    Object.entries(initPools).forEach(([optId, amt]) => {
+      if (marketStore.optionPools[optId] === undefined) {
+        marketStore.optionPools[optId] = Math.max(0, Number(amt) || 0);
+      }
+    });
+  }
   if (!Array.isArray(marketStore.traders)) marketStore.traders = [];
   if (marketStore.resolvedOptionId) throw new Error("This market is resolved and can no longer be traded");
 
