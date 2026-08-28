@@ -9731,56 +9731,60 @@ const server = createServer(async (request, response) => {
         }
         // === USDC PREDICTION MARKET START ===
         await saveOptionMarketPositionToSupabase(market, user.address, option.id, option.label, amountUsdc);
-        if (marketContractAddress) {
-          try {
-            const signer = new Wallet(user.privateKey, leaderboardProvider);
-            const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
-            const amountParsed = parseUnits(amountUsdc.toFixed(6), 6);
-
-            // Determine optionIndex (0 = Chelsea, 1 = Draw, 2 = Man Utd)
-            let optionIndex = 0;
-            if (option.id === "home" || option.id === "0") optionIndex = 0;
-            else if (option.id === "draw" || option.id === "1") optionIndex = 1;
-            else if (option.id === "away" || option.id === "2") optionIndex = 2;
-            else {
-              const opts = getMarketOptions(market);
-              const idx = opts.findIndex(o => o.id === option.id);
-              if (idx >= 0) optionIndex = idx;
-            }
-
-            const optionMarketAbi = [
-              "function buyShares(uint8 optionId, uint256 amount) external",
-              "function totalMarketPool() view returns (uint256)",
-              "function optionPools(uint8) view returns (uint256)"
-            ];
-            const optionMarketContract = new Contract(marketContractAddress, optionMarketAbi, signer);
-
-            // 1. Approve allowance if needed
-            const currentAllowance = await usdc.allowance(user.address, marketContractAddress).catch(() => 0n);
-            if (currentAllowance < amountParsed) {
-              const appTx = await usdc.approve(marketContractAddress, parseUnits("1000000", 6));
-              await appTx.wait();
-            }
-
-            // 2. Call buyShares on the smart contract
-            const buyTx = await optionMarketContract.buyShares(optionIndex, amountParsed);
-            const receipt = await buyTx.wait();
-            txHash = receipt?.hash || buyTx.hash;
-          } catch (err) {
-            console.warn("[ON-CHAIN SMART CONTRACT TRADE ERROR]", err.message);
-            // Fallback: direct USDC transfer to contract address
-            try {
-              const signer = new Wallet(user.privateKey, leaderboardProvider);
-              const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
-              const tx = await usdc.transfer(marketContractAddress, parseUnits(amountUsdc.toFixed(6), 6));
-              const receipt = await tx.wait();
-              txHash = receipt?.hash || tx.hash;
-            } catch (fallbackErr) {
-              await deleteOptionMarketPositionFromSupabase(market, user.address);
-              throw err;
-            }
-          }
+        if (!marketContractAddress) {
+          sendJson(response, 400, { error: "Market contract address is missing" });
+          return;
         }
+
+        try {
+          const signer = new Wallet(user.privateKey, leaderboardProvider);
+          const usdc = new Contract(ARC_TESTNET_USDC, BACKEND_WALLET_ERC20_ABI, signer);
+          const amountParsed = parseUnits(amountUsdc.toFixed(6), 6);
+
+          // Check user USDC balance on Arc Testnet
+          const userBal = await usdc.balanceOf(user.address);
+          if (userBal < amountParsed) {
+            sendJson(response, 400, { error: `Insufficient testnet USDC balance. You have $${formatUnits(userBal, 6)} USDC on Arc Testnet.` });
+            return;
+          }
+
+          // Determine optionIndex (0 = Chelsea, 1 = Draw, 2 = Man Utd)
+          let optionIndex = 0;
+          if (option.id === "home" || option.id === "0") optionIndex = 0;
+          else if (option.id === "draw" || option.id === "1") optionIndex = 1;
+          else if (option.id === "away" || option.id === "2") optionIndex = 2;
+          else {
+            const opts = getMarketOptions(market);
+            const idx = opts.findIndex(o => o.id === option.id);
+            if (idx >= 0) optionIndex = idx;
+          }
+
+          const optionMarketAbi = [
+            "function buyShares(uint8 optionId, uint256 amount) external",
+            "function totalMarketPool() view returns (uint256)",
+            "function optionPools(uint8) view returns (uint256)"
+          ];
+          const optionMarketContract = new Contract(marketContractAddress, optionMarketAbi, signer);
+
+          // 1. Approve USDC to the market contract if allowance is insufficient
+          const currentAllowance = await usdc.allowance(user.address, marketContractAddress).catch(() => 0n);
+          if (currentAllowance < amountParsed) {
+            const appTx = await usdc.approve(marketContractAddress, parseUnits("1000000", 6));
+            await appTx.wait();
+          }
+
+          // 2. Call buyShares directly on the smart contract (NO FALLBACK)
+          const buyTx = await optionMarketContract.buyShares(optionIndex, amountParsed);
+          const receipt = await buyTx.wait();
+          txHash = receipt?.hash || buyTx.hash;
+          console.log(`[ON-CHAIN TRADE SUCCESS] Market: ${market.id}, Option: ${optionIndex}, Amount: ${amountUsdc} USDC, Tx: ${txHash}`);
+        } catch (err) {
+          console.error("[ON-CHAIN SMART CONTRACT TRADE FAILED]", err);
+          await deleteOptionMarketPositionFromSupabase(market, user.address);
+          sendJson(response, 400, { error: `Smart contract trade failed on Arc Testnet: ${err.reason || err.message}` });
+          return;
+        }
+
         saveOptionMarketPosition(data, market, user.address, option.id, option.label, amountUsdc);
         marketListCache.expiresAt = 0;
         marketListCache.markets = null;
