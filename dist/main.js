@@ -1196,10 +1196,14 @@ Trade and discuss here: ${l}`};var Vo=e=>{if(!e)return!1;if(e.isLocked===!0)retu
       <div style="margin-bottom: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
           <span style="font-size: 0.9rem; font-weight: 700; color: var(--muted);">Portfolio</span>
-          <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--muted); font-weight: 600;">
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--muted); font-weight: 600;">
             <span>${w(u)}</span>
             ${i?`
-              <button type="button" id="editUsernameBtn" style="background: transparent; border: none; color: var(--muted); cursor: pointer; padding: 2px; display: inline-flex; align-items: center;">
+              <button type="button" class="copy-address-btn" data-address="${t.walletAddress}" title="Copy Wallet Address" style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; border-radius: 8px; padding: 3px 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: 800; transition: all 0.2s ease;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                Copy Address
+              </button>
+              <button type="button" id="editUsernameBtn" title="Edit Username" style="background: transparent; border: none; color: var(--muted); cursor: pointer; padding: 2px; display: inline-flex; align-items: center;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path></svg>
               </button>
             `:""}
