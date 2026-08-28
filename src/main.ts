@@ -4140,21 +4140,6 @@ const getMarketOddsCents = (market: any) => {
     };
   }
 
-  if (market && market.currentOdds) {
-    return {
-      home: String(Number(market.currentOdds.home).toFixed(1)),
-      draw: String(Number(market.currentOdds.draw).toFixed(1)),
-      away: String(Number(market.currentOdds.away).toFixed(1))
-    };
-  }
-
-  if (market && market.customOdds) {
-    return {
-      home: String(Number(market.customOdds.home).toFixed(1)),
-      draw: String(Number(market.customOdds.draw).toFixed(1)),
-      away: String(Number(market.customOdds.away).toFixed(1))
-    };
-  }
   return { home: "33.3", draw: "33.3", away: "33.3" };
 };
 
