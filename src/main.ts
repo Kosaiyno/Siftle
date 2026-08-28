@@ -4471,17 +4471,16 @@ const renderPortfolioPositionCard = (market: MarketPreview): string => {
   const sharesHeld = position.optionSharesUsdc || position.yesSharesUsdc || 1;
   const pickName = position.optionLabel || (position.optionId === 'home' ? homeTeam : position.optionId === 'away' ? awayTeam : position.optionId === 'draw' ? 'Draw' : 'Your Pick');
   
-  // Real calculation for projected payout
-  const estPayout = (position as any).projectedPayout || (sharesHeld > 0 ? (sharesHeld * 2.22) : 2.22);
-  const potentialProfit = Math.max(0, estPayout - sharesHeld);
-  const multiplier = (estPayout / (sharesHeld || 1)).toFixed(2);
-
-  const resolvedOptionId = snapshot?.resolvedOptionId || null;
+  const resolvedOptionId = (market as any).resolvedOptionId || snapshot?.resolvedOptionId || null;
   const isResolved = Boolean(resolvedOptionId);
   const won = isResolved && position.optionId === resolvedOptionId;
+  const payoutAmount = won ? (position.optionId === 'draw' ? 6.00 : (sharesHeld * 2.22)) : 0;
+  const estPayout = isResolved ? payoutAmount : ((position as any).projectedPayout || (sharesHeld > 0 ? (sharesHeld * 2.22) : 2.22));
+  const multiplier = (estPayout / (sharesHeld || 1)).toFixed(2);
+  const marketAddress = (market as any).marketAddress || (market as any).contractAddress || "0x202c3f057B7b767f80dF665fa225a4Fa5b8631C8";
 
   return `
-    <div class="siftle-ticket-card" style="background: linear-gradient(145deg, #131722 0%, #0d1017 100%); border: 1.5px solid rgba(56, 189, 248, 0.2); border-radius: 20px; padding: 18px 16px; margin-bottom: 14px; position: relative; overflow: hidden; box-shadow: 0 12px 32px rgba(0,0,0,0.5); font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Space Grotesk', sans-serif;">
+    <div class="siftle-ticket-card" style="background: linear-gradient(145deg, #131722 0%, #0d1017 100%); border: 1.5px solid ${isResolved ? (won ? 'rgba(52, 211, 153, 0.4)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(56, 189, 248, 0.2)'}; border-radius: 20px; padding: 18px 16px; margin-bottom: 14px; position: relative; overflow: hidden; box-shadow: 0 12px 32px rgba(0,0,0,0.5); font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Space Grotesk', sans-serif;">
       
       <!-- Top Ticket Header: League & Matchday Badge -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
@@ -4489,9 +4488,9 @@ const renderPortfolioPositionCard = (market: MarketPreview): string => {
           <span style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; background: rgba(255, 255, 255, 0.08); color: var(--muted); padding: 4px 10px; border-radius: 8px;">
             ${escapeHtml((market as any).league || "FOOTBALL")}
           </span>
-          <span style="display: flex; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: 800; color: #34d399;">
-            <span style="width: 6px; height: 6px; border-radius: 50%; background: #34d399; display: inline-block;"></span>
-            ${isResolved ? (won ? 'WON' : 'SETTLED') : 'OPEN TICKET'}
+          <span style="display: flex; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: 800; color: ${isResolved ? (won ? '#34d399' : '#ef4444') : '#34d399'};">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: ${isResolved ? (won ? '#34d399' : '#ef4444') : '#34d399'}; display: inline-block;"></span>
+            ${isResolved ? (won ? 'WON' : 'LOST') : 'OPEN TICKET'}
           </span>
         </div>
 
@@ -4523,17 +4522,29 @@ const renderPortfolioPositionCard = (market: MarketPreview): string => {
           <strong style="font-size: 1.15rem; font-weight: 900; color: var(--ink);">$${sharesHeld.toFixed(2)} <span style="font-size: 0.75rem; color: var(--muted); font-weight: 700;">USDC</span></strong>
         </div>
         <div style="text-align: right;">
-          <span style="font-size: 0.72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 2px;">Est. Payout (${multiplier}x)</span>
-          <strong style="font-size: 1.25rem; font-weight: 900; color: #34d399;">+$${estPayout.toFixed(2)} <span style="font-size: 0.75rem; color: #34d399; font-weight: 700;">USDC</span></strong>
+          <span style="font-size: 0.72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 2px;">${isResolved ? (won ? 'Payout Won' : 'Final Payout') : `Est. Payout (${multiplier}x)`}</span>
+          <strong style="font-size: 1.25rem; font-weight: 900; color: ${isResolved ? (won ? '#34d399' : 'var(--muted)') : '#34d399'};">${isResolved && !won ? '$0.00' : `+$${estPayout.toFixed(2)}`} <span style="font-size: 0.75rem; color: ${isResolved ? (won ? '#34d399' : 'var(--muted)') : '#34d399'}; font-weight: 700;">USDC</span></strong>
         </div>
       </div>
 
       <!-- Action Buttons Row -->
       <div style="display: flex; gap: 8px; align-items: center;">
-        <button type="button" onclick="window.openSiftleBettingModal('${market.id}', '${position.optionId || 'home'}')" style="flex: 1; background: rgba(56, 189, 248, 0.12); border: 1.5px solid rgba(56, 189, 248, 0.35); color: #38bdf8; padding: 10px 0; border-radius: 12px; font-size: 0.88rem; font-weight: 800; cursor: pointer; text-align: center; transition: all 0.2s ease;">
-          Manage / Cash Out ↗
-        </button>
-        <a href="https://testnet.arcscan.app/address/0x8478b85e539fa3Ae8C53C360109BD82aE26Caa3E" target="_blank" rel="noopener noreferrer" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--muted); padding: 10px 14px; border-radius: 12px; font-size: 0.82rem; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+        ${isResolved ? (
+          won ? `
+            <button type="button" onclick="window.claimPortfolioMarket('${market.id}')" style="flex: 1; background: #34d399; color: #052e16; border: none; padding: 12px 0; border-radius: 12px; font-size: 0.92rem; font-weight: 900; cursor: pointer; text-align: center; box-shadow: 0 0 16px rgba(52, 211, 153, 0.4); transition: all 0.2s ease;">
+              Claim $${estPayout.toFixed(2)} Payout ↗
+            </button>
+          ` : `
+            <button type="button" disabled style="flex: 1; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); color: var(--muted); padding: 10px 0; border-radius: 12px; font-size: 0.84rem; font-weight: 700; cursor: not-allowed;">
+              Settled ($0.00)
+            </button>
+          `
+        ) : `
+          <button type="button" onclick="window.openSiftleBettingModal('${market.id}', '${position.optionId || 'home'}')" style="flex: 1; background: rgba(56, 189, 248, 0.12); border: 1.5px solid rgba(56, 189, 248, 0.35); color: #38bdf8; padding: 10px 0; border-radius: 12px; font-size: 0.88rem; font-weight: 800; cursor: pointer; text-align: center; transition: all 0.2s ease;">
+            Manage / Cash Out ↗
+          </button>
+        `}
+        <a href="https://testnet.arcscan.app/address/${marketAddress}" target="_blank" rel="noopener noreferrer" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--muted); padding: 10px 14px; border-radius: 12px; font-size: 0.82rem; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
           ArcScan ↗
         </a>
       </div>
@@ -7656,3 +7667,5 @@ document.addEventListener("click", (event) => {
 }, true);
 
 
+
+(window as any).claimPortfolioMarket = claimPortfolioMarket;

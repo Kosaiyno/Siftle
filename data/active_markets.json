@@ -7,7 +7,7 @@
     "awayTeam": "Manchester United",
     "homeCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/363.png",
     "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/360.png",
-    "statusDetail": "Locked • In-Play",
+    "statusDetail": "Resolved • Draw Won",
     "isLive": false,
     "volumeUsdc": 6,
     "marketAddress": "0x202c3f057B7b767f80dF665fa225a4Fa5b8631C8",
@@ -38,7 +38,10 @@
       "draw": 1,
       "away": 2
     },
-    "isLocked": true
+    "isLocked": true,
+    "resolvedOptionId": "draw",
+    "closes": "Resolved",
+    "outcome": 1
   },
   {
     "id": "m-crystalpalace-manchestercity",
