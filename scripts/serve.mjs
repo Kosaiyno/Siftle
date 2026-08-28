@@ -7709,6 +7709,21 @@ async function loadLeaderboardFromSupabase(data) {
       };
     }
 
+    // Ensure all signed-up profiles in Supabase are also populated in leaderboard traders
+    for (const [address, profile] of profileMap.entries()) {
+      if (!leaderboard.traders[address]) {
+        leaderboard.traders[address] = {
+          points: 0,
+          status: "0 wins, 0 losses",
+          username: String(profile.username || ""),
+          reported_points: 0,
+          reported_status: "0 wins, 0 losses",
+          first_activity_at: profile.updated_at || new Date().toISOString(),
+          updated_at: profile.updated_at || new Date().toISOString()
+        };
+      }
+    }
+
     for (const result of results || []) {
       const address = canonicalAddress(result.wallet_address);
       const marketId = String(result.market_id || "");
@@ -8210,6 +8225,16 @@ async function recordAiBriefingUnlockBonus(walletAddress, sourceUrl, txHash = ""
     const unlockCount = new Set((unlockRows || []).map((row) => row.source_hash)).size;
     const alreadyAwarded = Boolean(leaderboard.bonusEvents?.[cleanWallet]?.[bonusKey]);
 
+    if (!leaderboard.traders[cleanWallet]) {
+      leaderboard.traders[cleanWallet] = {
+        points: 0,
+        status: "0 wins, 0 losses",
+        username: "",
+        first_activity_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+    }
+
     if (aiBriefingDailyBonusPoints > 0 && unlockCount >= aiBriefingDailyBonusUnlocks && !alreadyAwarded) {
       setLeaderboardBonus(data, cleanWallet, bonusKey, "ai_briefing_daily", aiBriefingDailyBonusPoints, {
         date_key: dateKey,
@@ -8233,6 +8258,17 @@ async function recordAiBriefingUnlockBonus(walletAddress, sourceUrl, txHash = ""
   const localKey = `${cleanWallet}:${dateKey}`;
   localUnlocks[localKey] = Array.from(new Set([...(localUnlocks[localKey] || []), sourceHash]));
   const unlockCount = localUnlocks[localKey].length;
+
+  if (!leaderboard.traders[cleanWallet]) {
+    leaderboard.traders[cleanWallet] = {
+      points: 0,
+      status: "0 wins, 0 losses",
+      username: "",
+      first_activity_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+  }
+
   const awarded = aiBriefingDailyBonusPoints > 0 && unlockCount >= aiBriefingDailyBonusUnlocks
     && setLeaderboardBonus(data, cleanWallet, bonusKey, "ai_briefing_daily", aiBriefingDailyBonusPoints, {
       date_key: dateKey,
