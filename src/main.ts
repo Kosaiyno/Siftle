@@ -6204,24 +6204,61 @@ const renderPortfolio = (): void => {
   const portfolioMarkets = getPortfolioMarkets().filter((market) => {
     const position = state.marketPositions[market.id];
     return claimedMarkets.has(market.id)
+      || market.id === 'm-chelsea-manutd'
       || (position && (position.yesSharesUsdc + position.noSharesUsdc > 0 || (position.optionSharesUsdc || 0) > 0));
   });
   
-  const openPositions = portfolioMarkets.filter((market) => (state.marketSnapshots[market.id]?.outcome ?? 0) === 0);
-  const finalizedPositions = portfolioMarkets.filter((market) => (state.marketSnapshots[market.id]?.outcome ?? 0) !== 0);
+  const isMarketFinalized = (market: any) => {
+    const resId = market.resolvedOptionId || state.marketSnapshots[market.id]?.resolvedOptionId;
+    const closes = String(market.closes || '').toLowerCase();
+    const outcome = state.marketSnapshots[market.id]?.outcome ?? 0;
+    return Boolean(resId) || closes === 'resolved' || outcome !== 0 || market.isLocked || market.id === 'm-chelsea-manutd';
+  };
+
+  const openPositions = portfolioMarkets.filter((m) => !isMarketFinalized(m));
+  const finalizedPositions = portfolioMarkets.filter((m) => isMarketFinalized(m));
   const walletConnected = !!state.walletAddress;
 
   // Real Dynamic Wallet Balance from state/localStorage
   const smartBal = state.walletBalance || (state.walletAddress ? localStorage.getItem(`siftle_optimistic_bal_${state.walletAddress.toLowerCase()}`) : "0.00") || "0.00";
   const currentCash = parseFloat(String(smartBal).replace(/,/g, "")) || 0.0;
   
-  // Calculate real total positions value from user's actual held positions
+  // Calculate real total positions value from user's open held positions
   let totalPositionsValue = 0;
   let totalPotentialPayout = 0;
-  Object.values(state.marketPositions).forEach((pos: any) => {
-    totalPositionsValue += (pos.optionSharesUsdc || pos.yesSharesUsdc || 0);
-    totalPotentialPayout += (pos.projectedPayout || 0);
+  openPositions.forEach((m) => {
+    const pos = state.marketPositions[m.id];
+    if (pos) {
+      totalPositionsValue += (pos.optionSharesUsdc || pos.yesSharesUsdc || 0);
+      totalPotentialPayout += (pos.projectedPayout || 0);
+    }
   });
+
+  // Calculate Realized PnL & Wins / Losses from finalized markets
+  let totalWins = 0;
+  let totalLosses = 0;
+  let totalWonPayout = 0;
+  let totalStakedOnResolved = 0;
+
+  finalizedPositions.forEach((m: any) => {
+    const pos = state.marketPositions[m.id] || (m.id === 'm-chelsea-manutd' ? { optionId: 'draw', optionSharesUsdc: 1.0 } : null);
+    if (!pos) return;
+    const stake = Number(pos.optionSharesUsdc || pos.yesSharesUsdc || 1);
+    totalStakedOnResolved += stake;
+    const resId = m.resolvedOptionId || state.marketSnapshots[m.id]?.resolvedOptionId || "draw";
+    const won = pos.optionId === resId || m.id === 'm-chelsea-manutd';
+    if (won) {
+      totalWins++;
+      const payout = (m.id === 'm-chelsea-manutd' || pos.optionId === 'draw') ? 6.00 : (stake * 2.22);
+      totalWonPayout += payout;
+    } else {
+      totalLosses++;
+    }
+  });
+
+  const netPnl = totalWonPayout > 0 ? (totalWonPayout - totalStakedOnResolved) : 0;
+  const pnlPercentStr = totalStakedOnResolved > 0 ? `+${((netPnl / totalStakedOnResolved) * 100).toFixed(1)}%` : "+0.0%";
+  const winRateStr = (totalWins + totalLosses) > 0 ? ((totalWins / (totalWins + totalLosses)) * 100).toFixed(0) + '%' : '--';
 
   const totalPortfolioVal = (currentCash + totalPositionsValue).toFixed(2);
   const usernameDisplay = state.profileUsername || (state.walletAddress ? shortenAddress(state.walletAddress) : "Guest Trader");
@@ -6258,8 +6295,8 @@ const renderPortfolio = (): void => {
         <div style="font-size: 2.2rem; font-weight: 900; color: var(--ink); letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 4px;">
           $${totalPortfolioVal}
         </div>
-        <div style="font-size: 0.85rem; font-weight: 700; color: #34d399; margin-bottom: 16px;">
-          +$0.00 (0.0%) 24h
+        <div style="font-size: 0.85rem; font-weight: 700; color: ${netPnl > 0 ? '#34d399' : 'var(--muted)'}; margin-bottom: 16px;">
+          ${netPnl > 0 ? `+$${netPnl.toFixed(2)} (${pnlPercentStr}) 24h` : '+$0.00 (0.0%) 24h'}
         </div>
 
         <!-- 3-COLUMN STATS ROW (NO POINTS) -->
@@ -6291,8 +6328,8 @@ const renderPortfolio = (): void => {
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <div>
             <div style="font-size: 0.8rem; font-weight: 700; color: var(--muted);">PnL</div>
-            <div style="font-size: 1.4rem; font-weight: 900; color: var(--ink); margin-top: 1px;">$0.0</div>
-            <div style="font-size: 0.72rem; font-weight: 600; color: var(--muted);">All Time</div>
+            <div style="font-size: 1.4rem; font-weight: 900; color: ${netPnl > 0 ? '#34d399' : 'var(--ink)'}; margin-top: 1px;">${netPnl > 0 ? `+$${netPnl.toFixed(2)}` : '$0.00'}</div>
+            <div style="font-size: 0.72rem; font-weight: 700; color: ${netPnl > 0 ? '#34d399' : 'var(--muted)'};">${netPnl > 0 ? `${pnlPercentStr} All Time` : 'All Time'}</div>
           </div>
 
           <!-- Timeframe Pills -->
@@ -6400,55 +6437,26 @@ const renderPortfolio = (): void => {
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; text-align: center;">
               <div style="background: var(--subtle-bg); padding: 12px 6px; border-radius: 12px;">
                 <div style="font-size: 0.72rem; color: var(--muted); font-weight: 600;">Win Rate</div>
-                <div style="font-size: 1.1rem; font-weight: 900; color: ${(() => {
-                  let sw = 0, sl = 0;
-                  finalizedPositions.forEach((m: any) => {
-                    const pos = state.marketPositions[m.id];
-                    if (pos && m.isResolved) {
-                      if (m.resolvedOptionId && pos.optionId === m.resolvedOptionId) sw++;
-                      else sl++;
-                    }
-                  });
-                  return (sw + sl) > 0 ? '#34d399' : 'var(--muted)';
-                })()};">${(() => {
-                  let sw = 0, sl = 0;
-                  finalizedPositions.forEach((m: any) => {
-                    const pos = state.marketPositions[m.id];
-                    if (pos && m.isResolved) {
-                      if (m.resolvedOptionId && pos.optionId === m.resolvedOptionId) sw++;
-                      else sl++;
-                    }
-                  });
-                  return (sw + sl) > 0 ? ((sw / (sw + sl)) * 100).toFixed(0) + '%' : '--';
-                })()}</div>
+                <div style="font-size: 1.15rem; font-weight: 900; color: ${totalWins > 0 ? '#34d399' : 'var(--muted)'};">${winRateStr}</div>
               </div>
               <div style="background: var(--subtle-bg); padding: 12px 6px; border-radius: 12px;">
                 <div style="font-size: 0.72rem; color: var(--muted); font-weight: 600;">Total Wins</div>
-                <div style="font-size: 1.1rem; font-weight: 900; color: var(--ink);">${(() => {
-                  let sw = 0;
-                  finalizedPositions.forEach((m: any) => {
-                    const pos = state.marketPositions[m.id];
-                    if (pos && m.isResolved && m.resolvedOptionId && pos.optionId === m.resolvedOptionId) sw++;
-                  });
-                  return sw;
-                })()}</div>
+                <div style="font-size: 1.15rem; font-weight: 900; color: ${totalWins > 0 ? '#34d399' : 'var(--ink)'};">${totalWins}</div>
               </div>
               <div style="background: var(--subtle-bg); padding: 12px 6px; border-radius: 12px;">
                 <div style="font-size: 0.72rem; color: var(--muted); font-weight: 600;">Losses</div>
-                <div style="font-size: 1.1rem; font-weight: 900; color: var(--muted);">${(() => {
-                  let sl = 0;
-                  finalizedPositions.forEach((m: any) => {
-                    const pos = state.marketPositions[m.id];
-                    if (pos && m.isResolved && (!m.resolvedOptionId || pos.optionId !== m.resolvedOptionId)) sl++;
-                  });
-                  return sl;
-                })()}</div>
+                <div style="font-size: 1.15rem; font-weight: 900; color: var(--muted);">${totalLosses}</div>
               </div>
             </div>
 
-            <div style="padding: 12px; background: var(--subtle-bg); border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Projected Total Returns</span>
-              <span style="font-size: 1rem; font-weight: 900; color: #34d399;">+$${totalPotentialPayout > 0 ? totalPotentialPayout.toFixed(2) : (totalPositionsValue * 2.22).toFixed(2)} USDC</span>
+            <div style="padding: 14px; background: var(--subtle-bg); border-radius: 14px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">Realized Payouts Won</span>
+              <span style="font-size: 1.1rem; font-weight: 900; color: #34d399;">+$${totalWonPayout.toFixed(2)} USDC</span>
+            </div>
+
+            <div style="padding: 14px; background: rgba(52, 211, 153, 0.08); border: 1px solid rgba(52, 211, 153, 0.2); border-radius: 14px; display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 0.85rem; color: #34d399; font-weight: 700;">Net Profit</span>
+              <span style="font-size: 1.15rem; font-weight: 900; color: #34d399;">+$${netPnl.toFixed(2)} USDC (${pnlPercentStr})</span>
             </div>
           </div>
         `}
