@@ -4183,15 +4183,7 @@ const renderMarkets = (): void => {
   });
 
 
-  const featuredMarket = marketPreviews.find(m => m.id === "m-barcelona-athleticclub") || marketPreviews[0] || {
-    id: "m-espanyol-real-madrid",
-    question: "Espanyol vs Real Madrid Match Result",
-    homeTeam: "Espanyol",
-    awayTeam: "Real Madrid",
-    homeCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/379.png",
-    awayCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/86.png",
-    league: "Spanish LaLiga"
-  };
+  const featuredMarket = marketPreviews.find(m => m.id === "m-chelsea-manutd") || marketPreviews[0];
 
   // Complete list of all 7 top leagues with exact matching
   const leaguesList = [
