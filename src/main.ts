@@ -4238,8 +4238,8 @@ const renderMarkets = (): void => {
               
               <!-- Card Header Status -->
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-                <span style="font-size: 0.78rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; ${isLive ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);' : 'background: rgba(255, 255, 255, 0.06); color: var(--muted);'}">
-                  ${isLive ? 'LIVE IN-PLAY' : escapeHtml(m.statusDetail || 'Scheduled')}
+                <span style="font-size: 0.78rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; ${Boolean(m.isLocked) ? 'background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);' : isLive ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4);' : 'background: rgba(255, 255, 255, 0.06); color: var(--muted);'}">
+                  ${Boolean(m.isLocked) ? 'Locked • In-Play' : isLive ? 'LIVE IN-PLAY' : escapeHtml(m.statusDetail || 'Scheduled')}
                 </span>
                 <span style="font-size: 0.78rem; color: #38bdf8; font-weight: 800; background: rgba(56, 189, 248, 0.12); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.25);">${cardVol > 0 ? ("$" + cardVol.toFixed(2)) : "$0.00"} Vol</span>
               </div>
@@ -4264,8 +4264,9 @@ const renderMarkets = (): void => {
                 const odds = getMarketOddsCents(m);
 
                 const renderOptionBox = (optId: string, label: string, price: string) => {
+                  const isMarketLocked = Boolean(m.isLocked) || Boolean(m.isLive);
                   const isHeld = hasPos && heldId === optId;
-                  const isLocked = hasPos && heldId !== optId;
+                  const isLocked = (hasPos && heldId !== optId) || (isMarketLocked && !isHeld);
 
                   if (isHeld) {
                     return `

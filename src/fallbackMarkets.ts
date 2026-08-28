@@ -7,7 +7,7 @@ export const fallbackMarketPreviews: any[] = [
     "awayTeam": "Manchester United",
     "homeCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/363.png",
     "awayCrest": "https://a.espncdn.com/i/teamlogos/soccer/500/360.png",
-    "statusDetail": "Saturday • 05:30 PM",
+    "statusDetail": "Locked • In-Play",
     "isLive": false,
     "volumeUsdc": 6,
     "marketAddress": "0x202c3f057B7b767f80dF665fa225a4Fa5b8631C8",
@@ -37,7 +37,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 3,
       "draw": 1,
       "away": 2
-    }
+    },
+    "isLocked": true
   },
   {
     "id": "m-crystalpalace-manchestercity",
@@ -77,7 +78,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-racingsantander-elche",
@@ -117,7 +119,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-alavs-villarreal",
@@ -157,7 +160,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-acmilan-venezia",
@@ -197,7 +201,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-bayernmunich-vfbstuttgart",
@@ -237,7 +242,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-lille-parissaintgermain",
@@ -277,7 +283,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-rioave-sportingcp",
@@ -317,7 +324,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-fcgroningen-fortunasittard",
@@ -357,7 +365,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-liverpool-nottinghamforest",
@@ -397,7 +406,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-afcbournemouth-everton",
@@ -437,7 +447,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-tottenhamhotspur-newcastleunited",
@@ -477,7 +488,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-levante-realbetis",
@@ -517,7 +529,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-realsociedad-espanyol",
@@ -557,7 +570,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-sevilla-atlticomadrid",
@@ -597,7 +611,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-fiorentina-frosinone",
@@ -637,7 +652,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-monza-udinese",
@@ -677,7 +693,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-sassuolo-torino",
@@ -717,7 +734,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-juventus-parma",
@@ -757,7 +775,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-1fcunionberlin-eintrachtfrankfurt",
@@ -797,7 +816,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-fccologne-tsghoffenheim",
@@ -837,7 +857,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-mainz-scpaderborn07",
@@ -877,7 +898,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-rbleipzig-borussiamnchengladbach",
@@ -917,7 +939,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-svelversberg-bayerleverkusen",
@@ -957,7 +980,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-borussiadortmund-hamburgsv",
@@ -997,7 +1021,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-strasbourg-lens",
@@ -1037,7 +1062,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-ajauxerre-angers",
@@ -1077,7 +1103,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-brest-toulouse",
@@ -1117,7 +1144,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-lorient-troyes",
@@ -1157,7 +1185,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-lyon-lehavreac",
@@ -1197,7 +1226,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-alverca-santaclara",
@@ -1237,7 +1267,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-arouca-maritimo",
@@ -1277,7 +1308,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-acadmicodeviseu-fcporto",
@@ -1317,7 +1349,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-excelsior-spartarotterdam",
@@ -1357,7 +1390,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-azalkmaar-goaheadeagles",
@@ -1397,7 +1431,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-peczwolle-necnijmegen",
@@ -1437,7 +1472,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-chelsea-brightonhovealbion",
@@ -1477,7 +1513,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-leedsunited-brentford",
@@ -1517,7 +1554,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-sunderland-fulham",
@@ -1557,7 +1595,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-manchesterunited-ipswichtown",
@@ -1597,7 +1636,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-realmadrid-mlaga",
@@ -1637,7 +1677,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-deportivo-valencia",
@@ -1677,7 +1718,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-celtavigo-athleticclub",
@@ -1717,7 +1759,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-napoli-como",
@@ -1757,7 +1800,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-cagliari-internazionale",
@@ -1797,7 +1841,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-lazio-genoa",
@@ -1837,7 +1882,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-scfreiburg-werderbremen",
@@ -1877,7 +1923,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-fcaugsburg-schalke04",
@@ -1917,7 +1964,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-parisfc-nice",
@@ -1957,7 +2005,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-staderennais-lemans",
@@ -1997,7 +2046,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-asmonaco-marseille",
@@ -2037,7 +2087,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-cdnacional-estrela",
@@ -2077,7 +2128,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-casapia-moreirense",
@@ -2117,7 +2169,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-fcfamalicao-gilvicente",
@@ -2157,7 +2210,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-fcutrecht-psveindhoven",
@@ -2197,7 +2251,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-feyenoordrotterdam-adodenhaag",
@@ -2237,7 +2292,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-willemii-heerenveen",
@@ -2277,7 +2333,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-telstar-ajaxamsterdam",
@@ -2317,7 +2374,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-sccambuur-fctwente",
@@ -2357,7 +2415,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-astonvilla-arsenal",
@@ -2397,7 +2456,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-osasuna-getafe",
@@ -2437,7 +2497,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-barcelona-rayovallecano",
@@ -2477,7 +2538,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-lecce-asroma",
@@ -2517,7 +2579,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-atalanta-bologna",
@@ -2557,7 +2620,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-benfica-estoril",
@@ -2597,7 +2661,8 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   },
   {
     "id": "m-braga-vitriadeguimaraes",
@@ -2637,6 +2702,7 @@ export const fallbackMarketPreviews: any[] = [
       "home": 0,
       "draw": 0,
       "away": 0
-    }
+    },
+    "isLocked": false
   }
 ];
