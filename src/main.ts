@@ -4120,11 +4120,34 @@ const getMarketOddsCents = (market: any) => {
   const mId = String(market?.id || "");
   if (globalOddsStore[mId]) {
     return {
-      home: String(globalOddsStore[mId].home.toFixed(1)),
-      draw: String(globalOddsStore[mId].draw.toFixed(1)),
-      away: String(globalOddsStore[mId].away.toFixed(1))
+      home: String(Number(globalOddsStore[mId].home).toFixed(1)),
+      draw: String(Number(globalOddsStore[mId].draw).toFixed(1)),
+      away: String(Number(globalOddsStore[mId].away).toFixed(1))
     };
   }
+  
+  // Calculate directly from option pools when volume exists
+  const homePool = Number(market?.homePoolUsdc) || Number(market?.optionPools?.home) || Number(market?.initialOptionPools?.home) || 0;
+  const drawPool = Number(market?.drawPoolUsdc) || Number(market?.optionPools?.draw) || Number(market?.initialOptionPools?.draw) || 0;
+  const awayPool = Number(market?.awayPoolUsdc) || Number(market?.optionPools?.away) || Number(market?.initialOptionPools?.away) || 0;
+  const totalPool = homePool + drawPool + awayPool;
+  
+  if (totalPool > 0) {
+    return {
+      home: ((homePool / totalPool) * 100).toFixed(1),
+      draw: ((drawPool / totalPool) * 100).toFixed(1),
+      away: ((awayPool / totalPool) * 100).toFixed(1)
+    };
+  }
+
+  if (market && market.currentOdds) {
+    return {
+      home: String(Number(market.currentOdds.home).toFixed(1)),
+      draw: String(Number(market.currentOdds.draw).toFixed(1)),
+      away: String(Number(market.currentOdds.away).toFixed(1))
+    };
+  }
+
   if (market && market.customOdds) {
     return {
       home: String(Number(market.customOdds.home).toFixed(1)),
@@ -4134,7 +4157,6 @@ const getMarketOddsCents = (market: any) => {
   }
   return { home: "33.3", draw: "33.3", away: "33.3" };
 };
-
 
 const renderMarkets = (): void => {
   if (!marketPreviews || marketPreviews.length === 0) { marketPreviews = fallbackMarketPreviews; }
