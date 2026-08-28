@@ -4260,23 +4260,58 @@ const renderMarkets = (): void => {
                 </div>
               </div>
 
-              <!-- 3 Outcome Cents Odds Trading Boxes -->
-              <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
-                <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="home" style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
-                  <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml(homeTeam)}</span>
-                  <span style="font-size: 1rem; font-weight: 900; color: #38bdf8;">${getMarketOddsCents(m).home}¢</span>
-                </button>
+              <!-- 3 Outcome Cents Odds Trading Boxes with Position Locking UX -->
+              ${(() => {
+                const userPos = state.marketPositions[m.id];
+                const hasPos = userPos && ((userPos.optionSharesUsdc || userPos.yesSharesUsdc || 0) > 0);
+                const heldId = userPos?.optionId || userPos?.side;
+                const odds = getMarketOddsCents(m);
 
-                <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="draw" style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
-                  <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted);">Draw</span>
-                  <span style="font-size: 1rem; font-weight: 900; color: #38bdf8;">${getMarketOddsCents(m).draw}¢</span>
-                </button>
+                const renderOptionBox = (optId: string, label: string, price: string) => {
+                  const isHeld = hasPos && heldId === optId;
+                  const isLocked = hasPos && heldId !== optId;
 
-                <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="away" style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer;">
-                  <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml(awayTeam)}</span>
-                  <span style="font-size: 1rem; font-weight: 900; color: #38bdf8;">${getMarketOddsCents(m).away}¢</span>
-                </button>
-              </div>
+                  if (isHeld) {
+                    return `
+                      <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="${optId}" style="background: rgba(52, 211, 153, 0.12); border: 1.5px solid #34d399; border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; cursor: pointer; text-align: left; box-shadow: 0 0 12px rgba(52, 211, 153, 0.2);">
+                        <span style="font-size: 0.68rem; font-weight: 800; color: #34d399; text-transform: uppercase;">✓ Holding ${userPos.optionSharesUsdc}</span>
+                        <span style="font-size: 0.78rem; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml(label)}</span>
+                        <span style="font-size: 1rem; font-weight: 900; color: #34d399;">${price}¢</span>
+                      </button>
+                    `;
+                  }
+
+                  if (isLocked) {
+                    return `
+                      <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="${optId}" data-held-lock="true" style="background: rgba(255, 255, 255, 0.02); border: 1px dashed rgba(255, 255, 255, 0.12); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; cursor: not-allowed; opacity: 0.45; text-align: left;">
+                        <span style="font-size: 0.68rem; font-weight: 800; color: var(--muted);">🔒 Locked</span>
+                        <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml(label)}</span>
+                        <span style="font-size: 1rem; font-weight: 800; color: var(--muted);">${price}¢</span>
+                      </button>
+                    `;
+                  }
+
+                  return `
+                    <button type="button" class="siftle-bet-option-btn" data-market-id="${m.id}" data-option-id="${optId}" style="background: var(--subtle-bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; cursor: pointer; text-align: left;">
+                      <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${escapeHtml(label)}</span>
+                      <span style="font-size: 1rem; font-weight: 900; color: #38bdf8;">${price}¢</span>
+                    </button>
+                  `;
+                };
+
+                return `
+                  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
+                    ${renderOptionBox("home", homeTeam, odds.home)}
+                    ${renderOptionBox("draw", "Draw", odds.draw)}
+                    ${renderOptionBox("away", awayTeam, odds.away)}
+                  </div>
+                  ${hasPos ? `
+                    <div style="margin-top: 10px; font-size: 0.75rem; color: var(--muted); font-weight: 600; text-align: center; background: rgba(255, 255, 255, 0.03); border-radius: 8px; padding: 6px 10px;">
+                      💡 You hold a position in <strong style="color: #34d399;">${escapeHtml(userPos.optionLabel || heldId)}</strong>. You can buy more or sell in Portfolio. Other outcomes are locked.
+                    </div>
+                  ` : ''}
+                `;
+              })()}
 
             </div>
           `;
@@ -5090,6 +5125,15 @@ const showTradeSuccessModal = (info: {
     awayCrest: "https://a.espncdn.com/i/teamlogos/soccer/500/382.png"
   };
 
+  const currentPos = state.marketPositions[market.id];
+  const hasActivePos = currentPos && ((currentPos.optionSharesUsdc || currentPos.yesSharesUsdc || 0) > 0);
+  const heldOptionId = currentPos?.optionId || currentPos?.side;
+
+  if (hasActivePos && heldOptionId !== optionId) {
+    showActionToast(`🔒 Outcome Locked: You currently hold $${currentPos.optionSharesUsdc} in ${currentPos.optionLabel || heldOptionId}. Sell your shares in Portfolio first to switch outcomes.`);
+    return;
+  }
+
   let optionName = optionId;
   const odds = getMarketOddsCents(market);
   let priceCents = parseFloat(odds.home) || 33.3;
@@ -5395,8 +5439,17 @@ const showTradeSuccessModal = (info: {
               if (btnEl) btnEl.textContent = statusMsg;
             }
           );
+          if (!txHash || !txHash.startsWith("0x")) {
+            throw new Error("No on-chain transaction hash returned from Arc Testnet");
+          }
         } catch (err: any) {
-          console.warn("On-chain execution fallback notice:", err?.message || err);
+          console.error("On-chain trade failed:", err);
+          if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.textContent = "Buy Shares";
+          }
+          showActionToast(`Trade failed on Arc: ${err?.message || err}`);
+          return; // STOP EXECUTION! DO NOT DEDUCT OR SHOW SUCCESS MODAL!
         }
       }
 
