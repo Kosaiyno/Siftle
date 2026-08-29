@@ -9317,15 +9317,21 @@ function getAnalyticsHtml() {
 }
 
 export function buildPreseasonLeaderboardPlayers(data, profiles, unlocks, bonusEvents = []) {
+  const migrationMap = getWalletMigrationMap(data);
+  const canonicalAddress = (addr) => {
+    const clean = normalizeWalletAddress(addr);
+    return clean ? migrationMap.get(clean) || clean : "";
+  };
+
   const profileMap = new Map();
   if (profiles && profiles.length > 0) {
     profiles.forEach(p => {
-      const clean = normalizeWalletAddress(p.wallet_address);
-      if (clean) profileMap.set(clean, p.username || "");
+      const clean = canonicalAddress(p.wallet_address);
+      if (clean) profileMap.set(clean, p.username || profileMap.get(clean) || "");
     });
   }
   Object.entries(data.leaderboard?.traders || {}).forEach(([addr, info]) => {
-    const clean = normalizeWalletAddress(addr);
+    const clean = canonicalAddress(addr);
     if (clean && info.username && !profileMap.has(clean)) {
       profileMap.set(clean, info.username);
     }
@@ -9335,42 +9341,44 @@ export function buildPreseasonLeaderboardPlayers(data, profiles, unlocks, bonusE
   const predictionWinsMap = new Map(); // walletAddress -> count
   const traderPnlMap = new Map(); // walletAddress -> { pnlUsdc: number, roiPct: number }
 
-  // Load prediction wins and pnl from local store/analytics
-  if (data.leaderboard?.traders) {
-    Object.entries(data.leaderboard.traders).forEach(([addr, info]) => {
-      const clean = normalizeWalletAddress(addr);
-      if (!clean) return;
-      const pnl = Number(info.pnlUsdc) || 0;
-      const vol = Number(info.totalVolumeUsdc) || 0;
-      const roi = vol > 0 ? ((pnl / vol) * 100) : 0;
-      traderPnlMap.set(clean, { pnlUsdc: pnl, roiPct: roi });
-    });
-  }
-
-  if (data.leaderboard?.predictionWins) {
-    Object.entries(data.leaderboard.predictionWins).forEach(([addr, count]) => {
-      const clean = normalizeWalletAddress(addr);
-      if (clean) predictionWinsMap.set(clean, Number(count) || 0);
-    });
-  }
-
-  if (bonusEvents && Array.isArray(bonusEvents)) {
-    bonusEvents.forEach(evt => {
-      const clean = normalizeWalletAddress(evt.wallet_address);
-      if (!clean) return;
-      if (evt.bonus_type === 'prediction_win') {
-        predictionWinsMap.set(clean, (predictionWinsMap.get(clean) || 0) + 1);
+  // Load daily briefing bonuses from data.leaderboard.bonusEvents (Season 2 timeframe)
+  Object.entries(data.leaderboard?.bonusEvents || {}).forEach(([addr, events]) => {
+    const clean = canonicalAddress(addr);
+    if (!clean || isAdminWallet(clean)) return;
+    Object.entries(events || {}).forEach(([bonusKey, evt]) => {
+      if (evt.bonus_type === 'ai_briefing_daily' || String(bonusKey).startsWith('ai-briefing-')) {
+        const dateKey = evt.metadata?.date_key || String(bonusKey).replace('ai-briefing-', '');
+        if (dateKey >= '2026-07-20') {
+          if (!dailyUnlocks.has(clean)) dailyUnlocks.set(clean, new Map());
+          const userDays = dailyUnlocks.get(clean);
+          userDays.set(dateKey, Math.max(userDays.get(dateKey) || 0, 3));
+        }
       }
     });
-  }
+  });
 
+  // Load local aiBriefingUnlocks (Season 2 timeframe)
+  Object.entries(data.leaderboard?.aiBriefingUnlocks || {}).forEach(([key, hashes]) => {
+    const parts = key.split(':');
+    if (parts.length === 2) {
+      const addr = canonicalAddress(parts[0]);
+      const dateKey = parts[1];
+      if (addr && !isAdminWallet(addr) && dateKey >= '2026-07-20') {
+        if (!dailyUnlocks.has(addr)) dailyUnlocks.set(addr, new Map());
+        const userDays = dailyUnlocks.get(addr);
+        userDays.set(dateKey, Math.max(userDays.get(dateKey) || 0, Array.isArray(hashes) ? hashes.length : 0));
+      }
+    }
+  });
+
+  // Load remote unlocks (Season 2 timeframe)
   if (unlocks && unlocks.length > 0) {
     unlocks.forEach(unlock => {
-      const addr = normalizeWalletAddress(unlock.wallet_address);
+      const addr = canonicalAddress(unlock.wallet_address);
       if (!addr || isAdminWallet(addr)) return;
       let dateKey = unlock.date_key;
       if (!dateKey && unlock.created_at) dateKey = unlock.created_at.substring(0, 10);
-      if (!dateKey) return;
+      if (!dateKey || dateKey < '2026-07-20') return;
       if (!dailyUnlocks.has(addr)) dailyUnlocks.set(addr, new Map());
       const userDays = dailyUnlocks.get(addr);
       userDays.set(dateKey, (userDays.get(dateKey) || 0) + 1);
@@ -9398,13 +9406,17 @@ export function buildPreseasonLeaderboardPlayers(data, profiles, unlocks, bonusE
     }
   }
 
-  return Array.from(allAddresses).map((address) => {
+  // Deduplicate by case-insensitive display name / identity
+  const playersByIdentity = new Map();
+
+  Array.from(allAddresses).forEach((address) => {
     const username = profileMap.get(address) || "";
     const days = daysMap.get(address) || 0;
     const wins = predictionWinsMap.get(address) || 0;
     const points = countMap.get(address) || 0;
     const pnlInfo = traderPnlMap.get(address) || { pnlUsdc: 0, roiPct: 0 };
-    return {
+    
+    const player = {
       username: address,
       displayName: username,
       unlocks: days * 3,
@@ -9414,7 +9426,17 @@ export function buildPreseasonLeaderboardPlayers(data, profiles, unlocks, bonusE
       roiPct: pnlInfo.roiPct,
       status: wins > 0 ? `${wins} win${wins === 1 ? "" : "s"} • ${days} briefing day${days === 1 ? "" : "s"}` : `${days} day${days === 1 ? "" : "s"} completed`
     };
-  }).filter(p => p.points > 0 || p.pnlUsdc !== 0 || p.wins > 0).sort((a, b) => b.points - a.points);
+
+    if (player.points > 0 || player.pnlUsdc !== 0 || player.wins > 0) {
+      const key = username ? `name:${username.toLowerCase()}` : `wallet:${address.toLowerCase()}`;
+      const existing = playersByIdentity.get(key);
+      if (!existing || player.points > existing.points) {
+        playersByIdentity.set(key, player);
+      }
+    }
+  });
+
+  return Array.from(playersByIdentity.values()).sort((a, b) => b.points - a.points);
 }
 
 const server = createServer(async (request, response) => {
