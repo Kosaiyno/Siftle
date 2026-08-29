@@ -1909,13 +1909,37 @@ const getMarketView = (market: MarketPreview): MarketPreview => {
 };
 
 const parseMarketKickoffTime = (market: MarketPreview, snapshot: ArcMarketSnapshot | undefined): number | null => {
-  if (market.timeframe !== "Daily") return null;
-
   const kickoffFromData = market.kickoffAt ? new Date(market.kickoffAt).getTime() : Number.NaN;
   if (Number.isFinite(kickoffFromData)) return kickoffFromData;
 
   const closesAtUnix = snapshot?.closesAtUnix ?? 0;
-  return closesAtUnix > 0 ? closesAtUnix * 1000 : null;
+  if (closesAtUnix > 0) return closesAtUnix * 1000;
+
+  // Parse statusDetail string e.g. "Saturday • 03:00 PM", "Sunday • 08:30 PM", "Monday • 07:45 PM"
+  const status = String(market.statusDetail || "");
+  const match = status.match(/(Friday|Saturday|Sunday|Monday)\s*•\s*(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (match) {
+    const day = match[1].toLowerCase();
+    let hours = parseInt(match[2], 10);
+    const mins = parseInt(match[3], 10);
+    const meridiem = match[4].toUpperCase();
+    if (meridiem === "PM" && hours < 12) hours += 12;
+    if (meridiem === "AM" && hours === 12) hours = 0;
+
+    let dayOffset = 0;
+    if (day === "friday") dayOffset = -1;
+    else if (day === "saturday") dayOffset = 0;
+    else if (day === "sunday") dayOffset = 1;
+    else if (day === "monday") dayOffset = 2;
+
+    // Use current base date (Saturday 2026-08-29)
+    const baseDate = new Date();
+    baseDate.setHours(hours, mins, 0, 0);
+    baseDate.setDate(baseDate.getDate() + (dayOffset - (baseDate.getDay() === 6 ? 0 : (baseDate.getDay() + 1) % 7)));
+    return baseDate.getTime();
+  }
+
+  return null;
 };
 
 const marketEvidenceDate = (story: NewsStory, index: number): string => {
@@ -4149,7 +4173,8 @@ export const isMarketLocked = (market: any): boolean => {
     status.includes("finished") ||
     status.includes("resolved") ||
     status.includes("postponed") ||
-    status.includes("locked")
+    status.includes("locked") ||
+    status.includes("friday")
   ) {
     return true;
   }
