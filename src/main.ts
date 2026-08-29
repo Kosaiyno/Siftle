@@ -441,7 +441,7 @@ interface MarketEvidenceOverride {
 
 type BriefingTarget = NewsStory;
 
-const DAILY_TRADE_LOCK_MINUTES = 20;
+const DAILY_TRADE_LOCK_MINUTES = 15;
 
 let marketPreviews: MarketPreview[] = fallbackMarketPreviews;
 
@@ -1204,7 +1204,8 @@ const findBriefingTargetBySourceUrl = (sourceUrl: string): BriefingTarget | null
 const getDailyTradeLockTime = (market: MarketPreview, snapshot: ArcMarketSnapshot | undefined): number | null => {
   const kickoffTime = parseMarketKickoffTime(market, snapshot);
   if (kickoffTime === null) return null;
-  return kickoffTime - DAILY_TRADE_LOCK_MINUTES * 60 * 1000;
+  // Match locks 15 minutes before ending (~75th minute / kickoff + 90 mins)
+  return kickoffTime + 90 * 60 * 1000 - 15 * 60 * 1000;
 };
 
 const getDailyTradeLockLabel = (market: MarketPreview, snapshot: ArcMarketSnapshot | undefined): string => {
@@ -1222,7 +1223,7 @@ const getDailyTradeLockLabel = (market: MarketPreview, snapshot: ArcMarketSnapsh
 const getMarketTradeLockMessage = (market: MarketPreview, snapshot: ArcMarketSnapshot | undefined): string | null => {
   const lockTime = getDailyTradeLockTime(market, snapshot);
   if (lockTime === null) return null;
-  return Date.now() >= lockTime ? `Locked ${DAILY_TRADE_LOCK_MINUTES}m before kickoff` : null;
+  return Date.now() >= lockTime ? "Locked (15m before full-time)" : null;
 };
 
 const renderLockedBriefing = (story: BriefingTarget, isUnlocking: boolean): string => {
@@ -4173,21 +4174,24 @@ export const isMarketLocked = (market: any): boolean => {
     status.includes("finished") ||
     status.includes("resolved") ||
     status.includes("postponed") ||
-    status.includes("locked") ||
-    status.includes("friday")
+    status.includes("locked")
   ) {
     return true;
   }
   if (String(market.closes || "").toLowerCase() === "resolved") {
     return true;
   }
-  // Check if live match reached 75+ mins (10-15 mins before final whistle)
+  // Check if live match reached 75+ mins (15 mins before full-time)
   if (market.isLive) {
     const minsMatch = status.match(/([0-9]{1,3})/);
     if (minsMatch) {
       const mins = parseInt(minsMatch[1], 10);
       if (!isNaN(mins) && mins >= 75) return true;
     }
+  }
+  const kickoff = parseMarketKickoffTime(market, undefined);
+  if (kickoff && Date.now() >= kickoff + 75 * 60 * 1000) {
+    return true;
   }
   return false;
 };
@@ -7390,7 +7394,7 @@ storyDetail?.addEventListener("click", (event) => {
       }
       const marketTradeLockMessage = getMarketTradeLockMessage(market, state.marketSnapshots[market.id]);
       if (marketTradeLockMessage) {
-        showActionToast("Trading is locked 20 minutes before kickoff.");
+        showActionToast("Trading is locked 15 minutes before the match ends.");
         return;
       }
     }
