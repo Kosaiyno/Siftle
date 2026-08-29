@@ -383,7 +383,7 @@ let feedWarmupRequested = false;
 const pendingReferralCode = new URLSearchParams(window.location.search).get("ref") || localStorage.getItem("siftle_pending_referral_code") || "";
 if (pendingReferralCode) localStorage.setItem("siftle_pending_referral_code", pendingReferralCode.trim().toUpperCase());
 
-interface MarketPreview {
+export interface MarketPreview {
   [key: string]: any;
   volumeUsdc?: number;
   customOdds?: { home: number; draw: number; away: number };
@@ -4205,14 +4205,24 @@ export const globalOddsStore: Record<string, { home: number; draw: number; away:
   }
 })();
 
-const getMarketOddsCents = (market: any) => {
-  // Calculate directly from live option pools when volume exists
-  const homePool = Number(market?.homePoolUsdc) || Number(market?.optionPools?.home) || Number(market?.initialOptionPools?.home) || 0;
-  const drawPool = Number(market?.drawPoolUsdc) || Number(market?.optionPools?.draw) || Number(market?.initialOptionPools?.draw) || 0;
-  const awayPool = Number(market?.awayPoolUsdc) || Number(market?.optionPools?.away) || Number(market?.initialOptionPools?.away) || 0;
+const getMarketOddsCents = (market: any): { home: string; draw: string; away: string } => {
+  if (!market) return { home: "45.0", draw: "28.0", away: "27.0" };
+
+  if (market.currentOdds?.home && market.currentOdds?.draw && market.currentOdds?.away) {
+    return market.currentOdds;
+  }
+  if (globalOddsStore[market.id]) {
+    const s = globalOddsStore[market.id];
+    return { home: Number(s.home).toFixed(1), draw: Number(s.draw).toFixed(1), away: Number(s.away).toFixed(1) };
+  }
+
+  const snapshot = state.marketSnapshots[market.id];
+  const homePool = Number(snapshot?.optionPools?.home) || Number(market?.optionPools?.home) || Number(market?.homePoolUsdc) || Number(market?.initialOptionPools?.home) || 0;
+  const drawPool = Number(snapshot?.optionPools?.draw) || Number(market?.optionPools?.draw) || Number(market?.drawPoolUsdc) || Number(market?.initialOptionPools?.draw) || 0;
+  const awayPool = Number(snapshot?.optionPools?.away) || Number(market?.optionPools?.away) || Number(market?.awayPoolUsdc) || Number(market?.initialOptionPools?.away) || 0;
   const totalPool = homePool + drawPool + awayPool;
   
-  if (totalPool > 0) {
+  if (totalPool > 0 && (homePool > 0 || drawPool > 0 || awayPool > 0)) {
     return {
       home: ((homePool / totalPool) * 100).toFixed(1),
       draw: ((drawPool / totalPool) * 100).toFixed(1),
@@ -4220,7 +4230,22 @@ const getMarketOddsCents = (market: any) => {
     };
   }
 
-  return { home: "33.3", draw: "33.3", away: "33.3" };
+  const home = (market.homeTeam || "").toLowerCase();
+  const away = (market.awayTeam || "").toLowerCase();
+  const topTeams = ["arsenal", "manchester city", "liverpool", "real madrid", "barcelona", "bayern munich", "paris saint-germain", "inter milan", "juventus", "sporting cp", "ajax", "psv"];
+  
+  const isHomeTop = topTeams.some(t => home.includes(t));
+  const isAwayTop = topTeams.some(t => away.includes(t));
+
+  if (isHomeTop && !isAwayTop) {
+    return { home: "62.0", draw: "22.0", away: "16.0" };
+  } else if (isAwayTop && !isHomeTop) {
+    return { home: "18.0", draw: "24.0", away: "58.0" };
+  } else if (isHomeTop && isAwayTop) {
+    return { home: "42.0", draw: "30.0", away: "28.0" };
+  }
+
+  return { home: "45.0", draw: "28.0", away: "27.0" };
 };
 
 const renderMarkets = (): void => {
@@ -5590,6 +5615,10 @@ const showTradeSuccessModal = (info: {
         draw: newDraw.toFixed(1),
         away: newAway.toFixed(1)
       };
+      globalOddsStore[market.id] = { home: newHome, draw: newDraw, away: newAway };
+      try {
+        localStorage.setItem("siftle_global_odds", JSON.stringify(globalOddsStore));
+      } catch (err) {}
 
       // Pari-mutuel stake stored
       const existingStake = state.marketPositions[market.id]?.optionSharesUsdc || 0;
